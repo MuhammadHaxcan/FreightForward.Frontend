@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Edit, Trash2, Plus, Search } from "lucide-react";
+import { Edit, Trash2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -9,18 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-interface Bank {
-  id: number;
-  bankName: string;
-  acHolder: string;
-  acNumber: string;
-  ibanNumber: string;
-  swiftCode: string;
-  branch: string;
-  telNo: string;
-  faxNo: string;
-}
+import { BankModal, Bank } from "./BankModal";
 
 const mockBanks: Bank[] = [
   { id: 1, bankName: "CASH ON HAND", acHolder: "TFS-DUBAI", acNumber: "", ibanNumber: "", swiftCode: "", branch: "", telNo: "", faxNo: "" },
@@ -35,15 +24,13 @@ const mockBanks: Bank[] = [
   { id: 10, bankName: "MASHREQ -CREDIT CARD", acHolder: "SOULAT ALI KHAN", acNumber: "", ibanNumber: "", swiftCode: "", branch: "", telNo: "", faxNo: "" },
 ];
 
-interface BanksTableProps {
-  onAddNew: () => void;
-  isFormExpanded: boolean;
-}
-
-export function BanksTable({ onAddNew, isFormExpanded }: BanksTableProps) {
+export function BanksTable() {
   const [searchTerm, setSearchTerm] = useState("");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [currentPage, setCurrentPage] = useState(1);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedBank, setSelectedBank] = useState<Bank | null>(null);
 
   const filteredBanks = mockBanks.filter(
     (bank) =>
@@ -51,133 +38,159 @@ export function BanksTable({ onAddNew, isFormExpanded }: BanksTableProps) {
       bank.acHolder.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleEdit = (bank: Bank) => {
+    setSelectedBank(bank);
+    setIsEditModalOpen(true);
+  };
+
   return (
-    <div className="bg-card rounded-lg shadow-sm border border-border animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
-        <h2 className="text-xl font-semibold text-foreground">
-          <span className="font-bold">List All</span> Banks
-        </h2>
-        {!isFormExpanded && (
-          <Button className="btn-success gap-2" onClick={onAddNew}>
+    <>
+      <div className="bg-card rounded-lg shadow-sm border border-border animate-fade-in">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <h2 className="text-xl font-semibold text-foreground">
+            <span className="font-bold">List All</span> Banks
+          </h2>
+          <Button className="btn-success gap-2" onClick={() => setIsAddModalOpen(true)}>
             <Plus size={16} />
             Add New
           </Button>
-        )}
-      </div>
-
-      {/* Controls */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Show</span>
-          <Select value={entriesPerPage} onValueChange={setEntriesPerPage}>
-            <SelectTrigger className="w-20 h-9">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-popover border border-border">
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="25">25</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-              <SelectItem value="100">100</SelectItem>
-            </SelectContent>
-          </Select>
-          <span className="text-sm text-muted-foreground">entries</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Search:</span>
-          <Input
-            placeholder=""
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="h-9 w-48"
-          />
-        </div>
-      </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="bg-table-header text-table-header-foreground">
-              <th className="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap">Bank Name ↕</th>
-              <th className="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap">A/C Holder ↕</th>
-              <th className="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap">A/C Number ↕</th>
-              <th className="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap">IBAN Number ↕</th>
-              <th className="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap">Swift Code ↕</th>
-              <th className="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap">Branch ↕</th>
-              <th className="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap">Tel.No ↕</th>
-              <th className="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap">Fax No ↕</th>
-              <th className="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap">Action ↕</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredBanks.map((bank, index) => (
-              <tr
-                key={bank.id}
-                className={`border-b border-border hover:bg-table-row-hover transition-colors ${
-                  index % 2 === 0 ? "bg-card" : "bg-secondary/30"
-                }`}
-              >
-                <td className="px-3 py-2.5 text-sm text-primary font-medium whitespace-nowrap">
-                  {bank.bankName}
-                </td>
-                <td className="px-3 py-2.5 text-sm text-foreground whitespace-nowrap">
-                  {bank.acHolder}
-                </td>
-                <td className="px-3 py-2.5 text-sm text-muted-foreground whitespace-nowrap">
-                  {bank.acNumber}
-                </td>
-                <td className="px-3 py-2.5 text-sm text-muted-foreground whitespace-nowrap">
-                  {bank.ibanNumber}
-                </td>
-                <td className="px-3 py-2.5 text-sm text-muted-foreground whitespace-nowrap">
-                  {bank.swiftCode}
-                </td>
-                <td className="px-3 py-2.5 text-sm text-muted-foreground whitespace-nowrap">
-                  {bank.branch}
-                </td>
-                <td className="px-3 py-2.5 text-sm text-muted-foreground whitespace-nowrap">
-                  {bank.telNo}
-                </td>
-                <td className="px-3 py-2.5 text-sm text-muted-foreground whitespace-nowrap">
-                  {bank.faxNo}
-                </td>
-                <td className="px-3 py-2.5">
-                  <div className="flex items-center gap-1">
-                    <button className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors">
-                      <Edit size={14} />
-                    </button>
-                    <button className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </td>
+        {/* Controls */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Show</span>
+            <Select value={entriesPerPage} onValueChange={setEntriesPerPage}>
+              <SelectTrigger className="w-20 h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-popover border border-border">
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-muted-foreground">entries</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Search:</span>
+            <Input
+              placeholder=""
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="h-9 w-48"
+            />
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-table-header text-table-header-foreground">
+                <th className="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap">Bank Name ↕</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap">A/C Holder ↕</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap">A/C Number ↕</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap">IBAN Number ↕</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap">Swift Code ↕</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap">Branch ↕</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap">Tel.No ↕</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap">Fax No ↕</th>
+                <th className="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap">Action ↕</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {filteredBanks.map((bank, index) => (
+                <tr
+                  key={bank.id}
+                  className={`border-b border-border hover:bg-table-row-hover transition-colors ${
+                    index % 2 === 0 ? "bg-card" : "bg-secondary/30"
+                  }`}
+                >
+                  <td className="px-3 py-2.5 text-sm text-primary font-medium whitespace-nowrap">
+                    {bank.bankName}
+                  </td>
+                  <td className="px-3 py-2.5 text-sm text-foreground whitespace-nowrap">
+                    {bank.acHolder}
+                  </td>
+                  <td className="px-3 py-2.5 text-sm text-muted-foreground whitespace-nowrap">
+                    {bank.acNumber}
+                  </td>
+                  <td className="px-3 py-2.5 text-sm text-muted-foreground whitespace-nowrap">
+                    {bank.ibanNumber}
+                  </td>
+                  <td className="px-3 py-2.5 text-sm text-muted-foreground whitespace-nowrap">
+                    {bank.swiftCode}
+                  </td>
+                  <td className="px-3 py-2.5 text-sm text-muted-foreground whitespace-nowrap">
+                    {bank.branch}
+                  </td>
+                  <td className="px-3 py-2.5 text-sm text-muted-foreground whitespace-nowrap">
+                    {bank.telNo}
+                  </td>
+                  <td className="px-3 py-2.5 text-sm text-muted-foreground whitespace-nowrap">
+                    {bank.faxNo}
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <div className="flex items-center gap-1">
+                      <button 
+                        onClick={() => handleEdit(bank)}
+                        className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                      >
+                        <Edit size={14} />
+                      </button>
+                      <button className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-      {/* Pagination */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4">
-        <p className="text-sm text-muted-foreground">
-          Showing 1 to {filteredBanks.length} of {mockBanks.length} entries
-        </p>
-        <div className="flex items-center gap-1">
-          <Button variant="outline" size="sm" className="h-8 px-3" disabled>
-            Previous
-          </Button>
-          <Button size="sm" className="h-8 w-8 bg-primary text-primary-foreground">
-            1
-          </Button>
-          <Button variant="outline" size="sm" className="h-8 w-8">
-            2
-          </Button>
-          <Button variant="outline" size="sm" className="h-8 px-3">
-            Next
-          </Button>
+        {/* Pagination */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4">
+          <p className="text-sm text-muted-foreground">
+            Showing 1 to {filteredBanks.length} of {mockBanks.length} entries
+          </p>
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="sm" className="h-8 px-3" disabled>
+              Previous
+            </Button>
+            <Button size="sm" className="h-8 w-8 bg-primary text-primary-foreground">
+              1
+            </Button>
+            <Button variant="outline" size="sm" className="h-8 w-8">
+              2
+            </Button>
+            <Button variant="outline" size="sm" className="h-8 px-3">
+              Next
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Add Modal */}
+      <BankModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        mode="add"
+      />
+
+      {/* Edit Modal */}
+      <BankModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedBank(null);
+        }}
+        bank={selectedBank}
+        mode="edit"
+      />
+    </>
   );
 }
