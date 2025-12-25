@@ -126,130 +126,6 @@ const AllUsers = () => {
   return (
     <MainLayout>
       <div className="p-6 space-y-4">
-        {/* Add/Edit Form Section */}
-        {modalOpen && (
-          <div className="bg-card rounded-lg border border-border p-6 space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-foreground">
-                {modalMode === "add" ? "Add New" : "Edit"} <span className="font-normal">Employee</span>
-              </h2>
-              <Button
-                variant="destructive"
-                size="sm"
-                className="gap-1"
-                onClick={() => setModalOpen(false)}
-              >
-                <Minus size={16} /> Hide
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label className="text-sm">First Name</Label>
-                <Input
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  placeholder="First Name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm">Last Name</Label>
-                <Input
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  placeholder="Last Name"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label className="text-sm">Contact Number</Label>
-                <Input
-                  value={contactNumber}
-                  onChange={(e) => setContactNumber(e.target.value)}
-                  placeholder="Contact Number"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm">Email</Label>
-                <Input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Email"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label className="text-sm">Company Branch</Label>
-                <Select value={companyBranch} onValueChange={setCompanyBranch}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Branch" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {branches.map((branch) => (
-                      <SelectItem key={branch} value={branch}>{branch}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-4">
-                <div className="grid grid-cols-[1fr_1fr_auto] gap-4 items-end">
-                  <Label className="text-sm">Permission Role</Label>
-                  <Label className="text-sm">Permission Country</Label>
-                  <div></div>
-                </div>
-
-                {permissionRows.map((row, index) => (
-                  <div key={row.id} className="grid grid-cols-[1fr_1fr_auto] gap-4 items-center">
-                    <Select value={row.role} onValueChange={(v) => updatePermissionRow(row.id, "role", v)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {roles.map((role) => (
-                          <SelectItem key={role} value={role}>{role}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={row.country} onValueChange={(v) => updatePermissionRow(row.id, "country", v)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Country" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {countries.map((country) => (
-                          <SelectItem key={country} value={country}>{country}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {index === 0 ? (
-                      <Button className="btn-success gap-1" onClick={handleAddPermissionRow}>
-                        <Plus size={16} /> Add Cargo
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        onClick={() => handleRemovePermissionRow(row.id)}
-                      >
-                        <Trash2 size={16} />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <Button className="btn-success" onClick={handleSave}>
-              Save
-            </Button>
-          </div>
-        )}
-
         {/* List Section */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-foreground">
@@ -349,6 +225,123 @@ const AllUsers = () => {
           </div>
         </div>
       </div>
+
+      {/* Add/Edit Employee Modal */}
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {modalMode === "add" ? "Add New" : "Edit"} Employee
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm">First Name</Label>
+                <Input
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="First Name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Last Name</Label>
+                <Input
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Last Name"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm">Contact Number</Label>
+                <Input
+                  value={contactNumber}
+                  onChange={(e) => setContactNumber(e.target.value)}
+                  placeholder="Contact Number"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Email</Label>
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm">Company Branch</Label>
+              <Select value={companyBranch} onValueChange={setCompanyBranch}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches.map((branch) => (
+                    <SelectItem key={branch} value={branch}>{branch}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-[1fr_1fr_auto] gap-4 items-end">
+                <Label className="text-sm">Permission Role</Label>
+                <Label className="text-sm">Permission Country</Label>
+                <div></div>
+              </div>
+
+              {permissionRows.map((row, index) => (
+                <div key={row.id} className="grid grid-cols-[1fr_1fr_auto] gap-4 items-center">
+                  <Select value={row.role} onValueChange={(v) => updatePermissionRow(row.id, "role", v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {roles.map((role) => (
+                        <SelectItem key={role} value={role}>{role}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={row.country} onValueChange={(v) => updatePermissionRow(row.id, "country", v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countries.map((country) => (
+                        <SelectItem key={country} value={country}>{country}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {index === 0 ? (
+                    <Button className="btn-success gap-1" onClick={handleAddPermissionRow}>
+                      <Plus size={16} /> Add Cargo
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      onClick={() => handleRemovePermissionRow(row.id)}
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t border-border">
+            <Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
+            <Button className="btn-success" onClick={handleSave}>Save</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 };
