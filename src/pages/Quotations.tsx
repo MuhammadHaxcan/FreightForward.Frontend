@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,6 +68,7 @@ const mockQuotations: Quotation[] = [
 type ModalMode = "add" | "edit" | "view";
 
 export default function Quotations() {
+  const navigate = useNavigate();
   const [quotations] = useState<Quotation[]>(mockQuotations);
   const [searchTerm, setSearchTerm] = useState("");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
@@ -233,6 +235,7 @@ export default function Quotations() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 bg-orange-500 hover:bg-orange-600 text-white rounded"
+                            onClick={() => navigate(`/sales/quotations/${quotation.id}/view`)}
                           >
                             <Download className="h-4 w-4" />
                           </Button>
