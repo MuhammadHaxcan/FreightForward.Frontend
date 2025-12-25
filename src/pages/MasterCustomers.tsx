@@ -8,16 +8,16 @@ import { useNavigate } from "react-router-dom";
 import { CustomerModal, Customer } from "@/components/customers/CustomerModal";
 
 const mockCustomers: Customer[] = [
-  { id: 1, code: "DEI0500", name: "KADDAH BLDC CLEANING EQUIP. TR CO.LLC", masterType: "Debtors", category: ["Consignee", "Customer"], phone: "0507466916", country: "United Arab Emirates", email: "kaddah@email.com", city: "Dubai", baseCurrency: "AED", taxNo: "" },
-  { id: 2, code: "NEI0500", name: "FISTON INTERNATIONAL PTE LTD", masterType: "Neutral", category: ["Shipper", "Neutral", "Consignee", "Neutral"], phone: "", country: "Singapore", email: "fiston@email.com", city: "Singapore", baseCurrency: "SGD", taxNo: "" },
-  { id: 3, code: "DEI0499", name: "REHBAR LOGISTICS PVT LTD", masterType: "Debtors", category: ["Consignee", "Customer"], phone: "", country: "Pakistan", email: "rehbar@email.com", city: "Karachi", baseCurrency: "PKR", taxNo: "" },
-  { id: 4, code: "NEI0499", name: "ATEN INTERNATIONAL CO., LTD.", masterType: "Neutral", category: ["Shipper", "Neutral"], phone: "", country: "Taiwan", email: "aten@email.com", city: "Taipei", baseCurrency: "USD", taxNo: "" },
-  { id: 5, code: "NEI0498", name: "SHANDONG LANCOR IMPORT&EXPORT CO., LTD.", masterType: "Neutral", category: ["Shipper", "Neutral"], phone: "", country: "China", email: "lancor@email.com", city: "Shandong", baseCurrency: "CNY", taxNo: "" },
-  { id: 6, code: "DEI0498", name: "BADRI OASIS TRADING LLC", masterType: "Debtors", category: ["Consignee", "Customer"], phone: "0556192253", country: "United Arab Emirates", email: "badri@email.com", city: "Dubai", baseCurrency: "AED", taxNo: "" },
-  { id: 7, code: "DEI0497", name: "HAZRAT USMAN USED AUTO SPARE PARTS TR", masterType: "Debtors", category: ["Consignee", "Customer"], phone: "050-3036517", country: "United Arab Emirates", email: "hazrat@email.com", city: "Sharjah", baseCurrency: "AED", taxNo: "" },
-  { id: 8, code: "NEI0497", name: "Ethiopian Electric Utility Off Grid Unit", masterType: "Neutral", category: ["Consignee", "Neutral", "Notify Party", "Neutral"], phone: "", country: "Ethiopia", email: "eeu@email.com", city: "Addis Ababa", baseCurrency: "USD", taxNo: "" },
-  { id: 9, code: "NEI0496", name: "RIC Sun Investments SL", masterType: "Debtors", category: ["Shipper"], phone: "", country: "United Arab Emirates", email: "ric@email.com", city: "Dubai", baseCurrency: "USD", taxNo: "" },
-  { id: 10, code: "DEI0509", name: "MUFADDAL SHABBIR BUILDING MATERIAL TRADING LLC", masterType: "Debtors", category: ["Consignee", "Customer"], phone: "042721314", country: "United Arab Emirates", email: "mufaddal@email.com", city: "Dubai", baseCurrency: "AED", taxNo: "" },
+  { id: 1, code: "DEI0504", name: "AL ALAMAA AL MUHAYYAH ISION", masterType: "Debtors", category: ["Consignee", "Customer"], phone: "971 55 507 1142", country: "United Arab Emirates", email: "alamaa@email.com", city: "Dubai", baseCurrency: "AED", taxNo: "" },
+  { id: 2, code: "DEI0503", name: "KAAM INTERNATIONAL GENERAL TRADING FZ-LLC", masterType: "Debtors", category: ["Notify Party"], phone: "", country: "United Arab Emirates", email: "kaam@email.com", city: "Dubai", baseCurrency: "AED", taxNo: "" },
+  { id: 3, code: "DEI0505", name: "MADOSCA LOGISTICS FZCO", masterType: "Debtors", category: ["Consignee", "Customer"], phone: "", country: "United Arab Emirates", email: "madosca@email.com", city: "Dubai", baseCurrency: "AED", taxNo: "" },
+  { id: 4, code: "CDI0466", name: "NEUTRAL CONSOLIDATORS FREIGHT LLC.", masterType: "Creditors", category: ["Co-loader"], phone: "00971 4 393 5702", country: "United Arab Emirates", email: "neutral@email.com", city: "Dubai", baseCurrency: "AED", taxNo: "" },
+  { id: 5, code: "CDI0465", name: "AL MISOAQUE SHIPPING SERVICES, LLC.", masterType: "Creditors", category: ["Shipping Line"], phone: "", country: "United Arab Emirates", email: "almisoaque@email.com", city: "Dubai", baseCurrency: "AED", taxNo: "" },
+  { id: 6, code: "DEI0502", name: "ORIENT ENERGY SYSTEMS FZCO.", masterType: "Debtors", category: ["Shipper"], phone: "", country: "United Arab Emirates", email: "orient@email.com", city: "Dubai", baseCurrency: "AED", taxNo: "" },
+  { id: 7, code: "NEI0448", name: "NOVATEX LIMITED", masterType: "Neutral", category: ["Consignee(Neutral)"], phone: "", country: "Pakistan", email: "novatex@email.com", city: "Karachi", baseCurrency: "PKR", taxNo: "" },
+  { id: 8, code: "NEI0492", name: "GLOBAL PHARMACEUTICALSPRIVATELTD", masterType: "Neutral", category: ["Consignee(Neutral)"], phone: "", country: "Pakistan", email: "global@email.com", city: "Lahore", baseCurrency: "PKR", taxNo: "" },
+  { id: 9, code: "DEI0501", name: "ALSON TRADING FZE", masterType: "Debtors", category: ["Shipper"], phone: "", country: "United Arab Emirates", email: "alson@email.com", city: "Dubai", baseCurrency: "AED", taxNo: "" },
+  { id: 10, code: "DEI0500", name: "QATAR MEAT PRODUCTION CO W.L.L", masterType: "Debtors", category: ["Consignee", "Customer"], phone: "", country: "Qatar", email: "qatar@email.com", city: "Doha", baseCurrency: "USD", taxNo: "" },
 ];
 
 const MasterCustomers = () => {
