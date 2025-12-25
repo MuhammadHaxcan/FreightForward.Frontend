@@ -1,4 +1,5 @@
-import { ChevronUp, ChevronDown, Upload } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,12 +10,37 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
-import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
-interface AddCompanyFormProps {
-  isExpanded: boolean;
-  onToggle: () => void;
+export interface Company {
+  id: number;
+  name: string;
+  email: string;
+  website: string;
+  addedBy: string;
+  companyType?: string;
+  legalTradingName?: string;
+  registrationNumber?: string;
+  contactNumber?: string;
+  vatId?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  stateProvince?: string;
+  zipCode?: string;
+  country?: string;
+}
+
+interface CompanyModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  company?: Company | null;
+  mode: "add" | "edit";
 }
 
 const countries = [
@@ -30,7 +56,7 @@ const countries = [
   "Australia",
 ];
 
-export function AddCompanyForm({ isExpanded, onToggle }: AddCompanyFormProps) {
+export function CompanyModal({ isOpen, onClose, company, mode }: CompanyModalProps) {
   const [formData, setFormData] = useState({
     companyName: "",
     companyType: "",
@@ -48,6 +74,44 @@ export function AddCompanyForm({ isExpanded, onToggle }: AddCompanyFormProps) {
     country: "",
   });
 
+  useEffect(() => {
+    if (company && mode === "edit") {
+      setFormData({
+        companyName: company.name || "",
+        companyType: company.companyType || "",
+        legalTradingName: company.legalTradingName || "",
+        registrationNumber: company.registrationNumber || "",
+        contactNumber: company.contactNumber || "",
+        email: company.email || "",
+        website: company.website || "",
+        vatId: company.vatId || "",
+        addressLine1: company.addressLine1 || "",
+        addressLine2: company.addressLine2 || "",
+        city: company.city || "",
+        stateProvince: company.stateProvince || "",
+        zipCode: company.zipCode || "",
+        country: company.country || "",
+      });
+    } else {
+      setFormData({
+        companyName: "",
+        companyType: "",
+        legalTradingName: "",
+        registrationNumber: "",
+        contactNumber: "",
+        email: "",
+        website: "",
+        vatId: "",
+        addressLine1: "",
+        addressLine2: "",
+        city: "",
+        stateProvince: "",
+        zipCode: "",
+        country: "",
+      });
+    }
+  }, [company, mode, isOpen]);
+
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -55,43 +119,18 @@ export function AddCompanyForm({ isExpanded, onToggle }: AddCompanyFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     console.log("Form submitted:", formData);
+    onClose();
   };
 
   return (
-    <div className="bg-card rounded-lg shadow-sm border border-border animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
-        <h2 className="text-xl font-semibold text-foreground">
-          <span className="font-bold">Add New</span> Company
-        </h2>
-        <Button
-          variant={isExpanded ? "destructive" : "default"}
-          size="sm"
-          onClick={onToggle}
-          className="gap-2"
-        >
-          {isExpanded ? (
-            <>
-              <ChevronUp size={16} />
-              Hide
-            </>
-          ) : (
-            <>
-              <ChevronDown size={16} />
-              Show
-            </>
-          )}
-        </Button>
-      </div>
-
-      {/* Form */}
-      <div
-        className={cn(
-          "transition-all duration-300 overflow-hidden",
-          isExpanded ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
-        )}
-      >
-        <form onSubmit={handleSubmit} className="p-6">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto bg-card">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-semibold">
+            <span className="font-bold">{mode === "add" ? "Add New" : "Edit"}</span> Company
+          </DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="py-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column */}
             <div className="space-y-4">
@@ -142,9 +181,6 @@ export function AddCompanyForm({ isExpanded, onToggle }: AddCompanyFormProps) {
                   </label>
                   <span className="text-sm text-muted-foreground">No file chosen</span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Upload files only: gif,png,jpg,jpeg
-                </p>
               </div>
             </div>
 
@@ -187,9 +223,6 @@ export function AddCompanyForm({ isExpanded, onToggle }: AddCompanyFormProps) {
                   </label>
                   <span className="text-sm text-muted-foreground">No file chosen</span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Upload files only: gif,png,jpg,jpeg
-                </p>
               </div>
             </div>
 
@@ -263,15 +296,18 @@ export function AddCompanyForm({ isExpanded, onToggle }: AddCompanyFormProps) {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex justify-end pt-2">
-                <Button type="submit" className="btn-success px-8">
-                  Save
-                </Button>
-              </div>
             </div>
           </div>
+          <div className="flex justify-end gap-3 pt-6">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" className="btn-success px-8">
+              {mode === "add" ? "Save" : "Update"}
+            </Button>
+          </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

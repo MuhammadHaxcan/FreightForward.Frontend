@@ -2,7 +2,7 @@ import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Edit, Trash2, X } from "lucide-react";
+import { Edit, Trash2, Plus } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type SettingsTab = "currency" | "ports" | "charges" | "expenses";
 
@@ -95,8 +96,13 @@ const mockExpenses: Expense[] = [
 ];
 
 const Settings = () => {
-  const [activeTab, setActiveTab] = useState<SettingsTab>("currency");
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Add modal states
+  const [addCurrencyModalOpen, setAddCurrencyModalOpen] = useState(false);
+  const [addPortModalOpen, setAddPortModalOpen] = useState(false);
+  const [addChargeModalOpen, setAddChargeModalOpen] = useState(false);
+  const [addExpenseModalOpen, setAddExpenseModalOpen] = useState(false);
 
   // Currency form state
   const [currencyName, setCurrencyName] = useState("");
@@ -129,13 +135,6 @@ const Settings = () => {
   const [editCharge, setEditCharge] = useState<Charge | null>(null);
   const [editExpense, setEditExpense] = useState<Expense | null>(null);
 
-  const tabs = [
-    { id: "currency" as SettingsTab, label: "Currency Type" },
-    { id: "ports" as SettingsTab, label: "Ports" },
-    { id: "charges" as SettingsTab, label: "Charges Items" },
-    { id: "expenses" as SettingsTab, label: "Expense Items" },
-  ];
-
   const handleEditCurrency = (currency: Currency) => {
     setEditCurrency({ ...currency });
     setEditCurrencyModalOpen(true);
@@ -156,78 +155,393 @@ const Settings = () => {
     setEditExpenseModalOpen(true);
   };
 
-  const renderForm = () => {
-    switch (activeTab) {
-      case "currency":
-        return (
-          <div className="space-y-4">
+  const resetCurrencyForm = () => {
+    setCurrencyName("");
+    setCurrencyCode("");
+    setCurrencySymbol("");
+    setDecimalPoint("");
+    setUsdValue("");
+    setRoe("");
+  };
+
+  const resetPortForm = () => {
+    setPortName("");
+    setPortCountry("");
+  };
+
+  const resetChargeForm = () => {
+    setChargeName("");
+  };
+
+  const resetExpenseForm = () => {
+    setExpenseCategory("");
+    setExpensePaymentType("");
+  };
+
+  return (
+    <MainLayout>
+      <div className="p-6">
+        <Tabs defaultValue="currency" className="w-full">
+          <TabsList className="w-full justify-start mb-6 bg-card border border-border rounded-lg p-1 h-auto flex-wrap">
+            <TabsTrigger 
+              value="currency" 
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
+            >
+              Currency Type
+            </TabsTrigger>
+            <TabsTrigger 
+              value="ports"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
+            >
+              Ports
+            </TabsTrigger>
+            <TabsTrigger 
+              value="charges"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
+            >
+              Charges Items
+            </TabsTrigger>
+            <TabsTrigger 
+              value="expenses"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
+            >
+              Expense Items
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Currency Tab */}
+          <TabsContent value="currency">
+            <div className="bg-card rounded-lg border border-border">
+              <div className="flex items-center justify-between p-4 border-b border-border">
+                <h2 className="text-lg font-semibold text-primary">List All Currencies</h2>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Search:</span>
+                    <Input
+                      placeholder=""
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="h-9 w-48"
+                    />
+                  </div>
+                  <Button className="btn-success gap-2" onClick={() => setAddCurrencyModalOpen(true)}>
+                    <Plus size={16} />
+                    Add New
+                  </Button>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-table-header text-table-header-foreground">
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Action ↕</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Name ↕</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Code ↕</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Symbol ↕</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Decimal ↕</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold">1 USD ↕</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mockCurrencies.map((currency, index) => (
+                      <tr
+                        key={currency.id}
+                        className={`border-b border-border hover:bg-table-row-hover transition-colors ${
+                          index % 2 === 0 ? "bg-card" : "bg-secondary/30"
+                        }`}
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1">
+                            <button 
+                              onClick={() => handleEditCurrency(currency)}
+                              className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                            >
+                              <Edit size={14} />
+                            </button>
+                            <button className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors">
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-primary font-medium">{currency.name}</td>
+                        <td className="px-4 py-3 text-sm text-foreground">{currency.code}</td>
+                        <td className="px-4 py-3 text-sm text-primary">{currency.symbol}</td>
+                        <td className="px-4 py-3 text-sm text-foreground">{currency.decimal}</td>
+                        <td className="px-4 py-3 text-sm text-foreground">{currency.usdRate}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex items-center justify-between p-4">
+                <p className="text-sm text-muted-foreground">Showing 1 to 6 of 6 entries</p>
+                <div className="flex items-center gap-1">
+                  <Button variant="outline" size="sm" className="h-8 px-3" disabled>Previous</Button>
+                  <Button size="sm" className="h-8 w-8 bg-primary text-primary-foreground">1</Button>
+                  <Button variant="outline" size="sm" className="h-8 px-3">Next</Button>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Ports Tab */}
+          <TabsContent value="ports">
+            <div className="bg-card rounded-lg border border-border">
+              <div className="flex items-center justify-between p-4 border-b border-border">
+                <h2 className="text-lg font-semibold text-primary">List All Ports</h2>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Search:</span>
+                    <Input placeholder="" className="h-9 w-48" />
+                  </div>
+                  <Button className="btn-success gap-2" onClick={() => setAddPortModalOpen(true)}>
+                    <Plus size={16} />
+                    Add New
+                  </Button>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-table-header text-table-header-foreground">
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Action ↕</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Name ↕</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Country ↕</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mockPorts.map((port, index) => (
+                      <tr
+                        key={port.id}
+                        className={`border-b border-border hover:bg-table-row-hover transition-colors ${
+                          index % 2 === 0 ? "bg-card" : "bg-secondary/30"
+                        }`}
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1">
+                            <button 
+                              onClick={() => handleEditPort(port)}
+                              className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                            >
+                              <Edit size={14} />
+                            </button>
+                            <button className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors">
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-primary font-medium">{port.name}</td>
+                        <td className="px-4 py-3 text-sm text-primary">{port.country}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex items-center justify-between p-4">
+                <p className="text-sm text-muted-foreground">Showing 1 to 10 of 225 entries</p>
+                <div className="flex items-center gap-1">
+                  <Button variant="outline" size="sm" className="h-8 px-3" disabled>Previous</Button>
+                  <Button size="sm" className="h-8 w-8 bg-primary text-primary-foreground">1</Button>
+                  <Button variant="outline" size="sm" className="h-8 w-8">2</Button>
+                  <Button variant="outline" size="sm" className="h-8 w-8">3</Button>
+                  <span className="text-muted-foreground mx-1">...</span>
+                  <Button variant="outline" size="sm" className="h-8 w-8">23</Button>
+                  <Button variant="outline" size="sm" className="h-8 px-3">Next</Button>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Charges Tab */}
+          <TabsContent value="charges">
+            <div className="bg-card rounded-lg border border-border">
+              <div className="flex items-center justify-between p-4 border-b border-border">
+                <h2 className="text-lg font-semibold text-primary">List All Charges</h2>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Search:</span>
+                    <Input placeholder="" className="h-9 w-48" />
+                  </div>
+                  <Button className="btn-success gap-2" onClick={() => setAddChargeModalOpen(true)}>
+                    <Plus size={16} />
+                    Add New
+                  </Button>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-table-header text-table-header-foreground">
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Action ↕</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Name ↕</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mockCharges.map((charge, index) => (
+                      <tr
+                        key={charge.id}
+                        className={`border-b border-border hover:bg-table-row-hover transition-colors ${
+                          index % 2 === 0 ? "bg-card" : "bg-secondary/30"
+                        }`}
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1">
+                            <button 
+                              onClick={() => handleEditCharge(charge)}
+                              className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                            >
+                              <Edit size={14} />
+                            </button>
+                            <button className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors">
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-primary font-medium">{charge.name}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex items-center justify-between p-4">
+                <p className="text-sm text-muted-foreground">Showing 1 to 10 of 253 entries</p>
+                <div className="flex items-center gap-1">
+                  <Button variant="outline" size="sm" className="h-8 px-3" disabled>Previous</Button>
+                  <Button size="sm" className="h-8 w-8 bg-primary text-primary-foreground">1</Button>
+                  <Button variant="outline" size="sm" className="h-8 w-8">2</Button>
+                  <Button variant="outline" size="sm" className="h-8 w-8">3</Button>
+                  <span className="text-muted-foreground mx-1">...</span>
+                  <Button variant="outline" size="sm" className="h-8 w-8">26</Button>
+                  <Button variant="outline" size="sm" className="h-8 px-3">Next</Button>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Expenses Tab */}
+          <TabsContent value="expenses">
+            <div className="bg-card rounded-lg border border-border">
+              <div className="flex items-center justify-between p-4 border-b border-border">
+                <h2 className="text-lg font-semibold text-primary">List All Expenses</h2>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Search:</span>
+                    <Input placeholder="" className="h-9 w-48" />
+                  </div>
+                  <Button className="btn-success gap-2" onClick={() => setAddExpenseModalOpen(true)}>
+                    <Plus size={16} />
+                    Add New
+                  </Button>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-table-header text-table-header-foreground">
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Action ↕</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Category ↕</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Payment Type ↕</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mockExpenses.map((expense, index) => (
+                      <tr
+                        key={expense.id}
+                        className={`border-b border-border hover:bg-table-row-hover transition-colors ${
+                          index % 2 === 0 ? "bg-card" : "bg-secondary/30"
+                        }`}
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1">
+                            <button 
+                              onClick={() => handleEditExpense(expense)}
+                              className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                            >
+                              <Edit size={14} />
+                            </button>
+                            <button className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors">
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-foreground">{expense.category}</td>
+                        <td className="px-4 py-3 text-sm text-primary font-medium">{expense.paymentType}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex items-center justify-between p-4">
+                <p className="text-sm text-muted-foreground">Showing 1 to 10 of 73 entries</p>
+                <div className="flex items-center gap-1">
+                  <Button variant="outline" size="sm" className="h-8 px-3" disabled>Previous</Button>
+                  <Button size="sm" className="h-8 w-8 bg-primary text-primary-foreground">1</Button>
+                  <Button variant="outline" size="sm" className="h-8 w-8">2</Button>
+                  <Button variant="outline" size="sm" className="h-8 w-8">3</Button>
+                  <span className="text-muted-foreground mx-1">...</span>
+                  <Button variant="outline" size="sm" className="h-8 w-8">8</Button>
+                  <Button variant="outline" size="sm" className="h-8 px-3">Next</Button>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      {/* Add Currency Modal */}
+      <Dialog open={addCurrencyModalOpen} onOpenChange={(open) => { setAddCurrencyModalOpen(open); if (!open) resetCurrencyForm(); }}>
+        <DialogContent className="sm:max-w-md bg-card">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold"><span className="font-bold">Add New</span> Currency Type</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Currency Name</label>
-              <Input
-                placeholder="Enter Currency Name"
-                value={currencyName}
-                onChange={(e) => setCurrencyName(e.target.value)}
-              />
+              <Input placeholder="Enter Currency Name" value={currencyName} onChange={(e) => setCurrencyName(e.target.value)} />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Currency Code</label>
-              <Input
-                placeholder="Enter Currency Code"
-                value={currencyCode}
-                onChange={(e) => setCurrencyCode(e.target.value)}
-              />
+              <Input placeholder="Enter Currency Code" value={currencyCode} onChange={(e) => setCurrencyCode(e.target.value)} />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Currency Symbol</label>
-              <Input
-                placeholder="Enter Currency Symbol"
-                value={currencySymbol}
-                onChange={(e) => setCurrencySymbol(e.target.value)}
-              />
+              <Input placeholder="Enter Currency Symbol" value={currencySymbol} onChange={(e) => setCurrencySymbol(e.target.value)} />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Decimal Point</label>
-              <Input
-                placeholder="Enter Decimal Point Value"
-                value={decimalPoint}
-                onChange={(e) => setDecimalPoint(e.target.value)}
-              />
+              <Input placeholder="Enter Decimal Point Value" value={decimalPoint} onChange={(e) => setDecimalPoint(e.target.value)} />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">1 USD =</label>
-              <Input
-                placeholder="1 USD ="
-                value={usdValue}
-                onChange={(e) => setUsdValue(e.target.value)}
-              />
+              <Input placeholder="1 USD =" value={usdValue} onChange={(e) => setUsdValue(e.target.value)} />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">ROE</label>
-              <Input
-                placeholder="ROE"
-                value={roe}
-                onChange={(e) => setRoe(e.target.value)}
-              />
+              <Input placeholder="ROE" value={roe} onChange={(e) => setRoe(e.target.value)} />
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button variant="outline" onClick={() => setAddCurrencyModalOpen(false)}>Cancel</Button>
+              <Button className="btn-success" onClick={() => setAddCurrencyModalOpen(false)}>Save</Button>
             </div>
           </div>
-        );
-      case "ports":
-        return (
-          <div className="space-y-4">
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Port Modal */}
+      <Dialog open={addPortModalOpen} onOpenChange={(open) => { setAddPortModalOpen(open); if (!open) resetPortForm(); }}>
+        <DialogContent className="sm:max-w-md bg-card">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold"><span className="font-bold">Add New</span> Port</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Port Name</label>
-              <Input
-                placeholder="Ports Name"
-                value={portName}
-                onChange={(e) => setPortName(e.target.value)}
-              />
+              <Input placeholder="Ports Name" value={portName} onChange={(e) => setPortName(e.target.value)} />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Country</label>
               <Select value={portCountry} onValueChange={setPortCountry}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Default Currency Symbol" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Select Country" /></SelectTrigger>
                 <SelectContent className="bg-popover border border-border">
                   <SelectItem value="india">India</SelectItem>
                   <SelectItem value="china">China</SelectItem>
@@ -237,30 +551,44 @@ const Settings = () => {
                 </SelectContent>
               </Select>
             </div>
-          </div>
-        );
-      case "charges":
-        return (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Charge</label>
-              <Input
-                placeholder="Charge Item"
-                value={chargeName}
-                onChange={(e) => setChargeName(e.target.value)}
-              />
+            <div className="flex justify-end gap-3 pt-4">
+              <Button variant="outline" onClick={() => setAddPortModalOpen(false)}>Cancel</Button>
+              <Button className="btn-success" onClick={() => setAddPortModalOpen(false)}>Save</Button>
             </div>
           </div>
-        );
-      case "expenses":
-        return (
-          <div className="space-y-4">
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Charge Modal */}
+      <Dialog open={addChargeModalOpen} onOpenChange={(open) => { setAddChargeModalOpen(open); if (!open) resetChargeForm(); }}>
+        <DialogContent className="sm:max-w-md bg-card">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold"><span className="font-bold">Add New</span> Charge</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Charge</label>
+              <Input placeholder="Charge Item" value={chargeName} onChange={(e) => setChargeName(e.target.value)} />
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button variant="outline" onClick={() => setAddChargeModalOpen(false)}>Cancel</Button>
+              <Button className="btn-success" onClick={() => setAddChargeModalOpen(false)}>Save</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Expense Modal */}
+      <Dialog open={addExpenseModalOpen} onOpenChange={(open) => { setAddExpenseModalOpen(open); if (!open) resetExpenseForm(); }}>
+        <DialogContent className="sm:max-w-md bg-card">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold"><span className="font-bold">Add New</span> Expense</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Category</label>
               <Select value={expenseCategory} onValueChange={setExpenseCategory}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select One" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Select One" /></SelectTrigger>
                 <SelectContent className="bg-popover border border-border">
                   <SelectItem value="outwards">Outwards</SelectItem>
                   <SelectItem value="inwards">Inwards</SelectItem>
@@ -269,275 +597,15 @@ const Settings = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Payment Type</label>
-              <Input
-                placeholder="Payment Type"
-                value={expensePaymentType}
-                onChange={(e) => setExpensePaymentType(e.target.value)}
-              />
+              <Input placeholder="Payment Type" value={expensePaymentType} onChange={(e) => setExpensePaymentType(e.target.value)} />
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button variant="outline" onClick={() => setAddExpenseModalOpen(false)}>Cancel</Button>
+              <Button className="btn-success" onClick={() => setAddExpenseModalOpen(false)}>Save</Button>
             </div>
           </div>
-        );
-    }
-  };
-
-  const renderTable = () => {
-    switch (activeTab) {
-      case "currency":
-        return (
-          <table className="w-full">
-            <thead>
-              <tr className="bg-table-header text-table-header-foreground">
-                <th className="px-3 py-3 text-left text-xs font-semibold">Action ↕</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold">Name ↕</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold">Code ↕</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold">Symbol ↕</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold">Decimal ↕</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold">1 USD ↕</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mockCurrencies.map((currency, index) => (
-                <tr
-                  key={currency.id}
-                  className={`border-b border-border hover:bg-table-row-hover transition-colors ${
-                    index % 2 === 0 ? "bg-card" : "bg-secondary/30"
-                  }`}
-                >
-                  <td className="px-3 py-2.5">
-                    <div className="flex items-center gap-1">
-                      <button 
-                        onClick={() => handleEditCurrency(currency)}
-                        className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
-                      >
-                        <Edit size={14} />
-                      </button>
-                      <button className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors">
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </td>
-                  <td className="px-3 py-2.5 text-sm text-primary font-medium">{currency.name}</td>
-                  <td className="px-3 py-2.5 text-sm text-foreground">{currency.code}</td>
-                  <td className="px-3 py-2.5 text-sm text-primary">{currency.symbol}</td>
-                  <td className="px-3 py-2.5 text-sm text-foreground">{currency.decimal}</td>
-                  <td className="px-3 py-2.5 text-sm text-foreground">{currency.usdRate}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        );
-      case "ports":
-        return (
-          <table className="w-full">
-            <thead>
-              <tr className="bg-table-header text-table-header-foreground">
-                <th className="px-3 py-3 text-left text-xs font-semibold">Action ↕</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold">Name ↕</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold">Country ↕</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mockPorts.map((port, index) => (
-                <tr
-                  key={port.id}
-                  className={`border-b border-border hover:bg-table-row-hover transition-colors ${
-                    index % 2 === 0 ? "bg-card" : "bg-secondary/30"
-                  }`}
-                >
-                  <td className="px-3 py-2.5">
-                    <div className="flex items-center gap-1">
-                      <button 
-                        onClick={() => handleEditPort(port)}
-                        className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
-                      >
-                        <Edit size={14} />
-                      </button>
-                      <button className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors">
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </td>
-                  <td className="px-3 py-2.5 text-sm text-primary font-medium">{port.name}</td>
-                  <td className="px-3 py-2.5 text-sm text-primary">{port.country}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        );
-      case "charges":
-        return (
-          <table className="w-full">
-            <thead>
-              <tr className="bg-table-header text-table-header-foreground">
-                <th className="px-3 py-3 text-left text-xs font-semibold">Action ↕</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold">Name ↕</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mockCharges.map((charge, index) => (
-                <tr
-                  key={charge.id}
-                  className={`border-b border-border hover:bg-table-row-hover transition-colors ${
-                    index % 2 === 0 ? "bg-card" : "bg-secondary/30"
-                  }`}
-                >
-                  <td className="px-3 py-2.5">
-                    <div className="flex items-center gap-1">
-                      <button 
-                        onClick={() => handleEditCharge(charge)}
-                        className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
-                      >
-                        <Edit size={14} />
-                      </button>
-                    </div>
-                  </td>
-                  <td className="px-3 py-2.5 text-sm text-primary font-medium">{charge.name}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        );
-      case "expenses":
-        return (
-          <table className="w-full">
-            <thead>
-              <tr className="bg-table-header text-table-header-foreground">
-                <th className="px-3 py-3 text-left text-xs font-semibold">Action ↕</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold">Category ↕</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold">Payment Type ↕</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mockExpenses.map((expense, index) => (
-                <tr
-                  key={expense.id}
-                  className={`border-b border-border hover:bg-table-row-hover transition-colors ${
-                    index % 2 === 0 ? "bg-card" : "bg-secondary/30"
-                  }`}
-                >
-                  <td className="px-3 py-2.5">
-                    <div className="flex items-center gap-1">
-                      <button 
-                        onClick={() => handleEditExpense(expense)}
-                        className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
-                      >
-                        <Edit size={14} />
-                      </button>
-                    </div>
-                  </td>
-                  <td className="px-3 py-2.5 text-sm text-foreground">{expense.category}</td>
-                  <td className="px-3 py-2.5 text-sm text-primary font-medium">{expense.paymentType}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        );
-    }
-  };
-
-  const getListTitle = () => {
-    switch (activeTab) {
-      case "currency":
-        return "List All Currencies";
-      case "ports":
-        return "List All Ports";
-      case "charges":
-        return "List All Charges";
-      case "expenses":
-        return "List All Expense";
-    }
-  };
-
-  return (
-    <MainLayout>
-      <div className="p-6">
-        <div className="flex gap-6">
-          {/* Left Sidebar - Tabs */}
-          <div className="w-56 flex-shrink-0">
-            <div className="bg-card rounded-lg border border-border overflow-hidden">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`w-full px-4 py-3 text-left text-sm transition-colors ${
-                    activeTab === tab.id
-                      ? "bg-primary text-primary-foreground font-medium"
-                      : "text-primary hover:bg-secondary/50"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Middle - Add Form */}
-          <div className="w-80 flex-shrink-0">
-            <div className="bg-card rounded-lg border border-border p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-6">
-                <span className="font-bold">Add New</span>{" "}
-                {activeTab === "currency" && "Currency Type"}
-                {activeTab === "ports" && "Port"}
-                {activeTab === "charges" && "Charge"}
-                {activeTab === "expenses" && "Expense"}
-              </h2>
-              {renderForm()}
-              <Button className="btn-success mt-6">Save</Button>
-            </div>
-          </div>
-
-          {/* Right - List Table */}
-          <div className="flex-1">
-            <div className="bg-card rounded-lg border border-border">
-              <div className="flex items-center justify-between p-4 border-b border-border">
-                <h2 className="text-lg font-semibold text-primary">{getListTitle()}</h2>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Search:</span>
-                  <Input
-                    placeholder=""
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="h-9 w-48"
-                  />
-                </div>
-              </div>
-              <div className="overflow-x-auto">{renderTable()}</div>
-              <div className="flex items-center justify-between p-4">
-                <p className="text-sm text-muted-foreground">
-                  Showing 1 to 10 of {activeTab === "ports" ? "225" : activeTab === "charges" ? "253" : activeTab === "expenses" ? "73" : "6"} entries
-                </p>
-                <div className="flex items-center gap-1">
-                  <Button variant="outline" size="sm" className="h-8 px-3" disabled>
-                    Previous
-                  </Button>
-                  <Button size="sm" className="h-8 w-8 bg-primary text-primary-foreground">
-                    1
-                  </Button>
-                  <Button variant="outline" size="sm" className="h-8 w-8">
-                    2
-                  </Button>
-                  <Button variant="outline" size="sm" className="h-8 w-8">
-                    3
-                  </Button>
-                  <Button variant="outline" size="sm" className="h-8 w-8">
-                    4
-                  </Button>
-                  <Button variant="outline" size="sm" className="h-8 w-8">
-                    5
-                  </Button>
-                  <span className="text-muted-foreground mx-1">...</span>
-                  <Button variant="outline" size="sm" className="h-8 w-8">
-                    23
-                  </Button>
-                  <Button variant="outline" size="sm" className="h-8 px-3">
-                    Next
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Currency Modal */}
       <Dialog open={editCurrencyModalOpen} onOpenChange={setEditCurrencyModalOpen}>
@@ -549,53 +617,31 @@ const Settings = () => {
             <div className="space-y-4 py-4">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Currency Name</label>
-                <Input
-                  value={editCurrency.name}
-                  onChange={(e) => setEditCurrency({ ...editCurrency, name: e.target.value })}
-                />
+                <Input value={editCurrency.name} onChange={(e) => setEditCurrency({ ...editCurrency, name: e.target.value })} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Currency Code</label>
-                <Input
-                  value={editCurrency.code}
-                  onChange={(e) => setEditCurrency({ ...editCurrency, code: e.target.value })}
-                />
+                <Input value={editCurrency.code} onChange={(e) => setEditCurrency({ ...editCurrency, code: e.target.value })} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Currency Symbol</label>
-                <Input
-                  value={editCurrency.symbol}
-                  onChange={(e) => setEditCurrency({ ...editCurrency, symbol: e.target.value })}
-                />
+                <Input value={editCurrency.symbol} onChange={(e) => setEditCurrency({ ...editCurrency, symbol: e.target.value })} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Decimal Point</label>
-                <Input
-                  value={editCurrency.decimal}
-                  onChange={(e) => setEditCurrency({ ...editCurrency, decimal: e.target.value })}
-                />
+                <Input value={editCurrency.decimal} onChange={(e) => setEditCurrency({ ...editCurrency, decimal: e.target.value })} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">1 USD =</label>
-                <Input
-                  value={editCurrency.usdRate}
-                  onChange={(e) => setEditCurrency({ ...editCurrency, usdRate: e.target.value })}
-                />
+                <Input value={editCurrency.usdRate} onChange={(e) => setEditCurrency({ ...editCurrency, usdRate: e.target.value })} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">ROE</label>
-                <Input
-                  value={editCurrency.roe || ""}
-                  onChange={(e) => setEditCurrency({ ...editCurrency, roe: e.target.value })}
-                />
+                <Input value={editCurrency.roe || ""} onChange={(e) => setEditCurrency({ ...editCurrency, roe: e.target.value })} />
               </div>
               <div className="flex justify-end gap-3 pt-4">
-                <Button variant="outline" onClick={() => setEditCurrencyModalOpen(false)}>
-                  Close
-                </Button>
-                <Button className="btn-success" onClick={() => setEditCurrencyModalOpen(false)}>
-                  Update
-                </Button>
+                <Button variant="outline" onClick={() => setEditCurrencyModalOpen(false)}>Close</Button>
+                <Button className="btn-success" onClick={() => setEditCurrencyModalOpen(false)}>Update</Button>
               </div>
             </div>
           )}
@@ -612,17 +658,12 @@ const Settings = () => {
             <div className="space-y-4 py-4">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Port Name</label>
-                <Input
-                  value={editPort.name}
-                  onChange={(e) => setEditPort({ ...editPort, name: e.target.value })}
-                />
+                <Input value={editPort.name} onChange={(e) => setEditPort({ ...editPort, name: e.target.value })} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Country</label>
                 <Select value={editPort.country.toLowerCase()} onValueChange={(value) => setEditPort({ ...editPort, country: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Country" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Select Country" /></SelectTrigger>
                   <SelectContent className="bg-popover border border-border">
                     <SelectItem value="india">India</SelectItem>
                     <SelectItem value="china">China</SelectItem>
@@ -637,12 +678,8 @@ const Settings = () => {
                 </Select>
               </div>
               <div className="flex justify-end gap-3 pt-4">
-                <Button variant="outline" onClick={() => setEditPortModalOpen(false)}>
-                  Close
-                </Button>
-                <Button className="btn-success" onClick={() => setEditPortModalOpen(false)}>
-                  Update
-                </Button>
+                <Button variant="outline" onClick={() => setEditPortModalOpen(false)}>Close</Button>
+                <Button className="btn-success" onClick={() => setEditPortModalOpen(false)}>Update</Button>
               </div>
             </div>
           )}
@@ -659,18 +696,11 @@ const Settings = () => {
             <div className="space-y-4 py-4">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Charge Name</label>
-                <Input
-                  value={editCharge.name}
-                  onChange={(e) => setEditCharge({ ...editCharge, name: e.target.value })}
-                />
+                <Input value={editCharge.name} onChange={(e) => setEditCharge({ ...editCharge, name: e.target.value })} />
               </div>
               <div className="flex justify-end gap-3 pt-4">
-                <Button variant="outline" onClick={() => setEditChargeModalOpen(false)}>
-                  Close
-                </Button>
-                <Button className="btn-success" onClick={() => setEditChargeModalOpen(false)}>
-                  Update
-                </Button>
+                <Button variant="outline" onClick={() => setEditChargeModalOpen(false)}>Close</Button>
+                <Button className="btn-success" onClick={() => setEditChargeModalOpen(false)}>Update</Button>
               </div>
             </div>
           )}
@@ -688,9 +718,7 @@ const Settings = () => {
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Category</label>
                 <Select value={editExpense.category.toLowerCase()} onValueChange={(value) => setEditExpense({ ...editExpense, category: value })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Category" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Select Category" /></SelectTrigger>
                   <SelectContent className="bg-popover border border-border">
                     <SelectItem value="outwards">Outwards</SelectItem>
                     <SelectItem value="inwards">Inwards</SelectItem>
@@ -699,18 +727,11 @@ const Settings = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Payment Type</label>
-                <Input
-                  value={editExpense.paymentType}
-                  onChange={(e) => setEditExpense({ ...editExpense, paymentType: e.target.value })}
-                />
+                <Input value={editExpense.paymentType} onChange={(e) => setEditExpense({ ...editExpense, paymentType: e.target.value })} />
               </div>
               <div className="flex justify-end gap-3 pt-4">
-                <Button variant="outline" onClick={() => setEditExpenseModalOpen(false)}>
-                  Close
-                </Button>
-                <Button className="btn-success" onClick={() => setEditExpenseModalOpen(false)}>
-                  Update
-                </Button>
+                <Button variant="outline" onClick={() => setEditExpenseModalOpen(false)}>Close</Button>
+                <Button className="btn-success" onClick={() => setEditExpenseModalOpen(false)}>Update</Button>
               </div>
             </div>
           )}
