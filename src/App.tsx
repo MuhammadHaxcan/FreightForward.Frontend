@@ -17,6 +17,7 @@ import Banks from "./pages/Banks";
 import Leads from "./pages/Leads";
 import RateRequests from "./pages/RateRequests";
 import Quotations from "./pages/Quotations";
+import QuotationView from "./pages/QuotationView";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => (
           <Route path="/sales/leads" element={<Leads />} />
           <Route path="/sales/rate-requests" element={<RateRequests />} />
           <Route path="/sales/quotations" element={<Quotations />} />
+          <Route path="/sales/quotations/:id/view" element={<QuotationView />} />
           <Route path="/accounts" element={<Dashboard />} />
           <Route path="/users" element={<Dashboard />} />
           <Route path="/users/all" element={<AllUsers />} />
