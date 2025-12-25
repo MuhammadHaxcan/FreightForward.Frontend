@@ -20,11 +20,13 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Edit, Plus, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
@@ -49,13 +51,17 @@ const mockRateRequests: RateRequest[] = [
   { id: "5", rateRequestNo: "RFQAE10822", date: "15-12-2025", mode: "Air Freight", incoterms: "FCA-FREE CARRIER", vendorName: "KESIF NAK. VE GUMR.TIC.LTD.STI.", polCountry: "Turkey", podCountry: "United Arab Emirates", status: "Pending" },
 ];
 
+type ModalMode = "add" | "edit";
+
 export default function RateRequests() {
   const navigate = useNavigate();
   const [rateRequests] = useState<RateRequest[]>(mockRateRequests);
   const [searchTerm, setSearchTerm] = useState("");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<ModalMode>("add");
   const [selectedRequest, setSelectedRequest] = useState<RateRequest | null>(null);
+  const [selectAllVendorEmail, setSelectAllVendorEmail] = useState(false);
 
   const filteredRequests = rateRequests.filter(
     (request) =>
@@ -75,12 +81,17 @@ export default function RateRequests() {
   };
 
   const handleConvertToQuotation = (request: RateRequest) => {
-    navigate("/sales/quotations/new", { state: { rateRequest: request } });
+    navigate("/sales/quotations", { state: { rateRequest: request } });
   };
 
-  const openSendModal = () => {
-    setSelectedRequest(null);
+  const openModal = (mode: ModalMode, request?: RateRequest) => {
+    setModalMode(mode);
+    setSelectedRequest(request || null);
     setIsModalOpen(true);
+  };
+
+  const getModalTitle = () => {
+    return modalMode === "edit" ? "Edit Rate Request" : "Add Rate Request";
   };
 
   return (
@@ -89,7 +100,7 @@ export default function RateRequests() {
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-semibold text-foreground">Rate Request</h1>
           <Button
-            onClick={openSendModal}
+            onClick={() => openModal("add")}
             className="bg-green-600 hover:bg-green-700 text-white"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -148,6 +159,7 @@ export default function RateRequests() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 bg-green-500 hover:bg-green-600 text-white rounded"
+                        onClick={() => openModal("edit", request)}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -191,25 +203,68 @@ export default function RateRequests() {
         </div>
       </div>
 
-      {/* Send Rate Request Modal */}
+      {/* Add/Edit Rate Request Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-green-600 text-xl">Send Rate Request</DialogTitle>
+            <DialogTitle className="text-green-600 text-xl">{getModalTitle()}</DialogTitle>
+            <DialogDescription>
+              {modalMode === "edit" ? "Edit rate request details" : "Fill in the rate request details"}
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6">
+            {/* Header Section with Title and Buttons */}
+            <div className="border border-border rounded-lg p-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-green-600 font-semibold">{getModalTitle()}</h3>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    className="bg-yellow-500 hover:bg-yellow-600 text-white border-yellow-500"
+                    onClick={() => setIsModalOpen(false)}
+                  >
+                    Back
+                  </Button>
+                  {modalMode === "edit" && (
+                    <Button className="bg-blue-500 hover:bg-blue-600 text-white">
+                      Update
+                    </Button>
+                  )}
+                  {modalMode === "edit" && selectedRequest?.status === "Received" && (
+                    <Button 
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                      onClick={() => {
+                        setIsModalOpen(false);
+                        if (selectedRequest) handleConvertToQuotation(selectedRequest);
+                      }}
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Convert to Quotation
+                    </Button>
+                  )}
+                  <Button className="bg-[#2c3e50] hover:bg-[#34495e] text-white">
+                    Send Rate Request
+                  </Button>
+                </div>
+              </div>
+            </div>
+
             {/* General Details */}
             <div className="border border-border rounded-lg p-4">
               <h3 className="text-green-600 font-semibold mb-4">General Details</h3>
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <Label>Rate code</Label>
-                  <Input value="RFQAE10827" readOnly className="bg-muted" />
+                  <Label className="text-red-500">* Rate code</Label>
+                  <Input 
+                    value={selectedRequest?.rateRequestNo || "RFQAE10827"} 
+                    readOnly 
+                    className="bg-muted" 
+                  />
                 </div>
                 <div>
-                  <Label>Shipment Mode</Label>
-                  <Select>
+                  <Label className="text-red-500">* Shipment Mode</Label>
+                  <Select defaultValue={selectedRequest?.mode === "FCL-Sea Freight" ? "fcl" : selectedRequest?.mode === "LCL-Sea Freight" ? "lcl" : "air"}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
@@ -222,7 +277,7 @@ export default function RateRequests() {
                 </div>
                 <div>
                   <Label>Incoterm</Label>
-                  <Select>
+                  <Select defaultValue={selectedRequest?.incoterms === "EXW-EX WORKS" ? "exw" : "fob"}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
@@ -230,6 +285,8 @@ export default function RateRequests() {
                       <SelectItem value="exw">EXW-EX WORKS</SelectItem>
                       <SelectItem value="fob">FOB-FREE ON BOARD</SelectItem>
                       <SelectItem value="cfr">CFR-COST AND FREIGHT</SelectItem>
+                      <SelectItem value="fca">FCA-FREE CARRIER</SelectItem>
+                      <SelectItem value="ddu">DDU-DELIVERED DUTY UNPAID</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -241,8 +298,8 @@ export default function RateRequests() {
               <h3 className="text-green-600 font-semibold mb-4">Package Details</h3>
               <div className="grid grid-cols-5 gap-4">
                 <div>
-                  <Label>Quantity</Label>
-                  <Input type="number" />
+                  <Label className="text-red-500">* Quantity</Label>
+                  <Input type="number" placeholder="1" defaultValue="1" />
                 </div>
                 <div>
                   <Label>Package Type</Label>
@@ -251,23 +308,30 @@ export default function RateRequests() {
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="box">Box</SelectItem>
-                      <SelectItem value="pallet">Pallet</SelectItem>
-                      <SelectItem value="container">Container</SelectItem>
+                      <SelectItem value="roll">ROLL</SelectItem>
+                      <SelectItem value="sacks">SACKS</SelectItem>
+                      <SelectItem value="set">SET</SelectItem>
+                      <SelectItem value="skids">SKIDS</SelectItem>
+                      <SelectItem value="units">UNITS</SelectItem>
+                      <SelectItem value="wooden-box">WOODEN BOX</SelectItem>
+                      <SelectItem value="bales">BALES</SelectItem>
+                      <SelectItem value="pallets">PALLETS</SelectItem>
+                      <SelectItem value="cartons">CARTONS</SelectItem>
+                      <SelectItem value="boxes">BOXES</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label>Weight</Label>
-                  <Input type="number" />
+                  <Label className="text-red-500">* Weight</Label>
+                  <Input type="number" placeholder="10000.00" />
                 </div>
                 <div>
-                  <Label>Volume</Label>
-                  <Input type="number" />
+                  <Label className="text-red-500">* Volume</Label>
+                  <Input type="number" placeholder="25" />
                 </div>
                 <div>
                   <Label>Commodity</Label>
-                  <Input />
+                  <Textarea placeholder="sugar paste" className="min-h-[40px]" />
                 </div>
               </div>
             </div>
@@ -278,7 +342,7 @@ export default function RateRequests() {
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label>Vendors</Label>
-                  <Select>
+                  <Select defaultValue={selectedRequest ? "vendor1" : undefined}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
@@ -286,24 +350,40 @@ export default function RateRequests() {
                       <SelectItem value="vendor1">CARGO SERVICES BARCELONA S.A.U.</SelectItem>
                       <SelectItem value="vendor2">MACNELS SHIPPING LLC</SelectItem>
                       <SelectItem value="vendor3">DNATA CARGO</SelectItem>
+                      <SelectItem value="vendor4">RONSPED WORLDWIDE SRL</SelectItem>
+                      <SelectItem value="vendor5">KESIF NAK. VE GUMR.TIC.LTD.STI.</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label>Vendor Type</Label>
-                  <Select>
+                  <Select defaultValue="overseas">
                     <SelectTrigger>
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="overseas">Overseas Agents</SelectItem>
+                      <SelectItem value="local">Local Agents</SelectItem>
                       <SelectItem value="carrier">Carrier</SelectItem>
-                      <SelectItem value="agent">Agent</SelectItem>
+                      <SelectItem value="freight-forwarder">Freight Forwarder</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label>Vendor Email to</Label>
-                  <Input />
+                  <div className="flex items-center justify-between mb-1">
+                    <Label>Vendor Email to</Label>
+                    <div className="flex items-center gap-2">
+                      <Checkbox 
+                        id="selectAll" 
+                        checked={selectAllVendorEmail}
+                        onCheckedChange={(checked) => setSelectAllVendorEmail(checked as boolean)}
+                      />
+                      <label htmlFor="selectAll" className="text-sm text-muted-foreground cursor-pointer">
+                        Select All
+                      </label>
+                    </div>
+                  </div>
+                  <Input placeholder="vendor@email.com" />
                 </div>
               </div>
             </div>
@@ -313,8 +393,8 @@ export default function RateRequests() {
               <h3 className="text-green-600 font-semibold mb-4">Port Details</h3>
               <div className="grid grid-cols-4 gap-4 mb-4">
                 <div>
-                  <Label>Arriving Country</Label>
-                  <Select>
+                  <Label className="text-red-500">* Arriving Country</Label>
+                  <Select defaultValue={selectedRequest?.podCountry === "Saudi Arabia" ? "sa" : "uae"}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
@@ -322,24 +402,27 @@ export default function RateRequests() {
                       <SelectItem value="uae">United Arab Emirates</SelectItem>
                       <SelectItem value="sa">Saudi Arabia</SelectItem>
                       <SelectItem value="uk">United Kingdom</SelectItem>
+                      <SelectItem value="au">Australia</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label>Arrival Port</Label>
+                  <Label className="text-red-500">* Arrival Port</Label>
                   <Select>
                     <SelectTrigger>
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="jeddah">Jeddah</SelectItem>
                       <SelectItem value="jebel-ali">Jebel Ali</SelectItem>
                       <SelectItem value="dubai">Dubai</SelectItem>
+                      <SelectItem value="dammam">Dammam</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label>Departure Country</Label>
-                  <Select>
+                  <Label className="text-red-500">* Departure Country</Label>
+                  <Select defaultValue={selectedRequest?.polCountry === "Spain" ? "spain" : "italy"}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
@@ -347,6 +430,8 @@ export default function RateRequests() {
                       <SelectItem value="spain">Spain</SelectItem>
                       <SelectItem value="italy">Italy</SelectItem>
                       <SelectItem value="germany">Germany</SelectItem>
+                      <SelectItem value="turkey">Turkey</SelectItem>
+                      <SelectItem value="uae">United Arab Emirates</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -359,34 +444,39 @@ export default function RateRequests() {
                     <SelectContent>
                       <SelectItem value="barcelona">Barcelona</SelectItem>
                       <SelectItem value="valencia">Valencia</SelectItem>
+                      <SelectItem value="genoa">Genoa</SelectItem>
+                      <SelectItem value="istanbul">Istanbul</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <Label>Pickup Address</Label>
-                  <Textarea />
+                  <Label className="text-red-500">* Pickup Address</Label>
+                  <Textarea placeholder="KELLMY" />
                 </div>
                 <div>
-                  <Label>Delivery Address</Label>
-                  <Textarea />
+                  <Label className="text-red-500">* Delivery Address</Label>
+                  <Textarea placeholder="JEDDAH" />
                 </div>
                 <div>
                   <Label>Remarks Notes</Label>
-                  <Textarea />
+                  <Textarea placeholder="Additional notes..." />
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button className="bg-green-600 hover:bg-green-700 text-white">
-                Send Rate Request
-              </Button>
-            </div>
+            {/* Footer Buttons for Add mode */}
+            {modalMode === "add" && (
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button className="bg-green-600 hover:bg-green-700 text-white">
+                  Send Rate Request
+                </Button>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
