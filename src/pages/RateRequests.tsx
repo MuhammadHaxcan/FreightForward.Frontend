@@ -213,43 +213,38 @@ export default function RateRequests() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6">
-            {/* Header Section with Title and Buttons */}
-            <div className="border border-border rounded-lg p-4">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-green-600 font-semibold">{getModalTitle()}</h3>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    className="bg-yellow-500 hover:bg-yellow-600 text-white border-yellow-500"
-                    onClick={() => setIsModalOpen(false)}
-                  >
-                    Back
-                  </Button>
-                  {modalMode === "edit" && (
-                    <Button className="bg-blue-500 hover:bg-blue-600 text-white">
-                      Update
-                    </Button>
-                  )}
-                  {modalMode === "edit" && selectedRequest?.status === "Received" && (
-                    <Button 
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                      onClick={() => {
-                        setIsModalOpen(false);
-                        if (selectedRequest) handleConvertToQuotation(selectedRequest);
-                      }}
-                    >
-                      <FileText className="h-4 w-4 mr-2" />
-                      Convert to Quotation
-                    </Button>
-                  )}
-                  <Button className="bg-[#2c3e50] hover:bg-[#34495e] text-white">
-                    Send Rate Request
-                  </Button>
-                </div>
-              </div>
-            </div>
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-2 mb-4">
+            <Button 
+              variant="outline" 
+              className="bg-yellow-500 hover:bg-yellow-600 text-white border-yellow-500"
+              onClick={() => setIsModalOpen(false)}
+            >
+              Back
+            </Button>
+            {modalMode === "edit" && (
+              <Button className="bg-blue-500 hover:bg-blue-600 text-white">
+                Update
+              </Button>
+            )}
+            {modalMode === "edit" && selectedRequest?.status === "Received" && (
+              <Button 
+                className="bg-green-600 hover:bg-green-700 text-white"
+                onClick={() => {
+                  setIsModalOpen(false);
+                  if (selectedRequest) handleConvertToQuotation(selectedRequest);
+                }}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Convert to Quotation
+              </Button>
+            )}
+            <Button className="bg-[#2c3e50] hover:bg-[#34495e] text-white">
+              Send Rate Request
+            </Button>
+          </div>
 
+          <div className="space-y-6">
             {/* General Details */}
             <div className="border border-border rounded-lg p-4">
               <h3 className="text-green-600 font-semibold mb-4">General Details</h3>
