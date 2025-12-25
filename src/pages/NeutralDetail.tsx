@@ -397,30 +397,27 @@ const NeutralDetail = () => {
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className="flex gap-6">
-          {/* Sidebar Tabs */}
-          <div className="w-48 space-y-1">
-            {tabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  "w-full text-left px-4 py-2.5 rounded-md text-sm font-medium transition-colors",
-                  activeTab === tab.id
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+        {/* Horizontal Tabs */}
+        <div className="bg-card border border-border rounded-lg p-1 flex flex-wrap gap-1">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                "px-4 py-2.5 rounded-md text-sm transition-colors",
+                activeTab === tab.id
+                  ? "bg-primary text-primary-foreground font-medium"
+                  : "text-foreground hover:bg-muted"
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-          {/* Content Area */}
-          <div className="flex-1 bg-card rounded-lg border border-border p-6">
-            {renderActiveTab()}
-          </div>
+        {/* Tab Content */}
+        <div className="bg-card border border-border rounded-lg p-6">
+          {renderActiveTab()}
         </div>
       </div>
 
