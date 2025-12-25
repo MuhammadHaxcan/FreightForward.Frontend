@@ -37,7 +37,17 @@ const sidebarItems: SidebarItem[] = [
   { title: "Dashboard", icon: LayoutDashboard, path: "/" },
   { title: "Shipments", icon: Truck, path: "/shipments", hasSubmenu: true },
   { title: "Master Customers", icon: Users, path: "/master-customers" },
-  { title: "Sales", icon: TrendingUp, path: "/sales", hasSubmenu: true },
+  { 
+    title: "Sales", 
+    icon: TrendingUp, 
+    path: "/sales", 
+    hasSubmenu: true,
+    subMenuItems: [
+      { title: "Leads", path: "/sales/leads" },
+      { title: "Rate Requests", path: "/sales/rate-requests" },
+      { title: "Quotations", path: "/sales/quotations" },
+    ]
+  },
   { title: "Accounts", icon: Wallet, path: "/accounts", hasSubmenu: true },
   { 
     title: "Users", 
