@@ -37,9 +37,10 @@ const mockBanks: Bank[] = [
 
 interface BanksTableProps {
   onAddNew: () => void;
+  isFormExpanded: boolean;
 }
 
-export function BanksTable({ onAddNew }: BanksTableProps) {
+export function BanksTable({ onAddNew, isFormExpanded }: BanksTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [currentPage, setCurrentPage] = useState(1);
@@ -57,10 +58,12 @@ export function BanksTable({ onAddNew }: BanksTableProps) {
         <h2 className="text-xl font-semibold text-foreground">
           <span className="font-bold">List All</span> Banks
         </h2>
-        <Button className="btn-success gap-2" onClick={onAddNew}>
-          <Plus size={16} />
-          Add New
-        </Button>
+        {!isFormExpanded && (
+          <Button className="btn-success gap-2" onClick={onAddNew}>
+            <Plus size={16} />
+            Add New
+          </Button>
+        )}
       </div>
 
       {/* Controls */}
