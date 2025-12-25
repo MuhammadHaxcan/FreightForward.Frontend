@@ -5,23 +5,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
-import { X, ChevronDown, Check } from "lucide-react";
+import { ChevronDown, Check, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-
-export interface Customer {
-  id: number;
-  code: string;
-  name: string;
-  masterType: string;
-  category: string[];
-  phone: string;
-  country: string;
-  email: string;
-  city: string;
-  baseCurrency: string;
-  taxNo: string;
-}
+import { useCreateCustomer, useUpdateCustomer } from "@/hooks/useCustomers";
+import { Customer } from "@/services/api";
 
 interface CustomerModalProps {
   open: boolean;
@@ -45,14 +33,12 @@ const customerTypes = [
 const masterTypes = ["Debtors", "Neutral", "Creditors"];
 const currencies = ["USD", "EUR", "GBP", "AED", "PKR", "INR", "CNY"];
 
-// Code prefixes for each master type
 const codePrefix: Record<string, string> = {
   Debtors: "DEI",
   Neutral: "NEI",
   Creditors: "CDI",
 };
 
-// Track last used codes for auto-generation (in real app, this would come from backend)
 const lastCodeNumber: Record<string, number> = {
   Debtors: 510,
   Neutral: 500,
@@ -80,19 +66,24 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
     taxNo: "",
   });
 
+  const createMutation = useCreateCustomer();
+  const updateMutation = useUpdateCustomer();
+
+  const isLoading = createMutation.isPending || updateMutation.isPending;
+
   useEffect(() => {
     if (customer && mode === "edit") {
       setFormData({
-        code: customer.code,
-        name: customer.name,
-        masterType: customer.masterType,
-        category: customer.category,
-        phone: customer.phone,
-        country: customer.country,
-        email: customer.email,
-        city: customer.city,
-        baseCurrency: customer.baseCurrency,
-        taxNo: customer.taxNo,
+        code: customer.code || "",
+        name: customer.name || "",
+        masterType: customer.masterType || "",
+        category: customer.category || [],
+        phone: customer.phone || "",
+        country: customer.country || "",
+        email: customer.email || "",
+        city: customer.city || "",
+        baseCurrency: customer.baseCurrency || "",
+        taxNo: customer.taxNo || "",
       });
     } else {
       setFormData({
@@ -119,9 +110,26 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
     }));
   };
 
-  const handleSubmit = () => {
-    console.log("Submitting:", formData);
-    onOpenChange(false);
+  const handleSubmit = async () => {
+    if (mode === "add") {
+      createMutation.mutate(formData, {
+        onSuccess: () => {
+          onOpenChange(false);
+        },
+      });
+    } else if (customer) {
+      updateMutation.mutate(
+        {
+          id: customer.id,
+          data: { ...formData, id: customer.id },
+        },
+        {
+          onSuccess: () => {
+            onOpenChange(false);
+          },
+        }
+      );
+    }
   };
 
   return (
@@ -204,7 +212,7 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
                             key={type}
                             className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary text-primary-foreground rounded-md"
                           >
-                            × {type}
+                            x {type}
                             <button
                               type="button"
                               onClick={(e) => {
@@ -344,10 +352,11 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
         </div>
 
         <div className="flex justify-end gap-2 pt-4 border-t border-border">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
             Cancel
           </Button>
-          <Button className="btn-success" onClick={handleSubmit}>
+          <Button className="btn-success" onClick={handleSubmit} disabled={isLoading}>
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {mode === "add" ? "Save" : "Update"}
           </Button>
         </div>
@@ -355,3 +364,5 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
     </Dialog>
   );
 }
+
+export type { Customer };

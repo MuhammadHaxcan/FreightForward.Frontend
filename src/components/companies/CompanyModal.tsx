@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Upload } from "lucide-react";
+import { Upload, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,25 +16,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-
-export interface Company {
-  id: number;
-  name: string;
-  email: string;
-  website: string;
-  addedBy: string;
-  companyType?: string;
-  legalTradingName?: string;
-  registrationNumber?: string;
-  contactNumber?: string;
-  vatId?: string;
-  addressLine1?: string;
-  addressLine2?: string;
-  city?: string;
-  stateProvince?: string;
-  zipCode?: string;
-  country?: string;
-}
+import { useCreateCompany, useUpdateCompany } from "@/hooks/useCompanies";
+import { Company } from "@/services/api";
 
 interface CompanyModalProps {
   isOpen: boolean;
@@ -74,10 +57,15 @@ export function CompanyModal({ isOpen, onClose, company, mode }: CompanyModalPro
     country: "",
   });
 
+  const createMutation = useCreateCompany();
+  const updateMutation = useUpdateCompany();
+
+  const isLoading = createMutation.isPending || updateMutation.isPending;
+
   useEffect(() => {
     if (company && mode === "edit") {
       setFormData({
-        companyName: company.name || "",
+        companyName: company.companyName || "",
         companyType: company.companyType || "",
         legalTradingName: company.legalTradingName || "",
         registrationNumber: company.registrationNumber || "",
@@ -116,10 +104,28 @@ export function CompanyModal({ isOpen, onClose, company, mode }: CompanyModalPro
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Form submitted:", formData);
-    onClose();
+
+    if (mode === "add") {
+      createMutation.mutate(formData, {
+        onSuccess: () => {
+          onClose();
+        },
+      });
+    } else if (company) {
+      updateMutation.mutate(
+        {
+          id: company.id,
+          data: { ...formData, id: company.id },
+        },
+        {
+          onSuccess: () => {
+            onClose();
+          },
+        }
+      );
+    }
   };
 
   return (
@@ -135,12 +141,13 @@ export function CompanyModal({ isOpen, onClose, company, mode }: CompanyModalPro
             {/* Left Column */}
             <div className="space-y-4">
               <div>
-                <Label className="form-label">Company Name</Label>
+                <Label className="form-label">Company Name *</Label>
                 <Input
                   placeholder="Company Name"
                   value={formData.companyName}
                   onChange={(e) => handleInputChange("companyName", e.target.value)}
                   className="form-input"
+                  required
                 />
               </div>
               <div>
@@ -299,10 +306,11 @@ export function CompanyModal({ isOpen, onClose, company, mode }: CompanyModalPro
             </div>
           </div>
           <div className="flex justify-end gap-3 pt-6">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
               Cancel
             </Button>
-            <Button type="submit" className="btn-success px-8">
+            <Button type="submit" className="btn-success px-8" disabled={isLoading}>
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {mode === "add" ? "Save" : "Update"}
             </Button>
           </div>
@@ -311,3 +319,5 @@ export function CompanyModal({ isOpen, onClose, company, mode }: CompanyModalPro
     </Dialog>
   );
 }
+
+export type { Company };

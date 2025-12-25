@@ -27,49 +27,37 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Edit, Plus, FileText } from "lucide-react";
+import { Edit, Plus, FileText, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-
-interface RateRequest {
-  id: string;
-  rateRequestNo: string;
-  date: string;
-  mode: string;
-  incoterms: string;
-  vendorName: string;
-  polCountry: string;
-  podCountry: string;
-  status: "Pending" | "Sent" | "Received";
-}
-
-const mockRateRequests: RateRequest[] = [
-  { id: "1", rateRequestNo: "RFQAE10826", date: "24-12-2025", mode: "FCL-Sea Freight", incoterms: "EXW-EX WORKS", vendorName: "CARGO SERVICES BARCELONA S.A.U.", polCountry: "Spain", podCountry: "Saudi Arabia", status: "Pending" },
-  { id: "2", rateRequestNo: "RFQAE10825", date: "24-12-2025", mode: "LCL-Sea Freight", incoterms: "EXW-EX WORKS", vendorName: "MACNELS SHIPPING LLC", polCountry: "United Arab Emirates", podCountry: "United Kingdom", status: "Pending" },
-  { id: "3", rateRequestNo: "RFQAE10824", date: "18-12-2025", mode: "FCL-Sea Freight", incoterms: "EXW-EX WORKS", vendorName: "RONSPED WORLDWIDE SRL", polCountry: "Italy", podCountry: "Saudi Arabia", status: "Sent" },
-  { id: "4", rateRequestNo: "RFQAE10823", date: "17-12-2025", mode: "Air Freight", incoterms: "CFR-COST AND FREIGHT", vendorName: "DNATA CARGO", polCountry: "United Arab Emirates", podCountry: "Australia", status: "Received" },
-  { id: "5", rateRequestNo: "RFQAE10822", date: "15-12-2025", mode: "Air Freight", incoterms: "FCA-FREE CARRIER", vendorName: "KESIF NAK. VE GUMR.TIC.LTD.STI.", polCountry: "Turkey", podCountry: "United Arab Emirates", status: "Pending" },
-];
+import { useRateRequests, useCreateRateRequest } from "@/hooks/useSales";
+import { RateRequest } from "@/services/api";
 
 type ModalMode = "add" | "edit";
 
 export default function RateRequests() {
   const navigate = useNavigate();
-  const [rateRequests] = useState<RateRequest[]>(mockRateRequests);
   const [searchTerm, setSearchTerm] = useState("");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
+  const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<ModalMode>("add");
   const [selectedRequest, setSelectedRequest] = useState<RateRequest | null>(null);
   const [selectAllVendorEmail, setSelectAllVendorEmail] = useState(false);
 
-  const filteredRequests = rateRequests.filter(
-    (request) =>
-      request.rateRequestNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.vendorName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const { data, isLoading, error } = useRateRequests({
+    pageNumber: currentPage,
+    pageSize: parseInt(entriesPerPage),
+    searchTerm: searchTerm || undefined,
+  });
 
-  const getStatusBadge = (status: RateRequest["status"]) => {
+  const createMutation = useCreateRateRequest();
+
+  const rateRequests = data?.items || [];
+  const totalCount = data?.totalCount || 0;
+  const totalPages = data?.totalPages || 1;
+
+  const getStatusBadge = (status: string) => {
     switch (status) {
       case "Pending":
         return <Badge className="bg-yellow-500 text-white">Pending</Badge>;
@@ -77,7 +65,19 @@ export default function RateRequests() {
         return <Badge className="bg-blue-500 text-white">Sent</Badge>;
       case "Received":
         return <Badge className="bg-green-500 text-white">Received</Badge>;
+      default:
+        return <Badge className="bg-gray-500 text-white">{status}</Badge>;
     }
+  };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "-";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).replace(/\//g, "-");
   };
 
   const handleConvertToQuotation = (request: RateRequest) => {
@@ -112,7 +112,10 @@ export default function RateRequests() {
           <div className="p-4 flex justify-between items-center border-b border-border">
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Show</span>
-              <Select value={entriesPerPage} onValueChange={setEntriesPerPage}>
+              <Select value={entriesPerPage} onValueChange={(value) => {
+                setEntriesPerPage(value);
+                setCurrentPage(1);
+              }}>
                 <SelectTrigger className="w-20">
                   <SelectValue />
                 </SelectTrigger>
@@ -130,74 +133,118 @@ export default function RateRequests() {
               <Input
                 placeholder=""
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
                 className="w-64"
               />
             </div>
           </div>
 
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-[#2c3e50]">
-                <TableHead className="text-white">Action</TableHead>
-                <TableHead className="text-white">Rate request No.</TableHead>
-                <TableHead className="text-white">Date</TableHead>
-                <TableHead className="text-white">Mode</TableHead>
-                <TableHead className="text-white">Incoterms</TableHead>
-                <TableHead className="text-white">Vendor Name</TableHead>
-                <TableHead className="text-white">POL Country</TableHead>
-                <TableHead className="text-white">POD Country</TableHead>
-                <TableHead className="text-white">Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredRequests.map((request) => (
-                <TableRow key={request.id} className="hover:bg-muted/50">
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 bg-green-500 hover:bg-green-600 text-white rounded"
-                        onClick={() => openModal("edit", request)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      {request.status === "Received" && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 bg-orange-500 hover:bg-orange-600 text-white rounded"
-                          onClick={() => handleConvertToQuotation(request)}
-                          title="Convert to Quotation"
-                        >
-                          <FileText className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-medium">{request.rateRequestNo}</TableCell>
-                  <TableCell>{request.date}</TableCell>
-                  <TableCell>{request.mode}</TableCell>
-                  <TableCell>{request.incoterms}</TableCell>
-                  <TableCell className="text-green-600">{request.vendorName}</TableCell>
-                  <TableCell className="text-green-600">{request.polCountry}</TableCell>
-                  <TableCell>{request.podCountry}</TableCell>
-                  <TableCell>{getStatusBadge(request.status)}</TableCell>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : error ? (
+            <div className="flex items-center justify-center py-12 text-destructive">
+              Error loading rate requests. Please try again.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-[#2c3e50]">
+                  <TableHead className="text-white">Action</TableHead>
+                  <TableHead className="text-white">Rate request No.</TableHead>
+                  <TableHead className="text-white">Date</TableHead>
+                  <TableHead className="text-white">Mode</TableHead>
+                  <TableHead className="text-white">Incoterms</TableHead>
+                  <TableHead className="text-white">Vendor Name</TableHead>
+                  <TableHead className="text-white">POL Country</TableHead>
+                  <TableHead className="text-white">POD Country</TableHead>
+                  <TableHead className="text-white">Status</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {rateRequests.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      No rate requests found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  rateRequests.map((request) => (
+                    <TableRow key={request.id} className="hover:bg-muted/50">
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 bg-green-500 hover:bg-green-600 text-white rounded"
+                            onClick={() => openModal("edit", request)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          {request.status === "Received" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 bg-orange-500 hover:bg-orange-600 text-white rounded"
+                              onClick={() => handleConvertToQuotation(request)}
+                              title="Convert to Quotation"
+                            >
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">{request.rateRequestNo}</TableCell>
+                      <TableCell>{formatDate(request.date)}</TableCell>
+                      <TableCell>{request.mode}</TableCell>
+                      <TableCell>{request.incoterms}</TableCell>
+                      <TableCell className="text-green-600">{request.vendorName}</TableCell>
+                      <TableCell className="text-green-600">{request.polCountry}</TableCell>
+                      <TableCell>{request.podCountry}</TableCell>
+                      <TableCell>{getStatusBadge(request.status)}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          )}
 
           <div className="p-4 flex justify-between items-center border-t border-border">
             <span className="text-sm text-green-600">
-              Showing 1 to {filteredRequests.length} of {rateRequests.length} entries
+              Showing {rateRequests.length > 0 ? ((currentPage - 1) * parseInt(entriesPerPage)) + 1 : 0} to {Math.min(currentPage * parseInt(entriesPerPage), totalCount)} of {totalCount} entries
             </span>
             <div className="flex gap-1">
-              <Button variant="outline" size="sm">Previous</Button>
-              <Button variant="default" size="sm" className="bg-green-600">1</Button>
-              <Button variant="outline" size="sm">2</Button>
-              <Button variant="outline" size="sm">Next</Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => p - 1)}
+              >
+                Previous
+              </Button>
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((page) => (
+                <Button
+                  key={page}
+                  variant={page === currentPage ? "default" : "outline"}
+                  size="sm"
+                  className={page === currentPage ? "bg-green-600" : ""}
+                  onClick={() => setCurrentPage(page)}
+                >
+                  {page}
+                </Button>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage >= totalPages}
+                onClick={() => setCurrentPage(p => p + 1)}
+              >
+                Next
+              </Button>
             </div>
           </div>
         </div>
@@ -215,8 +262,8 @@ export default function RateRequests() {
 
           {/* Action Buttons */}
           <div className="flex justify-end gap-2 mb-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="bg-yellow-500 hover:bg-yellow-600 text-white border-yellow-500"
               onClick={() => setIsModalOpen(false)}
             >
@@ -228,7 +275,7 @@ export default function RateRequests() {
               </Button>
             )}
             {modalMode === "edit" && selectedRequest?.status === "Received" && (
-              <Button 
+              <Button
                 className="bg-green-600 hover:bg-green-700 text-white"
                 onClick={() => {
                   setIsModalOpen(false);
@@ -251,10 +298,10 @@ export default function RateRequests() {
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label className="text-red-500">* Rate code</Label>
-                  <Input 
-                    value={selectedRequest?.rateRequestNo || "RFQAE10827"} 
-                    readOnly 
-                    className="bg-muted" 
+                  <Input
+                    value={selectedRequest?.rateRequestNo || "RFQAE10827"}
+                    readOnly
+                    className="bg-muted"
                   />
                 </div>
                 <div>
@@ -368,8 +415,8 @@ export default function RateRequests() {
                   <div className="flex items-center justify-between mb-1">
                     <Label>Vendor Email to</Label>
                     <div className="flex items-center gap-2">
-                      <Checkbox 
-                        id="selectAll" 
+                      <Checkbox
+                        id="selectAll"
                         checked={selectAllVendorEmail}
                         onCheckedChange={(checked) => setSelectAllVendorEmail(checked as boolean)}
                       />

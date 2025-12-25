@@ -8,18 +8,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-
-export interface Bank {
-  id: number;
-  bankName: string;
-  acHolder: string;
-  acNumber: string;
-  ibanNumber: string;
-  swiftCode: string;
-  branch: string;
-  telNo: string;
-  faxNo: string;
-}
+import { useCreateBank, useUpdateBank } from "@/hooks/useBanks";
+import { Bank } from "@/services/api";
+import { Loader2 } from "lucide-react";
 
 interface BankModalProps {
   isOpen: boolean;
@@ -39,6 +30,11 @@ export function BankModal({ isOpen, onClose, bank, mode }: BankModalProps) {
     telNo: "",
     faxNo: "",
   });
+
+  const createMutation = useCreateBank();
+  const updateMutation = useUpdateBank();
+
+  const isLoading = createMutation.isPending || updateMutation.isPending;
 
   useEffect(() => {
     if (bank && mode === "edit") {
@@ -70,10 +66,28 @@ export function BankModal({ isOpen, onClose, bank, mode }: BankModalProps) {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Bank form submitted:", formData);
-    onClose();
+
+    if (mode === "add") {
+      createMutation.mutate(formData, {
+        onSuccess: () => {
+          onClose();
+        },
+      });
+    } else if (bank) {
+      updateMutation.mutate(
+        {
+          id: bank.id,
+          data: { ...formData, id: bank.id },
+        },
+        {
+          onSuccess: () => {
+            onClose();
+          },
+        }
+      );
+    }
   };
 
   return (
@@ -89,12 +103,13 @@ export function BankModal({ isOpen, onClose, bank, mode }: BankModalProps) {
             {/* Left Column */}
             <div className="space-y-4">
               <div>
-                <Label className="form-label">Bank Name</Label>
+                <Label className="form-label">Bank Name *</Label>
                 <Input
                   placeholder="Bank Name"
                   value={formData.bankName}
                   onChange={(e) => handleInputChange("bankName", e.target.value)}
                   className="form-input"
+                  required
                 />
               </div>
               <div>
@@ -167,10 +182,11 @@ export function BankModal({ isOpen, onClose, bank, mode }: BankModalProps) {
             </div>
           </div>
           <div className="flex justify-end gap-3 pt-6">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
               Cancel
             </Button>
-            <Button type="submit" className="btn-success px-8">
+            <Button type="submit" className="btn-success px-8" disabled={isLoading}>
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {mode === "add" ? "Save" : "Update"}
             </Button>
           </div>
@@ -179,3 +195,5 @@ export function BankModal({ isOpen, onClose, bank, mode }: BankModalProps) {
     </Dialog>
   );
 }
+
+export type { Bank };

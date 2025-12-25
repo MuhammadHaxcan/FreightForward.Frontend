@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Edit, Trash2, Plus, Search } from "lucide-react";
+import { Edit, Trash2, Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -9,31 +9,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CompanyModal, Company } from "./CompanyModal";
-
-const mockCompanies: Company[] = [
-  {
-    id: 1,
-    name: "TRANSPARENT FREIGHT SERVICES LLC",
-    email: "info@tfs-global.com",
-    website: "www.tfs-global.com",
-    addedBy: "04-2396853",
-  },
-  {
-    id: 2,
-    name: "TRANSPARENT FREIGHT SERVICES WLL",
-    email: "SULTAN@TFS-GLOBAL.COM",
-    website: "https://www.tfs-global.com/",
-    addedBy: "+974-70606059",
-  },
-  {
-    id: 3,
-    name: "TRANSPARENT FREIGHT SERVICES",
-    email: "info2@transparent.com",
-    website: "",
-    addedBy: "42334",
-  },
-];
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { CompanyModal } from "./CompanyModal";
+import { useCompanies, useDeleteCompany } from "@/hooks/useCompanies";
+import { Company } from "@/services/api";
 
 export function CompaniesTable() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -42,17 +30,35 @@ export function CompaniesTable() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
 
-  const filteredCompanies = mockCompanies.filter(
-    (company) =>
-      company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      company.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const { data, isLoading, error } = useCompanies({
+    pageNumber: currentPage,
+    pageSize: parseInt(entriesPerPage),
+    searchTerm: searchTerm || undefined,
+  });
+
+  const deleteMutation = useDeleteCompany();
 
   const handleEdit = (company: Company) => {
     setSelectedCompany(company);
     setIsEditModalOpen(true);
   };
+
+  const handleDelete = (company: Company) => {
+    setCompanyToDelete(company);
+  };
+
+  const confirmDelete = () => {
+    if (companyToDelete) {
+      deleteMutation.mutate(companyToDelete.id);
+      setCompanyToDelete(null);
+    }
+  };
+
+  const companies = data?.items || [];
+  const totalCount = data?.totalCount || 0;
+  const totalPages = data?.totalPages || 1;
 
   return (
     <>
@@ -72,7 +78,10 @@ export function CompaniesTable() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Show</span>
-            <Select value={entriesPerPage} onValueChange={setEntriesPerPage}>
+            <Select value={entriesPerPage} onValueChange={(value) => {
+              setEntriesPerPage(value);
+              setCurrentPage(1);
+            }}>
               <SelectTrigger className="w-20 h-9">
                 <SelectValue />
               </SelectTrigger>
@@ -87,91 +96,98 @@ export function CompaniesTable() {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Search:</span>
-            <div className="relative">
-              <Input
-                placeholder=""
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="h-9 w-48 pr-8"
-              />
-              <Search
-                size={16}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
-              />
-            </div>
+            <Input
+              placeholder=""
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="h-9 w-48"
+            />
           </div>
         </div>
 
         {/* Table */}
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-table-header text-table-header-foreground">
-                <th className="px-4 py-3 text-left text-sm font-semibold">
-                  Action
-                  <span className="ml-1 text-xs opacity-70">↕</span>
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">
-                  Company
-                  <span className="ml-1 text-xs opacity-70">↕</span>
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">
-                  Email
-                  <span className="ml-1 text-xs opacity-70">↕</span>
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">
-                  Website
-                  <span className="ml-1 text-xs opacity-70">↕</span>
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">
-                  Added By
-                  <span className="ml-1 text-xs opacity-70">↕</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredCompanies.map((company, index) => (
-                <tr
-                  key={company.id}
-                  className={`border-b border-border hover:bg-table-row-hover transition-colors ${
-                    index % 2 === 0 ? "bg-card" : "bg-secondary/30"
-                  }`}
-                >
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <button 
-                        onClick={() => handleEdit(company)}
-                        className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
-                      >
-                        <Edit size={14} />
-                      </button>
-                      <button className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors">
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-foreground font-medium">
-                    {company.name}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">
-                    {company.email}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-primary hover:underline cursor-pointer">
-                    {company.website}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">
-                    {company.addedBy}
-                  </td>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : error ? (
+            <div className="flex items-center justify-center py-12 text-destructive">
+              Error loading companies. Please try again.
+            </div>
+          ) : (
+            <table className="w-full">
+              <thead>
+                <tr className="bg-table-header text-table-header-foreground">
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Action</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Company</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Email</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Website</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Contact</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">City</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {companies.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                      No companies found
+                    </td>
+                  </tr>
+                ) : (
+                  companies.map((company, index) => (
+                    <tr
+                      key={company.id}
+                      className={`border-b border-border hover:bg-table-row-hover transition-colors ${
+                        index % 2 === 0 ? "bg-card" : "bg-secondary/30"
+                      }`}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleEdit(company)}
+                            className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                          >
+                            <Edit size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(company)}
+                            className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-foreground font-medium">
+                        {company.companyName}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground">
+                        {company.email || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-primary hover:underline cursor-pointer">
+                        {company.website || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground">
+                        {company.contactNumber || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground">
+                        {company.city || '-'}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
 
         {/* Pagination */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4">
           <p className="text-sm text-muted-foreground">
-            Showing 1 to {filteredCompanies.length} of {filteredCompanies.length} entries
+            Showing {companies.length > 0 ? ((currentPage - 1) * parseInt(entriesPerPage)) + 1 : 0} to {Math.min(currentPage * parseInt(entriesPerPage), totalCount)} of {totalCount} entries
           </p>
           <div className="flex items-center gap-1">
             <Button
@@ -179,21 +195,27 @@ export function CompaniesTable() {
               size="sm"
               className="h-8 px-3"
               disabled={currentPage === 1}
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              onClick={() => setCurrentPage(p => p - 1)}
             >
               Previous
             </Button>
-            <Button
-              size="sm"
-              className="h-8 w-8 bg-primary text-primary-foreground"
-            >
-              1
-            </Button>
+            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((page) => (
+              <Button
+                key={page}
+                size="sm"
+                variant={page === currentPage ? "default" : "outline"}
+                className={`h-8 w-8 ${page === currentPage ? "bg-primary text-primary-foreground" : ""}`}
+                onClick={() => setCurrentPage(page)}
+              >
+                {page}
+              </Button>
+            ))}
             <Button
               variant="outline"
               size="sm"
               className="h-8 px-3"
-              onClick={() => setCurrentPage((p) => p + 1)}
+              disabled={currentPage >= totalPages}
+              onClick={() => setCurrentPage(p => p + 1)}
             >
               Next
             </Button>
@@ -218,6 +240,27 @@ export function CompaniesTable() {
         company={selectedCompany}
         mode="edit"
       />
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!companyToDelete} onOpenChange={() => setCompanyToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Company</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{companyToDelete?.companyName}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

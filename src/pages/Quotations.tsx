@@ -28,21 +28,10 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Edit, Plus, Eye, Download, Trash2 } from "lucide-react";
+import { Edit, Plus, Eye, Download, Trash2, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-
-interface Quotation {
-  id: string;
-  quotationNo: string;
-  date: string;
-  customerName: string;
-  incoterms: string;
-  mode: string;
-  pol: string;
-  pod: string;
-  quoteExpiryDate: string;
-  status: "Pending" | "Approved" | "Rejected";
-}
+import { useQuotations, useCreateQuotation } from "@/hooks/useSales";
+import { Quotation } from "@/services/api";
 
 interface ChargeRow {
   id: number;
@@ -55,23 +44,13 @@ interface ChargeRow {
   amount: string;
 }
 
-const mockQuotations: Quotation[] = [
-  { id: "1", quotationNo: "QTAE10992", date: "25-12-2025", customerName: "SKY SHIPPING LINE (LLC)", incoterms: "FOB-FREE ON BOARD", mode: "LCL-Sea Freight", pol: "China", pod: "United Arab Emirates", quoteExpiryDate: "31-12-2025", status: "Approved" },
-  { id: "2", quotationNo: "QTAE10991", date: "24-12-2025", customerName: "CAKE DECORATION CENTER FOR TRADING", incoterms: "EXW-EX WORKS", mode: "FCL-Sea Freight", pol: "Spain", pod: "Saudi Arabia", quoteExpiryDate: "15-01-2026", status: "Pending" },
-  { id: "3", quotationNo: "QTAE10990", date: "16-12-2025", customerName: "EES FREIGHT SERVICES PTE LTD", incoterms: "EXW-EX WORKS", mode: "FCL-Sea Freight", pol: "Thailand", pod: "United Arab Emirates", quoteExpiryDate: "31-12-2025", status: "Pending" },
-  { id: "4", quotationNo: "QTAE10989", date: "13-12-2025", customerName: "CAKE DECORATION CENTER FOR TRADING", incoterms: "EXW-EX WORKS", mode: "FCL-Sea Freight", pol: "Italy", pod: "Saudi Arabia", quoteExpiryDate: "31-12-2025", status: "Pending" },
-  { id: "5", quotationNo: "QTAE10988", date: "12-12-2025", customerName: "CAKE DECORATION CENTER FOR TRADING", incoterms: "EXW-EX WORKS", mode: "FCL-Sea Freight", pol: "Italy", pod: "Saudi Arabia", quoteExpiryDate: "31-12-2025", status: "Pending" },
-  { id: "6", quotationNo: "QTAE10987", date: "08-12-2025", customerName: "TRANSPARENT FREIGHT SERVICES", incoterms: "DDU-DELIVERED DUTY UNPAID", mode: "Air Freight", pol: "Pakistan", pod: "United Arab Emirates", quoteExpiryDate: "31-12-2025", status: "Pending" },
-  { id: "7", quotationNo: "QTAE10983", date: "22-10-2025", customerName: "EL ABRAR", incoterms: "EXW-EX WORKS", mode: "FCL-Sea Freight", pol: "Italy", pod: "Pakistan", quoteExpiryDate: "31-10-2025", status: "Approved" },
-];
-
 type ModalMode = "add" | "edit" | "view";
 
 export default function Quotations() {
   const navigate = useNavigate();
-  const [quotations] = useState<Quotation[]>(mockQuotations);
   const [searchTerm, setSearchTerm] = useState("");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
+  const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<ModalMode>("add");
   const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(null);
@@ -81,18 +60,20 @@ export default function Quotations() {
     { id: 1, chargeType: "", bases: "", currency: "", rate: "", roe: "", quantity: "", amount: "" }
   ]);
 
-  const filteredQuotations = quotations.filter((quotation) => {
-    const matchesSearch =
-      quotation.quotationNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      quotation.customerName.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    if (activeTab === "all") return matchesSearch;
-    if (activeTab === "pending") return matchesSearch && quotation.status === "Pending";
-    if (activeTab === "approved") return matchesSearch && quotation.status === "Approved";
-    return matchesSearch;
+  const { data, isLoading, error } = useQuotations({
+    pageNumber: currentPage,
+    pageSize: parseInt(entriesPerPage),
+    searchTerm: searchTerm || undefined,
+    status: activeTab === "pending" ? "Pending" : activeTab === "approved" ? "Approved" : undefined,
   });
 
-  const getStatusBadge = (status: Quotation["status"]) => {
+  const createMutation = useCreateQuotation();
+
+  const quotations = data?.items || [];
+  const totalCount = data?.totalCount || 0;
+  const totalPages = data?.totalPages || 1;
+
+  const getStatusBadge = (status: string) => {
     switch (status) {
       case "Approved":
         return <Badge className="bg-green-500 text-white">Approved</Badge>;
@@ -100,7 +81,19 @@ export default function Quotations() {
         return <Badge className="bg-yellow-500 text-white">Pending</Badge>;
       case "Rejected":
         return <Badge className="bg-red-500 text-white">Rejected</Badge>;
+      default:
+        return <Badge className="bg-gray-500 text-white">{status}</Badge>;
     }
+  };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "-";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).replace(/\//g, "-");
   };
 
   const openModal = (mode: ModalMode, quotation?: Quotation) => {
@@ -150,7 +143,10 @@ export default function Quotations() {
           </Button>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={(value) => {
+          setActiveTab(value);
+          setCurrentPage(1);
+        }}>
           <TabsList>
             <TabsTrigger value="all">All</TabsTrigger>
             <TabsTrigger value="pending">Pending</TabsTrigger>
@@ -162,7 +158,10 @@ export default function Quotations() {
               <div className="p-4 flex justify-between items-center border-b border-border">
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">Show</span>
-                  <Select value={entriesPerPage} onValueChange={setEntriesPerPage}>
+                  <Select value={entriesPerPage} onValueChange={(value) => {
+                    setEntriesPerPage(value);
+                    setCurrentPage(1);
+                  }}>
                     <SelectTrigger className="w-20">
                       <SelectValue />
                     </SelectTrigger>
@@ -180,88 +179,132 @@ export default function Quotations() {
                   <Input
                     placeholder=""
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setCurrentPage(1);
+                    }}
                     className="w-64"
                   />
                 </div>
               </div>
 
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-[#2c3e50]">
-                    <TableHead className="text-white">Date</TableHead>
-                    <TableHead className="text-white">Quotation No</TableHead>
-                    <TableHead className="text-white">Customer Name</TableHead>
-                    <TableHead className="text-white">Incoterms</TableHead>
-                    <TableHead className="text-white">Mode</TableHead>
-                    <TableHead className="text-white">POL</TableHead>
-                    <TableHead className="text-white">POD</TableHead>
-                    <TableHead className="text-white">Quote Expiry Date</TableHead>
-                    <TableHead className="text-white">Status</TableHead>
-                    <TableHead className="text-white">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredQuotations.map((quotation) => (
-                    <TableRow key={quotation.id} className="hover:bg-muted/50">
-                      <TableCell>{quotation.date}</TableCell>
-                      <TableCell className="font-medium">{quotation.quotationNo}</TableCell>
-                      <TableCell className="text-green-600">{quotation.customerName}</TableCell>
-                      <TableCell className="text-green-600">{quotation.incoterms}</TableCell>
-                      <TableCell>{quotation.mode}</TableCell>
-                      <TableCell className="text-green-600">{quotation.pol}</TableCell>
-                      <TableCell className="text-green-600">{quotation.pod}</TableCell>
-                      <TableCell>{quotation.quoteExpiryDate}</TableCell>
-                      <TableCell>{getStatusBadge(quotation.status)}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 bg-green-500 hover:bg-green-600 text-white rounded"
-                            onClick={() => openModal("edit", quotation)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 bg-blue-500 hover:bg-blue-600 text-white rounded"
-                            onClick={() => openModal("view", quotation)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 bg-orange-500 hover:bg-orange-600 text-white rounded"
-                            onClick={() => window.open(`/sales/quotations/${quotation.id}/view`, '_blank')}
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+              {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : error ? (
+                <div className="flex items-center justify-center py-12 text-destructive">
+                  Error loading quotations. Please try again.
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-[#2c3e50]">
+                      <TableHead className="text-white">Date</TableHead>
+                      <TableHead className="text-white">Quotation No</TableHead>
+                      <TableHead className="text-white">Customer Name</TableHead>
+                      <TableHead className="text-white">Incoterms</TableHead>
+                      <TableHead className="text-white">Mode</TableHead>
+                      <TableHead className="text-white">POL</TableHead>
+                      <TableHead className="text-white">POD</TableHead>
+                      <TableHead className="text-white">Quote Expiry Date</TableHead>
+                      <TableHead className="text-white">Status</TableHead>
+                      <TableHead className="text-white">Action</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {quotations.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                          No quotations found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      quotations.map((quotation) => (
+                        <TableRow key={quotation.id} className="hover:bg-muted/50">
+                          <TableCell>{formatDate(quotation.date)}</TableCell>
+                          <TableCell className="font-medium">{quotation.quotationNo}</TableCell>
+                          <TableCell className="text-green-600">{quotation.customerName}</TableCell>
+                          <TableCell className="text-green-600">{quotation.incoterms}</TableCell>
+                          <TableCell>{quotation.mode}</TableCell>
+                          <TableCell className="text-green-600">{quotation.pol}</TableCell>
+                          <TableCell className="text-green-600">{quotation.pod}</TableCell>
+                          <TableCell>{formatDate(quotation.quoteExpiryDate)}</TableCell>
+                          <TableCell>{getStatusBadge(quotation.status)}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 bg-green-500 hover:bg-green-600 text-white rounded"
+                                onClick={() => openModal("edit", quotation)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 bg-blue-500 hover:bg-blue-600 text-white rounded"
+                                onClick={() => openModal("view", quotation)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 bg-orange-500 hover:bg-orange-600 text-white rounded"
+                                onClick={() => window.open(`/sales/quotations/${quotation.id}/view`, '_blank')}
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              )}
 
               <div className="p-4 flex justify-between items-center border-t border-border">
                 <span className="text-sm text-green-600">
-                  Showing 1 to {filteredQuotations.length} of {quotations.length} entries
+                  Showing {quotations.length > 0 ? ((currentPage - 1) * parseInt(entriesPerPage)) + 1 : 0} to {Math.min(currentPage * parseInt(entriesPerPage), totalCount)} of {totalCount} entries
                 </span>
                 <div className="flex gap-1">
-                  <Button variant="outline" size="sm">Previous</Button>
-                  <Button variant="default" size="sm" className="bg-green-600">1</Button>
-                  <Button variant="outline" size="sm">2</Button>
-                  <Button variant="outline" size="sm">Next</Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(p => p - 1)}
+                  >
+                    Previous
+                  </Button>
+                  {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((page) => (
+                    <Button
+                      key={page}
+                      variant={page === currentPage ? "default" : "outline"}
+                      size="sm"
+                      className={page === currentPage ? "bg-green-600" : ""}
+                      onClick={() => setCurrentPage(page)}
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage >= totalPages}
+                    onClick={() => setCurrentPage(p => p + 1)}
+                  >
+                    Next
+                  </Button>
                 </div>
               </div>
             </div>
@@ -285,8 +328,8 @@ export default function Quotations() {
             {/* Header with Back and Update buttons for edit/view mode */}
             {(modalMode === "edit" || modalMode === "view") && (
               <div className="flex justify-end gap-2">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="bg-yellow-500 hover:bg-yellow-600 text-white border-yellow-500"
                   onClick={() => setIsModalOpen(false)}
                 >
@@ -306,10 +349,10 @@ export default function Quotations() {
               <div className="grid grid-cols-6 gap-4 mb-4">
                 <div>
                   <Label>Quotation ID</Label>
-                  <Input 
-                    value={selectedQuotation?.quotationNo || "QTAE10993"} 
-                    readOnly 
-                    className="bg-muted" 
+                  <Input
+                    value={selectedQuotation?.quotationNo || "QTAE10993"}
+                    readOnly
+                    className="bg-muted"
                     disabled={isReadOnly}
                   />
                 </div>
@@ -443,12 +486,12 @@ export default function Quotations() {
             {/* Cargo Details */}
             <div className="border border-border rounded-lg p-4">
               <h3 className="text-green-600 font-semibold mb-4">Cargo Details</h3>
-              
+
               {/* Cargo Calculation Mode Tabs */}
               <div className="flex gap-2 mb-4">
-                <Button 
-                  className={cargoCalculationMode === "units" 
-                    ? "bg-green-600 hover:bg-green-700 text-white" 
+                <Button
+                  className={cargoCalculationMode === "units"
+                    ? "bg-green-600 hover:bg-green-700 text-white"
                     : "bg-transparent text-green-600 hover:bg-green-50"}
                   variant={cargoCalculationMode === "units" ? "default" : "ghost"}
                   onClick={() => !isReadOnly && setCargoCalculationMode("units")}
@@ -456,9 +499,9 @@ export default function Quotations() {
                 >
                   Calculate by Units
                 </Button>
-                <Button 
-                  className={cargoCalculationMode === "shipment" 
-                    ? "bg-green-600 hover:bg-green-700 text-white" 
+                <Button
+                  className={cargoCalculationMode === "shipment"
+                    ? "bg-green-600 hover:bg-green-700 text-white"
                     : "bg-transparent text-green-600 hover:bg-green-50"}
                   variant={cargoCalculationMode === "shipment" ? "default" : "ghost"}
                   onClick={() => !isReadOnly && setCargoCalculationMode("shipment")}
@@ -695,16 +738,16 @@ export default function Quotations() {
                   <div>
                     {!isReadOnly && (
                       index === chargeRows.length - 1 ? (
-                        <Button 
-                          onClick={addChargeRow} 
+                        <Button
+                          onClick={addChargeRow}
                           className="bg-green-600 hover:bg-green-700 text-white w-full"
                         >
                           + Add
                         </Button>
                       ) : (
-                        <Button 
-                          variant="destructive" 
-                          size="icon" 
+                        <Button
+                          variant="destructive"
+                          size="icon"
                           className="h-10 w-full bg-red-500 hover:bg-red-600"
                           onClick={() => deleteChargeRow(row.id)}
                         >
