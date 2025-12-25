@@ -2,7 +2,7 @@ import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -10,6 +10,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type SettingsTab = "currency" | "ports" | "charges" | "expenses";
 
@@ -20,6 +26,7 @@ interface Currency {
   symbol: string;
   decimal: string;
   usdRate: string;
+  roe?: string;
 }
 
 interface Port {
@@ -40,12 +47,12 @@ interface Expense {
 }
 
 const mockCurrencies: Currency[] = [
-  { id: 1, name: "Dhirham", code: "AED", symbol: "AED", decimal: "fils", usdRate: "3.685" },
-  { id: 2, name: "Dollar", code: "USD", symbol: "$", decimal: "Cent", usdRate: "1.000" },
-  { id: 3, name: "EURO", code: "EURO", symbol: "€", decimal: "cent", usdRate: "0.860" },
-  { id: 4, name: "POUND", code: "GBP", symbol: "£", decimal: "Penny", usdRate: "0.790" },
-  { id: 5, name: "Qatari riyal", code: "QAR", symbol: "Qar", decimal: "Dirham", usdRate: "3.655" },
-  { id: 6, name: "Pakistani rupee", code: "PKR", symbol: "PKR", decimal: "Paisa", usdRate: "175.000" },
+  { id: 1, name: "Dhirham", code: "AED", symbol: "AED", decimal: "fils", usdRate: "3.685", roe: "1.000" },
+  { id: 2, name: "Dollar", code: "USD", symbol: "$", decimal: "Cent", usdRate: "1.000", roe: "1.000" },
+  { id: 3, name: "EURO", code: "EURO", symbol: "€", decimal: "cent", usdRate: "0.860", roe: "1.000" },
+  { id: 4, name: "POUND", code: "GBP", symbol: "£", decimal: "Penny", usdRate: "0.790", roe: "1.000" },
+  { id: 5, name: "Qatari riyal", code: "QAR", symbol: "Qar", decimal: "Dirham", usdRate: "3.655", roe: "1.000" },
+  { id: 6, name: "Pakistani rupee", code: "PKR", symbol: "PKR", decimal: "Paisa", usdRate: "175.000", roe: "1.000" },
 ];
 
 const mockPorts: Port[] = [
@@ -110,12 +117,44 @@ const Settings = () => {
   const [expenseCategory, setExpenseCategory] = useState("");
   const [expensePaymentType, setExpensePaymentType] = useState("");
 
+  // Edit modal states
+  const [editCurrencyModalOpen, setEditCurrencyModalOpen] = useState(false);
+  const [editPortModalOpen, setEditPortModalOpen] = useState(false);
+  const [editChargeModalOpen, setEditChargeModalOpen] = useState(false);
+  const [editExpenseModalOpen, setEditExpenseModalOpen] = useState(false);
+
+  // Edit form states
+  const [editCurrency, setEditCurrency] = useState<Currency | null>(null);
+  const [editPort, setEditPort] = useState<Port | null>(null);
+  const [editCharge, setEditCharge] = useState<Charge | null>(null);
+  const [editExpense, setEditExpense] = useState<Expense | null>(null);
+
   const tabs = [
     { id: "currency" as SettingsTab, label: "Currency Type" },
     { id: "ports" as SettingsTab, label: "Ports" },
     { id: "charges" as SettingsTab, label: "Charges Items" },
     { id: "expenses" as SettingsTab, label: "Expense Items" },
   ];
+
+  const handleEditCurrency = (currency: Currency) => {
+    setEditCurrency({ ...currency });
+    setEditCurrencyModalOpen(true);
+  };
+
+  const handleEditPort = (port: Port) => {
+    setEditPort({ ...port });
+    setEditPortModalOpen(true);
+  };
+
+  const handleEditCharge = (charge: Charge) => {
+    setEditCharge({ ...charge });
+    setEditChargeModalOpen(true);
+  };
+
+  const handleEditExpense = (expense: Expense) => {
+    setEditExpense({ ...expense });
+    setEditExpenseModalOpen(true);
+  };
 
   const renderForm = () => {
     switch (activeTab) {
@@ -266,7 +305,10 @@ const Settings = () => {
                 >
                   <td className="px-3 py-2.5">
                     <div className="flex items-center gap-1">
-                      <button className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors">
+                      <button 
+                        onClick={() => handleEditCurrency(currency)}
+                        className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                      >
                         <Edit size={14} />
                       </button>
                       <button className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors">
@@ -304,7 +346,10 @@ const Settings = () => {
                 >
                   <td className="px-3 py-2.5">
                     <div className="flex items-center gap-1">
-                      <button className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors">
+                      <button 
+                        onClick={() => handleEditPort(port)}
+                        className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                      >
                         <Edit size={14} />
                       </button>
                       <button className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors">
@@ -338,7 +383,10 @@ const Settings = () => {
                 >
                   <td className="px-3 py-2.5">
                     <div className="flex items-center gap-1">
-                      <button className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors">
+                      <button 
+                        onClick={() => handleEditCharge(charge)}
+                        className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                      >
                         <Edit size={14} />
                       </button>
                     </div>
@@ -369,7 +417,10 @@ const Settings = () => {
                 >
                   <td className="px-3 py-2.5">
                     <div className="flex items-center gap-1">
-                      <button className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors">
+                      <button 
+                        onClick={() => handleEditExpense(expense)}
+                        className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                      >
                         <Edit size={14} />
                       </button>
                     </div>
@@ -487,6 +538,184 @@ const Settings = () => {
           </div>
         </div>
       </div>
+
+      {/* Edit Currency Modal */}
+      <Dialog open={editCurrencyModalOpen} onOpenChange={setEditCurrencyModalOpen}>
+        <DialogContent className="sm:max-w-md bg-card">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold">Edit Currency Type</DialogTitle>
+          </DialogHeader>
+          {editCurrency && (
+            <div className="space-y-4 py-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Currency Name</label>
+                <Input
+                  value={editCurrency.name}
+                  onChange={(e) => setEditCurrency({ ...editCurrency, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Currency Code</label>
+                <Input
+                  value={editCurrency.code}
+                  onChange={(e) => setEditCurrency({ ...editCurrency, code: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Currency Symbol</label>
+                <Input
+                  value={editCurrency.symbol}
+                  onChange={(e) => setEditCurrency({ ...editCurrency, symbol: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Decimal Point</label>
+                <Input
+                  value={editCurrency.decimal}
+                  onChange={(e) => setEditCurrency({ ...editCurrency, decimal: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">1 USD =</label>
+                <Input
+                  value={editCurrency.usdRate}
+                  onChange={(e) => setEditCurrency({ ...editCurrency, usdRate: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">ROE</label>
+                <Input
+                  value={editCurrency.roe || ""}
+                  onChange={(e) => setEditCurrency({ ...editCurrency, roe: e.target.value })}
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <Button variant="outline" onClick={() => setEditCurrencyModalOpen(false)}>
+                  Close
+                </Button>
+                <Button className="btn-success" onClick={() => setEditCurrencyModalOpen(false)}>
+                  Update
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Port Modal */}
+      <Dialog open={editPortModalOpen} onOpenChange={setEditPortModalOpen}>
+        <DialogContent className="sm:max-w-md bg-card">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold">Edit Port</DialogTitle>
+          </DialogHeader>
+          {editPort && (
+            <div className="space-y-4 py-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Port Name</label>
+                <Input
+                  value={editPort.name}
+                  onChange={(e) => setEditPort({ ...editPort, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Country</label>
+                <Select value={editPort.country.toLowerCase()} onValueChange={(value) => setEditPort({ ...editPort, country: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Country" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border border-border">
+                    <SelectItem value="india">India</SelectItem>
+                    <SelectItem value="china">China</SelectItem>
+                    <SelectItem value="usa">USA</SelectItem>
+                    <SelectItem value="uae">UAE</SelectItem>
+                    <SelectItem value="turkey">Turkey</SelectItem>
+                    <SelectItem value="ecuador">Ecuador</SelectItem>
+                    <SelectItem value="tanzania, united republic of">Tanzania, United Republic of</SelectItem>
+                    <SelectItem value="papua new guinea">Papua New Guinea</SelectItem>
+                    <SelectItem value="gabon">Gabon</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <Button variant="outline" onClick={() => setEditPortModalOpen(false)}>
+                  Close
+                </Button>
+                <Button className="btn-success" onClick={() => setEditPortModalOpen(false)}>
+                  Update
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Charge Modal */}
+      <Dialog open={editChargeModalOpen} onOpenChange={setEditChargeModalOpen}>
+        <DialogContent className="sm:max-w-md bg-card">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold">Edit Charge Item</DialogTitle>
+          </DialogHeader>
+          {editCharge && (
+            <div className="space-y-4 py-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Charge Name</label>
+                <Input
+                  value={editCharge.name}
+                  onChange={(e) => setEditCharge({ ...editCharge, name: e.target.value })}
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <Button variant="outline" onClick={() => setEditChargeModalOpen(false)}>
+                  Close
+                </Button>
+                <Button className="btn-success" onClick={() => setEditChargeModalOpen(false)}>
+                  Update
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Expense Modal */}
+      <Dialog open={editExpenseModalOpen} onOpenChange={setEditExpenseModalOpen}>
+        <DialogContent className="sm:max-w-md bg-card">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold">Edit Expense Item</DialogTitle>
+          </DialogHeader>
+          {editExpense && (
+            <div className="space-y-4 py-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Category</label>
+                <Select value={editExpense.category.toLowerCase()} onValueChange={(value) => setEditExpense({ ...editExpense, category: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Category" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border border-border">
+                    <SelectItem value="outwards">Outwards</SelectItem>
+                    <SelectItem value="inwards">Inwards</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Payment Type</label>
+                <Input
+                  value={editExpense.paymentType}
+                  onChange={(e) => setEditExpense({ ...editExpense, paymentType: e.target.value })}
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <Button variant="outline" onClick={() => setEditExpenseModalOpen(false)}>
+                  Close
+                </Button>
+                <Button className="btn-success" onClick={() => setEditExpenseModalOpen(false)}>
+                  Update
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 };
