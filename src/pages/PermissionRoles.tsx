@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Pencil, Trash2, Minus } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 
 interface Role {
   id: number;
@@ -125,7 +126,7 @@ const initialPermissionGroups: PermissionGroup[] = [
 const PermissionRoles = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
-  const [showRoleForm, setShowRoleForm] = useState(false);
+  const [roleModalOpen, setRoleModalOpen] = useState(false);
   const [roleName, setRoleName] = useState("");
   const [selectAccess, setSelectAccess] = useState("");
   const [permissionGroups, setPermissionGroups] = useState<PermissionGroup[]>(initialPermissionGroups);
@@ -159,236 +160,234 @@ const PermissionRoles = () => {
     );
   };
 
+  const toggleAllInGroup = (groupId: string) => {
+    setPermissionGroups(prev =>
+      prev.map(group => {
+        if (group.id === groupId) {
+          const allChecked = group.permissions.every(p => p.checked);
+          return {
+            ...group,
+            permissions: group.permissions.map(p => ({ ...p, checked: !allChecked }))
+          };
+        }
+        return group;
+      })
+    );
+  };
+
   const handleSaveRole = () => {
     console.log("Saving role:", { roleName, selectAccess, permissionGroups });
-    setShowRoleForm(false);
+    setRoleModalOpen(false);
     setRoleName("");
     setSelectAccess("");
+    setPermissionGroups(initialPermissionGroups);
+  };
+
+  const resetAndOpenModal = () => {
+    setRoleName("");
+    setSelectAccess("");
+    setPermissionGroups(initialPermissionGroups);
+    setRoleModalOpen(true);
   };
 
   return (
     <MainLayout>
       <div className="p-6 space-y-4">
-        {/* Role Form Section */}
-        {showRoleForm && (
-          <div className="bg-card rounded-lg border border-border p-6 space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-foreground">Set New Role</h2>
-              <Button
-                variant="destructive"
-                size="sm"
-                className="gap-1"
-                onClick={() => setShowRoleForm(false)}
-              >
-                <Minus size={16} /> Hide
-              </Button>
-            </div>
+        <h1 className="text-2xl font-semibold text-foreground">List All Roles</h1>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Left Column - Form Fields */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Role Name</Label>
-                  <Input
-                    value={roleName}
-                    onChange={(e) => setRoleName(e.target.value)}
-                    placeholder="Role Name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Select Access</Label>
-                  <Select value={selectAccess} onValueChange={setSelectAccess}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Access" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Menu Access</SelectItem>
-                      <SelectItem value="custom">Custom Menu Access</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button className="btn-success" onClick={handleSaveRole}>Save</Button>
-              </div>
-
-              {/* Middle Column - Resources */}
-              <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-muted-foreground mb-4">Resources</h3>
-                {permissionGroups.slice(0, 4).map((group) => (
-                  <div key={group.id} className="space-y-1">
-                    <div
-                      className="flex items-center gap-2 cursor-pointer"
-                      onClick={() => toggleGroup(group.id)}
-                    >
-                      <span className="text-muted-foreground">{group.expanded ? "−" : "+"}</span>
-                      <Checkbox
-                        checked={group.permissions.every(p => p.checked)}
-                        onCheckedChange={() => {
-                          const allChecked = group.permissions.every(p => p.checked);
-                          setPermissionGroups(prev =>
-                            prev.map(g =>
-                              g.id === group.id
-                                ? { ...g, permissions: g.permissions.map(p => ({ ...p, checked: !allChecked })) }
-                                : g
-                            )
-                          );
-                        }}
-                      />
-                      <span className="font-medium">{group.name}</span>
-                    </div>
-                    {group.expanded && (
-                      <div className="ml-8 space-y-1">
-                        {group.permissions.map((perm) => (
-                          <div key={perm.id} className="flex items-center gap-2">
-                            <Checkbox
-                              checked={perm.checked}
-                              onCheckedChange={() => togglePermission(group.id, perm.id)}
-                            />
-                            <span className="text-sm">{perm.label}</span>
-                            <span className="text-sm text-primary underline cursor-pointer">{perm.action}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Right Column - More Resources */}
-              <div className="space-y-2">
-                {permissionGroups.slice(4).map((group) => (
-                  <div key={group.id} className="space-y-1">
-                    <div
-                      className="flex items-center gap-2 cursor-pointer"
-                      onClick={() => toggleGroup(group.id)}
-                    >
-                      <span className="text-muted-foreground">{group.expanded ? "−" : "+"}</span>
-                      <Checkbox
-                        checked={group.permissions.every(p => p.checked)}
-                        onCheckedChange={() => {
-                          const allChecked = group.permissions.every(p => p.checked);
-                          setPermissionGroups(prev =>
-                            prev.map(g =>
-                              g.id === group.id
-                                ? { ...g, permissions: g.permissions.map(p => ({ ...p, checked: !allChecked })) }
-                                : g
-                            )
-                          );
-                        }}
-                      />
-                      <span className="font-medium">{group.name}</span>
-                    </div>
-                    {group.expanded && (
-                      <div className="ml-8 space-y-1">
-                        {group.permissions.map((perm) => (
-                          <div key={perm.id} className="flex items-center gap-2">
-                            <Checkbox
-                              checked={perm.checked}
-                              onCheckedChange={() => togglePermission(group.id, perm.id)}
-                            />
-                            <span className="text-sm">{perm.label}</span>
-                            <span className="text-sm text-primary underline cursor-pointer">{perm.action}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Roles List Section */}
-        <div className="space-y-4">
-          <h1 className="text-2xl font-semibold text-foreground">List All Roles</h1>
-
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Show:</span>
-                <Select value={entriesPerPage} onValueChange={setEntriesPerPage}>
-                  <SelectTrigger className="w-[70px] h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="25">25</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                  </SelectContent>
-                </Select>
-                <span className="text-sm text-muted-foreground">entries</span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Search:</span>
-                <Input
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-[200px] h-8"
-                />
-              </div>
-              <Button className="btn-success gap-2" onClick={() => setShowRoleForm(true)}>
-                <Plus size={16} />
-                Set New Role
-              </Button>
-            </div>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Show:</span>
+            <Select value={entriesPerPage} onValueChange={setEntriesPerPage}>
+              <SelectTrigger className="w-[70px] h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-muted-foreground">entries</span>
           </div>
 
-          <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-table-header text-table-header-foreground">
-                    <th className="px-4 py-3 text-left text-sm font-semibold">Action</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold">Role ID</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold">Role Name</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold">Menu Permission</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold">Added Date</th>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Search:</span>
+              <Input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-[200px] h-8"
+              />
+            </div>
+            <Button className="btn-success gap-2" onClick={resetAndOpenModal}>
+              <Plus size={16} />
+              Set New Role
+            </Button>
+          </div>
+        </div>
+
+        <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-table-header text-table-header-foreground">
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Action</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Role ID</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Role Name</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Menu Permission</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Added Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRoles.map((role, index) => (
+                  <tr
+                    key={role.id}
+                    className={`border-b border-border hover:bg-table-row-hover transition-colors ${
+                      index % 2 === 0 ? "bg-card" : "bg-secondary/30"
+                    }`}
+                  >
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        <button className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors">
+                          <Pencil size={14} />
+                        </button>
+                        <button className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-foreground">{role.id}</td>
+                    <td className="px-4 py-3 text-sm text-primary font-medium">{role.name}</td>
+                    <td className="px-4 py-3 text-sm text-primary">{role.menuPermission}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{role.addedDate}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {filteredRoles.map((role, index) => (
-                    <tr
-                      key={role.id}
-                      className={`border-b border-border hover:bg-table-row-hover transition-colors ${
-                        index % 2 === 0 ? "bg-card" : "bg-secondary/30"
-                      }`}
-                    >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1">
-                          <button className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors">
-                            <Pencil size={14} />
-                          </button>
-                          <button className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors">
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-foreground">{role.id}</td>
-                      <td className="px-4 py-3 text-sm text-primary font-medium">{role.name}</td>
-                      <td className="px-4 py-3 text-sm text-primary">{role.menuPermission}</td>
-                      <td className="px-4 py-3 text-sm text-muted-foreground">{role.addedDate}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
+        </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-muted-foreground">
-              Showing 1 to {filteredRoles.length} of {filteredRoles.length} entries
-            </p>
-            <div className="flex items-center gap-1">
-              <Button variant="outline" size="sm" disabled>Previous</Button>
-              <Button variant="default" size="sm" className="btn-success">1</Button>
-              <Button variant="outline" size="sm">Next</Button>
-            </div>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-sm text-primary">
+            Showing 1 to {filteredRoles.length} of {filteredRoles.length} entries
+          </p>
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="sm" disabled>Previous</Button>
+            <Button variant="default" size="sm" className="btn-success">1</Button>
+            <Button variant="outline" size="sm">Next</Button>
           </div>
         </div>
       </div>
+
+      {/* Set New Role Modal */}
+      <Dialog open={roleModalOpen} onOpenChange={setRoleModalOpen}>
+        <DialogContent className="sm:max-w-[900px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Set New Role</DialogTitle>
+          </DialogHeader>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 py-4">
+            {/* Left Column - Form Fields */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Role Name</Label>
+                <Input
+                  value={roleName}
+                  onChange={(e) => setRoleName(e.target.value)}
+                  placeholder="Role Name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Select Access</Label>
+                <Select value={selectAccess} onValueChange={setSelectAccess}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Access" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Menu Access</SelectItem>
+                    <SelectItem value="custom">Custom Menu Access</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Middle Column - Resources */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground mb-2">Resources</h3>
+              {permissionGroups.slice(0, 4).map((group) => (
+                <div key={group.id} className="space-y-1">
+                  <div
+                    className="flex items-center gap-2 cursor-pointer"
+                    onClick={() => toggleGroup(group.id)}
+                  >
+                    <span className="text-muted-foreground text-sm">{group.expanded ? "−" : "+"}</span>
+                    <Checkbox
+                      checked={group.permissions.every(p => p.checked)}
+                      onCheckedChange={() => toggleAllInGroup(group.id)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <span className="font-medium text-sm">{group.name}</span>
+                  </div>
+                  {group.expanded && (
+                    <div className="ml-8 space-y-1">
+                      {group.permissions.map((perm) => (
+                        <div key={perm.id} className="flex items-center gap-2">
+                          <Checkbox
+                            checked={perm.checked}
+                            onCheckedChange={() => togglePermission(group.id, perm.id)}
+                          />
+                          <span className="text-sm">{perm.label}</span>
+                          <span className="text-sm text-primary underline cursor-pointer">{perm.action}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Right Column - More Resources */}
+            <div className="space-y-3">
+              {permissionGroups.slice(4).map((group) => (
+                <div key={group.id} className="space-y-1">
+                  <div
+                    className="flex items-center gap-2 cursor-pointer"
+                    onClick={() => toggleGroup(group.id)}
+                  >
+                    <span className="text-muted-foreground text-sm">{group.expanded ? "−" : "+"}</span>
+                    <Checkbox
+                      checked={group.permissions.every(p => p.checked)}
+                      onCheckedChange={() => toggleAllInGroup(group.id)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <span className="font-medium text-sm">{group.name}</span>
+                  </div>
+                  {group.expanded && (
+                    <div className="ml-8 space-y-1">
+                      {group.permissions.map((perm) => (
+                        <div key={perm.id} className="flex items-center gap-2">
+                          <Checkbox
+                            checked={perm.checked}
+                            onCheckedChange={() => togglePermission(group.id, perm.id)}
+                          />
+                          <span className="text-sm">{perm.label}</span>
+                          <span className="text-sm text-primary underline cursor-pointer">{perm.action}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t border-border">
+            <Button variant="outline" onClick={() => setRoleModalOpen(false)}>Cancel</Button>
+            <Button className="btn-success" onClick={handleSaveRole}>Save</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 };
