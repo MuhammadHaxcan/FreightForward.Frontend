@@ -195,8 +195,8 @@ export default function QuotationView() {
       </div>
 
       {/* Quotation Document */}
-      <div className="py-8 print:py-0">
-        <div className="max-w-4xl mx-auto bg-white shadow-lg print:shadow-none">
+      <div className="py-4 print:py-0">
+        <div className="max-w-3xl mx-auto bg-white shadow-lg print:shadow-none" style={{ transform: 'scale(0.85)', transformOrigin: 'top center' }}>
           {/* Header */}
           <div className="p-8 print:p-6">
             <div className="flex justify-between items-start mb-8">
