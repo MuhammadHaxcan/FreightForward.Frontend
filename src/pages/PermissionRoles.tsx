@@ -46,7 +46,7 @@ const initialPermissionGroups: PermissionGroup[] = [
   {
     id: "dashboard",
     name: "Dashboard",
-    expanded: true,
+    expanded: false,
     permissions: [
       { id: "dash_all_count", label: "All count", action: "All count", checked: false },
       { id: "dash_branch_total", label: "Branch total count", action: "Branch total count", checked: false },
@@ -56,7 +56,7 @@ const initialPermissionGroups: PermissionGroup[] = [
   {
     id: "shipments",
     name: "Shipments",
-    expanded: true,
+    expanded: false,
     permissions: [
       { id: "ship_show_all", label: "Show All", action: "Show All", checked: false },
       { id: "ship_edit", label: "Edit", action: "Edit", checked: false },
@@ -68,7 +68,7 @@ const initialPermissionGroups: PermissionGroup[] = [
   {
     id: "customer",
     name: "Customer",
-    expanded: true,
+    expanded: false,
     permissions: [
       { id: "cust_add", label: "Add", action: "Add", checked: false },
       { id: "cust_edit", label: "Edit", action: "Edit", checked: false },
@@ -79,7 +79,7 @@ const initialPermissionGroups: PermissionGroup[] = [
   {
     id: "quotations",
     name: "Quotations",
-    expanded: true,
+    expanded: false,
     permissions: [
       { id: "quot_show_all", label: "Show All", action: "Show All", checked: false },
       { id: "quot_add", label: "Add", action: "Add", checked: false },
@@ -92,7 +92,7 @@ const initialPermissionGroups: PermissionGroup[] = [
   {
     id: "rate_request",
     name: "Rate Request",
-    expanded: true,
+    expanded: false,
     permissions: [
       { id: "rate_add", label: "Add", action: "Add", checked: false },
       { id: "rate_edit", label: "Edit", action: "Edit", checked: false },
@@ -103,7 +103,7 @@ const initialPermissionGroups: PermissionGroup[] = [
   {
     id: "users",
     name: "Users",
-    expanded: true,
+    expanded: false,
     permissions: [
       { id: "user_add", label: "Add", action: "Add", checked: false },
       { id: "user_edit", label: "Edit", action: "Edit", checked: false },
@@ -116,7 +116,7 @@ const initialPermissionGroups: PermissionGroup[] = [
   {
     id: "settings",
     name: "Settings",
-    expanded: true,
+    expanded: false,
     permissions: [
       { id: "settings_currency", label: "Currency", action: "Add", checked: false },
     ],
