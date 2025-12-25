@@ -3,8 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { X } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
+import { X, ChevronDown, Check } from "lucide-react";
 import { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
 
 export interface Customer {
   id: number;
@@ -161,23 +164,67 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
 
             <div className="space-y-2">
               <Label className="text-sm">*Customer Type</Label>
-              <div className="flex flex-wrap gap-2 p-2 bg-muted/50 rounded-md border border-input min-h-[80px]">
-                {customerTypes.map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => toggleCategory(type)}
-                    className={`px-2 py-1 text-xs rounded-md transition-colors ${
-                      formData.category.includes(type)
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                    }`}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    className="w-full justify-between bg-muted/50 font-normal h-auto min-h-[40px] py-2"
                   >
-                    {formData.category.includes(type) && <span className="mr-1">×</span>}
-                    {type}
-                  </button>
-                ))}
-              </div>
+                    <div className="flex flex-wrap gap-1 flex-1">
+                      {formData.category.length === 0 ? (
+                        <span className="text-muted-foreground">Select customer types...</span>
+                      ) : (
+                        formData.category.map((type) => (
+                          <span
+                            key={type}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary text-primary-foreground rounded-md"
+                          >
+                            × {type}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleCategory(type);
+                              }}
+                              className="hover:bg-primary-foreground/20 rounded-full"
+                            >
+                            </button>
+                          </span>
+                        ))
+                      )}
+                    </div>
+                    <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[280px] p-0" align="start">
+                  <Command>
+                    <CommandList>
+                      <CommandGroup>
+                        {customerTypes.map((type) => (
+                          <CommandItem
+                            key={type}
+                            onSelect={() => toggleCategory(type)}
+                            className="cursor-pointer"
+                          >
+                            <div
+                              className={cn(
+                                "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                                formData.category.includes(type)
+                                  ? "bg-primary text-primary-foreground"
+                                  : "opacity-50"
+                              )}
+                            >
+                              {formData.category.includes(type) && <Check className="h-3 w-3" />}
+                            </div>
+                            {type}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="space-y-2">
