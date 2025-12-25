@@ -45,6 +45,27 @@ const customerTypes = [
 const masterTypes = ["Debtors", "Neutral", "Creditors"];
 const currencies = ["USD", "EUR", "GBP", "AED", "PKR", "INR", "CNY"];
 
+// Code prefixes for each master type
+const codePrefix: Record<string, string> = {
+  Debtors: "DEI",
+  Neutral: "NEI",
+  Creditors: "CDI",
+};
+
+// Track last used codes for auto-generation (in real app, this would come from backend)
+const lastCodeNumber: Record<string, number> = {
+  Debtors: 510,
+  Neutral: 500,
+  Creditors: 470,
+};
+
+const generateCode = (masterType: string): string => {
+  const prefix = codePrefix[masterType] || "XXX";
+  const nextNumber = (lastCodeNumber[masterType] || 0) + 1;
+  lastCodeNumber[masterType] = nextNumber;
+  return `${prefix}${String(nextNumber).padStart(4, "0")}`;
+};
+
 export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerModalProps) {
   const [formData, setFormData] = useState({
     code: "",
@@ -147,7 +168,10 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
               </Label>
               <Select
                 value={formData.masterType}
-                onValueChange={(value) => setFormData({ ...formData, masterType: value })}
+                onValueChange={(value) => {
+                  const newCode = mode === "add" ? generateCode(value) : formData.code;
+                  setFormData({ ...formData, masterType: value, code: newCode });
+                }}
               >
                 <SelectTrigger className="bg-muted/50">
                   <SelectValue placeholder="Select" />
