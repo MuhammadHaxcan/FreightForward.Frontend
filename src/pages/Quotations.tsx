@@ -235,7 +235,7 @@ export default function Quotations() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 bg-orange-500 hover:bg-orange-600 text-white rounded"
-                            onClick={() => navigate(`/sales/quotations/${quotation.id}/view`)}
+                            onClick={() => window.open(`/sales/quotations/${quotation.id}/view`, '_blank')}
                           >
                             <Download className="h-4 w-4" />
                           </Button>
