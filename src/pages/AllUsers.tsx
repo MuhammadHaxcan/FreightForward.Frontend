@@ -5,54 +5,257 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Minus } from "lucide-react";
 
 interface User {
   id: number;
+  firstName: string;
+  lastName: string;
   name: string;
   email: string;
+  contactNumber: string;
+  companyBranch: string;
+  permissions: { role: string; country: string }[];
   status: string;
 }
 
+interface PermissionRow {
+  id: number;
+  role: string;
+  country: string;
+}
+
 const mockUsers: User[] = [
-  { id: 1, name: "Transparant Admin", email: "admin@tfs-global.com", status: "Active" },
-  { id: 2, name: "SOULAT TFSU", email: "soulat@tfs-global.com", status: "Active" },
-  { id: 3, name: "ACCOUNTS TFSU", email: "accounts@tfs-global.com", status: "Active" },
-  { id: 4, name: "Safuvan cmc", email: "cmcsafuvan46@gmail.com", status: "Active" },
-  { id: 5, name: "admin pakistan s", email: "salepakistan@transparant.com", status: "Active" },
-  { id: 6, name: "admin qatar s", email: "saleqatar@transparant.com", status: "Active" },
-  { id: 7, name: "Shireen TFSU", email: "cus1@tfs-global.com", status: "Active" },
-  { id: 8, name: "Qaseem tfs", email: "qaseem@tfs-global.com", status: "In-Active" },
-  { id: 9, name: "Mazeeda TFSU", email: "cs2@tfs-global.com", status: "Active" },
-  { id: 10, name: "sales TFS", email: "sales1@tfs-global.com", status: "Active" },
+  { id: 1, firstName: "Transparant", lastName: "Admin", name: "Transparant Admin", email: "admin@tfs-global.com", contactNumber: "", companyBranch: "TRANSPARENT FREIGHT SERVICES", permissions: [{ role: "Administrator", country: "TRANSPARENT FREIGHT SERVICES" }], status: "Active" },
+  { id: 2, firstName: "SOULAT", lastName: "TFSU", name: "SOULAT TFSU", email: "soulat@tfs-global.com", contactNumber: "", companyBranch: "TRANSPARENT FREIGHT SERVICES", permissions: [{ role: "Employee", country: "TRANSPARENT FREIGHT SERVICES" }], status: "Active" },
+  { id: 3, firstName: "ACCOUNTS", lastName: "TFSU", name: "ACCOUNTS TFSU", email: "accounts@tfs-global.com", contactNumber: "", companyBranch: "TRANSPARENT FREIGHT SERVICES", permissions: [{ role: "Employee", country: "TRANSPARENT FREIGHT SERVICES" }], status: "Active" },
+  { id: 4, firstName: "Safuvan", lastName: "cmc", name: "Safuvan cmc", email: "cmcsafuvan46@gmail.com", contactNumber: "", companyBranch: "TRANSPARENT FREIGHT SERVICES", permissions: [{ role: "Employee", country: "TRANSPARENT FREIGHT SERVICES" }], status: "Active" },
+  { id: 5, firstName: "admin", lastName: "pakistan s", name: "admin pakistan s", email: "salepakistan@transparant.com", contactNumber: "", companyBranch: "TRANSPARENT FREIGHT SERVICES", permissions: [{ role: "Manager", country: "TRANSPARENT FREIGHT SERVICES WLL" }], status: "Active" },
+  { id: 6, firstName: "admin", lastName: "qatar s", name: "admin qatar s", email: "saleqatar@transparant.com", contactNumber: "", companyBranch: "TRANSPARENT FREIGHT SERVICES", permissions: [{ role: "Manager", country: "TRANSPARENT FREIGHT SERVICES WLL" }], status: "Active" },
+  { id: 7, firstName: "Shireen", lastName: "TFSU", name: "Shireen TFSU", email: "cus1@tfs-global.com", contactNumber: "", companyBranch: "TRANSPARENT FREIGHT SERVICES", permissions: [{ role: "Employee", country: "TRANSPARENT FREIGHT SERVICES" }], status: "Active" },
+  { id: 8, firstName: "Qaseem", lastName: "tfs", name: "Qaseem tfs", email: "qaseem@tfs-global.com", contactNumber: "", companyBranch: "TRANSPARENT FREIGHT SERVICES", permissions: [{ role: "Employee", country: "TRANSPARENT FREIGHT SERVICES" }], status: "In-Active" },
+  { id: 9, firstName: "Mazeeda", lastName: "TFSU", name: "Mazeeda TFSU", email: "cs2@tfs-global.com", contactNumber: "", companyBranch: "TRANSPARENT FREIGHT SERVICES", permissions: [{ role: "Employee", country: "TRANSPARENT FREIGHT SERVICES" }], status: "Active" },
+  { id: 10, firstName: "sales", lastName: "TFS", name: "sales TFS", email: "sales1@tfs-global.com", contactNumber: "", companyBranch: "TRANSPARENT FREIGHT SERVICES", permissions: [{ role: "SALES", country: "TRANSPARENT FREIGHT SERVICES" }], status: "Active" },
 ];
 
+const roles = ["Administrator", "Employee", "Manager", "Junior Employee", "President", "CEOs", "SALES"];
+const countries = ["TRANSPARENT FREIGHT SERVICES", "TRANSPARENT FREIGHT SERVICES WLL", "TRANSPARENT FREIGHT SERVICES LLC"];
+const branches = ["TRANSPARENT FREIGHT SERVICES", "TRANSPARENT FREIGHT SERVICES WLL", "TRANSPARENT FREIGHT SERVICES LLC"];
+
 const AllUsers = () => {
+  const [users] = useState<User[]>(mockUsers);
   const [searchTerm, setSearchTerm] = useState("");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
-  const [addModalOpen, setAddModalOpen] = useState(false);
-  const [newUser, setNewUser] = useState({ name: "", email: "", password: "", role: "", status: "Active" });
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<"add" | "edit">("add");
+  const [editingUser, setEditingUser] = useState<User | null>(null);
 
-  const filteredUsers = mockUsers.filter(
+  // Form state
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [contactNumber, setContactNumber] = useState("");
+  const [email, setEmail] = useState("");
+  const [companyBranch, setCompanyBranch] = useState("");
+  const [permissionRows, setPermissionRows] = useState<PermissionRow[]>([
+    { id: 1, role: "", country: "" }
+  ]);
+
+  const filteredUsers = users.filter(
     (user) =>
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleSaveUser = () => {
-    console.log("Saving user:", newUser);
-    setAddModalOpen(false);
-    setNewUser({ name: "", email: "", password: "", role: "", status: "Active" });
+  const resetForm = () => {
+    setFirstName("");
+    setLastName("");
+    setContactNumber("");
+    setEmail("");
+    setCompanyBranch("");
+    setPermissionRows([{ id: 1, role: "", country: "" }]);
+  };
+
+  const handleAddNew = () => {
+    resetForm();
+    setModalMode("add");
+    setEditingUser(null);
+    setModalOpen(true);
+  };
+
+  const handleEdit = (user: User) => {
+    setFirstName(user.firstName);
+    setLastName(user.lastName);
+    setContactNumber(user.contactNumber);
+    setEmail(user.email);
+    setCompanyBranch(user.companyBranch);
+    setPermissionRows(user.permissions.map((p, i) => ({ id: i + 1, role: p.role, country: p.country })));
+    setModalMode("edit");
+    setEditingUser(user);
+    setModalOpen(true);
+  };
+
+  const handleAddPermissionRow = () => {
+    setPermissionRows([...permissionRows, { id: Date.now(), role: "", country: "" }]);
+  };
+
+  const handleRemovePermissionRow = (id: number) => {
+    if (permissionRows.length > 1) {
+      setPermissionRows(permissionRows.filter(row => row.id !== id));
+    }
+  };
+
+  const updatePermissionRow = (id: number, field: "role" | "country", value: string) => {
+    setPermissionRows(permissionRows.map(row =>
+      row.id === id ? { ...row, [field]: value } : row
+    ));
+  };
+
+  const handleSave = () => {
+    console.log("Saving:", {
+      firstName,
+      lastName,
+      contactNumber,
+      email,
+      companyBranch,
+      permissions: permissionRows
+    });
+    setModalOpen(false);
+    resetForm();
   };
 
   return (
     <MainLayout>
       <div className="p-6 space-y-4">
+        {/* Add/Edit Form Section */}
+        {modalOpen && (
+          <div className="bg-card rounded-lg border border-border p-6 space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-foreground">
+                {modalMode === "add" ? "Add New" : "Edit"} <span className="font-normal">Employee</span>
+              </h2>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="gap-1"
+                onClick={() => setModalOpen(false)}
+              >
+                <Minus size={16} /> Hide
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label className="text-sm">First Name</Label>
+                <Input
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="First Name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Last Name</Label>
+                <Input
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Last Name"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label className="text-sm">Contact Number</Label>
+                <Input
+                  value={contactNumber}
+                  onChange={(e) => setContactNumber(e.target.value)}
+                  placeholder="Contact Number"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Email</Label>
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label className="text-sm">Company Branch</Label>
+                <Select value={companyBranch} onValueChange={setCompanyBranch}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select Branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((branch) => (
+                      <SelectItem key={branch} value={branch}>{branch}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-[1fr_1fr_auto] gap-4 items-end">
+                  <Label className="text-sm">Permission Role</Label>
+                  <Label className="text-sm">Permission Country</Label>
+                  <div></div>
+                </div>
+
+                {permissionRows.map((row, index) => (
+                  <div key={row.id} className="grid grid-cols-[1fr_1fr_auto] gap-4 items-center">
+                    <Select value={row.role} onValueChange={(v) => updatePermissionRow(row.id, "role", v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {roles.map((role) => (
+                          <SelectItem key={role} value={role}>{role}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={row.country} onValueChange={(v) => updatePermissionRow(row.id, "country", v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Country" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {countries.map((country) => (
+                          <SelectItem key={country} value={country}>{country}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {index === 0 ? (
+                      <Button className="btn-success gap-1" onClick={handleAddPermissionRow}>
+                        <Plus size={16} /> Add Cargo
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        onClick={() => handleRemovePermissionRow(row.id)}
+                      >
+                        <Trash2 size={16} />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <Button className="btn-success" onClick={handleSave}>
+              Save
+            </Button>
+          </div>
+        )}
+
+        {/* List Section */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-foreground">
-            List All <span className="text-foreground">Employees</span>
+            List All <span className="font-normal">Employees</span>
           </h1>
-          <Button className="btn-success gap-2" onClick={() => setAddModalOpen(true)}>
+          <Button className="btn-success gap-2" onClick={handleAddNew}>
             <Plus size={16} />
             Add New
           </Button>
@@ -105,7 +308,10 @@ const AllUsers = () => {
                   >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
-                        <button className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors">
+                        <button 
+                          className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                          onClick={() => handleEdit(user)}
+                        >
                           <Pencil size={14} />
                         </button>
                         <button className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors">
@@ -143,73 +349,6 @@ const AllUsers = () => {
           </div>
         </div>
       </div>
-
-      {/* Add New User Modal */}
-      <Dialog open={addModalOpen} onOpenChange={setAddModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Add New Employee</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label>*Name</Label>
-              <Input 
-                value={newUser.name} 
-                onChange={(e) => setNewUser({...newUser, name: e.target.value})}
-                placeholder="Enter name"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>*Email</Label>
-              <Input 
-                type="email"
-                value={newUser.email} 
-                onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                placeholder="Enter email"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>*Password</Label>
-              <Input 
-                type="password"
-                value={newUser.password} 
-                onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                placeholder="Enter password"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>*Role</Label>
-              <Select value={newUser.role} onValueChange={(v) => setNewUser({...newUser, role: v})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Administrator">Administrator</SelectItem>
-                  <SelectItem value="Manager">Manager</SelectItem>
-                  <SelectItem value="Employee">Employee</SelectItem>
-                  <SelectItem value="Junior Employee">Junior Employee</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Select value={newUser.status} onValueChange={(v) => setNewUser({...newUser, status: v})}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Active">Active</SelectItem>
-                  <SelectItem value="In-Active">In-Active</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setAddModalOpen(false)}>Cancel</Button>
-            <Button className="btn-success" onClick={handleSaveUser}>Save</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </MainLayout>
   );
 };
