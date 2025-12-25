@@ -51,6 +51,10 @@ const MasterCustomers = () => {
   const handleEdit = (customer: Customer) => {
     if (customer.masterType === "Debtors") {
       navigate(`/master-customers/${customer.id}/edit`);
+    } else if (customer.masterType === "Creditors") {
+      navigate(`/master-customers/${customer.id}/creditor/edit`);
+    } else if (customer.masterType === "Neutral") {
+      navigate(`/master-customers/${customer.id}/neutral/edit`);
     } else {
       setEditCustomer(customer);
       setModalMode("edit");
@@ -61,6 +65,10 @@ const MasterCustomers = () => {
   const handleView = (customer: Customer) => {
     if (customer.masterType === "Debtors") {
       navigate(`/master-customers/${customer.id}/edit?mode=view`);
+    } else if (customer.masterType === "Creditors") {
+      navigate(`/master-customers/${customer.id}/creditor/edit?mode=view`);
+    } else if (customer.masterType === "Neutral") {
+      navigate(`/master-customers/${customer.id}/neutral/edit?mode=view`);
     }
   };
 
@@ -147,7 +155,7 @@ const MasterCustomers = () => {
                         >
                           <Pencil size={16} />
                         </Button>
-                        {customer.masterType === "Debtors" && (
+                        {(customer.masterType === "Debtors" || customer.masterType === "Creditors" || customer.masterType === "Neutral") && (
                           <Button
                             size="icon"
                             variant="ghost"
