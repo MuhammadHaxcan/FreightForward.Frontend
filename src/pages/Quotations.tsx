@@ -20,6 +20,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -42,6 +43,17 @@ interface Quotation {
   status: "Pending" | "Approved" | "Rejected";
 }
 
+interface ChargeRow {
+  id: number;
+  chargeType: string;
+  bases: string;
+  currency: string;
+  rate: string;
+  roe: string;
+  quantity: string;
+  amount: string;
+}
+
 const mockQuotations: Quotation[] = [
   { id: "1", quotationNo: "QTAE10992", date: "25-12-2025", customerName: "SKY SHIPPING LINE (LLC)", incoterms: "FOB-FREE ON BOARD", mode: "LCL-Sea Freight", pol: "China", pod: "United Arab Emirates", quoteExpiryDate: "31-12-2025", status: "Approved" },
   { id: "2", quotationNo: "QTAE10991", date: "24-12-2025", customerName: "CAKE DECORATION CENTER FOR TRADING", incoterms: "EXW-EX WORKS", mode: "FCL-Sea Freight", pol: "Spain", pod: "Saudi Arabia", quoteExpiryDate: "15-01-2026", status: "Pending" },
@@ -52,14 +64,20 @@ const mockQuotations: Quotation[] = [
   { id: "7", quotationNo: "QTAE10983", date: "22-10-2025", customerName: "EL ABRAR", incoterms: "EXW-EX WORKS", mode: "FCL-Sea Freight", pol: "Italy", pod: "Pakistan", quoteExpiryDate: "31-10-2025", status: "Approved" },
 ];
 
+type ModalMode = "add" | "edit" | "view";
+
 export default function Quotations() {
   const [quotations] = useState<Quotation[]>(mockQuotations);
   const [searchTerm, setSearchTerm] = useState("");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingQuotation, setEditingQuotation] = useState<Quotation | null>(null);
+  const [modalMode, setModalMode] = useState<ModalMode>("add");
+  const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(null);
   const [activeTab, setActiveTab] = useState("all");
-  const [chargeRows, setChargeRows] = useState([{ id: 1 }]);
+  const [cargoCalculationMode, setCargoCalculationMode] = useState<"units" | "shipment">("units");
+  const [chargeRows, setChargeRows] = useState<ChargeRow[]>([
+    { id: 1, chargeType: "", bases: "", currency: "", rate: "", roe: "", quantity: "", amount: "" }
+  ]);
 
   const filteredQuotations = quotations.filter((quotation) => {
     const matchesSearch =
@@ -83,18 +101,37 @@ export default function Quotations() {
     }
   };
 
-  const openAddModal = () => {
-    setEditingQuotation(null);
-    setIsModalOpen(true);
-  };
-
-  const openEditModal = (quotation: Quotation) => {
-    setEditingQuotation(quotation);
+  const openModal = (mode: ModalMode, quotation?: Quotation) => {
+    setModalMode(mode);
+    setSelectedQuotation(quotation || null);
+    setChargeRows([
+      { id: 1, chargeType: "", bases: "", currency: "", rate: "", roe: "", quantity: "", amount: "" }
+    ]);
+    setCargoCalculationMode("units");
     setIsModalOpen(true);
   };
 
   const addChargeRow = () => {
-    setChargeRows([...chargeRows, { id: chargeRows.length + 1 }]);
+    setChargeRows([
+      ...chargeRows,
+      { id: Date.now(), chargeType: "", bases: "", currency: "", rate: "", roe: "", quantity: "", amount: "" }
+    ]);
+  };
+
+  const deleteChargeRow = (id: number) => {
+    if (chargeRows.length > 1) {
+      setChargeRows(chargeRows.filter(row => row.id !== id));
+    }
+  };
+
+  const isReadOnly = modalMode === "view";
+
+  const getModalTitle = () => {
+    switch (modalMode) {
+      case "add": return "Add New Quotation";
+      case "edit": return "Edit Quotation";
+      case "view": return "View Quotation";
+    }
   };
 
   return (
@@ -103,7 +140,7 @@ export default function Quotations() {
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-semibold text-foreground">Quotations</h1>
           <Button
-            onClick={openAddModal}
+            onClick={() => openModal("add")}
             className="bg-green-600 hover:bg-green-700 text-white"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -180,7 +217,7 @@ export default function Quotations() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 bg-green-500 hover:bg-green-600 text-white rounded"
-                            onClick={() => openEditModal(quotation)}
+                            onClick={() => openModal("edit", quotation)}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -188,6 +225,7 @@ export default function Quotations() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 bg-blue-500 hover:bg-blue-600 text-white rounded"
+                            onClick={() => openModal("view", quotation)}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -228,29 +266,55 @@ export default function Quotations() {
         </Tabs>
       </div>
 
-      {/* Add/Edit Quotation Modal */}
+      {/* Add/Edit/View Quotation Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-green-600 text-xl">
-              {editingQuotation ? "Edit Quotation" : "Add New Quotation"}
+              {getModalTitle()}
             </DialogTitle>
+            <DialogDescription>
+              {modalMode === "view" ? "View quotation details" : "Fill in the quotation details below"}
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6">
+            {/* Header with Back and Update buttons for edit/view mode */}
+            {(modalMode === "edit" || modalMode === "view") && (
+              <div className="flex justify-end gap-2">
+                <Button 
+                  variant="outline" 
+                  className="bg-yellow-500 hover:bg-yellow-600 text-white border-yellow-500"
+                  onClick={() => setIsModalOpen(false)}
+                >
+                  Back
+                </Button>
+                {modalMode === "edit" && (
+                  <Button className="bg-blue-500 hover:bg-blue-600 text-white">
+                    Update
+                  </Button>
+                )}
+              </div>
+            )}
+
             {/* Quotation Details */}
             <div className="border border-border rounded-lg p-4">
               <h3 className="text-green-600 font-semibold mb-4">Quotation</h3>
               <div className="grid grid-cols-6 gap-4 mb-4">
                 <div>
                   <Label>Quotation ID</Label>
-                  <Input value={editingQuotation?.quotationNo || "QTAE10993"} readOnly className="bg-muted" />
+                  <Input 
+                    value={selectedQuotation?.quotationNo || "QTAE10993"} 
+                    readOnly 
+                    className="bg-muted" 
+                    disabled={isReadOnly}
+                  />
                 </div>
                 <div>
                   <Label>Company Name</Label>
-                  <Select>
+                  <Select disabled={isReadOnly}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select" />
+                      <SelectValue placeholder={selectedQuotation?.customerName || "Select"} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="sky">SKY SHIPPING LINE (LLC)</SelectItem>
@@ -261,7 +325,7 @@ export default function Quotations() {
                 </div>
                 <div>
                   <Label>Contact Person</Label>
-                  <Select>
+                  <Select disabled={isReadOnly}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
@@ -273,17 +337,17 @@ export default function Quotations() {
                 </div>
                 <div>
                   <Label>Customer Reference Code</Label>
-                  <Input />
+                  <Input disabled={isReadOnly} />
                 </div>
                 <div>
                   <Label>Quotation Booking No</Label>
-                  <Input value="BKGAE25113" readOnly className="bg-muted" />
+                  <Input value="BKGAE25113" readOnly className="bg-muted" disabled={isReadOnly} />
                 </div>
                 <div>
                   <Label>Mode</Label>
-                  <Select>
+                  <Select disabled={isReadOnly}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select" />
+                      <SelectValue placeholder={selectedQuotation?.mode || "Select"} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="air">Air Freight</SelectItem>
@@ -296,17 +360,17 @@ export default function Quotations() {
               <div className="grid grid-cols-6 gap-4 mb-4">
                 <div>
                   <Label>Date Of Issue</Label>
-                  <Input type="date" defaultValue="2025-12-25" />
+                  <Input type="date" defaultValue="2025-12-25" disabled={isReadOnly} />
                 </div>
                 <div>
                   <Label>Validity</Label>
-                  <Input type="date" defaultValue="2025-12-25" />
+                  <Input type="date" defaultValue="2025-12-31" disabled={isReadOnly} />
                 </div>
                 <div>
                   <Label>Incoterm</Label>
-                  <Select>
+                  <Select disabled={isReadOnly}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select" />
+                      <SelectValue placeholder={selectedQuotation?.incoterms || "Select"} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="exw">EXW-EX WORKS</SelectItem>
@@ -317,9 +381,9 @@ export default function Quotations() {
                 </div>
                 <div>
                   <Label>Status</Label>
-                  <Select>
+                  <Select disabled={isReadOnly}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Pending" />
+                      <SelectValue placeholder={selectedQuotation?.status || "Pending"} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="pending">Pending</SelectItem>
@@ -330,9 +394,9 @@ export default function Quotations() {
                 </div>
                 <div>
                   <Label>Origin/Loading Port</Label>
-                  <Select>
+                  <Select disabled={isReadOnly}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select" />
+                      <SelectValue placeholder={selectedQuotation?.pol || "Select"} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="qingdao">Qingdao</SelectItem>
@@ -342,9 +406,9 @@ export default function Quotations() {
                 </div>
                 <div>
                   <Label>Destination/Discharge Port</Label>
-                  <Select>
+                  <Select disabled={isReadOnly}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select" />
+                      <SelectValue placeholder={selectedQuotation?.pod || "Select"} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="jebel-ali">Jebel Ali</SelectItem>
@@ -356,19 +420,19 @@ export default function Quotations() {
               <div className="grid grid-cols-4 gap-4">
                 <div>
                   <Label>Pick-Up Address</Label>
-                  <Textarea placeholder="Pick-Up Address" />
+                  <Textarea placeholder="Pick-Up Address" disabled={isReadOnly} />
                 </div>
                 <div>
                   <Label>Delivery Address</Label>
-                  <Textarea placeholder="Delivery Address" />
+                  <Textarea placeholder="Delivery Address" disabled={isReadOnly} />
                 </div>
                 <div>
-                  <Label>Remarks</Label>
-                  <Textarea placeholder="Remarks" />
+                  <Label>Document Required</Label>
+                  <Textarea placeholder="Document Required" disabled={isReadOnly} />
                 </div>
                 <div>
-                  <Label>CFS</Label>
-                  <Textarea placeholder="CFS" />
+                  <Label>Notes</Label>
+                  <Textarea placeholder="Notes" disabled={isReadOnly} />
                 </div>
               </div>
             </div>
@@ -376,110 +440,218 @@ export default function Quotations() {
             {/* Cargo Details */}
             <div className="border border-border rounded-lg p-4">
               <h3 className="text-green-600 font-semibold mb-4">Cargo Details</h3>
+              
+              {/* Cargo Calculation Mode Tabs */}
               <div className="flex gap-2 mb-4">
-                <Button className="bg-red-500 hover:bg-red-600 text-white">Calculate by Units</Button>
-                <Button variant="link" className="text-green-600">Calculate by Total Shipment</Button>
+                <Button 
+                  className={cargoCalculationMode === "units" 
+                    ? "bg-green-600 hover:bg-green-700 text-white" 
+                    : "bg-transparent text-green-600 hover:bg-green-50"}
+                  variant={cargoCalculationMode === "units" ? "default" : "ghost"}
+                  onClick={() => !isReadOnly && setCargoCalculationMode("units")}
+                  disabled={isReadOnly}
+                >
+                  Calculate by Units
+                </Button>
+                <Button 
+                  className={cargoCalculationMode === "shipment" 
+                    ? "bg-green-600 hover:bg-green-700 text-white" 
+                    : "bg-transparent text-green-600 hover:bg-green-50"}
+                  variant={cargoCalculationMode === "shipment" ? "default" : "ghost"}
+                  onClick={() => !isReadOnly && setCargoCalculationMode("shipment")}
+                  disabled={isReadOnly}
+                >
+                  Calculate by Total Shipment
+                </Button>
               </div>
-              <div className="grid grid-cols-9 gap-2 mb-4">
-                <div>
-                  <Label>Qty</Label>
-                  <Input placeholder="Quantity" />
-                </div>
-                <div>
-                  <Label>Load Type</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pallets">Pallets</SelectItem>
-                      <SelectItem value="boxes">Boxes</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Length</Label>
-                  <Input placeholder="L" />
-                </div>
-                <div>
-                  <Label>Width</Label>
-                  <Input placeholder="W" />
-                </div>
-                <div>
-                  <Label>Height</Label>
-                  <Input placeholder="H" />
-                </div>
-                <div>
-                  <Label>CBM</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cbm">CBM</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Weight</Label>
-                  <Input placeholder="0" />
-                </div>
-                <div>
-                  <Label>Unit Weight</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="KG" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="kg">KG</SelectItem>
-                      <SelectItem value="lbs">LBS</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-end">
-                  <Button className="bg-green-600 hover:bg-green-700 text-white">+ Add</Button>
-                </div>
-              </div>
-              <div className="grid grid-cols-5 gap-4">
-                <div>
-                  <Label>Cargo Description</Label>
-                  <Input placeholder="Enter Description Here" />
-                </div>
-                <div>
-                  <Label>Total Volume</Label>
-                  <Input value="0.00" readOnly />
-                </div>
-                <div>
-                  <Label>Total CBM</Label>
-                  <Input value="0.00" readOnly />
-                </div>
-                <div>
-                  <Label>Total Weight</Label>
-                  <Input value="0.00" readOnly />
-                </div>
-                <div>
-                  <Label>Type</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="KG" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="kg">KG</SelectItem>
-                      <SelectItem value="lbs">LBS</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+
+              {/* Calculate by Units View */}
+              {cargoCalculationMode === "units" && (
+                <>
+                  <div className="grid grid-cols-10 gap-2 mb-4 text-sm">
+                    <div>
+                      <Label className="text-xs">Qty</Label>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Load Type</Label>
+                    </div>
+                    <div className="col-span-3">
+                      <Label className="text-xs">Unit Dimensions | Total Volume</Label>
+                      <div className="grid grid-cols-3 gap-1 text-xs text-muted-foreground">
+                        <span>Length</span>
+                        <span>Width</span>
+                        <span>Height</span>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs">CBM</Label>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Weight</Label>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Unit Weight</Label>
+                    </div>
+                    <div></div>
+                  </div>
+                  <div className="grid grid-cols-10 gap-2 mb-4">
+                    <div>
+                      <Input placeholder="Quantity" disabled={isReadOnly} />
+                    </div>
+                    <div>
+                      <Select disabled={isReadOnly}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pallets">PALLETS</SelectItem>
+                          <SelectItem value="boxes">BOXES</SelectItem>
+                          <SelectItem value="cartons">CARTONS</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Input placeholder="L" disabled={isReadOnly} />
+                    </div>
+                    <div>
+                      <Input placeholder="W" disabled={isReadOnly} />
+                    </div>
+                    <div>
+                      <Input placeholder="H" disabled={isReadOnly} />
+                    </div>
+                    <div>
+                      <Select disabled={isReadOnly}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cbm">CBM</SelectItem>
+                          <SelectItem value="cft">CFT</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Input placeholder="0.00" disabled={isReadOnly} />
+                    </div>
+                    <div>
+                      <Select disabled={isReadOnly}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="KG" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="kg">KG</SelectItem>
+                          <SelectItem value="lbs">LBS</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      {!isReadOnly && (
+                        <Button className="bg-green-600 hover:bg-green-700 text-white w-full">
+                          + Add
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-6 gap-4">
+                    <div>
+                      <Label>Cargo Description</Label>
+                      <Input placeholder="GENERAL CARGO" disabled={isReadOnly} />
+                    </div>
+                    <div>
+                      <Label>Total Volume</Label>
+                      <Input value="0.00" readOnly className="bg-muted" />
+                    </div>
+                    <div>
+                      <Label>Total CBM</Label>
+                      <Input value="0.00" readOnly className="bg-muted" />
+                    </div>
+                    <div>
+                      <Label>Total Weight</Label>
+                      <Input value="0.00" readOnly className="bg-muted" />
+                    </div>
+                    <div>
+                      <Label>Type</Label>
+                      <Select disabled={isReadOnly}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="KG" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="kg">KG</SelectItem>
+                          <SelectItem value="lbs">LBS</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Calculate by Total Shipment View */}
+              {cargoCalculationMode === "shipment" && (
+                <>
+                  <div className="grid grid-cols-5 gap-4 mb-4">
+                    <div>
+                      <Label>Qty</Label>
+                      <Input placeholder="4" disabled={isReadOnly} />
+                    </div>
+                    <div>
+                      <Label>Load Type</Label>
+                      <Select disabled={isReadOnly}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="PALLETS" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pallets">PALLETS</SelectItem>
+                          <SelectItem value="boxes">BOXES</SelectItem>
+                          <SelectItem value="cartons">CARTONS</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Total CBM</Label>
+                      <Input placeholder="2.50" disabled={isReadOnly} />
+                    </div>
+                    <div>
+                      <Label>Total Weight</Label>
+                      <Input placeholder="2455" disabled={isReadOnly} />
+                    </div>
+                    <div>
+                      <Label>Weight Type</Label>
+                      <Select disabled={isReadOnly}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="KG" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="kg">KG</SelectItem>
+                          <SelectItem value="lbs">LBS</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Cargo Description</Label>
+                    <Input placeholder="GENERAL CARGO" disabled={isReadOnly} />
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Charges Details */}
             <div className="border border-border rounded-lg p-4">
               <h3 className="text-green-600 font-semibold mb-4">Charges Details</h3>
+              <div className="grid grid-cols-8 gap-2 mb-2 text-sm font-medium">
+                <div>Charges Details</div>
+                <div>Bases</div>
+                <div>Currency</div>
+                <div>Rate</div>
+                <div>ROE</div>
+                <div>Quantity</div>
+                <div>Amount</div>
+                <div></div>
+              </div>
               {chargeRows.map((row, index) => (
-                <div key={row.id} className="grid grid-cols-7 gap-2 mb-2">
+                <div key={row.id} className="grid grid-cols-8 gap-2 mb-2">
                   <div>
-                    <Label>Charges Details</Label>
-                    <Select>
+                    <Select disabled={isReadOnly}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
@@ -491,12 +663,10 @@ export default function Quotations() {
                     </Select>
                   </div>
                   <div>
-                    <Label>Bases</Label>
-                    <Input placeholder="Bases" />
+                    <Input placeholder="Bases" disabled={isReadOnly} />
                   </div>
                   <div>
-                    <Label>Currency</Label>
-                    <Select>
+                    <Select disabled={isReadOnly}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
@@ -508,41 +678,57 @@ export default function Quotations() {
                     </Select>
                   </div>
                   <div>
-                    <Label>Rate</Label>
-                    <Input placeholder="1" />
+                    <Input placeholder="Rates" disabled={isReadOnly} />
                   </div>
                   <div>
-                    <Label>ROE</Label>
-                    <Input placeholder="ROE" />
+                    <Input placeholder="ROE" disabled={isReadOnly} />
                   </div>
                   <div>
-                    <Label>Quantity</Label>
-                    <Input placeholder="Quantity" />
+                    <Input placeholder="Quantity" disabled={isReadOnly} />
                   </div>
-                  <div className="flex items-end gap-1">
-                    <div className="flex-1">
-                      <Label>Amount</Label>
-                      <Input placeholder="0" />
-                    </div>
-                    {index === chargeRows.length - 1 ? (
-                      <Button onClick={addChargeRow} className="bg-green-600 hover:bg-green-700 text-white">Add</Button>
-                    ) : (
-                      <Button variant="destructive" size="icon" className="h-10 w-10">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                  <div>
+                    <Input placeholder="0.00" disabled={isReadOnly} />
+                  </div>
+                  <div>
+                    {!isReadOnly && (
+                      index === chargeRows.length - 1 ? (
+                        <Button 
+                          onClick={addChargeRow} 
+                          className="bg-green-600 hover:bg-green-700 text-white w-full"
+                        >
+                          + Add
+                        </Button>
+                      ) : (
+                        <Button 
+                          variant="destructive" 
+                          size="icon" 
+                          className="h-10 w-full bg-red-500 hover:bg-red-600"
+                          onClick={() => deleteChargeRow(row.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )
                     )}
                   </div>
                 </div>
               ))}
             </div>
 
+            {/* Footer Buttons */}
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setIsModalOpen(false)}>
-                Cancel
+                {isReadOnly ? "Close" : "Cancel"}
               </Button>
-              <Button className="bg-green-600 hover:bg-green-700 text-white">
-                Save
-              </Button>
+              {modalMode === "add" && (
+                <Button className="bg-green-600 hover:bg-green-700 text-white">
+                  Save
+                </Button>
+              )}
+              {modalMode === "edit" && (
+                <Button className="bg-blue-500 hover:bg-blue-600 text-white">
+                  Update
+                </Button>
+              )}
             </div>
           </div>
         </DialogContent>
