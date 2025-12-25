@@ -18,7 +18,7 @@ const Companies = () => {
     <MainLayout>
       <div className="p-6 space-y-6">
         <AddCompanyForm isExpanded={isFormExpanded} onToggle={toggleForm} />
-        <CompaniesTable onAddNew={showForm} />
+        <CompaniesTable onAddNew={showForm} isFormExpanded={isFormExpanded} />
       </div>
     </MainLayout>
   );

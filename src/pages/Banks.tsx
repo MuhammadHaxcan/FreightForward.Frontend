@@ -18,7 +18,7 @@ const Banks = () => {
     <MainLayout>
       <div className="p-6 space-y-6">
         <AddBankForm isExpanded={isFormExpanded} onToggle={toggleForm} />
-        <BanksTable onAddNew={showForm} />
+        <BanksTable onAddNew={showForm} isFormExpanded={isFormExpanded} />
       </div>
     </MainLayout>
   );

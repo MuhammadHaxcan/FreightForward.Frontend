@@ -44,9 +44,10 @@ const mockCompanies: Company[] = [
 
 interface CompaniesTableProps {
   onAddNew: () => void;
+  isFormExpanded: boolean;
 }
 
-export function CompaniesTable({ onAddNew }: CompaniesTableProps) {
+export function CompaniesTable({ onAddNew, isFormExpanded }: CompaniesTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [currentPage, setCurrentPage] = useState(1);
@@ -64,10 +65,12 @@ export function CompaniesTable({ onAddNew }: CompaniesTableProps) {
         <h2 className="text-xl font-semibold text-foreground">
           <span className="font-bold">List All</span> Companies
         </h2>
-        <Button className="btn-success gap-2" onClick={onAddNew}>
-          <Plus size={16} />
-          Add New
-        </Button>
+        {!isFormExpanded && (
+          <Button className="btn-success gap-2" onClick={onAddNew}>
+            <Plus size={16} />
+            Add New
+          </Button>
+        )}
       </div>
 
       {/* Controls */}
