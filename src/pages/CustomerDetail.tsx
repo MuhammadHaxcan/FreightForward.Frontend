@@ -186,6 +186,55 @@ const CustomerDetail = () => {
     currency: "AED"
   });
 
+  // Credit Note form
+  const [creditNoteForm, setCreditNoteForm] = useState({
+    jobNumber: "",
+    creditNoteNo: "CNAE251001",
+    customerName: profileData.name,
+    email: "123@test.com",
+    invoiceDate: new Date(2025, 11, 25) as Date | null,
+    referenceNo: "",
+    status: "Active",
+  });
+
+  // Charges Details for Credit Note
+  interface ChargeDetail {
+    id: number;
+    chargeDetails: string;
+    bases: string;
+    currency: string;
+    rate: string;
+    roe: string;
+    quantity: string;
+    amount: string;
+  }
+  const [chargeDetails, setChargeDetails] = useState<ChargeDetail[]>([]);
+  const [newCharge, setNewCharge] = useState<Partial<ChargeDetail>>({
+    chargeDetails: "",
+    bases: "",
+    currency: "",
+    rate: "1",
+    roe: "ROE",
+    quantity: "",
+    amount: ""
+  });
+  const [additionalContents, setAdditionalContents] = useState("");
+
+  const handleAddCharge = () => {
+    if (newCharge.chargeDetails) {
+      setChargeDetails([...chargeDetails, { ...newCharge, id: Date.now() } as ChargeDetail]);
+      setNewCharge({
+        chargeDetails: "",
+        bases: "",
+        currency: "",
+        rate: "1",
+        roe: "ROE",
+        quantity: "",
+        amount: ""
+      });
+    }
+  };
+
   const toggleCategory = (type: string) => {
     setProfileData(prev => ({
       ...prev,
@@ -925,6 +974,192 @@ const CustomerDetail = () => {
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setOpeningBalanceModalOpen(false)}>Cancel</Button>
             <Button className="btn-success" onClick={() => setOpeningBalanceModalOpen(false)}>Save</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Credit Note Modal */}
+      <Dialog open={creditNoteModalOpen} onOpenChange={setCreditNoteModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl">Add New Credit Note</DialogTitle>
+          </DialogHeader>
+
+          {/* Credit Note Section */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-primary">Credit Note</h3>
+              <Button className="btn-success">Save</Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm">Job Number</Label>
+                <Select value={creditNoteForm.jobNumber} onValueChange={v => setCreditNoteForm({...creditNoteForm, jobNumber: v})}>
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder="Select One" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="25UAE1582">25UAE1582</SelectItem>
+                    <SelectItem value="25UAE1583">25UAE1583</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">*Credit Note #</Label>
+                <Input value={creditNoteForm.creditNoteNo} onChange={e => setCreditNoteForm({...creditNoteForm, creditNoteNo: e.target.value})} className="bg-muted/50" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Customer Name</Label>
+                <Select value={creditNoteForm.customerName} onValueChange={v => setCreditNoteForm({...creditNoteForm, customerName: v})}>
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder="Select customer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={profileData.name}>{profileData.name}</SelectItem>
+                    <SelectItem value="EES FREIGHT SERVICES PTE LTD">EES FREIGHT SERVICES PTE LTD</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Email</Label>
+                <Input value={creditNoteForm.email} onChange={e => setCreditNoteForm({...creditNoteForm, email: e.target.value})} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm">*Invoice Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {creditNoteForm.invoiceDate ? format(creditNoteForm.invoiceDate, "dd-MM-yyyy") : "Select date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 bg-popover z-50">
+                    <Calendar mode="single" selected={creditNoteForm.invoiceDate || undefined} onSelect={(d) => setCreditNoteForm({...creditNoteForm, invoiceDate: d || null})} />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Reference #</Label>
+                <Input value={creditNoteForm.referenceNo} onChange={e => setCreditNoteForm({...creditNoteForm, referenceNo: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Status</Label>
+                <Select value={creditNoteForm.status} onValueChange={v => setCreditNoteForm({...creditNoteForm, status: v})}>
+                  <SelectTrigger className="bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          {/* Charges Details Section */}
+          <div className="space-y-4 mt-6">
+            <h3 className="text-lg font-semibold text-primary">Charges Details</h3>
+            
+            <div className="bg-card rounded-lg border border-border overflow-hidden">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-table-header text-table-header-foreground">
+                    <th className="px-3 py-2 text-left text-sm font-semibold">Charges Details</th>
+                    <th className="px-3 py-2 text-left text-sm font-semibold">Bases</th>
+                    <th className="px-3 py-2 text-left text-sm font-semibold">Currency</th>
+                    <th className="px-3 py-2 text-left text-sm font-semibold">Rate</th>
+                    <th className="px-3 py-2 text-left text-sm font-semibold">ROE</th>
+                    <th className="px-3 py-2 text-left text-sm font-semibold">Quantity</th>
+                    <th className="px-3 py-2 text-left text-sm font-semibold">Amount</th>
+                    <th className="px-3 py-2 text-left text-sm font-semibold"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {chargeDetails.map((charge, i) => (
+                    <tr key={charge.id} className={`border-b border-border ${i % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
+                      <td className="px-3 py-2 text-sm">{charge.chargeDetails}</td>
+                      <td className="px-3 py-2 text-sm">{charge.bases}</td>
+                      <td className="px-3 py-2 text-sm">{charge.currency}</td>
+                      <td className="px-3 py-2 text-sm">{charge.rate}</td>
+                      <td className="px-3 py-2 text-sm">{charge.roe}</td>
+                      <td className="px-3 py-2 text-sm">{charge.quantity}</td>
+                      <td className="px-3 py-2 text-sm">{charge.amount}</td>
+                      <td className="px-3 py-2">
+                        <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => setChargeDetails(chargeDetails.filter(c => c.id !== charge.id))}>
+                          <Trash2 size={14} />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                  {/* Add new charge row */}
+                  <tr className="bg-card">
+                    <td className="px-3 py-2">
+                      <Select value={newCharge.chargeDetails} onValueChange={v => setNewCharge({...newCharge, chargeDetails: v})}>
+                        <SelectTrigger className="h-8 text-xs bg-background">
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Freight Charges">Freight Charges</SelectItem>
+                          <SelectItem value="Handling Charges">Handling Charges</SelectItem>
+                          <SelectItem value="Documentation">Documentation</SelectItem>
+                          <SelectItem value="THC">THC</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="px-3 py-2">
+                      <Input className="h-8 text-xs" placeholder="Bases" value={newCharge.bases} onChange={e => setNewCharge({...newCharge, bases: e.target.value})} />
+                    </td>
+                    <td className="px-3 py-2">
+                      <Select value={newCharge.currency} onValueChange={v => setNewCharge({...newCharge, currency: v})}>
+                        <SelectTrigger className="h-8 text-xs bg-background">
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {currencies.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="px-3 py-2">
+                      <Input className="h-8 text-xs" placeholder="1" value={newCharge.rate} onChange={e => setNewCharge({...newCharge, rate: e.target.value})} />
+                    </td>
+                    <td className="px-3 py-2">
+                      <Input className="h-8 text-xs" placeholder="ROE" value={newCharge.roe} onChange={e => setNewCharge({...newCharge, roe: e.target.value})} />
+                    </td>
+                    <td className="px-3 py-2">
+                      <Input className="h-8 text-xs" placeholder="Quantity" value={newCharge.quantity} onChange={e => setNewCharge({...newCharge, quantity: e.target.value})} />
+                    </td>
+                    <td className="px-3 py-2">
+                      <Input className="h-8 text-xs" placeholder="Amount" value={newCharge.amount} onChange={e => setNewCharge({...newCharge, amount: e.target.value})} />
+                    </td>
+                    <td className="px-3 py-2">
+                      <Button size="sm" className="btn-success h-8 px-3 gap-1" onClick={handleAddCharge}>
+                        <Plus size={14} /> Add
+                      </Button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Additional Contents */}
+          <div className="space-y-2 mt-6">
+            <Label className="text-sm">Additional Contents</Label>
+            <Textarea 
+              className="min-h-[100px]" 
+              value={additionalContents} 
+              onChange={e => setAdditionalContents(e.target.value)} 
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setCreditNoteModalOpen(false)}>Cancel</Button>
+            <Button className="btn-success" onClick={() => setCreditNoteModalOpen(false)}>Save</Button>
           </div>
         </DialogContent>
       </Dialog>
