@@ -7,6 +7,7 @@ import Dashboard from "./pages/Dashboard";
 import Companies from "./pages/Companies";
 import Shipments from "./pages/Shipments";
 import MasterCustomers from "./pages/MasterCustomers";
+import CustomerDetail from "./pages/CustomerDetail";
 import Settings from "./pages/Settings";
 import Banks from "./pages/Banks";
 import NotFound from "./pages/NotFound";
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/companies" element={<Companies />} />
           <Route path="/shipments" element={<Shipments />} />
           <Route path="/master-customers" element={<MasterCustomers />} />
+          <Route path="/master-customers/:id/edit" element={<CustomerDetail />} />
           <Route path="/sales" element={<Dashboard />} />
           <Route path="/accounts" element={<Dashboard />} />
           <Route path="/users" element={<Dashboard />} />

@@ -1,9 +1,10 @@
 import { MainLayout } from "@/components/layout/MainLayout";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { CustomerModal, Customer } from "@/components/customers/CustomerModal";
 
 const mockCustomers: Customer[] = [
@@ -20,6 +21,7 @@ const mockCustomers: Customer[] = [
 ];
 
 const MasterCustomers = () => {
+  const navigate = useNavigate();
   const [customers] = useState<Customer[]>(mockCustomers);
   const [modalOpen, setModalOpen] = useState(false);
   const [editCustomer, setEditCustomer] = useState<Customer | null>(null);
@@ -47,13 +49,19 @@ const MasterCustomers = () => {
   };
 
   const handleEdit = (customer: Customer) => {
-    setEditCustomer(customer);
-    setModalMode("edit");
-    setModalOpen(true);
+    if (customer.masterType === "Debtors") {
+      navigate(`/master-customers/${customer.id}/edit`);
+    } else {
+      setEditCustomer(customer);
+      setModalMode("edit");
+      setModalOpen(true);
+    }
   };
 
-  const handleDelete = (id: number) => {
-    console.log("Delete customer:", id);
+  const handleView = (customer: Customer) => {
+    if (customer.masterType === "Debtors") {
+      navigate(`/master-customers/${customer.id}/edit?mode=view`);
+    }
   };
 
   return (
@@ -139,14 +147,16 @@ const MasterCustomers = () => {
                         >
                           <Pencil size={16} />
                         </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => handleDelete(customer.id)}
-                        >
-                          <Trash2 size={16} />
-                        </Button>
+                        {customer.masterType === "Debtors" && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+                            onClick={() => handleView(customer)}
+                          >
+                            <Eye size={16} />
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>
