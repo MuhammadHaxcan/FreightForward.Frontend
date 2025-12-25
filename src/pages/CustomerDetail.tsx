@@ -835,40 +835,35 @@ const CustomerDetail = () => {
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-foreground">{isViewMode ? "View" : "Edit"} Customers</h1>
-          <Button variant="outline" className="gap-2" onClick={() => navigate("/master-customers")}>
-            <ArrowLeft size={16} /> Back
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" className="gap-2" onClick={() => navigate("/master-customers")}>
+              <ArrowLeft size={16} /> Back
+            </Button>
+            {!isViewMode && <Button className="btn-success">Save</Button>}
+          </div>
         </div>
 
-        {/* Main Content */}
-        <div className="flex gap-6">
-          {/* Side Tabs */}
-          <div className="w-48 flex-shrink-0">
-            <div className="space-y-1">
-              {tabs.map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={cn(
-                    "w-full text-left px-4 py-2.5 rounded-md text-sm transition-colors",
-                    activeTab === tab.id
-                      ? "bg-primary text-primary-foreground font-medium"
-                      : "text-primary hover:bg-muted"
-                  )}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          </div>
+        {/* Horizontal Tabs */}
+        <div className="bg-card border border-border rounded-lg p-1 flex flex-wrap gap-1">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                "px-4 py-2.5 rounded-md text-sm transition-colors",
+                activeTab === tab.id
+                  ? "bg-primary text-primary-foreground font-medium"
+                  : "text-foreground hover:bg-muted"
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-          {/* Tab Content */}
-          <div className="flex-1 bg-card border border-border rounded-lg p-6">
-            <div className="flex justify-end mb-4">
-              {!isViewMode && <Button className="btn-success">Save</Button>}
-            </div>
-            {renderTabContent()}
-          </div>
+        {/* Tab Content */}
+        <div className="bg-card border border-border rounded-lg p-6">
+          {renderTabContent()}
         </div>
       </div>
 

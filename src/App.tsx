@@ -10,6 +10,8 @@ import MasterCustomers from "./pages/MasterCustomers";
 import CustomerDetail from "./pages/CustomerDetail";
 import CreditorDetail from "./pages/CreditorDetail";
 import NeutralDetail from "./pages/NeutralDetail";
+import AllUsers from "./pages/AllUsers";
+import PermissionRoles from "./pages/PermissionRoles";
 import Settings from "./pages/Settings";
 import Banks from "./pages/Banks";
 import NotFound from "./pages/NotFound";
@@ -33,6 +35,8 @@ const App = () => (
           <Route path="/sales" element={<Dashboard />} />
           <Route path="/accounts" element={<Dashboard />} />
           <Route path="/users" element={<Dashboard />} />
+          <Route path="/users/all" element={<AllUsers />} />
+          <Route path="/users/roles" element={<PermissionRoles />} />
           <Route path="/banks" element={<Banks />} />
           <Route path="/general-document" element={<Dashboard />} />
           <Route path="/settings" element={<Settings />} />
