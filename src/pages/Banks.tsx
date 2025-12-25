@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { AddCompanyForm } from "@/components/companies/AddCompanyForm";
-import { CompaniesTable } from "@/components/companies/CompaniesTable";
+import { AddBankForm } from "@/components/banks/AddBankForm";
+import { BanksTable } from "@/components/banks/BanksTable";
 
-const Companies = () => {
+const Banks = () => {
   const [isFormExpanded, setIsFormExpanded] = useState(true);
 
   const toggleForm = () => {
@@ -17,11 +17,11 @@ const Companies = () => {
   return (
     <MainLayout>
       <div className="p-6 space-y-6">
-        <AddCompanyForm isExpanded={isFormExpanded} onToggle={toggleForm} />
-        <CompaniesTable onAddNew={showForm} />
+        <AddBankForm isExpanded={isFormExpanded} onToggle={toggleForm} />
+        <BanksTable onAddNew={showForm} />
       </div>
     </MainLayout>
   );
 };
 
-export default Companies;
+export default Banks;

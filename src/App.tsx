@@ -8,6 +8,7 @@ import Companies from "./pages/Companies";
 import Shipments from "./pages/Shipments";
 import MasterCustomers from "./pages/MasterCustomers";
 import Settings from "./pages/Settings";
+import Banks from "./pages/Banks";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,7 +27,7 @@ const App = () => (
           <Route path="/sales" element={<Dashboard />} />
           <Route path="/accounts" element={<Dashboard />} />
           <Route path="/users" element={<Dashboard />} />
-          <Route path="/banks" element={<Dashboard />} />
+          <Route path="/banks" element={<Banks />} />
           <Route path="/general-document" element={<Dashboard />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<NotFound />} />

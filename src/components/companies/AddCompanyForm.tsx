@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { ChevronUp, ChevronDown, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +10,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
+
+interface AddCompanyFormProps {
+  isExpanded: boolean;
+  onToggle: () => void;
+}
 
 const countries = [
   "United States",
@@ -25,8 +30,7 @@ const countries = [
   "Australia",
 ];
 
-export function AddCompanyForm() {
-  const [isExpanded, setIsExpanded] = useState(true);
+export function AddCompanyForm({ isExpanded, onToggle }: AddCompanyFormProps) {
   const [formData, setFormData] = useState({
     companyName: "",
     companyType: "",
@@ -63,7 +67,7 @@ export function AddCompanyForm() {
         <Button
           variant={isExpanded ? "destructive" : "default"}
           size="sm"
-          onClick={() => setIsExpanded(!isExpanded)}
+          onClick={onToggle}
           className="gap-2"
         >
           {isExpanded ? (
