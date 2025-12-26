@@ -199,13 +199,13 @@ export default function RateRequests() {
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">{request.rateRequestNo}</TableCell>
-                      <TableCell>{formatDate(request.date)}</TableCell>
+                      <TableCell>{formatDate(request.requestDate)}</TableCell>
                       <TableCell>{request.mode}</TableCell>
                       <TableCell>{request.incoterms}</TableCell>
                       <TableCell className="text-green-600">{request.vendorName}</TableCell>
                       <TableCell className="text-green-600">{request.polCountry}</TableCell>
                       <TableCell>{request.podCountry}</TableCell>
-                      <TableCell>{getStatusBadge(request.status)}</TableCell>
+                      <TableCell>{getStatusBadge(request.requestStatus)}</TableCell>
                     </TableRow>
                   ))
                 )}
@@ -306,7 +306,7 @@ export default function RateRequests() {
                 </div>
                 <div>
                   <Label className="text-red-500">* Shipment Mode</Label>
-                  <Select defaultValue={selectedRequest?.mode === "FCL-Sea Freight" ? "fcl" : selectedRequest?.mode === "LCL-Sea Freight" ? "lcl" : "air"}>
+                  <Select defaultValue={selectedRequest?.mode === "FCLSeaFreight" ? "fcl" : selectedRequest?.mode === "LCLSeaFreight" ? "lcl" : "air"}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
@@ -319,7 +319,7 @@ export default function RateRequests() {
                 </div>
                 <div>
                   <Label>Incoterm</Label>
-                  <Select defaultValue={selectedRequest?.incoterms === "EXW-EX WORKS" ? "exw" : "fob"}>
+                  <Select defaultValue={selectedRequest?.incoterms === "EXW" ? "exw" : "fob"}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>

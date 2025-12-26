@@ -162,7 +162,7 @@ export function CompaniesTable() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm text-foreground font-medium">
-                        {company.companyName}
+                        {company.name}
                       </td>
                       <td className="px-4 py-3 text-sm text-muted-foreground">
                         {company.email || '-'}
@@ -247,7 +247,7 @@ export function CompaniesTable() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Company</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{companyToDelete?.companyName}"? This action cannot be undone.
+              Are you sure you want to delete "{companyToDelete?.name}"? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

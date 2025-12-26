@@ -198,7 +198,7 @@ export default function Leads() {
                         </Button>
                       </TableCell>
                       <TableCell className="font-medium">{lead.leadNo}</TableCell>
-                      <TableCell>{formatDate(lead.date)}</TableCell>
+                      <TableCell>{formatDate(lead.leadDate)}</TableCell>
                       <TableCell className="text-green-600">{lead.customerName}</TableCell>
                       <TableCell>{lead.mode}</TableCell>
                       <TableCell>{lead.incoterms}</TableCell>
@@ -206,7 +206,7 @@ export default function Leads() {
                       <TableCell>{lead.podCountry}</TableCell>
                       <TableCell>{lead.quantity}</TableCell>
                       <TableCell>{lead.weight}</TableCell>
-                      <TableCell>{getStatusBadge(lead.status)}</TableCell>
+                      <TableCell>{getStatusBadge(lead.leadStatus)}</TableCell>
                     </TableRow>
                   ))
                 )}

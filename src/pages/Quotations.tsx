@@ -222,7 +222,7 @@ export default function Quotations() {
                     ) : (
                       quotations.map((quotation) => (
                         <TableRow key={quotation.id} className="hover:bg-muted/50">
-                          <TableCell>{formatDate(quotation.date)}</TableCell>
+                          <TableCell>{formatDate(quotation.quotationDate)}</TableCell>
                           <TableCell className="font-medium">{quotation.quotationNo}</TableCell>
                           <TableCell className="text-green-600">{quotation.customerName}</TableCell>
                           <TableCell className="text-green-600">{quotation.incoterms}</TableCell>
@@ -230,7 +230,7 @@ export default function Quotations() {
                           <TableCell className="text-green-600">{quotation.pol}</TableCell>
                           <TableCell className="text-green-600">{quotation.pod}</TableCell>
                           <TableCell>{formatDate(quotation.quoteExpiryDate)}</TableCell>
-                          <TableCell>{getStatusBadge(quotation.status)}</TableCell>
+                          <TableCell>{getStatusBadge(quotation.quotationStatus)}</TableCell>
                           <TableCell>
                             <div className="flex gap-1">
                               <Button
