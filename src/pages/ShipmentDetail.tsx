@@ -59,6 +59,11 @@ const mockShipmentData = {
   voyage: "221W",
   etd: "2025-12-24",
   eta: "2025-12-24",
+  secondLegVessel: false,
+  secondLegVesselName: "",
+  secondLegVoyage: "",
+  secondLegETD: "2025-12-24",
+  secondLegETA: "2025-12-24",
   marksNumbers: "",
   notes: "",
   internalNotes: "",
@@ -119,7 +124,7 @@ const ShipmentDetail = () => {
   const [documents, setDocuments] = useState<any[]>([]);
   const [shipmentStatus, setShipmentStatus] = useState({ date: "2025-12-26", remarks: "" });
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -152,46 +157,46 @@ const ShipmentDetail = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="bg-transparent border-b border-border w-full justify-start rounded-none h-auto p-0 gap-0">
+          <TabsList className="w-full justify-start mb-4 bg-card border border-border rounded-lg p-1 h-auto flex-wrap">
             <TabsTrigger 
               value="shipment-info" 
-              className={`rounded-t-md rounded-b-none px-4 py-2 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-none border-0`}
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
             >
               Shipment Info
             </TabsTrigger>
             <TabsTrigger 
               value="parties"
-              className={`rounded-t-md rounded-b-none px-4 py-2 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-none border-0`}
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
             >
               Parties
             </TabsTrigger>
             <TabsTrigger 
               value="containers"
-              className={`rounded-t-md rounded-b-none px-4 py-2 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-none border-0`}
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
             >
               Containers
             </TabsTrigger>
             <TabsTrigger 
               value="costing"
-              className={`rounded-t-md rounded-b-none px-4 py-2 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-none border-0`}
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
             >
               Costing
             </TabsTrigger>
             <TabsTrigger 
               value="cargo-details"
-              className={`rounded-t-md rounded-b-none px-4 py-2 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-none border-0`}
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
             >
               Cargo Details
             </TabsTrigger>
             <TabsTrigger 
               value="documents"
-              className={`rounded-t-md rounded-b-none px-4 py-2 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-none border-0`}
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
             >
               Documents
             </TabsTrigger>
             <TabsTrigger 
               value="shipment-status"
-              className={`rounded-t-md rounded-b-none px-4 py-2 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-none border-0`}
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
             >
               Shipment Status
             </TabsTrigger>
@@ -470,11 +475,53 @@ const ShipmentDetail = () => {
                 </div>
                 <div className="flex items-end">
                   <div className="flex items-center gap-2">
-                    <Checkbox id="2ndLeg" />
+                    <Checkbox 
+                      id="2ndLeg" 
+                      checked={formData.secondLegVessel}
+                      onCheckedChange={(checked) => handleInputChange("secondLegVessel", checked as boolean)}
+                    />
                     <Label htmlFor="2ndLeg" className="text-sm">2nd Leg Vessel</Label>
                   </div>
                 </div>
               </div>
+
+              {/* 2nd Leg Vessel Row - Conditional */}
+              {formData.secondLegVessel && (
+                <div className="grid grid-cols-4 gap-4">
+                  <div>
+                    <Label className="text-sm">2nd Leg Vessel</Label>
+                    <Input 
+                      value={formData.secondLegVesselName} 
+                      onChange={(e) => handleInputChange("secondLegVesselName", e.target.value)} 
+                      placeholder="OCL France" 
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm">2nd Leg Voyage</Label>
+                    <Input 
+                      value={formData.secondLegVoyage} 
+                      onChange={(e) => handleInputChange("secondLegVoyage", e.target.value)} 
+                      placeholder="78465F1" 
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm">2nd Leg ETD</Label>
+                    <Input 
+                      type="date" 
+                      value={formData.secondLegETD} 
+                      onChange={(e) => handleInputChange("secondLegETD", e.target.value)} 
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm">2nd Leg ETA</Label>
+                    <Input 
+                      type="date" 
+                      value={formData.secondLegETA} 
+                      onChange={(e) => handleInputChange("secondLegETA", e.target.value)} 
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Row 7 - Notes */}
               <div className="grid grid-cols-3 gap-4">
