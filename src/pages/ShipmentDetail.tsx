@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DateInput } from "@/components/ui/date-input";
 import {
   Select,
   SelectContent,
@@ -22,7 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Edit, Trash2, Plus, FileText } from "lucide-react";
+import { Edit, Trash2, Plus } from "lucide-react";
 
 // Mock data for the shipment
 const mockShipmentData = {
@@ -145,10 +146,6 @@ const ShipmentDetail = () => {
             Edit Shipment - Job No : <span className="font-bold">{formData.jobNumber}</span>
           </h1>
           <div className="flex gap-2">
-            <Button variant="outline" className="bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-500">
-              <FileText className="h-4 w-4 mr-2" />
-              Reports
-            </Button>
             <Button variant="outline" className="bg-[#2c3e50] hover:bg-[#34495e] text-white border-[#2c3e50]" onClick={() => navigate("/shipments")}>
               Back
             </Button>
@@ -215,7 +212,7 @@ const ShipmentDetail = () => {
                 </div>
                 <div>
                   <Label className="text-sm">Job Date</Label>
-                  <Input type="date" value={formData.jobDate} onChange={(e) => handleInputChange("jobDate", e.target.value)} />
+                  <DateInput value={formData.jobDate} onChange={(v) => handleInputChange("jobDate", v)} />
                 </div>
                 <div>
                   <Label className="text-sm">Job Status</Label>
@@ -271,7 +268,7 @@ const ShipmentDetail = () => {
                 </div>
                 <div>
                   <Label className="text-sm">Date</Label>
-                  <Input type="date" value={formData.houseBLDate} onChange={(e) => handleInputChange("houseBLDate", e.target.value)} />
+                  <DateInput value={formData.houseBLDate} onChange={(v) => handleInputChange("houseBLDate", v)} />
                 </div>
                 <div>
                   <Label className="text-sm">BL Status</Label>
@@ -317,7 +314,7 @@ const ShipmentDetail = () => {
                 </div>
                 <div>
                   <Label className="text-sm">Date</Label>
-                  <Input type="date" value={formData.mblDate} onChange={(e) => handleInputChange("mblDate", e.target.value)} />
+                  <DateInput value={formData.mblDate} onChange={(v) => handleInputChange("mblDate", v)} />
                 </div>
                 <div>
                   <Label className="text-sm">BL Status</Label>
@@ -467,11 +464,11 @@ const ShipmentDetail = () => {
                 </div>
                 <div>
                   <Label className="text-sm">ETD</Label>
-                  <Input type="date" value={formData.etd} onChange={(e) => handleInputChange("etd", e.target.value)} />
+                  <DateInput value={formData.etd} onChange={(v) => handleInputChange("etd", v)} />
                 </div>
                 <div>
                   <Label className="text-sm">ETA</Label>
-                  <Input type="date" value={formData.eta} onChange={(e) => handleInputChange("eta", e.target.value)} />
+                  <DateInput value={formData.eta} onChange={(v) => handleInputChange("eta", v)} />
                 </div>
                 <div className="flex items-end">
                   <div className="flex items-center gap-2">
@@ -506,18 +503,16 @@ const ShipmentDetail = () => {
                   </div>
                   <div>
                     <Label className="text-sm">2nd Leg ETD</Label>
-                    <Input 
-                      type="date" 
+                    <DateInput 
                       value={formData.secondLegETD} 
-                      onChange={(e) => handleInputChange("secondLegETD", e.target.value)} 
+                      onChange={(v) => handleInputChange("secondLegETD", v)} 
                     />
                   </div>
                   <div>
                     <Label className="text-sm">2nd Leg ETA</Label>
-                    <Input 
-                      type="date" 
+                    <DateInput 
                       value={formData.secondLegETA} 
-                      onChange={(e) => handleInputChange("secondLegETA", e.target.value)} 
+                      onChange={(v) => handleInputChange("secondLegETA", v)} 
                     />
                   </div>
                 </div>
@@ -966,7 +961,7 @@ const ShipmentDetail = () => {
               <div className="grid grid-cols-3 gap-4 items-end">
                 <div>
                   <Label className="text-sm font-semibold">Date</Label>
-                  <Input type="date" value={shipmentStatus.date} onChange={(e) => setShipmentStatus(prev => ({ ...prev, date: e.target.value }))} />
+                  <DateInput value={shipmentStatus.date} onChange={(v) => setShipmentStatus(prev => ({ ...prev, date: v }))} />
                 </div>
                 <div>
                   <Label className="text-sm font-semibold">Text</Label>

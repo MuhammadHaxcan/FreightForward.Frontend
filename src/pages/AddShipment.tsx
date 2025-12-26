@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DateInput } from "@/components/ui/date-input";
 import {
   Select,
   SelectContent,
@@ -22,7 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Edit, Trash2, Plus, FileText } from "lucide-react";
+import { Edit, Trash2, Plus } from "lucide-react";
 import { ContainerModal } from "@/components/shipments/ContainerModal";
 import { CostingModal } from "@/components/shipments/CostingModal";
 import { DocumentModal } from "@/components/shipments/DocumentModal";
@@ -245,7 +246,7 @@ const AddShipment = () => {
                 </div>
                 <div>
                   <Label className="text-sm">Date</Label>
-                  <Input type="date" value={formData.jobDate} onChange={(e) => handleInputChange("jobDate", e.target.value)} />
+                  <DateInput value={formData.jobDate} onChange={(v) => handleInputChange("jobDate", v)} />
                 </div>
                 <div>
                   <Label className="text-sm">Job Status</Label>
@@ -302,7 +303,7 @@ const AddShipment = () => {
                 </div>
                 <div>
                   <Label className="text-sm">Date</Label>
-                  <Input type="date" value={formData.houseBLDate} onChange={(e) => handleInputChange("houseBLDate", e.target.value)} />
+                  <DateInput value={formData.houseBLDate} onChange={(v) => handleInputChange("houseBLDate", v)} />
                 </div>
                 <div>
                   <Label className="text-sm">BL Status</Label>
@@ -348,7 +349,7 @@ const AddShipment = () => {
                 </div>
                 <div>
                   <Label className="text-sm">Date</Label>
-                  <Input type="date" value={formData.mblDate} onChange={(e) => handleInputChange("mblDate", e.target.value)} />
+                  <DateInput value={formData.mblDate} onChange={(v) => handleInputChange("mblDate", v)} />
                 </div>
                 <div>
                   <Label className="text-sm">BL Status</Label>
@@ -494,11 +495,11 @@ const AddShipment = () => {
                 </div>
                 <div>
                   <Label className="text-sm">ETD</Label>
-                  <Input type="date" value={formData.etd} onChange={(e) => handleInputChange("etd", e.target.value)} />
+                  <DateInput value={formData.etd} onChange={(v) => handleInputChange("etd", v)} />
                 </div>
                 <div>
                   <Label className="text-sm">ETA</Label>
-                  <Input type="date" value={formData.eta} onChange={(e) => handleInputChange("eta", e.target.value)} />
+                  <DateInput value={formData.eta} onChange={(v) => handleInputChange("eta", v)} />
                 </div>
                 <div className="flex items-end">
                   <div className="flex items-center gap-2">
@@ -533,18 +534,16 @@ const AddShipment = () => {
                   </div>
                   <div>
                     <Label className="text-sm">2nd Leg ETD</Label>
-                    <Input 
-                      type="date" 
+                    <DateInput 
                       value={formData.secondLegETD} 
-                      onChange={(e) => handleInputChange("secondLegETD", e.target.value)} 
+                      onChange={(v) => handleInputChange("secondLegETD", v)} 
                     />
                   </div>
                   <div>
                     <Label className="text-sm">2nd Leg ETA</Label>
-                    <Input 
-                      type="date" 
+                    <DateInput 
                       value={formData.secondLegETA} 
-                      onChange={(e) => handleInputChange("secondLegETA", e.target.value)} 
+                      onChange={(v) => handleInputChange("secondLegETA", v)} 
                     />
                   </div>
                 </div>
@@ -939,10 +938,9 @@ const AddShipment = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm">Date</Label>
-                  <Input 
-                    type="date" 
+                  <DateInput 
                     value={shipmentStatus.date}
-                    onChange={(e) => setShipmentStatus(prev => ({ ...prev, date: e.target.value }))}
+                    onChange={(v) => setShipmentStatus(prev => ({ ...prev, date: v }))}
                   />
                 </div>
                 <div>
