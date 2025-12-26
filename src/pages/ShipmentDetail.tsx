@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,40 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Edit, Trash2, Plus } from "lucide-react";
+import { Edit, Trash2, Plus, Loader2 } from "lucide-react";
+import { useShipment, useUpdateShipment, useAddShipmentParty, useDeleteShipmentParty } from "@/hooks/useShipments";
+import { useCustomers } from "@/hooks/useCustomers";
+import { PartyType, CustomerCategory, MasterType, Customer } from "@/services/api";
+
+// Map PartyType to CustomerCategory for filtering customers
+const partyTypeToCategory: Record<PartyType, CustomerCategory | null> = {
+  Shipper: 'Shipper',
+  Consignee: 'Consignee',
+  BookingParty: 'BookingParty',
+  Agents: 'Agents',
+  Forwarder: 'Forwarder',
+  Customer: 'Customer',
+  DeliveryAgent: 'DeliveryAgent',
+  OriginAgent: 'OriginAgent',
+  NotifyParty: 'NotifyParty',
+  ShippingLine: null, // No matching customer category
+  AirLine: null, // No matching customer category
+};
+
+// Display labels for party types
+const partyTypeLabels: Record<PartyType, string> = {
+  Shipper: 'Shipper',
+  Consignee: 'Consignee',
+  BookingParty: 'Booking Party',
+  Agents: 'Agents',
+  Forwarder: 'Forwarder',
+  Customer: 'Customer',
+  DeliveryAgent: 'Delivery Agent',
+  OriginAgent: 'Origin Agent',
+  NotifyParty: 'Notify Party',
+  ShippingLine: 'Shipping Line',
+  AirLine: 'Air Line',
+};
 
 // Mock data for the shipment
 const mockShipmentData = {
@@ -101,41 +134,147 @@ const mockBillTo = [
   { billTo: "MMF GLOBAL TRADING LLC", pSale: "AED 1,289.75", voucherNumber: "INVAL251799", status: "Opened" },
 ];
 
-const customerTypes = [
-  "Shipper",
-  "Consignee",
-  "Booking Party",
-  "Agents",
-  "Forwarder",
-  "Shipping Line",
-  "Air Line",
-  "Delivery Agent",
+// All available party types
+const partyTypes: PartyType[] = [
+  'Shipper',
+  'Consignee',
+  'BookingParty',
+  'Agents',
+  'Forwarder',
+  'ShippingLine',
+  'AirLine',
+  'DeliveryAgent',
+  'OriginAgent',
+  'NotifyParty',
+  'Customer',
 ];
 
 const ShipmentDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const shipmentId = parseInt(id || '0');
+
+  // Fetch shipment data from API
+  const { data: shipmentData, isLoading: isLoadingShipment, error: shipmentError } = useShipment(shipmentId);
+
+  // Mutations
+  const updateShipmentMutation = useUpdateShipment();
+  const addPartyMutation = useAddShipmentParty();
+  const deletePartyMutation = useDeleteShipmentParty();
+
   const [activeTab, setActiveTab] = useState("shipment-info");
   const [formData, setFormData] = useState(mockShipmentData);
-  const [parties, setParties] = useState(mockParties);
-  const [selectedCustomerType, setSelectedCustomerType] = useState("Shipper");
-  const [selectedCustomerName, setSelectedCustomerName] = useState("");
+  const [selectedPartyType, setSelectedPartyType] = useState<PartyType>('Shipper');
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
   const [containers, setContainers] = useState(mockContainers);
   const [cargoDetails, setCargoDetails] = useState({ quantity: "", loadType: "", totalCBM: "", totalWeight: "", description: "" });
   const [documents, setDocuments] = useState<any[]>([]);
   const [shipmentStatus, setShipmentStatus] = useState({ date: "2025-12-26", remarks: "" });
+
+  // Get the customer category for the selected party type
+  const selectedCategory = partyTypeToCategory[selectedPartyType];
+
+  // Fetch customers filtered by the selected category
+  const { data: customersData, isLoading: isLoadingCustomers } = useCustomers({
+    pageSize: 100,
+    category: selectedCategory || undefined,
+  });
+
+  // Get the list of customers
+  const customers = useMemo(() => customersData?.items || [], [customersData]);
+
+  // Get the selected customer details
+  const selectedCustomer = useMemo(() =>
+    customers.find(c => c.id.toString() === selectedCustomerId),
+    [customers, selectedCustomerId]
+  );
+
+  // Update form data when shipment data is loaded
+  useEffect(() => {
+    if (shipmentData) {
+      setFormData({
+        jobNumber: shipmentData.jobNumber,
+        jobDate: shipmentData.jobDate?.split('T')[0] || '',
+        jobStatus: shipmentData.jobStatus,
+        direction: shipmentData.direction,
+        mode: shipmentData.mode === 'SeaFreightFCL' ? 'Sea Freight FCL' :
+              shipmentData.mode === 'SeaFreightLCL' ? 'Sea Freight LCL' : 'Air Freight',
+        incoterms: shipmentData.incoterms || '',
+        houseBLNo: shipmentData.houseBLNo || '',
+        houseBLDate: shipmentData.houseBLDate?.split('T')[0] || '',
+        houseBLStatus: shipmentData.houseBLStatus || 'HBL',
+        hblServiceType: shipmentData.hblServiceType || 'LCL/LCL',
+        hblNoBLIssued: shipmentData.hblNoBLIssued || '',
+        hblFreight: shipmentData.hblFreight || 'Prepaid',
+        mblNumber: shipmentData.mblNumber || '',
+        mblDate: shipmentData.mblDate?.split('T')[0] || '',
+        mblStatus: shipmentData.mblStatus || 'MBL',
+        mblServiceType: shipmentData.mblServiceType || 'FCL/FCL',
+        mblNoBLIssued: shipmentData.mblNoBLIssued || '',
+        mblFreight: shipmentData.mblFreight || 'Prepaid',
+        placeOfBLIssue: shipmentData.placeOfBLIssue || '',
+        carrier: shipmentData.carrier || '',
+        freeTime: shipmentData.freeTime || '',
+        networkPartner: shipmentData.networkPartner || 'SELF',
+        assignedTo: shipmentData.assignedTo || 'None',
+        placeOfReceipt: shipmentData.placeOfReceipt || '',
+        portOfReceipt: shipmentData.portOfReceipt || '',
+        portOfLoading: shipmentData.portOfLoading || '',
+        portOfDischarge: shipmentData.portOfDischarge || '',
+        portOfFinalDestination: shipmentData.portOfFinalDestination || '',
+        placeOfDelivery: shipmentData.placeOfDelivery || '',
+        vessel: shipmentData.vessel || '',
+        voyage: shipmentData.voyage || '',
+        etd: shipmentData.etd?.split('T')[0] || '',
+        eta: shipmentData.eta?.split('T')[0] || '',
+        secondLegVessel: shipmentData.secondLegVessel || false,
+        secondLegVesselName: shipmentData.secondLegVesselName || '',
+        secondLegVoyage: shipmentData.secondLegVoyage || '',
+        secondLegETD: shipmentData.secondLegETD?.split('T')[0] || '',
+        secondLegETA: shipmentData.secondLegETA?.split('T')[0] || '',
+        marksNumbers: shipmentData.marksNumbers || '',
+        notes: shipmentData.notes || '',
+        internalNotes: shipmentData.internalNotes || '',
+      });
+    }
+  }, [shipmentData]);
+
+  // Reset selected customer when party type changes
+  useEffect(() => {
+    setSelectedCustomerId("");
+  }, [selectedPartyType]);
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleAddParty = () => {
-    // Add party logic
+    if (!selectedCustomer || !shipmentId) return;
+
+    addPartyMutation.mutate({
+      shipmentId,
+      data: {
+        shipmentId,
+        masterType: selectedCustomer.masterType,
+        partyType: selectedPartyType,
+        customerId: selectedCustomer.id,
+        customerName: selectedCustomer.name,
+        mobile: '',
+        phone: selectedCustomer.phone || '',
+        email: selectedCustomer.email || '',
+      }
+    });
+
+    setSelectedCustomerId("");
   };
 
   const handleDeleteParty = (partyId: number) => {
-    setParties(prev => prev.filter(p => p.id !== partyId));
+    if (!shipmentId) return;
+    deletePartyMutation.mutate({ partyId, shipmentId });
   };
+
+  // Get parties from shipment data
+  const parties = shipmentData?.parties || [];
 
   return (
     <MainLayout>
@@ -544,34 +683,56 @@ const ShipmentDetail = () => {
           <TabsContent value="parties" className="mt-0">
             <div className="bg-card border border-border rounded-lg p-6 space-y-6">
               <h3 className="text-emerald-600 font-semibold text-lg">Parties</h3>
-              
+
               <div className="grid grid-cols-3 gap-4 items-end">
                 <div>
                   <Label className="text-sm text-red-500">* Customer Type</Label>
-                  <Select value={selectedCustomerType} onValueChange={setSelectedCustomerType}>
+                  <Select value={selectedPartyType} onValueChange={(v) => setSelectedPartyType(v as PartyType)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent className="bg-popover border border-border">
-                      {customerTypes.map(type => (
-                        <SelectItem key={type} value={type}>{type}</SelectItem>
+                      {partyTypes.map(type => (
+                        <SelectItem key={type} value={type}>{partyTypeLabels[type]}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label className="text-sm text-red-500">* Customer Name</Label>
-                  <Select value={selectedCustomerName} onValueChange={setSelectedCustomerName}>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="MONTEVERDI SRL">MONTEVERDI SRL</SelectItem>
-                      <SelectItem value="ATRACO INDUSTRIAL ENTERPRISES">ATRACO INDUSTRIAL ENTERPRISES</SelectItem>
-                      <SelectItem value="PRECISION INDUSTRIES">PRECISION INDUSTRIES</SelectItem>
-                      <SelectItem value="AIR SWIFT FREIGHT SERVICES LLC">AIR SWIFT FREIGHT SERVICES LLC</SelectItem>
+                  <Select
+                    value={selectedCustomerId}
+                    onValueChange={setSelectedCustomerId}
+                    disabled={isLoadingCustomers || !selectedCategory}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={
+                        isLoadingCustomers ? "Loading..." :
+                        !selectedCategory ? "No customers for this type" :
+                        customers.length === 0 ? "No customers found" :
+                        "Select a customer"
+                      } />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border border-border max-h-[300px]">
+                      {customers.map(customer => (
+                        <SelectItem key={customer.id} value={customer.id.toString()}>
+                          {customer.name} ({customer.code})
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
+                  {!selectedCategory && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      No customer category matches "{partyTypeLabels[selectedPartyType]}". You can add customers manually.
+                    </p>
+                  )}
                 </div>
                 <div>
-                  <Button className="bg-emerald-500 hover:bg-emerald-600 text-white" onClick={handleAddParty}>
-                    Add Parties
+                  <Button
+                    className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                    onClick={handleAddParty}
+                    disabled={!selectedCustomer || addPartyMutation.isPending}
+                  >
+                    {addPartyMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Add Party
                   </Button>
                 </div>
               </div>
@@ -591,21 +752,35 @@ const ShipmentDetail = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {parties.map((party, index) => (
-                      <TableRow key={party.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
-                        <TableCell>{party.masterType}</TableCell>
-                        <TableCell className="text-emerald-600">{party.type}</TableCell>
-                        <TableCell className="text-emerald-600">{party.name}</TableCell>
-                        <TableCell>{party.mobile}</TableCell>
-                        <TableCell>{party.phone || "-"}</TableCell>
-                        <TableCell className="text-emerald-600">{party.email}</TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded" onClick={() => handleDeleteParty(party.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                    {parties.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                          No parties added yet
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      parties.map((party, index) => (
+                        <TableRow key={party.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
+                          <TableCell>{party.masterType}</TableCell>
+                          <TableCell className="text-emerald-600">{partyTypeLabels[party.partyType] || party.partyType}</TableCell>
+                          <TableCell className="text-emerald-600">{party.customerName}</TableCell>
+                          <TableCell>{party.mobile || "-"}</TableCell>
+                          <TableCell>{party.phone || "-"}</TableCell>
+                          <TableCell className="text-emerald-600">{party.email || "-"}</TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded"
+                              onClick={() => handleDeleteParty(party.id)}
+                              disabled={deletePartyMutation.isPending}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>

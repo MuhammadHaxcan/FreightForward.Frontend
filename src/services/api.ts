@@ -167,6 +167,7 @@ export const companyApi = {
 
 // Customer Types
 export type MasterType = 'Debtors' | 'Creditors' | 'Neutral';
+export type CustomerCategory = 'Shipper' | 'Consignee' | 'BookingParty' | 'Agents' | 'Forwarder' | 'Customer' | 'DeliveryAgent' | 'OriginAgent' | 'NotifyParty' | 'CoLoader';
 export type Currency = 'USD' | 'EUR' | 'GBP' | 'AED' | 'PKR' | 'INR' | 'CNY' | 'SGD';
 export type PaymentStatus = 'Pending' | 'Paid' | 'PartiallyPaid' | 'Overdue' | 'Closed';
 
@@ -346,12 +347,14 @@ export const customerApi = {
     pageSize?: number;
     searchTerm?: string;
     masterType?: MasterType;
+    category?: CustomerCategory;
   }) => {
     const query = new URLSearchParams();
     if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
     if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
     if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
     if (params?.masterType) query.append('masterType', params.masterType);
+    if (params?.category) query.append('category', params.category);
     return fetchApi<PaginatedList<Customer>>(`/customers?${query}`);
   },
   getById: (id: number) => fetchApi<CustomerDetail>(`/customers/${id}`),
@@ -594,6 +597,284 @@ export const quotationApi = {
     fetchApi<number>('/sales/quotations', { method: 'POST', body: JSON.stringify(data) }),
 };
 
+// Shipment Types
+export type ShipmentStatus = 'Opened' | 'Closed' | 'Cancelled';
+export type ShipmentDirection = 'Import' | 'Export' | 'CrossTrade';
+export type ShipmentMode = 'SeaFreightFCL' | 'SeaFreightLCL' | 'AirFreight';
+export type BLStatus = 'HBL' | 'MBL' | 'Express';
+export type BLServiceType = 'FCLFCL' | 'LCLLCL';
+export type FreightType = 'Prepaid' | 'Collect';
+export type PartyType = 'Shipper' | 'Consignee' | 'BookingParty' | 'Agents' | 'Forwarder' | 'ShippingLine' | 'AirLine' | 'DeliveryAgent' | 'OriginAgent' | 'NotifyParty' | 'Customer';
+
+export interface Shipment {
+  id: number;
+  jobNumber: string;
+  jobDate: string;
+  jobStatus: ShipmentStatus;
+  direction: ShipmentDirection;
+  directionDisplay: string;
+  mode: ShipmentMode;
+  modeDisplay: string;
+  houseBLNo?: string;
+  mblNumber?: string;
+  customerName?: string;
+  portOfLoading?: string;
+  portOfDischarge?: string;
+  etd?: string;
+  eta?: string;
+  carrier?: string;
+  vessel?: string;
+  addedBy?: string;
+  invoiceGenerated: boolean;
+  status?: string;
+  createdAt: string;
+}
+
+export interface ShipmentDetail extends Shipment {
+  incoterms?: Incoterms;
+  houseBLDate?: string;
+  houseBLStatus?: BLStatus;
+  hblServiceType?: BLServiceType;
+  hblNoBLIssued?: string;
+  hblFreight?: FreightType;
+  mblDate?: string;
+  mblStatus?: BLStatus;
+  mblServiceType?: BLServiceType;
+  mblNoBLIssued?: string;
+  mblFreight?: FreightType;
+  placeOfBLIssue?: string;
+  freeTime?: string;
+  networkPartner?: string;
+  assignedTo?: string;
+  placeOfReceipt?: string;
+  portOfReceipt?: string;
+  portOfFinalDestination?: string;
+  placeOfDelivery?: string;
+  voyage?: string;
+  secondLegVessel: boolean;
+  secondLegVesselName?: string;
+  secondLegVoyage?: string;
+  secondLegETD?: string;
+  secondLegETA?: string;
+  marksNumbers?: string;
+  notes?: string;
+  internalNotes?: string;
+  parties: ShipmentParty[];
+  containers: ShipmentContainer[];
+  costings: ShipmentCosting[];
+  cargos: ShipmentCargo[];
+  documents: ShipmentDocument[];
+  statusLogs: ShipmentStatusLog[];
+}
+
+export interface ShipmentParty {
+  id: number;
+  masterType: MasterType;
+  partyType: PartyType;
+  customerId?: number;
+  customerName: string;
+  mobile?: string;
+  phone?: string;
+  email?: string;
+}
+
+export interface ShipmentContainer {
+  id: number;
+  containerNumber: string;
+  containerType?: string;
+  sealNo?: string;
+  noOfPcs: number;
+  packageType?: string;
+  grossWeight: number;
+  volume: number;
+}
+
+export interface ShipmentCosting {
+  id: number;
+  description: string;
+  saleQty: number;
+  saleUnit: number;
+  saleCurrency: Currency;
+  saleExRate: number;
+  saleFCY: number;
+  saleLCY: number;
+  costQty: number;
+  costUnit: number;
+  costCurrency: Currency;
+  costExRate: number;
+  costFCY: number;
+  costLCY: number;
+  unit?: string;
+  gp: number;
+  billToCustomerId?: number;
+  billToName?: string;
+  voucherNumber?: string;
+  voucherStatus?: string;
+}
+
+export interface ShipmentCargo {
+  id: number;
+  quantity: number;
+  loadType?: string;
+  totalCBM?: number;
+  totalWeight?: number;
+  description?: string;
+}
+
+export interface ShipmentDocument {
+  id: number;
+  documentType: string;
+  documentNo: string;
+  docDate: string;
+  filePath?: string;
+}
+
+export interface ShipmentStatusLog {
+  id: number;
+  statusDate: string;
+  remarks?: string;
+}
+
+export interface CreateShipmentRequest {
+  direction: ShipmentDirection;
+  mode: ShipmentMode;
+  incoterms?: Incoterms;
+  houseBLNo?: string;
+  houseBLDate?: string;
+  houseBLStatus?: BLStatus;
+  hblServiceType?: BLServiceType;
+  hblNoBLIssued?: string;
+  hblFreight?: FreightType;
+  mblNumber?: string;
+  mblDate?: string;
+  mblStatus?: BLStatus;
+  mblServiceType?: BLServiceType;
+  mblNoBLIssued?: string;
+  mblFreight?: FreightType;
+  placeOfBLIssue?: string;
+  carrier?: string;
+  freeTime?: string;
+  networkPartner?: string;
+  placeOfReceipt?: string;
+  portOfReceipt?: string;
+  portOfLoading?: string;
+  portOfDischarge?: string;
+  portOfFinalDestination?: string;
+  placeOfDelivery?: string;
+  vessel?: string;
+  voyage?: string;
+  etd?: string;
+  eta?: string;
+  secondLegVessel?: boolean;
+  secondLegVesselName?: string;
+  secondLegVoyage?: string;
+  secondLegETD?: string;
+  secondLegETA?: string;
+  marksNumbers?: string;
+  notes?: string;
+  internalNotes?: string;
+}
+
+export interface UpdateShipmentRequest extends CreateShipmentRequest {
+  id: number;
+  jobStatus: ShipmentStatus;
+  assignedTo?: string;
+}
+
+export interface AddShipmentPartyRequest {
+  shipmentId: number;
+  masterType: MasterType;
+  partyType: PartyType;
+  customerId?: number;
+  customerName: string;
+  mobile?: string;
+  phone?: string;
+  email?: string;
+}
+
+export interface AddShipmentContainerRequest {
+  shipmentId: number;
+  containerNumber: string;
+  containerType?: string;
+  sealNo?: string;
+  noOfPcs: number;
+  packageType?: string;
+  grossWeight: number;
+  volume: number;
+}
+
+export interface AddShipmentCostingRequest {
+  shipmentId: number;
+  description: string;
+  saleQty: number;
+  saleUnit: number;
+  saleCurrency: Currency;
+  saleExRate: number;
+  saleFCY: number;
+  saleLCY: number;
+  costQty: number;
+  costUnit: number;
+  costCurrency: Currency;
+  costExRate: number;
+  costFCY: number;
+  costLCY: number;
+  unit?: string;
+  gp: number;
+  billToCustomerId?: number;
+  billToName?: string;
+}
+
+// Shipment API
+export const shipmentApi = {
+  getAll: (params?: {
+    pageNumber?: number;
+    pageSize?: number;
+    searchTerm?: string;
+    status?: ShipmentStatus;
+    fromDate?: string;
+    toDate?: string;
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
+    if (params?.status) query.append('status', params.status);
+    if (params?.fromDate) query.append('fromDate', params.fromDate);
+    if (params?.toDate) query.append('toDate', params.toDate);
+    return fetchApi<PaginatedList<Shipment>>(`/shipments?${query}`);
+  },
+  getById: (id: number) => fetchApi<ShipmentDetail>(`/shipments/${id}`),
+  create: (data: CreateShipmentRequest) =>
+    fetchApi<number>('/shipments', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: UpdateShipmentRequest) =>
+    fetchApi<void>(`/shipments/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) => fetchApi<void>(`/shipments/${id}`, { method: 'DELETE' }),
+
+  // Parties
+  addParty: (shipmentId: number, data: AddShipmentPartyRequest) =>
+    fetchApi<number>(`/shipments/${shipmentId}/parties`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  deleteParty: (id: number) => fetchApi<void>(`/shipments/parties/${id}`, { method: 'DELETE' }),
+
+  // Containers
+  addContainer: (shipmentId: number, data: AddShipmentContainerRequest) =>
+    fetchApi<number>(`/shipments/${shipmentId}/containers`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  deleteContainer: (id: number) => fetchApi<void>(`/shipments/containers/${id}`, { method: 'DELETE' }),
+
+  // Costings
+  addCosting: (shipmentId: number, data: AddShipmentCostingRequest) =>
+    fetchApi<number>(`/shipments/${shipmentId}/costings`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  deleteCosting: (id: number) => fetchApi<void>(`/shipments/costings/${id}`, { method: 'DELETE' }),
+};
+
 // Export all APIs
 export const api = {
   banks: bankApi,
@@ -602,6 +883,7 @@ export const api = {
   leads: leadApi,
   rateRequests: rateRequestApi,
   quotations: quotationApi,
+  shipments: shipmentApi,
 };
 
 export default api;

@@ -18,17 +18,31 @@ interface CustomerModalProps {
   mode: "add" | "edit";
 }
 
-const customerTypes = [
+// Customer category values (must match backend enum)
+const customerCategoryValues = [
   "Shipper",
   "Consignee",
-  "Booking Party",
+  "BookingParty",
   "Agents",
   "Forwarder",
   "Customer",
-  "Delivery Agent",
-  "Origin Agent",
-  "Notify Party",
+  "DeliveryAgent",
+  "OriginAgent",
+  "NotifyParty",
 ];
+
+// Display labels for customer categories
+const customerCategoryLabels: Record<string, string> = {
+  Shipper: "Shipper",
+  Consignee: "Consignee",
+  BookingParty: "Booking Party",
+  Agents: "Agents",
+  Forwarder: "Forwarder",
+  Customer: "Customer",
+  DeliveryAgent: "Delivery Agent",
+  OriginAgent: "Origin Agent",
+  NotifyParty: "Notify Party",
+};
 
 const masterTypes = ["Debtors", "Neutral", "Creditors"];
 const currencies = ["USD", "EUR", "GBP", "AED", "PKR", "INR", "CNY"];
@@ -225,7 +239,7 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
                             key={type}
                             className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary text-primary-foreground rounded-md"
                           >
-                            x {type}
+                            {customerCategoryLabels[type] || type}
                             <button
                               type="button"
                               onClick={(e) => {
@@ -234,6 +248,7 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
                               }}
                               className="hover:bg-primary-foreground/20 rounded-full"
                             >
+                              x
                             </button>
                           </span>
                         ))
@@ -246,23 +261,23 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
                   <Command>
                     <CommandList>
                       <CommandGroup>
-                        {customerTypes.map((type) => (
+                        {customerCategoryValues.map((value) => (
                           <CommandItem
-                            key={type}
-                            onSelect={() => toggleCategory(type)}
+                            key={value}
+                            onSelect={() => toggleCategory(value)}
                             className="cursor-pointer"
                           >
                             <div
                               className={cn(
                                 "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                                formData.category.includes(type)
+                                formData.category.includes(value)
                                   ? "bg-primary text-primary-foreground"
                                   : "opacity-50"
                               )}
                             >
-                              {formData.category.includes(type) && <Check className="h-3 w-3" />}
+                              {formData.category.includes(value) && <Check className="h-3 w-3" />}
                             </div>
-                            {type}
+                            {customerCategoryLabels[value]}
                           </CommandItem>
                         ))}
                       </CommandGroup>

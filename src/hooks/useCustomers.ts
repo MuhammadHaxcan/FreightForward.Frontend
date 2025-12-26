@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { customerApi, CreateCustomerRequest, UpdateCustomerRequest, MasterType } from '@/services/api';
+import { customerApi, CreateCustomerRequest, UpdateCustomerRequest, MasterType, CustomerCategory } from '@/services/api';
 import { toast } from 'sonner';
 
 export function useCustomers(params?: {
@@ -7,6 +7,7 @@ export function useCustomers(params?: {
   pageSize?: number;
   searchTerm?: string;
   masterType?: MasterType;
+  category?: CustomerCategory;
 }) {
   return useQuery({
     queryKey: ['customers', params],
