@@ -1,0 +1,947 @@
+import { useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { MainLayout } from "@/components/layout/MainLayout";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Edit, Trash2, Plus, FileText } from "lucide-react";
+
+// Mock data for the shipment
+const mockShipmentData = {
+  jobNumber: "25JAE1658",
+  jobDate: "2025-12-24",
+  jobStatus: "Opened",
+  direction: "Import",
+  mode: "Sea Freight FCL",
+  incoterms: "CFR-COST AND FREIGHT",
+  houseBLNo: "HSCMBJEA00077",
+  houseBLDate: "2025-12-24",
+  houseBLStatus: "HBL",
+  hblServiceType: "LCL/LCL",
+  hblNoBLIssued: "3",
+  hblFreight: "Prepaid",
+  mblNumber: "CGLCMBJEA322725",
+  mblDate: "2025-12-24",
+  mblStatus: "MBL",
+  mblServiceType: "FCL/FCL",
+  mblNoBLIssued: "3",
+  mblFreight: "Prepaid",
+  placeOfBLIssue: "COLOMBO,SRILANKA",
+  carrier: "GULF AGENCY CO PVT LTD",
+  freeTime: "14 DAYS",
+  networkPartner: "SELF",
+  assignedTo: "None",
+  placeOfReceipt: "Colombo",
+  portOfReceipt: "Colombo",
+  portOfLoading: "Colombo",
+  portOfDischarge: "Jebel Ali",
+  portOfFinalDestination: "Jebel Ali",
+  placeOfDelivery: "Jebel Ali",
+  vessel: "EVER URBAN",
+  voyage: "221W",
+  etd: "2025-12-24",
+  eta: "2025-12-24",
+  marksNumbers: "",
+  notes: "",
+  internalNotes: "",
+};
+
+// Mock parties data
+const mockParties = [
+  { id: 1, masterType: "Debtors", type: "Agents", name: "INFINITE SHIPPING PVT LTD", mobile: "0", phone: "", email: "kushla@infinite.lk" },
+  { id: 2, masterType: "Creditors", type: "Shipping Line", name: "GULF AGENCY CO (DUBAI) PVT LTD", mobile: "0", phone: "", email: "LINERDOCDUBAI@GAC.COM" },
+  { id: 3, masterType: "Debtors", type: "Customer", name: "KADDAH BLDG CLEANING EQUIP. TR CO LLC", mobile: "0", phone: "0507466916", email: "XXXXX@GMAIL.COM" },
+  { id: 4, masterType: "Debtors", type: "Consignee", name: "KADDAH BLDG CLEANING EQUIP. TR CO LLC", mobile: "0", phone: "0507466916", email: "XXXXX@GMAIL.COM" },
+  { id: 5, masterType: "Neutral", type: "Shipper(Neutral)", name: "RAVI INDUSTRIES LTD", mobile: "0", phone: "", email: "RAVIINDUSTRIES@LTD.COM" },
+];
+
+// Mock containers data
+const mockContainers = [
+  { id: 1, container: "GESU6251749", type: "40HC", sealNo: "FX44078456", noOfPcs: 1120, packageType: "BAGS", grossWeight: 28224.000, volume: 45.000 },
+  { id: 2, container: "MLDU4363310", type: "40HC", sealNo: "FX44021137", noOfPcs: 1120, packageType: "BAGS", grossWeight: 28224.000, volume: 45.000 },
+  { id: 3, container: "MSDU5652784", type: "40HC", sealNo: "FX44021047", noOfPcs: 1120, packageType: "BAGS", grossWeight: 28224.000, volume: 45.000 },
+  { id: 4, container: "MSDU6686161", type: "40HC", sealNo: "FX44021021", noOfPcs: 1120, packageType: "BAGS", grossWeight: 28224.000, volume: 45.000 },
+  { id: 5, container: "MSDU8495457", type: "40HC", sealNo: "FX43958866", noOfPcs: 1120, packageType: "BAGS", grossWeight: 28224.000, volume: 45.000 },
+  { id: 6, container: "MSMU8504811", type: "40HC", sealNo: "FX43958894", noOfPcs: 1120, packageType: "BAGS", grossWeight: 28224.000, volume: 45.000 },
+];
+
+// Mock costing data
+const mockCosting = [
+  { id: 1, description: "Handling Charges", saleQty: "1.000", saleUnit: "25.00", saleCurrency: "USD", saleExRate: "3.685", saleFCY: "25.00", saleLCY: "92.13", costQty: "0.000", costUnit: "0.00", costCurrency: "AED", costExRate: "1.000", costFCY: "0.00", costLCY: "0.00", unit: "BL", gp: "92.13" },
+  { id: 2, description: "Bill of Lading Charges", saleQty: "1.000", saleUnit: "350.00", saleCurrency: "USD", saleExRate: "3.685", saleFCY: "350.00", saleLCY: "1289.75", costQty: "0.000", costUnit: "0.00", costCurrency: "AED", costExRate: "1.000", costFCY: "0.00", costLCY: "0.00", unit: "BL", gp: "1,289.75" },
+];
+
+// Mock bill to data
+const mockBillTo = [
+  { billTo: "BLISS LOGISTICS & SHIPPING PVT LTD", pSale: "USD 25.00", voucherNumber: "INVAL251836", status: "Opened" },
+  { billTo: "MMF GLOBAL TRADING LLC", pSale: "AED 1,289.75", voucherNumber: "INVAL251799", status: "Opened" },
+];
+
+const customerTypes = [
+  "Shipper",
+  "Consignee",
+  "Booking Party",
+  "Agents",
+  "Forwarder",
+  "Shipping Line",
+  "Air Line",
+  "Delivery Agent",
+];
+
+const ShipmentDetail = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState("shipment-info");
+  const [formData, setFormData] = useState(mockShipmentData);
+  const [parties, setParties] = useState(mockParties);
+  const [selectedCustomerType, setSelectedCustomerType] = useState("Shipper");
+  const [selectedCustomerName, setSelectedCustomerName] = useState("");
+  const [containers, setContainers] = useState(mockContainers);
+  const [cargoDetails, setCargoDetails] = useState({ quantity: "", loadType: "", totalCBM: "", totalWeight: "", description: "" });
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [shipmentStatus, setShipmentStatus] = useState({ date: "2025-12-26", remarks: "" });
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleAddParty = () => {
+    // Add party logic
+  };
+
+  const handleDeleteParty = (partyId: number) => {
+    setParties(prev => prev.filter(p => p.id !== partyId));
+  };
+
+  return (
+    <MainLayout>
+      <div className="p-6 space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-semibold text-foreground">
+            Edit Shipment - Job No : <span className="font-bold">{formData.jobNumber}</span>
+          </h1>
+          <div className="flex gap-2">
+            <Button variant="outline" className="bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-500">
+              <FileText className="h-4 w-4 mr-2" />
+              Reports
+            </Button>
+            <Button variant="outline" className="bg-[#2c3e50] hover:bg-[#34495e] text-white border-[#2c3e50]" onClick={() => navigate("/shipments")}>
+              Back
+            </Button>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="bg-transparent border-b border-border w-full justify-start rounded-none h-auto p-0 gap-0">
+            <TabsTrigger 
+              value="shipment-info" 
+              className={`rounded-t-md rounded-b-none px-4 py-2 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-none border-0`}
+            >
+              Shipment Info
+            </TabsTrigger>
+            <TabsTrigger 
+              value="parties"
+              className={`rounded-t-md rounded-b-none px-4 py-2 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-none border-0`}
+            >
+              Parties
+            </TabsTrigger>
+            <TabsTrigger 
+              value="containers"
+              className={`rounded-t-md rounded-b-none px-4 py-2 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-none border-0`}
+            >
+              Containers
+            </TabsTrigger>
+            <TabsTrigger 
+              value="costing"
+              className={`rounded-t-md rounded-b-none px-4 py-2 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-none border-0`}
+            >
+              Costing
+            </TabsTrigger>
+            <TabsTrigger 
+              value="cargo-details"
+              className={`rounded-t-md rounded-b-none px-4 py-2 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-none border-0`}
+            >
+              Cargo Details
+            </TabsTrigger>
+            <TabsTrigger 
+              value="documents"
+              className={`rounded-t-md rounded-b-none px-4 py-2 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-none border-0`}
+            >
+              Documents
+            </TabsTrigger>
+            <TabsTrigger 
+              value="shipment-status"
+              className={`rounded-t-md rounded-b-none px-4 py-2 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-none border-0`}
+            >
+              Shipment Status
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Shipment Info Tab */}
+          <TabsContent value="shipment-info" className="mt-0">
+            <div className="bg-card border border-border rounded-lg p-6 space-y-6">
+              <h3 className="text-emerald-600 font-semibold text-lg">Shipment Info</h3>
+              
+              {/* Row 1 */}
+              <div className="grid grid-cols-6 gap-4">
+                <div>
+                  <Label className="text-sm">Job Number</Label>
+                  <Input value={formData.jobNumber} readOnly className="bg-muted" />
+                </div>
+                <div>
+                  <Label className="text-sm">Job Date</Label>
+                  <Input type="date" value={formData.jobDate} onChange={(e) => handleInputChange("jobDate", e.target.value)} />
+                </div>
+                <div>
+                  <Label className="text-sm">Job Status</Label>
+                  <Select value={formData.jobStatus} onValueChange={(v) => handleInputChange("jobStatus", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border border-border">
+                      <SelectItem value="Opened">Opened</SelectItem>
+                      <SelectItem value="Closed">Closed</SelectItem>
+                      <SelectItem value="Cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-sm">Direction</Label>
+                  <Select value={formData.direction} onValueChange={(v) => handleInputChange("direction", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border border-border">
+                      <SelectItem value="Import">Import</SelectItem>
+                      <SelectItem value="Export">Export</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-sm">Mode</Label>
+                  <Select value={formData.mode} onValueChange={(v) => handleInputChange("mode", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border border-border">
+                      <SelectItem value="Sea Freight FCL">Sea Freight FCL</SelectItem>
+                      <SelectItem value="Sea Freight LCL">Sea Freight LCL</SelectItem>
+                      <SelectItem value="Air Freight">Air Freight</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-sm">INCO Terms</Label>
+                  <Select value={formData.incoterms} onValueChange={(v) => handleInputChange("incoterms", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border border-border">
+                      <SelectItem value="CFR-COST AND FREIGHT">CFR-COST AND FREIGHT</SelectItem>
+                      <SelectItem value="CIF">CIF</SelectItem>
+                      <SelectItem value="FOB">FOB</SelectItem>
+                      <SelectItem value="EXW">EXW</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Row 2 - House B/L */}
+              <div className="grid grid-cols-6 gap-4">
+                <div>
+                  <Label className="text-sm text-emerald-600">House B/L No</Label>
+                  <Input value={formData.houseBLNo} onChange={(e) => handleInputChange("houseBLNo", e.target.value)} className="border-emerald-300" />
+                </div>
+                <div>
+                  <Label className="text-sm">Date</Label>
+                  <Input type="date" value={formData.houseBLDate} onChange={(e) => handleInputChange("houseBLDate", e.target.value)} />
+                </div>
+                <div>
+                  <Label className="text-sm">BL Status</Label>
+                  <Select value={formData.houseBLStatus} onValueChange={(v) => handleInputChange("houseBLStatus", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border border-border">
+                      <SelectItem value="HBL">HBL</SelectItem>
+                      <SelectItem value="Express">Express</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-sm">BL Service Type</Label>
+                  <Select value={formData.hblServiceType} onValueChange={(v) => handleInputChange("hblServiceType", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border border-border">
+                      <SelectItem value="LCL/LCL">LCL/LCL</SelectItem>
+                      <SelectItem value="FCL/FCL">FCL/FCL</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-sm">No BL Issued</Label>
+                  <Input value={formData.hblNoBLIssued} onChange={(e) => handleInputChange("hblNoBLIssued", e.target.value)} />
+                </div>
+                <div>
+                  <Label className="text-sm">Freight</Label>
+                  <Select value={formData.hblFreight} onValueChange={(v) => handleInputChange("hblFreight", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border border-border">
+                      <SelectItem value="Prepaid">Prepaid</SelectItem>
+                      <SelectItem value="Collect">Collect</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Row 3 - MBL */}
+              <div className="grid grid-cols-6 gap-4">
+                <div>
+                  <Label className="text-sm">MBL Number</Label>
+                  <Input value={formData.mblNumber} onChange={(e) => handleInputChange("mblNumber", e.target.value)} />
+                </div>
+                <div>
+                  <Label className="text-sm">Date</Label>
+                  <Input type="date" value={formData.mblDate} onChange={(e) => handleInputChange("mblDate", e.target.value)} />
+                </div>
+                <div>
+                  <Label className="text-sm">BL Status</Label>
+                  <Select value={formData.mblStatus} onValueChange={(v) => handleInputChange("mblStatus", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border border-border">
+                      <SelectItem value="MBL">MBL</SelectItem>
+                      <SelectItem value="Express">Express</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-sm">BL Service Type</Label>
+                  <Select value={formData.mblServiceType} onValueChange={(v) => handleInputChange("mblServiceType", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border border-border">
+                      <SelectItem value="FCL/FCL">FCL/FCL</SelectItem>
+                      <SelectItem value="LCL/LCL">LCL/LCL</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-sm">No BL Issued</Label>
+                  <Input value={formData.mblNoBLIssued} onChange={(e) => handleInputChange("mblNoBLIssued", e.target.value)} />
+                </div>
+                <div>
+                  <Label className="text-sm">Freight</Label>
+                  <Select value={formData.mblFreight} onValueChange={(v) => handleInputChange("mblFreight", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border border-border">
+                      <SelectItem value="Prepaid">Prepaid</SelectItem>
+                      <SelectItem value="Collect">Collect</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Row 4 */}
+              <div className="grid grid-cols-5 gap-4">
+                <div>
+                  <Label className="text-sm">Place of BL Issue</Label>
+                  <Input value={formData.placeOfBLIssue} onChange={(e) => handleInputChange("placeOfBLIssue", e.target.value)} />
+                </div>
+                <div>
+                  <Label className="text-sm">Carrier</Label>
+                  <Input value={formData.carrier} onChange={(e) => handleInputChange("carrier", e.target.value)} />
+                </div>
+                <div>
+                  <Label className="text-sm">Free Time</Label>
+                  <Input value={formData.freeTime} onChange={(e) => handleInputChange("freeTime", e.target.value)} />
+                </div>
+                <div>
+                  <Label className="text-sm">Network Partner</Label>
+                  <Select value={formData.networkPartner} onValueChange={(v) => handleInputChange("networkPartner", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border border-border">
+                      <SelectItem value="SELF">SELF</SelectItem>
+                      <SelectItem value="Partner 1">Partner 1</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-sm">Assigned To</Label>
+                  <Select value={formData.assignedTo} onValueChange={(v) => handleInputChange("assignedTo", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border border-border">
+                      <SelectItem value="None">None</SelectItem>
+                      <SelectItem value="User 1">User 1</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Row 5 - Ports */}
+              <div className="grid grid-cols-6 gap-4">
+                <div>
+                  <Label className="text-sm">Place of Receipt</Label>
+                  <Select value={formData.placeOfReceipt} onValueChange={(v) => handleInputChange("placeOfReceipt", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border border-border">
+                      <SelectItem value="Colombo">Colombo</SelectItem>
+                      <SelectItem value="Singapore">Singapore</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-sm">Port of Receipt</Label>
+                  <Select value={formData.portOfReceipt} onValueChange={(v) => handleInputChange("portOfReceipt", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border border-border">
+                      <SelectItem value="Colombo">Colombo</SelectItem>
+                      <SelectItem value="Singapore">Singapore</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-sm">Port of Loading</Label>
+                  <Select value={formData.portOfLoading} onValueChange={(v) => handleInputChange("portOfLoading", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border border-border">
+                      <SelectItem value="Colombo">Colombo</SelectItem>
+                      <SelectItem value="Singapore">Singapore</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-sm">Port of Discharge</Label>
+                  <Select value={formData.portOfDischarge} onValueChange={(v) => handleInputChange("portOfDischarge", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border border-border">
+                      <SelectItem value="Jebel Ali">Jebel Ali</SelectItem>
+                      <SelectItem value="Dubai">Dubai</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-sm">Port of Final Destination</Label>
+                  <Select value={formData.portOfFinalDestination} onValueChange={(v) => handleInputChange("portOfFinalDestination", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border border-border">
+                      <SelectItem value="Jebel Ali">Jebel Ali</SelectItem>
+                      <SelectItem value="Dubai">Dubai</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-sm">Place of Delivery</Label>
+                  <Select value={formData.placeOfDelivery} onValueChange={(v) => handleInputChange("placeOfDelivery", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border border-border">
+                      <SelectItem value="Jebel Ali">Jebel Ali</SelectItem>
+                      <SelectItem value="Dubai">Dubai</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Row 6 - Vessel & Dates */}
+              <div className="grid grid-cols-5 gap-4">
+                <div>
+                  <Label className="text-sm">Vessel</Label>
+                  <Input value={formData.vessel} onChange={(e) => handleInputChange("vessel", e.target.value)} />
+                </div>
+                <div>
+                  <Label className="text-sm">Voyage</Label>
+                  <Input value={formData.voyage} onChange={(e) => handleInputChange("voyage", e.target.value)} />
+                </div>
+                <div>
+                  <Label className="text-sm">ETD</Label>
+                  <Input type="date" value={formData.etd} onChange={(e) => handleInputChange("etd", e.target.value)} />
+                </div>
+                <div>
+                  <Label className="text-sm">ETA</Label>
+                  <Input type="date" value={formData.eta} onChange={(e) => handleInputChange("eta", e.target.value)} />
+                </div>
+                <div className="flex items-end">
+                  <div className="flex items-center gap-2">
+                    <Checkbox id="2ndLeg" />
+                    <Label htmlFor="2ndLeg" className="text-sm">2nd Leg Vessel</Label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 7 - Notes */}
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label className="text-sm">Marks & Numbers</Label>
+                  <Textarea value={formData.marksNumbers} onChange={(e) => handleInputChange("marksNumbers", e.target.value)} placeholder="Marks & Numbers" />
+                </div>
+                <div>
+                  <Label className="text-sm">Notes</Label>
+                  <Textarea value={formData.notes} onChange={(e) => handleInputChange("notes", e.target.value)} placeholder="Notes" />
+                </div>
+                <div>
+                  <Label className="text-sm">Internal Notes</Label>
+                  <Textarea value={formData.internalNotes} onChange={(e) => handleInputChange("internalNotes", e.target.value)} placeholder="Internal Notes" />
+                </div>
+              </div>
+
+              <Button className="bg-emerald-500 hover:bg-emerald-600 text-white">
+                Update & Continue
+              </Button>
+            </div>
+          </TabsContent>
+
+          {/* Parties Tab */}
+          <TabsContent value="parties" className="mt-0">
+            <div className="bg-card border border-border rounded-lg p-6 space-y-6">
+              <h3 className="text-emerald-600 font-semibold text-lg">Parties</h3>
+              
+              <div className="grid grid-cols-3 gap-4 items-end">
+                <div>
+                  <Label className="text-sm text-red-500">* Customer Type</Label>
+                  <Select value={selectedCustomerType} onValueChange={setSelectedCustomerType}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border border-border">
+                      {customerTypes.map(type => (
+                        <SelectItem key={type} value={type}>{type}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-sm text-red-500">* Customer Name</Label>
+                  <Select value={selectedCustomerName} onValueChange={setSelectedCustomerName}>
+                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectContent className="bg-popover border border-border">
+                      <SelectItem value="MONTEVERDI SRL">MONTEVERDI SRL</SelectItem>
+                      <SelectItem value="ATRACO INDUSTRIAL ENTERPRISES">ATRACO INDUSTRIAL ENTERPRISES</SelectItem>
+                      <SelectItem value="PRECISION INDUSTRIES">PRECISION INDUSTRIES</SelectItem>
+                      <SelectItem value="AIR SWIFT FREIGHT SERVICES LLC">AIR SWIFT FREIGHT SERVICES LLC</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Button className="bg-emerald-500 hover:bg-emerald-600 text-white" onClick={handleAddParty}>
+                    Add Parties
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="text-emerald-600 font-semibold">List All Parties</h4>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-table-header">
+                      <TableHead className="text-table-header-foreground">Master Type</TableHead>
+                      <TableHead className="text-table-header-foreground">Type</TableHead>
+                      <TableHead className="text-table-header-foreground">Name</TableHead>
+                      <TableHead className="text-table-header-foreground">Mobile</TableHead>
+                      <TableHead className="text-table-header-foreground">Phone</TableHead>
+                      <TableHead className="text-table-header-foreground">Email</TableHead>
+                      <TableHead className="text-table-header-foreground">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {parties.map((party, index) => (
+                      <TableRow key={party.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
+                        <TableCell>{party.masterType}</TableCell>
+                        <TableCell className="text-emerald-600">{party.type}</TableCell>
+                        <TableCell className="text-emerald-600">{party.name}</TableCell>
+                        <TableCell>{party.mobile}</TableCell>
+                        <TableCell>{party.phone || "-"}</TableCell>
+                        <TableCell className="text-emerald-600">{party.email}</TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded" onClick={() => handleDeleteParty(party.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Containers Tab */}
+          <TabsContent value="containers" className="mt-0">
+            <div className="bg-card border border-border rounded-lg p-6 space-y-6">
+              <div className="flex justify-between items-center">
+                <h3 className="text-emerald-600 font-semibold text-lg">Containers</h3>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-muted-foreground">Containers - 6 x 40HC, Total Quantity : 6720</span>
+                  <Button className="bg-emerald-500 hover:bg-emerald-600 text-white">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add New Container
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">Show</span>
+                  <Select defaultValue="10">
+                    <SelectTrigger className="w-[70px] h-8"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border border-border">
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="25">25</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span className="text-sm">entries</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm">Search:</Label>
+                  <Input className="w-[200px] h-8" />
+                </div>
+              </div>
+
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-table-header">
+                    <TableHead className="text-table-header-foreground">S.No</TableHead>
+                    <TableHead className="text-table-header-foreground">Container</TableHead>
+                    <TableHead className="text-table-header-foreground">Type</TableHead>
+                    <TableHead className="text-table-header-foreground">Seal No.</TableHead>
+                    <TableHead className="text-table-header-foreground">No.of Pcs</TableHead>
+                    <TableHead className="text-table-header-foreground">Type of Packages</TableHead>
+                    <TableHead className="text-table-header-foreground">Gross Weight</TableHead>
+                    <TableHead className="text-table-header-foreground">Volume</TableHead>
+                    <TableHead className="text-table-header-foreground">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {containers.map((container, index) => (
+                    <TableRow key={container.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
+                      <TableCell>{index + 1}</TableCell>
+                      <TableCell className="text-emerald-600">{container.container}</TableCell>
+                      <TableCell>{container.type}</TableCell>
+                      <TableCell className="text-emerald-600">{container.sealNo}</TableCell>
+                      <TableCell>{container.noOfPcs}</TableCell>
+                      <TableCell>{container.packageType}</TableCell>
+                      <TableCell>{container.grossWeight.toFixed(3)}</TableCell>
+                      <TableCell className="text-emerald-600">{container.volume.toFixed(3)}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600 text-white rounded">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              <div className="text-sm text-emerald-600">Showing 1 to 6 of 6 entries</div>
+            </div>
+          </TabsContent>
+
+          {/* Costing Tab */}
+          <TabsContent value="costing" className="mt-0">
+            <div className="bg-card border border-border rounded-lg p-6 space-y-6">
+              <div className="flex justify-between items-center">
+                <h3 className="text-emerald-600 font-semibold text-lg">Costing</h3>
+                <div className="flex gap-2">
+                  <Button variant="outline" className="bg-[#2c3e50] hover:bg-[#34495e] text-white border-[#2c3e50]">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create
+                  </Button>
+                  <Button className="bg-emerald-500 hover:bg-emerald-600 text-white">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Generate Invoice
+                  </Button>
+                  <Button className="bg-emerald-500 hover:bg-emerald-600 text-white">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Book Purchase Invoice
+                  </Button>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-table-header">
+                      <TableHead className="text-table-header-foreground">S.No</TableHead>
+                      <TableHead className="text-table-header-foreground">Description</TableHead>
+                      <TableHead className="text-table-header-foreground">Sale Quantity</TableHead>
+                      <TableHead className="text-table-header-foreground">Sale Unit</TableHead>
+                      <TableHead className="text-table-header-foreground">Currency</TableHead>
+                      <TableHead className="text-table-header-foreground">Ex.Rate</TableHead>
+                      <TableHead className="text-table-header-foreground">FCY Amount</TableHead>
+                      <TableHead className="text-table-header-foreground">LCY Amount</TableHead>
+                      <TableHead className="text-table-header-foreground">Cost Quantity</TableHead>
+                      <TableHead className="text-table-header-foreground">Cost/Unit</TableHead>
+                      <TableHead className="text-table-header-foreground">Currency</TableHead>
+                      <TableHead className="text-table-header-foreground">Ex.Rate</TableHead>
+                      <TableHead className="text-table-header-foreground">FCY Amount</TableHead>
+                      <TableHead className="text-table-header-foreground">LCY Amount</TableHead>
+                      <TableHead className="text-table-header-foreground">Unit</TableHead>
+                      <TableHead className="text-table-header-foreground">GP</TableHead>
+                      <TableHead className="text-table-header-foreground">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {mockCosting.map((cost, index) => (
+                      <TableRow key={cost.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell className="text-emerald-600">{cost.description}</TableCell>
+                        <TableCell>{cost.saleQty}</TableCell>
+                        <TableCell>{cost.saleUnit}</TableCell>
+                        <TableCell>{cost.saleCurrency}</TableCell>
+                        <TableCell>{cost.saleExRate}</TableCell>
+                        <TableCell>{cost.saleFCY}</TableCell>
+                        <TableCell className="text-emerald-600">{cost.saleLCY}</TableCell>
+                        <TableCell>{cost.costQty}</TableCell>
+                        <TableCell>{cost.costUnit}</TableCell>
+                        <TableCell>{cost.costCurrency}</TableCell>
+                        <TableCell>{cost.costExRate}</TableCell>
+                        <TableCell>{cost.costFCY}</TableCell>
+                        <TableCell>{cost.costLCY}</TableCell>
+                        <TableCell>{cost.unit}</TableCell>
+                        <TableCell className="text-emerald-600 font-semibold">{cost.gp}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600 text-white rounded">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Bill To and Vendor Tables */}
+              <div className="grid grid-cols-2 gap-6">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-table-header">
+                      <TableHead className="text-table-header-foreground">Bill To</TableHead>
+                      <TableHead className="text-table-header-foreground">P.Sale</TableHead>
+                      <TableHead className="text-table-header-foreground">Voucher Number</TableHead>
+                      <TableHead className="text-table-header-foreground">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {mockBillTo.map((bill, index) => (
+                      <TableRow key={index} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
+                        <TableCell className="text-emerald-600">{bill.billTo}</TableCell>
+                        <TableCell>{bill.pSale}</TableCell>
+                        <TableCell className="text-emerald-600">{bill.voucherNumber}</TableCell>
+                        <TableCell>{bill.status}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-table-header">
+                      <TableHead className="text-table-header-foreground">Vendor</TableHead>
+                      <TableHead className="text-table-header-foreground">P.Cost</TableHead>
+                      <TableHead className="text-table-header-foreground">Voucher Number</TableHead>
+                      <TableHead className="text-table-header-foreground">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center text-muted-foreground py-4">No data available in table</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Summary */}
+              <div className="flex justify-center">
+                <Table className="w-auto">
+                  <TableHeader>
+                    <TableRow className="bg-table-header">
+                      <TableHead className="text-table-header-foreground">Total Sale</TableHead>
+                      <TableHead className="text-table-header-foreground">Total Cost</TableHead>
+                      <TableHead className="text-table-header-foreground">Profit</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow className="bg-card">
+                      <TableCell>( AED 1,381.88)</TableCell>
+                      <TableCell></TableCell>
+                      <TableCell className="font-semibold">AED 1381.875</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Cargo Details Tab */}
+          <TabsContent value="cargo-details" className="mt-0">
+            <div className="bg-card border border-border rounded-lg p-6 space-y-6">
+              <h3 className="text-emerald-600 font-semibold text-lg">Cargo Details</h3>
+              
+              <div className="grid grid-cols-6 gap-4 items-end">
+                <div>
+                  <Label className="text-sm font-semibold">Quantity</Label>
+                  <Input value={cargoDetails.quantity} onChange={(e) => setCargoDetails(prev => ({ ...prev, quantity: e.target.value }))} />
+                </div>
+                <div>
+                  <Label className="text-sm font-semibold">Load Type</Label>
+                  <Select value={cargoDetails.loadType} onValueChange={(v) => setCargoDetails(prev => ({ ...prev, loadType: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectContent className="bg-popover border border-border">
+                      <SelectItem value="FCL">FCL</SelectItem>
+                      <SelectItem value="LCL">LCL</SelectItem>
+                      <SelectItem value="Bulk">Bulk</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-sm font-semibold">Total CBM</Label>
+                  <Input value={cargoDetails.totalCBM} onChange={(e) => setCargoDetails(prev => ({ ...prev, totalCBM: e.target.value }))} placeholder="Total CBM" />
+                </div>
+                <div>
+                  <Label className="text-sm font-semibold">Total Weight</Label>
+                  <Input value={cargoDetails.totalWeight} onChange={(e) => setCargoDetails(prev => ({ ...prev, totalWeight: e.target.value }))} placeholder="Total Weight" />
+                </div>
+                <div>
+                  <Label className="text-sm font-semibold">Description</Label>
+                  <Textarea value={cargoDetails.description} onChange={(e) => setCargoDetails(prev => ({ ...prev, description: e.target.value }))} placeholder="Description" className="min-h-[40px]" />
+                </div>
+                <div>
+                  <Button className="bg-emerald-500 hover:bg-emerald-600 text-white">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Cargo
+                  </Button>
+                </div>
+              </div>
+
+              <Button className="bg-emerald-500 hover:bg-emerald-600 text-white">
+                Save and Continue
+              </Button>
+            </div>
+          </TabsContent>
+
+          {/* Documents Tab */}
+          <TabsContent value="documents" className="mt-0">
+            <div className="bg-card border border-border rounded-lg p-6 space-y-6">
+              <div className="flex justify-between items-center">
+                <h3 className="text-emerald-600 font-semibold text-lg">Documents</h3>
+                <Button className="bg-[#2c3e50] hover:bg-[#34495e] text-white">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create
+                </Button>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">Show</span>
+                  <Select defaultValue="10">
+                    <SelectTrigger className="w-[70px] h-8"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover border border-border">
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="25">25</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span className="text-sm">entries</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm">Search:</Label>
+                  <Input className="w-[200px] h-8" />
+                </div>
+              </div>
+
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-table-header">
+                    <TableHead className="text-table-header-foreground">S.No</TableHead>
+                    <TableHead className="text-table-header-foreground">Document Type</TableHead>
+                    <TableHead className="text-table-header-foreground">Document No</TableHead>
+                    <TableHead className="text-table-header-foreground">Doc.Date</TableHead>
+                    <TableHead className="text-table-header-foreground">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {documents.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">No data available in table</TableCell>
+                    </TableRow>
+                  ) : (
+                    documents.map((doc, index) => (
+                      <TableRow key={index} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell>{doc.type}</TableCell>
+                        <TableCell>{doc.number}</TableCell>
+                        <TableCell>{doc.date}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600 text-white rounded">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+
+              <div className="text-sm text-muted-foreground">Showing 0 to 0 of 0 entries</div>
+            </div>
+          </TabsContent>
+
+          {/* Shipment Status Tab */}
+          <TabsContent value="shipment-status" className="mt-0">
+            <div className="bg-card border border-border rounded-lg p-6 space-y-6">
+              <div className="flex justify-between items-center">
+                <h3 className="text-emerald-600 font-semibold text-lg">Shipment Status</h3>
+                <Button className="bg-[#2c3e50] hover:bg-[#34495e] text-white">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create
+                </Button>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-4 items-end">
+                <div>
+                  <Label className="text-sm font-semibold">Date</Label>
+                  <Input type="date" value={shipmentStatus.date} onChange={(e) => setShipmentStatus(prev => ({ ...prev, date: e.target.value }))} />
+                </div>
+                <div>
+                  <Label className="text-sm font-semibold">Text</Label>
+                  <Input value={shipmentStatus.remarks} onChange={(e) => setShipmentStatus(prev => ({ ...prev, remarks: e.target.value }))} placeholder="Remarks" />
+                </div>
+                <div>
+                  <Button className="bg-emerald-500 hover:bg-emerald-600 text-white">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Cargo
+                  </Button>
+                </div>
+              </div>
+
+              <Button className="bg-emerald-500 hover:bg-emerald-600 text-white">
+                Save and Continue
+              </Button>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </MainLayout>
+  );
+};
+
+export default ShipmentDetail;
