@@ -77,7 +77,7 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
         code: customer.code || "",
         name: customer.name || "",
         masterType: customer.masterType || "",
-        category: customer.category || [],
+        category: customer.categoryList || [],
         phone: customer.phone || "",
         country: customer.country || "",
         email: customer.email || "",
@@ -114,13 +114,13 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
     // Map frontend formData to backend expected format
     const requestData = {
       name: formData.name,
-      masterType: formData.masterType,
-      categories: formData.category, // Backend expects 'categories' (plural)
+      masterType: formData.masterType as 'Debtors' | 'Creditors' | 'Neutral',
+      categories: formData.category,
       phone: formData.phone,
       email: formData.email,
       country: formData.country,
       city: formData.city,
-      baseCurrency: formData.baseCurrency,
+      baseCurrency: formData.baseCurrency as 'USD' | 'EUR' | 'GBP' | 'AED' | 'PKR' | 'INR' | 'CNY' | 'SGD' | undefined,
       taxNo: formData.taxNo,
     };
 

@@ -172,7 +172,7 @@ const MasterCustomers = () => {
                         <td className="px-4 py-3 text-sm font-medium text-foreground">{customer.code}</td>
                         <td className="px-4 py-3 text-sm text-muted-foreground">{customer.masterType}</td>
                         <td className="px-4 py-3 text-sm text-muted-foreground">
-                          {customer.category?.join(", ") || "-"}
+                          {customer.categoryList?.join(", ") || "-"}
                         </td>
                         <td className="px-4 py-3 text-sm text-foreground">{customer.name}</td>
                         <td className="px-4 py-3 text-sm text-muted-foreground">{customer.phone || "-"}</td>

@@ -65,7 +65,7 @@ export function CompanyModal({ isOpen, onClose, company, mode }: CompanyModalPro
   useEffect(() => {
     if (company && mode === "edit") {
       setFormData({
-        companyName: company.companyName || "",
+        companyName: company.name || "",
         companyType: company.companyType || "",
         legalTradingName: company.legalTradingName || "",
         registrationNumber: company.registrationNumber || "",
@@ -107,8 +107,26 @@ export function CompanyModal({ isOpen, onClose, company, mode }: CompanyModalPro
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Map frontend formData to backend expected format
+    const requestData = {
+      name: formData.companyName,
+      companyType: formData.companyType,
+      legalTradingName: formData.legalTradingName,
+      registrationNumber: formData.registrationNumber,
+      contactNumber: formData.contactNumber,
+      email: formData.email,
+      website: formData.website,
+      vatId: formData.vatId,
+      addressLine1: formData.addressLine1,
+      addressLine2: formData.addressLine2,
+      city: formData.city,
+      stateProvince: formData.stateProvince,
+      zipCode: formData.zipCode,
+      country: formData.country,
+    };
+
     if (mode === "add") {
-      createMutation.mutate(formData, {
+      createMutation.mutate(requestData, {
         onSuccess: () => {
           onClose();
         },
@@ -117,7 +135,7 @@ export function CompanyModal({ isOpen, onClose, company, mode }: CompanyModalPro
       updateMutation.mutate(
         {
           id: company.id,
-          data: { ...formData, id: company.id },
+          data: { ...requestData, id: company.id },
         },
         {
           onSuccess: () => {
