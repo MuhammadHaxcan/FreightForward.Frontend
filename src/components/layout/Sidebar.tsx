@@ -57,7 +57,15 @@ const sidebarItems: SidebarItem[] = [
       { title: "Quotations", path: "/sales/quotations" },
     ]
   },
-  { title: "Accounts", icon: Wallet, path: "/accounts", hasSubmenu: true },
+  { 
+    title: "Accounts", 
+    icon: Wallet, 
+    path: "/accounts", 
+    hasSubmenu: true,
+    subMenuItems: [
+      { title: "Daily Expenses", path: "/accounts/daily-expenses" },
+    ]
+  },
   { 
     title: "Users", 
     icon: UserCircle, 
