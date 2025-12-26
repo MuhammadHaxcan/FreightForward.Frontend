@@ -2,7 +2,7 @@ import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Edit, Trash2, Plus } from "lucide-react";
+import { Edit, Trash2, Plus, Loader2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -17,191 +17,361 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-type SettingsTab = "currency" | "ports" | "charges" | "expenses";
-
-interface Currency {
-  id: number;
-  name: string;
-  code: string;
-  symbol: string;
-  decimal: string;
-  usdRate: string;
-  roe?: string;
-}
-
-interface Port {
-  id: number;
-  name: string;
-  country: string;
-}
-
-interface Charge {
-  id: number;
-  name: string;
-}
-
-interface Expense {
-  id: number;
-  category: string;
-  paymentType: string;
-}
-
-const mockCurrencies: Currency[] = [
-  { id: 1, name: "Dhirham", code: "AED", symbol: "AED", decimal: "fils", usdRate: "3.685", roe: "1.000" },
-  { id: 2, name: "Dollar", code: "USD", symbol: "$", decimal: "Cent", usdRate: "1.000", roe: "1.000" },
-  { id: 3, name: "EURO", code: "EURO", symbol: "€", decimal: "cent", usdRate: "0.860", roe: "1.000" },
-  { id: 4, name: "POUND", code: "GBP", symbol: "£", decimal: "Penny", usdRate: "0.790", roe: "1.000" },
-  { id: 5, name: "Qatari riyal", code: "QAR", symbol: "Qar", decimal: "Dirham", usdRate: "3.655", roe: "1.000" },
-  { id: 6, name: "Pakistani rupee", code: "PKR", symbol: "PKR", decimal: "Paisa", usdRate: "175.000", roe: "1.000" },
-];
-
-const mockPorts: Port[] = [
-  { id: 1, name: "HAZIRA", country: "India" },
-  { id: 2, name: "GEMLIK", country: "Turkey" },
-  { id: 3, name: "GUAYAQUIL", country: "Ecuador" },
-  { id: 4, name: "DA CHAN BAY", country: "China" },
-  { id: 5, name: "ZANZIBAR", country: "Tanzania, United Republic of" },
-  { id: 6, name: "Lianyungang", country: "China" },
-  { id: 7, name: "Moresby", country: "Papua New Guinea" },
-  { id: 8, name: "HALDIA", country: "India" },
-  { id: 9, name: "MOTUKEA ISLAND", country: "Papua New Guinea" },
-  { id: 10, name: "Libreville", country: "Gabon" },
-];
-
-const mockCharges: Charge[] = [
-  { id: 1, name: "License Fee" },
-  { id: 2, name: "LONG LENGTH SURCHARGE" },
-  { id: 3, name: "Import & Re-Export Charges" },
-  { id: 4, name: "Freight & Local Charges" },
-  { id: 5, name: "EXIT CERTIFICATE" },
-  { id: 6, name: "LATE MANIFEST CHARGES" },
-  { id: 7, name: "ADDITIONAL RE-WORKING CHARGES" },
-  { id: 8, name: "TS D/O" },
-  { id: 9, name: "LINER FEE" },
-  { id: 10, name: "SEA WAY BL FEE" },
-];
-
-const mockExpenses: Expense[] = [
-  { id: 1, category: "Outwards", paymentType: "Admin Expense" },
-  { id: 2, category: "Outwards", paymentType: "Selling Expenses" },
-  { id: 3, category: "Outwards", paymentType: "Operating Expenses" },
-  { id: 4, category: "Outwards", paymentType: "Marketing Expenses" },
-  { id: 5, category: "Outwards", paymentType: "Bank & Financial Charges" },
-  { id: 6, category: "Outwards", paymentType: "FCL Expenses" },
-  { id: 7, category: "Outwards", paymentType: "LCL Expenses" },
-  { id: 8, category: "Outwards", paymentType: "Open Top Selling" },
-  { id: 9, category: "Outwards", paymentType: "Import Selling Expense" },
-  { id: 10, category: "Outwards", paymentType: "Air Selling Expense" },
-];
+import {
+  useCurrencyTypes,
+  useCreateCurrencyType,
+  useUpdateCurrencyType,
+  useDeleteCurrencyType,
+  usePorts,
+  useCreatePort,
+  useUpdatePort,
+  useDeletePort,
+  useChargeItems,
+  useCreateChargeItem,
+  useUpdateChargeItem,
+  useDeleteChargeItem,
+  useExpenseTypes,
+  useCreateExpenseType,
+  useUpdateExpenseType,
+  useDeleteExpenseType,
+} from "@/hooks/useSettings";
+import {
+  CurrencyType,
+  Port,
+  ChargeItem,
+  ExpenseType,
+  PaymentType,
+} from "@/services/api";
 
 const Settings = () => {
-  const [searchTerm, setSearchTerm] = useState("");
+  // Pagination state
+  const [currencyPage, setCurrencyPage] = useState(1);
+  const [portPage, setPortPage] = useState(1);
+  const [chargePage, setChargePage] = useState(1);
+  const [expensePage, setExpensePage] = useState(1);
 
-  // Add modal states
+  // Search state
+  const [currencySearch, setCurrencySearch] = useState("");
+  const [portSearch, setPortSearch] = useState("");
+  const [chargeSearch, setChargeSearch] = useState("");
+  const [expenseSearch, setExpenseSearch] = useState("");
+
+  // Modal states
   const [addCurrencyModalOpen, setAddCurrencyModalOpen] = useState(false);
   const [addPortModalOpen, setAddPortModalOpen] = useState(false);
   const [addChargeModalOpen, setAddChargeModalOpen] = useState(false);
   const [addExpenseModalOpen, setAddExpenseModalOpen] = useState(false);
 
-  // Currency form state
-  const [currencyName, setCurrencyName] = useState("");
-  const [currencyCode, setCurrencyCode] = useState("");
-  const [currencySymbol, setCurrencySymbol] = useState("");
-  const [decimalPoint, setDecimalPoint] = useState("");
-  const [usdValue, setUsdValue] = useState("");
-  const [roe, setRoe] = useState("");
-
-  // Port form state
-  const [portName, setPortName] = useState("");
-  const [portCountry, setPortCountry] = useState("");
-
-  // Charge form state
-  const [chargeName, setChargeName] = useState("");
-
-  // Expense form state
-  const [expenseCategory, setExpenseCategory] = useState("");
-  const [expensePaymentType, setExpensePaymentType] = useState("");
-
-  // Edit modal states
   const [editCurrencyModalOpen, setEditCurrencyModalOpen] = useState(false);
   const [editPortModalOpen, setEditPortModalOpen] = useState(false);
   const [editChargeModalOpen, setEditChargeModalOpen] = useState(false);
   const [editExpenseModalOpen, setEditExpenseModalOpen] = useState(false);
 
   // Edit form states
-  const [editCurrency, setEditCurrency] = useState<Currency | null>(null);
+  const [editCurrency, setEditCurrency] = useState<CurrencyType | null>(null);
   const [editPort, setEditPort] = useState<Port | null>(null);
-  const [editCharge, setEditCharge] = useState<Charge | null>(null);
-  const [editExpense, setEditExpense] = useState<Expense | null>(null);
+  const [editCharge, setEditCharge] = useState<ChargeItem | null>(null);
+  const [editExpense, setEditExpense] = useState<ExpenseType | null>(null);
 
-  const handleEditCurrency = (currency: Currency) => {
-    setEditCurrency({ ...currency });
-    setEditCurrencyModalOpen(true);
+  // Form states
+  const [currencyForm, setCurrencyForm] = useState({
+    name: "",
+    code: "",
+    symbol: "",
+    decimalName: "",
+    usdRate: "",
+    roe: "1.000",
+  });
+
+  const [portForm, setPortForm] = useState({
+    name: "",
+    country: "",
+  });
+
+  const [chargeForm, setChargeForm] = useState({
+    name: "",
+  });
+
+  const [expenseForm, setExpenseForm] = useState({
+    paymentDirection: "Outwards" as PaymentType,
+    name: "",
+  });
+
+  // API queries
+  const { data: currencyData, isLoading: currencyLoading } = useCurrencyTypes({
+    pageNumber: currencyPage,
+    pageSize: 10,
+    searchTerm: currencySearch || undefined,
+  });
+
+  const { data: portData, isLoading: portLoading } = usePorts({
+    pageNumber: portPage,
+    pageSize: 10,
+    searchTerm: portSearch || undefined,
+  });
+
+  const { data: chargeData, isLoading: chargeLoading } = useChargeItems({
+    pageNumber: chargePage,
+    pageSize: 10,
+    searchTerm: chargeSearch || undefined,
+  });
+
+  const { data: expenseData, isLoading: expenseLoading } = useExpenseTypes({
+    pageNumber: expensePage,
+    pageSize: 10,
+    searchTerm: expenseSearch || undefined,
+  });
+
+  // Mutations
+  const createCurrencyMutation = useCreateCurrencyType();
+  const updateCurrencyMutation = useUpdateCurrencyType();
+  const deleteCurrencyMutation = useDeleteCurrencyType();
+
+  const createPortMutation = useCreatePort();
+  const updatePortMutation = useUpdatePort();
+  const deletePortMutation = useDeletePort();
+
+  const createChargeMutation = useCreateChargeItem();
+  const updateChargeMutation = useUpdateChargeItem();
+  const deleteChargeMutation = useDeleteChargeItem();
+
+  const createExpenseMutation = useCreateExpenseType();
+  const updateExpenseMutation = useUpdateExpenseType();
+  const deleteExpenseMutation = useDeleteExpenseType();
+
+  // Handlers
+  const handleAddCurrency = () => {
+    createCurrencyMutation.mutate(
+      {
+        name: currencyForm.name,
+        code: currencyForm.code,
+        symbol: currencyForm.symbol,
+        decimalName: currencyForm.decimalName || undefined,
+        usdRate: parseFloat(currencyForm.usdRate) || 1,
+        roe: parseFloat(currencyForm.roe) || 1,
+      },
+      {
+        onSuccess: () => {
+          setAddCurrencyModalOpen(false);
+          resetCurrencyForm();
+        },
+      }
+    );
   };
 
-  const handleEditPort = (port: Port) => {
-    setEditPort({ ...port });
-    setEditPortModalOpen(true);
+  const handleUpdateCurrency = () => {
+    if (!editCurrency) return;
+    updateCurrencyMutation.mutate(
+      {
+        id: editCurrency.id,
+        data: {
+          id: editCurrency.id,
+          name: editCurrency.name,
+          code: editCurrency.code,
+          symbol: editCurrency.symbol,
+          decimalName: editCurrency.decimalName || undefined,
+          usdRate: editCurrency.usdRate,
+          roe: editCurrency.roe,
+        },
+      },
+      {
+        onSuccess: () => {
+          setEditCurrencyModalOpen(false);
+          setEditCurrency(null);
+        },
+      }
+    );
   };
 
-  const handleEditCharge = (charge: Charge) => {
-    setEditCharge({ ...charge });
-    setEditChargeModalOpen(true);
+  const handleDeleteCurrency = (id: number) => {
+    deleteCurrencyMutation.mutate(id);
   };
 
-  const handleEditExpense = (expense: Expense) => {
-    setEditExpense({ ...expense });
-    setEditExpenseModalOpen(true);
+  const handleAddPort = () => {
+    createPortMutation.mutate(
+      {
+        name: portForm.name,
+        country: portForm.country,
+      },
+      {
+        onSuccess: () => {
+          setAddPortModalOpen(false);
+          resetPortForm();
+        },
+      }
+    );
+  };
+
+  const handleUpdatePort = () => {
+    if (!editPort) return;
+    updatePortMutation.mutate(
+      {
+        id: editPort.id,
+        data: {
+          id: editPort.id,
+          name: editPort.name,
+          country: editPort.country,
+        },
+      },
+      {
+        onSuccess: () => {
+          setEditPortModalOpen(false);
+          setEditPort(null);
+        },
+      }
+    );
+  };
+
+  const handleDeletePort = (id: number) => {
+    deletePortMutation.mutate(id);
+  };
+
+  const handleAddCharge = () => {
+    createChargeMutation.mutate(
+      {
+        name: chargeForm.name,
+      },
+      {
+        onSuccess: () => {
+          setAddChargeModalOpen(false);
+          resetChargeForm();
+        },
+      }
+    );
+  };
+
+  const handleUpdateCharge = () => {
+    if (!editCharge) return;
+    updateChargeMutation.mutate(
+      {
+        id: editCharge.id,
+        data: {
+          id: editCharge.id,
+          name: editCharge.name,
+        },
+      },
+      {
+        onSuccess: () => {
+          setEditChargeModalOpen(false);
+          setEditCharge(null);
+        },
+      }
+    );
+  };
+
+  const handleDeleteCharge = (id: number) => {
+    deleteChargeMutation.mutate(id);
+  };
+
+  const handleAddExpense = () => {
+    createExpenseMutation.mutate(
+      {
+        paymentDirection: expenseForm.paymentDirection,
+        name: expenseForm.name,
+      },
+      {
+        onSuccess: () => {
+          setAddExpenseModalOpen(false);
+          resetExpenseForm();
+        },
+      }
+    );
+  };
+
+  const handleUpdateExpense = () => {
+    if (!editExpense) return;
+    updateExpenseMutation.mutate(
+      {
+        id: editExpense.id,
+        data: {
+          id: editExpense.id,
+          paymentDirection: editExpense.paymentDirection,
+          name: editExpense.name,
+        },
+      },
+      {
+        onSuccess: () => {
+          setEditExpenseModalOpen(false);
+          setEditExpense(null);
+        },
+      }
+    );
+  };
+
+  const handleDeleteExpense = (id: number) => {
+    deleteExpenseMutation.mutate(id);
   };
 
   const resetCurrencyForm = () => {
-    setCurrencyName("");
-    setCurrencyCode("");
-    setCurrencySymbol("");
-    setDecimalPoint("");
-    setUsdValue("");
-    setRoe("");
+    setCurrencyForm({
+      name: "",
+      code: "",
+      symbol: "",
+      decimalName: "",
+      usdRate: "",
+      roe: "1.000",
+    });
   };
 
   const resetPortForm = () => {
-    setPortName("");
-    setPortCountry("");
+    setPortForm({ name: "", country: "" });
   };
 
   const resetChargeForm = () => {
-    setChargeName("");
+    setChargeForm({ name: "" });
   };
 
   const resetExpenseForm = () => {
-    setExpenseCategory("");
-    setExpensePaymentType("");
+    setExpenseForm({ paymentDirection: "Outwards", name: "" });
   };
+
+  const countries = [
+    "United Arab Emirates",
+    "United States",
+    "United Kingdom",
+    "China",
+    "India",
+    "Turkey",
+    "Ecuador",
+    "Tanzania",
+    "Papua New Guinea",
+    "Gabon",
+    "Saudi Arabia",
+    "Qatar",
+    "Pakistan",
+    "Singapore",
+    "Germany",
+    "France",
+    "Italy",
+    "Japan",
+    "South Korea",
+    "Australia",
+  ];
 
   return (
     <MainLayout>
       <div className="p-6">
         <Tabs defaultValue="currency" className="w-full">
           <TabsList className="w-full justify-start mb-6 bg-card border border-border rounded-lg p-1 h-auto flex-wrap">
-            <TabsTrigger 
-              value="currency" 
+            <TabsTrigger
+              value="currency"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
             >
               Currency Type
             </TabsTrigger>
-            <TabsTrigger 
+            <TabsTrigger
               value="ports"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
             >
               Ports
             </TabsTrigger>
-            <TabsTrigger 
+            <TabsTrigger
               value="charges"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
             >
               Charges Items
             </TabsTrigger>
-            <TabsTrigger 
+            <TabsTrigger
               value="expenses"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
             >
@@ -219,8 +389,8 @@ const Settings = () => {
                     <span className="text-sm text-muted-foreground">Search:</span>
                     <Input
                       placeholder=""
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
+                      value={currencySearch}
+                      onChange={(e) => setCurrencySearch(e.target.value)}
                       className="h-9 w-48"
                     />
                   </div>
@@ -231,56 +401,95 @@ const Settings = () => {
                 </div>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-table-header text-table-header-foreground">
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Action ↕</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Name ↕</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Code ↕</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Symbol ↕</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Decimal ↕</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold">1 USD ↕</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mockCurrencies.map((currency, index) => (
-                      <tr
-                        key={currency.id}
-                        className={`border-b border-border hover:bg-table-row-hover transition-colors ${
-                          index % 2 === 0 ? "bg-card" : "bg-secondary/30"
-                        }`}
-                      >
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1">
-                            <button 
-                              onClick={() => handleEditCurrency(currency)}
-                              className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
-                            >
-                              <Edit size={14} />
-                            </button>
-                            <button className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors">
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-primary font-medium">{currency.name}</td>
-                        <td className="px-4 py-3 text-sm text-foreground">{currency.code}</td>
-                        <td className="px-4 py-3 text-sm text-primary">{currency.symbol}</td>
-                        <td className="px-4 py-3 text-sm text-foreground">{currency.decimal}</td>
-                        <td className="px-4 py-3 text-sm text-foreground">{currency.usdRate}</td>
+                {currencyLoading ? (
+                  <div className="flex justify-center items-center p-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-table-header text-table-header-foreground">
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Action</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Name</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Code</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Symbol</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Decimal</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">1 USD</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {currencyData?.items.map((currency, index) => (
+                        <tr
+                          key={currency.id}
+                          className={`border-b border-border hover:bg-table-row-hover transition-colors ${
+                            index % 2 === 0 ? "bg-card" : "bg-secondary/30"
+                          }`}
+                        >
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => {
+                                  setEditCurrency({ ...currency });
+                                  setEditCurrencyModalOpen(true);
+                                }}
+                                className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                              >
+                                <Edit size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteCurrency(currency.id)}
+                                className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-primary font-medium">{currency.name}</td>
+                          <td className="px-4 py-3 text-sm text-foreground">{currency.code}</td>
+                          <td className="px-4 py-3 text-sm text-primary">{currency.symbol}</td>
+                          <td className="px-4 py-3 text-sm text-foreground">{currency.decimalName}</td>
+                          <td className="px-4 py-3 text-sm text-foreground">{currency.usdRate}</td>
+                        </tr>
+                      ))}
+                      {currencyData?.items.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                            No currencies found
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                )}
               </div>
-              <div className="flex items-center justify-between p-4">
-                <p className="text-sm text-muted-foreground">Showing 1 to 6 of 6 entries</p>
-                <div className="flex items-center gap-1">
-                  <Button variant="outline" size="sm" className="h-8 px-3" disabled>Previous</Button>
-                  <Button size="sm" className="h-8 w-8 bg-primary text-primary-foreground">1</Button>
-                  <Button variant="outline" size="sm" className="h-8 px-3">Next</Button>
+              {currencyData && (
+                <div className="flex items-center justify-between p-4">
+                  <p className="text-sm text-muted-foreground">
+                    Showing {((currencyPage - 1) * 10) + 1} to {Math.min(currencyPage * 10, currencyData.totalCount)} of {currencyData.totalCount} entries
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3"
+                      disabled={!currencyData.hasPreviousPage}
+                      onClick={() => setCurrencyPage(p => p - 1)}
+                    >
+                      Previous
+                    </Button>
+                    <Button size="sm" className="h-8 w-8 bg-primary text-primary-foreground">{currencyPage}</Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3"
+                      disabled={!currencyData.hasNextPage}
+                      onClick={() => setCurrencyPage(p => p + 1)}
+                    >
+                      Next
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </TabsContent>
 
@@ -292,7 +501,12 @@ const Settings = () => {
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Search:</span>
-                    <Input placeholder="" className="h-9 w-48" />
+                    <Input
+                      placeholder=""
+                      value={portSearch}
+                      onChange={(e) => setPortSearch(e.target.value)}
+                      className="h-9 w-48"
+                    />
                   </div>
                   <Button className="btn-success gap-2" onClick={() => setAddPortModalOpen(true)}>
                     <Plus size={16} />
@@ -301,54 +515,89 @@ const Settings = () => {
                 </div>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-table-header text-table-header-foreground">
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Action ↕</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Name ↕</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Country ↕</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mockPorts.map((port, index) => (
-                      <tr
-                        key={port.id}
-                        className={`border-b border-border hover:bg-table-row-hover transition-colors ${
-                          index % 2 === 0 ? "bg-card" : "bg-secondary/30"
-                        }`}
-                      >
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1">
-                            <button 
-                              onClick={() => handleEditPort(port)}
-                              className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
-                            >
-                              <Edit size={14} />
-                            </button>
-                            <button className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors">
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-primary font-medium">{port.name}</td>
-                        <td className="px-4 py-3 text-sm text-primary">{port.country}</td>
+                {portLoading ? (
+                  <div className="flex justify-center items-center p-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-table-header text-table-header-foreground">
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Action</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Name</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Country</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {portData?.items.map((port, index) => (
+                        <tr
+                          key={port.id}
+                          className={`border-b border-border hover:bg-table-row-hover transition-colors ${
+                            index % 2 === 0 ? "bg-card" : "bg-secondary/30"
+                          }`}
+                        >
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => {
+                                  setEditPort({ ...port });
+                                  setEditPortModalOpen(true);
+                                }}
+                                className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                              >
+                                <Edit size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleDeletePort(port.id)}
+                                className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-primary font-medium">{port.name}</td>
+                          <td className="px-4 py-3 text-sm text-primary">{port.country}</td>
+                        </tr>
+                      ))}
+                      {portData?.items.length === 0 && (
+                        <tr>
+                          <td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">
+                            No ports found
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                )}
               </div>
-              <div className="flex items-center justify-between p-4">
-                <p className="text-sm text-muted-foreground">Showing 1 to 10 of 225 entries</p>
-                <div className="flex items-center gap-1">
-                  <Button variant="outline" size="sm" className="h-8 px-3" disabled>Previous</Button>
-                  <Button size="sm" className="h-8 w-8 bg-primary text-primary-foreground">1</Button>
-                  <Button variant="outline" size="sm" className="h-8 w-8">2</Button>
-                  <Button variant="outline" size="sm" className="h-8 w-8">3</Button>
-                  <span className="text-muted-foreground mx-1">...</span>
-                  <Button variant="outline" size="sm" className="h-8 w-8">23</Button>
-                  <Button variant="outline" size="sm" className="h-8 px-3">Next</Button>
+              {portData && (
+                <div className="flex items-center justify-between p-4">
+                  <p className="text-sm text-muted-foreground">
+                    Showing {((portPage - 1) * 10) + 1} to {Math.min(portPage * 10, portData.totalCount)} of {portData.totalCount} entries
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3"
+                      disabled={!portData.hasPreviousPage}
+                      onClick={() => setPortPage(p => p - 1)}
+                    >
+                      Previous
+                    </Button>
+                    <Button size="sm" className="h-8 w-8 bg-primary text-primary-foreground">{portPage}</Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3"
+                      disabled={!portData.hasNextPage}
+                      onClick={() => setPortPage(p => p + 1)}
+                    >
+                      Next
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </TabsContent>
 
@@ -360,7 +609,12 @@ const Settings = () => {
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Search:</span>
-                    <Input placeholder="" className="h-9 w-48" />
+                    <Input
+                      placeholder=""
+                      value={chargeSearch}
+                      onChange={(e) => setChargeSearch(e.target.value)}
+                      className="h-9 w-48"
+                    />
                   </div>
                   <Button className="btn-success gap-2" onClick={() => setAddChargeModalOpen(true)}>
                     <Plus size={16} />
@@ -369,52 +623,87 @@ const Settings = () => {
                 </div>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-table-header text-table-header-foreground">
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Action ↕</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Name ↕</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mockCharges.map((charge, index) => (
-                      <tr
-                        key={charge.id}
-                        className={`border-b border-border hover:bg-table-row-hover transition-colors ${
-                          index % 2 === 0 ? "bg-card" : "bg-secondary/30"
-                        }`}
-                      >
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1">
-                            <button 
-                              onClick={() => handleEditCharge(charge)}
-                              className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
-                            >
-                              <Edit size={14} />
-                            </button>
-                            <button className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors">
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-primary font-medium">{charge.name}</td>
+                {chargeLoading ? (
+                  <div className="flex justify-center items-center p-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-table-header text-table-header-foreground">
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Action</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Name</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {chargeData?.items.map((charge, index) => (
+                        <tr
+                          key={charge.id}
+                          className={`border-b border-border hover:bg-table-row-hover transition-colors ${
+                            index % 2 === 0 ? "bg-card" : "bg-secondary/30"
+                          }`}
+                        >
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => {
+                                  setEditCharge({ ...charge });
+                                  setEditChargeModalOpen(true);
+                                }}
+                                className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                              >
+                                <Edit size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteCharge(charge.id)}
+                                className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-primary font-medium">{charge.name}</td>
+                        </tr>
+                      ))}
+                      {chargeData?.items.length === 0 && (
+                        <tr>
+                          <td colSpan={2} className="px-4 py-8 text-center text-muted-foreground">
+                            No charge items found
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                )}
               </div>
-              <div className="flex items-center justify-between p-4">
-                <p className="text-sm text-muted-foreground">Showing 1 to 10 of 253 entries</p>
-                <div className="flex items-center gap-1">
-                  <Button variant="outline" size="sm" className="h-8 px-3" disabled>Previous</Button>
-                  <Button size="sm" className="h-8 w-8 bg-primary text-primary-foreground">1</Button>
-                  <Button variant="outline" size="sm" className="h-8 w-8">2</Button>
-                  <Button variant="outline" size="sm" className="h-8 w-8">3</Button>
-                  <span className="text-muted-foreground mx-1">...</span>
-                  <Button variant="outline" size="sm" className="h-8 w-8">26</Button>
-                  <Button variant="outline" size="sm" className="h-8 px-3">Next</Button>
+              {chargeData && (
+                <div className="flex items-center justify-between p-4">
+                  <p className="text-sm text-muted-foreground">
+                    Showing {((chargePage - 1) * 10) + 1} to {Math.min(chargePage * 10, chargeData.totalCount)} of {chargeData.totalCount} entries
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3"
+                      disabled={!chargeData.hasPreviousPage}
+                      onClick={() => setChargePage(p => p - 1)}
+                    >
+                      Previous
+                    </Button>
+                    <Button size="sm" className="h-8 w-8 bg-primary text-primary-foreground">{chargePage}</Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3"
+                      disabled={!chargeData.hasNextPage}
+                      onClick={() => setChargePage(p => p + 1)}
+                    >
+                      Next
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </TabsContent>
 
@@ -426,7 +715,12 @@ const Settings = () => {
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Search:</span>
-                    <Input placeholder="" className="h-9 w-48" />
+                    <Input
+                      placeholder=""
+                      value={expenseSearch}
+                      onChange={(e) => setExpenseSearch(e.target.value)}
+                      className="h-9 w-48"
+                    />
                   </div>
                   <Button className="btn-success gap-2" onClick={() => setAddExpenseModalOpen(true)}>
                     <Plus size={16} />
@@ -435,54 +729,89 @@ const Settings = () => {
                 </div>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-table-header text-table-header-foreground">
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Action ↕</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Category ↕</th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Payment Type ↕</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mockExpenses.map((expense, index) => (
-                      <tr
-                        key={expense.id}
-                        className={`border-b border-border hover:bg-table-row-hover transition-colors ${
-                          index % 2 === 0 ? "bg-card" : "bg-secondary/30"
-                        }`}
-                      >
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1">
-                            <button 
-                              onClick={() => handleEditExpense(expense)}
-                              className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
-                            >
-                              <Edit size={14} />
-                            </button>
-                            <button className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors">
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-foreground">{expense.category}</td>
-                        <td className="px-4 py-3 text-sm text-primary font-medium">{expense.paymentType}</td>
+                {expenseLoading ? (
+                  <div className="flex justify-center items-center p-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-table-header text-table-header-foreground">
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Action</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Category</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Payment Type</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {expenseData?.items.map((expense, index) => (
+                        <tr
+                          key={expense.id}
+                          className={`border-b border-border hover:bg-table-row-hover transition-colors ${
+                            index % 2 === 0 ? "bg-card" : "bg-secondary/30"
+                          }`}
+                        >
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => {
+                                  setEditExpense({ ...expense });
+                                  setEditExpenseModalOpen(true);
+                                }}
+                                className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                              >
+                                <Edit size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteExpense(expense.id)}
+                                className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-foreground">{expense.paymentDirectionName}</td>
+                          <td className="px-4 py-3 text-sm text-primary font-medium">{expense.name}</td>
+                        </tr>
+                      ))}
+                      {expenseData?.items.length === 0 && (
+                        <tr>
+                          <td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">
+                            No expense types found
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                )}
               </div>
-              <div className="flex items-center justify-between p-4">
-                <p className="text-sm text-muted-foreground">Showing 1 to 10 of 73 entries</p>
-                <div className="flex items-center gap-1">
-                  <Button variant="outline" size="sm" className="h-8 px-3" disabled>Previous</Button>
-                  <Button size="sm" className="h-8 w-8 bg-primary text-primary-foreground">1</Button>
-                  <Button variant="outline" size="sm" className="h-8 w-8">2</Button>
-                  <Button variant="outline" size="sm" className="h-8 w-8">3</Button>
-                  <span className="text-muted-foreground mx-1">...</span>
-                  <Button variant="outline" size="sm" className="h-8 w-8">8</Button>
-                  <Button variant="outline" size="sm" className="h-8 px-3">Next</Button>
+              {expenseData && (
+                <div className="flex items-center justify-between p-4">
+                  <p className="text-sm text-muted-foreground">
+                    Showing {((expensePage - 1) * 10) + 1} to {Math.min(expensePage * 10, expenseData.totalCount)} of {expenseData.totalCount} entries
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3"
+                      disabled={!expenseData.hasPreviousPage}
+                      onClick={() => setExpensePage(p => p - 1)}
+                    >
+                      Previous
+                    </Button>
+                    <Button size="sm" className="h-8 w-8 bg-primary text-primary-foreground">{expensePage}</Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3"
+                      disabled={!expenseData.hasNextPage}
+                      onClick={() => setExpensePage(p => p + 1)}
+                    >
+                      Next
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </TabsContent>
         </Tabs>
@@ -497,111 +826,62 @@ const Settings = () => {
           <div className="space-y-4 py-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Currency Name</label>
-              <Input placeholder="Enter Currency Name" value={currencyName} onChange={(e) => setCurrencyName(e.target.value)} />
+              <Input
+                placeholder="Enter Currency Name"
+                value={currencyForm.name}
+                onChange={(e) => setCurrencyForm({ ...currencyForm, name: e.target.value })}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Currency Code</label>
-              <Input placeholder="Enter Currency Code" value={currencyCode} onChange={(e) => setCurrencyCode(e.target.value)} />
+              <Input
+                placeholder="Enter Currency Code"
+                value={currencyForm.code}
+                onChange={(e) => setCurrencyForm({ ...currencyForm, code: e.target.value })}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Currency Symbol</label>
-              <Input placeholder="Enter Currency Symbol" value={currencySymbol} onChange={(e) => setCurrencySymbol(e.target.value)} />
+              <Input
+                placeholder="Enter Currency Symbol"
+                value={currencyForm.symbol}
+                onChange={(e) => setCurrencyForm({ ...currencyForm, symbol: e.target.value })}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Decimal Point</label>
-              <Input placeholder="Enter Decimal Point Value" value={decimalPoint} onChange={(e) => setDecimalPoint(e.target.value)} />
+              <Input
+                placeholder="Enter Decimal Point Value"
+                value={currencyForm.decimalName}
+                onChange={(e) => setCurrencyForm({ ...currencyForm, decimalName: e.target.value })}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">1 USD =</label>
-              <Input placeholder="1 USD =" value={usdValue} onChange={(e) => setUsdValue(e.target.value)} />
+              <Input
+                placeholder="1 USD ="
+                value={currencyForm.usdRate}
+                onChange={(e) => setCurrencyForm({ ...currencyForm, usdRate: e.target.value })}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">ROE</label>
-              <Input placeholder="ROE" value={roe} onChange={(e) => setRoe(e.target.value)} />
+              <Input
+                placeholder="ROE"
+                value={currencyForm.roe}
+                onChange={(e) => setCurrencyForm({ ...currencyForm, roe: e.target.value })}
+              />
             </div>
             <div className="flex justify-end gap-3 pt-4">
               <Button variant="outline" onClick={() => setAddCurrencyModalOpen(false)}>Cancel</Button>
-              <Button className="btn-success" onClick={() => setAddCurrencyModalOpen(false)}>Save</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Port Modal */}
-      <Dialog open={addPortModalOpen} onOpenChange={(open) => { setAddPortModalOpen(open); if (!open) resetPortForm(); }}>
-        <DialogContent className="sm:max-w-md bg-card">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold"><span className="font-bold">Add New</span> Port</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Port Name</label>
-              <Input placeholder="Ports Name" value={portName} onChange={(e) => setPortName(e.target.value)} />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Country</label>
-              <Select value={portCountry} onValueChange={setPortCountry}>
-                <SelectTrigger><SelectValue placeholder="Select Country" /></SelectTrigger>
-                <SelectContent className="bg-popover border border-border">
-                  <SelectItem value="india">India</SelectItem>
-                  <SelectItem value="china">China</SelectItem>
-                  <SelectItem value="usa">USA</SelectItem>
-                  <SelectItem value="uae">UAE</SelectItem>
-                  <SelectItem value="turkey">Turkey</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex justify-end gap-3 pt-4">
-              <Button variant="outline" onClick={() => setAddPortModalOpen(false)}>Cancel</Button>
-              <Button className="btn-success" onClick={() => setAddPortModalOpen(false)}>Save</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Charge Modal */}
-      <Dialog open={addChargeModalOpen} onOpenChange={(open) => { setAddChargeModalOpen(open); if (!open) resetChargeForm(); }}>
-        <DialogContent className="sm:max-w-md bg-card">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold"><span className="font-bold">Add New</span> Charge</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Charge</label>
-              <Input placeholder="Charge Item" value={chargeName} onChange={(e) => setChargeName(e.target.value)} />
-            </div>
-            <div className="flex justify-end gap-3 pt-4">
-              <Button variant="outline" onClick={() => setAddChargeModalOpen(false)}>Cancel</Button>
-              <Button className="btn-success" onClick={() => setAddChargeModalOpen(false)}>Save</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Expense Modal */}
-      <Dialog open={addExpenseModalOpen} onOpenChange={(open) => { setAddExpenseModalOpen(open); if (!open) resetExpenseForm(); }}>
-        <DialogContent className="sm:max-w-md bg-card">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold"><span className="font-bold">Add New</span> Expense</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Category</label>
-              <Select value={expenseCategory} onValueChange={setExpenseCategory}>
-                <SelectTrigger><SelectValue placeholder="Select One" /></SelectTrigger>
-                <SelectContent className="bg-popover border border-border">
-                  <SelectItem value="outwards">Outwards</SelectItem>
-                  <SelectItem value="inwards">Inwards</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Payment Type</label>
-              <Input placeholder="Payment Type" value={expensePaymentType} onChange={(e) => setExpensePaymentType(e.target.value)} />
-            </div>
-            <div className="flex justify-end gap-3 pt-4">
-              <Button variant="outline" onClick={() => setAddExpenseModalOpen(false)}>Cancel</Button>
-              <Button className="btn-success" onClick={() => setAddExpenseModalOpen(false)}>Save</Button>
+              <Button
+                className="btn-success"
+                onClick={handleAddCurrency}
+                disabled={createCurrencyMutation.isPending}
+              >
+                {createCurrencyMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save
+              </Button>
             </div>
           </div>
         </DialogContent>
@@ -629,22 +909,70 @@ const Settings = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Decimal Point</label>
-                <Input value={editCurrency.decimal} onChange={(e) => setEditCurrency({ ...editCurrency, decimal: e.target.value })} />
+                <Input value={editCurrency.decimalName || ""} onChange={(e) => setEditCurrency({ ...editCurrency, decimalName: e.target.value })} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">1 USD =</label>
-                <Input value={editCurrency.usdRate} onChange={(e) => setEditCurrency({ ...editCurrency, usdRate: e.target.value })} />
+                <Input value={editCurrency.usdRate} onChange={(e) => setEditCurrency({ ...editCurrency, usdRate: parseFloat(e.target.value) || 0 })} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">ROE</label>
-                <Input value={editCurrency.roe || ""} onChange={(e) => setEditCurrency({ ...editCurrency, roe: e.target.value })} />
+                <Input value={editCurrency.roe} onChange={(e) => setEditCurrency({ ...editCurrency, roe: parseFloat(e.target.value) || 0 })} />
               </div>
               <div className="flex justify-end gap-3 pt-4">
                 <Button variant="outline" onClick={() => setEditCurrencyModalOpen(false)}>Close</Button>
-                <Button className="btn-success" onClick={() => setEditCurrencyModalOpen(false)}>Update</Button>
+                <Button
+                  className="btn-success"
+                  onClick={handleUpdateCurrency}
+                  disabled={updateCurrencyMutation.isPending}
+                >
+                  {updateCurrencyMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Update
+                </Button>
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Port Modal */}
+      <Dialog open={addPortModalOpen} onOpenChange={(open) => { setAddPortModalOpen(open); if (!open) resetPortForm(); }}>
+        <DialogContent className="sm:max-w-md bg-card">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold"><span className="font-bold">Add New</span> Port</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Port Name</label>
+              <Input
+                placeholder="Ports Name"
+                value={portForm.name}
+                onChange={(e) => setPortForm({ ...portForm, name: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Country</label>
+              <Select value={portForm.country} onValueChange={(value) => setPortForm({ ...portForm, country: value })}>
+                <SelectTrigger><SelectValue placeholder="Select Country" /></SelectTrigger>
+                <SelectContent className="bg-popover border border-border">
+                  {countries.map((country) => (
+                    <SelectItem key={country} value={country}>{country}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button variant="outline" onClick={() => setAddPortModalOpen(false)}>Cancel</Button>
+              <Button
+                className="btn-success"
+                onClick={handleAddPort}
+                disabled={createPortMutation.isPending}
+              >
+                {createPortMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -662,27 +990,58 @@ const Settings = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Country</label>
-                <Select value={editPort.country.toLowerCase()} onValueChange={(value) => setEditPort({ ...editPort, country: value })}>
+                <Select value={editPort.country} onValueChange={(value) => setEditPort({ ...editPort, country: value })}>
                   <SelectTrigger><SelectValue placeholder="Select Country" /></SelectTrigger>
                   <SelectContent className="bg-popover border border-border">
-                    <SelectItem value="india">India</SelectItem>
-                    <SelectItem value="china">China</SelectItem>
-                    <SelectItem value="usa">USA</SelectItem>
-                    <SelectItem value="uae">UAE</SelectItem>
-                    <SelectItem value="turkey">Turkey</SelectItem>
-                    <SelectItem value="ecuador">Ecuador</SelectItem>
-                    <SelectItem value="tanzania, united republic of">Tanzania, United Republic of</SelectItem>
-                    <SelectItem value="papua new guinea">Papua New Guinea</SelectItem>
-                    <SelectItem value="gabon">Gabon</SelectItem>
+                    {countries.map((country) => (
+                      <SelectItem key={country} value={country}>{country}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="flex justify-end gap-3 pt-4">
                 <Button variant="outline" onClick={() => setEditPortModalOpen(false)}>Close</Button>
-                <Button className="btn-success" onClick={() => setEditPortModalOpen(false)}>Update</Button>
+                <Button
+                  className="btn-success"
+                  onClick={handleUpdatePort}
+                  disabled={updatePortMutation.isPending}
+                >
+                  {updatePortMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Update
+                </Button>
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Charge Modal */}
+      <Dialog open={addChargeModalOpen} onOpenChange={(open) => { setAddChargeModalOpen(open); if (!open) resetChargeForm(); }}>
+        <DialogContent className="sm:max-w-md bg-card">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold"><span className="font-bold">Add New</span> Charge</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Charge</label>
+              <Input
+                placeholder="Charge Item"
+                value={chargeForm.name}
+                onChange={(e) => setChargeForm({ ...chargeForm, name: e.target.value })}
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button variant="outline" onClick={() => setAddChargeModalOpen(false)}>Cancel</Button>
+              <Button
+                className="btn-success"
+                onClick={handleAddCharge}
+                disabled={createChargeMutation.isPending}
+              >
+                {createChargeMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -700,10 +1059,57 @@ const Settings = () => {
               </div>
               <div className="flex justify-end gap-3 pt-4">
                 <Button variant="outline" onClick={() => setEditChargeModalOpen(false)}>Close</Button>
-                <Button className="btn-success" onClick={() => setEditChargeModalOpen(false)}>Update</Button>
+                <Button
+                  className="btn-success"
+                  onClick={handleUpdateCharge}
+                  disabled={updateChargeMutation.isPending}
+                >
+                  {updateChargeMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Update
+                </Button>
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Expense Modal */}
+      <Dialog open={addExpenseModalOpen} onOpenChange={(open) => { setAddExpenseModalOpen(open); if (!open) resetExpenseForm(); }}>
+        <DialogContent className="sm:max-w-md bg-card">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold"><span className="font-bold">Add New</span> Expense</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Category</label>
+              <Select value={expenseForm.paymentDirection} onValueChange={(value: PaymentType) => setExpenseForm({ ...expenseForm, paymentDirection: value })}>
+                <SelectTrigger><SelectValue placeholder="Select One" /></SelectTrigger>
+                <SelectContent className="bg-popover border border-border">
+                  <SelectItem value="Outwards">Outwards</SelectItem>
+                  <SelectItem value="Inwards">Inwards</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Payment Type</label>
+              <Input
+                placeholder="Payment Type"
+                value={expenseForm.name}
+                onChange={(e) => setExpenseForm({ ...expenseForm, name: e.target.value })}
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button variant="outline" onClick={() => setAddExpenseModalOpen(false)}>Cancel</Button>
+              <Button
+                className="btn-success"
+                onClick={handleAddExpense}
+                disabled={createExpenseMutation.isPending}
+              >
+                {createExpenseMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -717,21 +1123,28 @@ const Settings = () => {
             <div className="space-y-4 py-4">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Category</label>
-                <Select value={editExpense.category.toLowerCase()} onValueChange={(value) => setEditExpense({ ...editExpense, category: value })}>
+                <Select value={editExpense.paymentDirection} onValueChange={(value: PaymentType) => setEditExpense({ ...editExpense, paymentDirection: value })}>
                   <SelectTrigger><SelectValue placeholder="Select Category" /></SelectTrigger>
                   <SelectContent className="bg-popover border border-border">
-                    <SelectItem value="outwards">Outwards</SelectItem>
-                    <SelectItem value="inwards">Inwards</SelectItem>
+                    <SelectItem value="Outwards">Outwards</SelectItem>
+                    <SelectItem value="Inwards">Inwards</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Payment Type</label>
-                <Input value={editExpense.paymentType} onChange={(e) => setEditExpense({ ...editExpense, paymentType: e.target.value })} />
+                <Input value={editExpense.name} onChange={(e) => setEditExpense({ ...editExpense, name: e.target.value })} />
               </div>
               <div className="flex justify-end gap-3 pt-4">
                 <Button variant="outline" onClick={() => setEditExpenseModalOpen(false)}>Close</Button>
-                <Button className="btn-success" onClick={() => setEditExpenseModalOpen(false)}>Update</Button>
+                <Button
+                  className="btn-success"
+                  onClick={handleUpdateExpense}
+                  disabled={updateExpenseMutation.isPending}
+                >
+                  {updateExpenseMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Update
+                </Button>
               </div>
             </div>
           )}

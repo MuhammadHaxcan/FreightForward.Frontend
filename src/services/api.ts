@@ -875,6 +875,148 @@ export const shipmentApi = {
   deleteCosting: (id: number) => fetchApi<void>(`/shipments/costings/${id}`, { method: 'DELETE' }),
 };
 
+// Settings Types
+export type PaymentType = 'Inwards' | 'Outwards';
+
+export interface CurrencyType {
+  id: number;
+  name: string;
+  code: string;
+  symbol: string;
+  decimalName?: string;
+  usdRate: number;
+  roe: number;
+}
+
+export interface Port {
+  id: number;
+  name: string;
+  country: string;
+  code?: string;
+}
+
+export interface ChargeItem {
+  id: number;
+  name: string;
+  description?: string;
+}
+
+export interface ExpenseType {
+  id: number;
+  paymentDirection: PaymentType;
+  paymentDirectionName: string;
+  name: string;
+  description?: string;
+}
+
+export interface CreateCurrencyTypeRequest {
+  name: string;
+  code: string;
+  symbol: string;
+  decimalName?: string;
+  usdRate: number;
+  roe: number;
+}
+
+export interface UpdateCurrencyTypeRequest extends CreateCurrencyTypeRequest {
+  id: number;
+}
+
+export interface CreatePortRequest {
+  name: string;
+  country: string;
+  code?: string;
+}
+
+export interface UpdatePortRequest extends CreatePortRequest {
+  id: number;
+}
+
+export interface CreateChargeItemRequest {
+  name: string;
+  description?: string;
+}
+
+export interface UpdateChargeItemRequest extends CreateChargeItemRequest {
+  id: number;
+}
+
+export interface CreateExpenseTypeRequest {
+  paymentDirection: PaymentType;
+  name: string;
+  description?: string;
+}
+
+export interface UpdateExpenseTypeRequest extends CreateExpenseTypeRequest {
+  id: number;
+}
+
+// Settings API
+export const settingsApi = {
+  // Currency Types
+  getCurrencyTypes: (params?: { pageNumber?: number; pageSize?: number; searchTerm?: string }) => {
+    const query = new URLSearchParams();
+    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
+    return fetchApi<PaginatedList<CurrencyType>>(`/settings/currency-types?${query}`);
+  },
+  createCurrencyType: (data: CreateCurrencyTypeRequest) =>
+    fetchApi<number>('/settings/currency-types', { method: 'POST', body: JSON.stringify(data) }),
+  updateCurrencyType: (id: number, data: UpdateCurrencyTypeRequest) =>
+    fetchApi<void>(`/settings/currency-types/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteCurrencyType: (id: number) =>
+    fetchApi<void>(`/settings/currency-types/${id}`, { method: 'DELETE' }),
+
+  // Ports
+  getPorts: (params?: { pageNumber?: number; pageSize?: number; searchTerm?: string }) => {
+    const query = new URLSearchParams();
+    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
+    return fetchApi<PaginatedList<Port>>(`/settings/ports?${query}`);
+  },
+  createPort: (data: CreatePortRequest) =>
+    fetchApi<number>('/settings/ports', { method: 'POST', body: JSON.stringify(data) }),
+  updatePort: (id: number, data: UpdatePortRequest) =>
+    fetchApi<void>(`/settings/ports/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deletePort: (id: number) =>
+    fetchApi<void>(`/settings/ports/${id}`, { method: 'DELETE' }),
+
+  // Charge Items
+  getChargeItems: (params?: { pageNumber?: number; pageSize?: number; searchTerm?: string }) => {
+    const query = new URLSearchParams();
+    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
+    return fetchApi<PaginatedList<ChargeItem>>(`/settings/charge-items?${query}`);
+  },
+  createChargeItem: (data: CreateChargeItemRequest) =>
+    fetchApi<number>('/settings/charge-items', { method: 'POST', body: JSON.stringify(data) }),
+  updateChargeItem: (id: number, data: UpdateChargeItemRequest) =>
+    fetchApi<void>(`/settings/charge-items/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteChargeItem: (id: number) =>
+    fetchApi<void>(`/settings/charge-items/${id}`, { method: 'DELETE' }),
+
+  // Expense Types
+  getExpenseTypes: (params?: { pageNumber?: number; pageSize?: number; searchTerm?: string; paymentDirection?: PaymentType }) => {
+    const query = new URLSearchParams();
+    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
+    if (params?.paymentDirection) query.append('paymentDirection', params.paymentDirection);
+    return fetchApi<PaginatedList<ExpenseType>>(`/settings/expense-types?${query}`);
+  },
+  getAllExpenseTypes: () =>
+    fetchApi<ExpenseType[]>('/settings/expense-types/all'),
+  createExpenseType: (data: CreateExpenseTypeRequest) =>
+    fetchApi<number>('/settings/expense-types', { method: 'POST', body: JSON.stringify(data) }),
+  updateExpenseType: (id: number, data: UpdateExpenseTypeRequest) =>
+    fetchApi<void>(`/settings/expense-types/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteExpenseType: (id: number) =>
+    fetchApi<void>(`/settings/expense-types/${id}`, { method: 'DELETE' }),
+};
+
 // Export all APIs
 export const api = {
   banks: bankApi,
@@ -884,6 +1026,7 @@ export const api = {
   rateRequests: rateRequestApi,
   quotations: quotationApi,
   shipments: shipmentApi,
+  settings: settingsApi,
 };
 
 export default api;

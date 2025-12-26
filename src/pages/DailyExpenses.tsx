@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,8 @@ import { Plus, Printer, Search, Eye, Pencil, Trash2 } from "lucide-react";
 import { DateInput } from "@/components/ui/date-input";
 import { ExpenseModal } from "@/components/expenses/ExpenseModal";
 import { ExpensePrintView } from "@/components/expenses/ExpensePrintView";
+import { useAllExpenseTypes } from "@/hooks/useSettings";
+import { useBanks } from "@/hooks/useBanks";
 
 interface Expense {
   id: string;
@@ -122,24 +124,6 @@ const mockExpenses: Expense[] = [
   },
 ];
 
-const expenseCategories = [
-  "NETWORK MEMBERSHIP",
-  "OFFICE RENT EXPENSE",
-  "Car Repair & Maintenance",
-  "Utilities",
-  "Office Supplies",
-  "Travel Expense",
-  "Marketing",
-  "Professional Services",
-];
-
-const banks = [
-  "EMIRATES ISLAMIC BANK",
-  "EMIRATES NBD",
-  "ADCB",
-  "FAB",
-  "RAK BANK",
-];
 
 export default function DailyExpenses() {
   const [expenses, setExpenses] = useState<Expense[]>(mockExpenses);
@@ -151,6 +135,22 @@ export default function DailyExpenses() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [showPrintView, setShowPrintView] = useState(false);
+
+  // Fetch expense types from Settings API
+  const { data: expenseTypesData } = useAllExpenseTypes();
+  const { data: banksData } = useBanks({ pageSize: 100 });
+
+  // Map expense types to category names
+  const expenseCategories = useMemo(() => {
+    if (!expenseTypesData) return [];
+    return expenseTypesData.map((et) => et.name);
+  }, [expenseTypesData]);
+
+  // Map banks to bank names
+  const banks = useMemo(() => {
+    if (!banksData?.items) return [];
+    return banksData.items.map((b) => b.bankName);
+  }, [banksData]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
