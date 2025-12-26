@@ -111,8 +111,21 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
   };
 
   const handleSubmit = async () => {
+    // Map frontend formData to backend expected format
+    const requestData = {
+      name: formData.name,
+      masterType: formData.masterType,
+      categories: formData.category, // Backend expects 'categories' (plural)
+      phone: formData.phone,
+      email: formData.email,
+      country: formData.country,
+      city: formData.city,
+      baseCurrency: formData.baseCurrency,
+      taxNo: formData.taxNo,
+    };
+
     if (mode === "add") {
-      createMutation.mutate(formData, {
+      createMutation.mutate(requestData, {
         onSuccess: () => {
           onOpenChange(false);
         },
@@ -121,7 +134,7 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
       updateMutation.mutate(
         {
           id: customer.id,
-          data: { ...formData, id: customer.id },
+          data: { ...requestData, id: customer.id },
         },
         {
           onSuccess: () => {

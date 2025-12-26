@@ -29,7 +29,6 @@ async function fetchApi<T>(
         'Content-Type': 'application/json',
         ...options.headers,
       },
-      credentials: 'include',
     });
 
     if (!response.ok) {
