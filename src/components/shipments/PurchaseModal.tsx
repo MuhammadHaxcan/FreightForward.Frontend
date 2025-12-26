@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DateInput } from "@/components/ui/date-input";
 import {
   Select,
   SelectContent,
@@ -127,7 +128,7 @@ export function PurchaseModal({ open, onOpenChange, chargesDetails, onSave }: Pu
               <Label className="text-sm">Purchase ID</Label>
               <Input 
                 value={formData.purchaseId} 
-                className="bg-[#34495e] text-white border-[#4a5568]"
+                className="bg-muted"
                 readOnly
               />
             </div>
@@ -146,11 +147,9 @@ export function PurchaseModal({ open, onOpenChange, chargesDetails, onSave }: Pu
             </div>
             <div>
               <Label className="text-sm">* Invoice Date</Label>
-              <Input 
-                type="date"
+              <DateInput 
                 value={formData.invoiceDate} 
-                onChange={(e) => handleInputChange("invoiceDate", e.target.value)}
-                className="bg-background border-border"
+                onChange={(v) => handleInputChange("invoiceDate", v)}
               />
             </div>
           </div>
@@ -167,11 +166,9 @@ export function PurchaseModal({ open, onOpenChange, chargesDetails, onSave }: Pu
             </div>
             <div>
               <Label className="text-sm">* V.Date</Label>
-              <Input 
-                type="date"
+              <DateInput 
                 value={formData.vDate} 
-                onChange={(e) => handleInputChange("vDate", e.target.value)}
-                className="bg-background border-border"
+                onChange={(v) => handleInputChange("vDate", v)}
               />
             </div>
             <div>
@@ -179,7 +176,6 @@ export function PurchaseModal({ open, onOpenChange, chargesDetails, onSave }: Pu
               <Input 
                 value={formData.baseCurrency} 
                 onChange={(e) => handleInputChange("baseCurrency", e.target.value)}
-                className="bg-[#5a9bd5] text-white border-[#4a5568]"
               />
             </div>
             <div className="flex gap-2 items-end">

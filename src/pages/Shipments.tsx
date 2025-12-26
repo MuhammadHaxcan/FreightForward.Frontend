@@ -240,7 +240,7 @@ const Shipments = () => {
         {/* Filters Row */}
         <div className="flex flex-wrap items-center gap-3">
           <Select value={searchBy} onValueChange={setSearchBy}>
-            <SelectTrigger className="w-[150px] bg-card border-emerald-500">
+            <SelectTrigger className="w-[150px] bg-card border-border">
               <SelectValue placeholder="Job No" />
             </SelectTrigger>
             <SelectContent className="bg-popover border border-border">

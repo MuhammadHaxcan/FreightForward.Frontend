@@ -8,8 +8,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DateInput } from "@/components/ui/date-input";
 import {
   Select,
   SelectContent,
@@ -121,7 +121,7 @@ export function InvoiceModal({ open, onOpenChange, chargesDetails, onSave }: Inv
               <Label className="text-sm">Invoice ID</Label>
               <Input 
                 value={formData.invoiceId} 
-                className="bg-[#34495e] text-white border-[#4a5568]"
+                className="bg-muted"
                 readOnly
               />
             </div>
@@ -140,11 +140,9 @@ export function InvoiceModal({ open, onOpenChange, chargesDetails, onSave }: Inv
             </div>
             <div>
               <Label className="text-sm">* Invoice Date</Label>
-              <Input 
-                type="date"
+              <DateInput 
                 value={formData.invoiceDate} 
-                onChange={(e) => handleInputChange("invoiceDate", e.target.value)}
-                className="bg-background border-border"
+                onChange={(v) => handleInputChange("invoiceDate", v)}
               />
             </div>
             <div className="flex items-end gap-2">
@@ -152,7 +150,7 @@ export function InvoiceModal({ open, onOpenChange, chargesDetails, onSave }: Inv
                 <Label className="text-sm">* Base Currency</Label>
                 <Input 
                   value={formData.baseCurrency} 
-                  className="bg-[#34495e] text-white border-[#4a5568]"
+                  className="bg-muted"
                   readOnly
                 />
               </div>

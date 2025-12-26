@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { DateInput } from "@/components/ui/date-input";
 import {
   Select,
   SelectContent,
@@ -92,11 +93,9 @@ export function DocumentModal({ open, onOpenChange, onSave }: DocumentModalProps
             </div>
             <div>
               <Label className="text-sm">Doc. Date</Label>
-              <Input 
-                type="date"
+              <DateInput 
                 value={formData.docDate} 
-                onChange={(e) => handleInputChange("docDate", e.target.value)}
-                className="bg-background border-border"
+                onChange={(v) => handleInputChange("docDate", v)}
               />
             </div>
           </div>

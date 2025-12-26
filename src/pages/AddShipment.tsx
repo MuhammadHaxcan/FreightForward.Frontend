@@ -242,7 +242,7 @@ const AddShipment = () => {
               <div className="grid grid-cols-6 gap-4">
                 <div>
                   <Label className="text-sm">Job Number</Label>
-                  <Input value={formData.jobNumber} className="bg-[#34495e] text-white" readOnly />
+                  <Input value={formData.jobNumber} className="bg-muted" readOnly />
                 </div>
                 <div>
                   <Label className="text-sm">Date</Label>
@@ -396,7 +396,7 @@ const AddShipment = () => {
                 </div>
                 <div>
                   <Label className="text-sm">Carrier</Label>
-                  <Input value={formData.carrier} onChange={(e) => handleInputChange("carrier", e.target.value)} className="bg-[#f0ad4e] border-[#f0ad4e]" />
+                  <Input value={formData.carrier} onChange={(e) => handleInputChange("carrier", e.target.value)} />
                 </div>
                 <div>
                   <Label className="text-sm">Free Time</Label>

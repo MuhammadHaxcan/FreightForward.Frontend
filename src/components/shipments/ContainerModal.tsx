@@ -65,29 +65,29 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl bg-[#2c3e50] text-white border-0">
+      <DialogContent className="max-w-4xl bg-card border border-border">
         <DialogHeader>
-          <DialogTitle className="text-white text-lg">Add Container</DialogTitle>
+          <DialogTitle className="text-foreground text-lg">Add Container</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4 p-4">
           {/* Row 1 */}
           <div className="grid grid-cols-5 gap-4">
             <div>
-              <Label className="text-sm text-gray-300">SN.No</Label>
+              <Label className="text-sm">SN.No</Label>
               <Input 
                 value={formData.sNo} 
                 onChange={(e) => handleInputChange("sNo", e.target.value)}
-                className="bg-[#34495e] border-[#4a5568] text-white"
+                className="bg-muted"
               />
             </div>
             <div>
-              <Label className="text-sm text-gray-300">Container Type</Label>
+              <Label className="text-sm">Container Type</Label>
               <Select value={formData.containerType} onValueChange={(v) => handleInputChange("containerType", v)}>
-                <SelectTrigger className="bg-white text-black border-gray-300">
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-white border border-gray-300">
+                <SelectContent className="bg-popover border border-border">
                   {containerTypes.map(type => (
                     <SelectItem key={type} value={type}>{type}</SelectItem>
                   ))}
@@ -95,30 +95,28 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
               </Select>
             </div>
             <div>
-              <Label className="text-sm text-gray-300">Container No</Label>
+              <Label className="text-sm">Container No</Label>
               <Input 
                 value={formData.containerNo} 
                 onChange={(e) => handleInputChange("containerNo", e.target.value)}
                 placeholder="Container No"
-                className="bg-white text-black border-gray-300"
               />
             </div>
             <div>
-              <Label className="text-sm text-gray-300">No of Pcs</Label>
+              <Label className="text-sm">No of Pcs</Label>
               <Input 
                 value={formData.noOfPcs} 
                 onChange={(e) => handleInputChange("noOfPcs", e.target.value)}
                 placeholder="No of pcs"
-                className="bg-white text-black border-gray-300"
               />
             </div>
             <div>
-              <Label className="text-sm text-gray-300">Packages</Label>
+              <Label className="text-sm">Packages</Label>
               <Select value={formData.packages} onValueChange={(v) => handleInputChange("packages", v)}>
-                <SelectTrigger className="bg-white text-black border-gray-300">
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-white border border-gray-300">
+                <SelectContent className="bg-popover border border-border">
                   {packageTypes.map(type => (
                     <SelectItem key={type} value={type}>{type}</SelectItem>
                   ))}
@@ -130,28 +128,27 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
           {/* Row 2 */}
           <div className="grid grid-cols-4 gap-4">
             <div>
-              <Label className="text-sm text-gray-300">Actual Seal</Label>
+              <Label className="text-sm">Actual Seal</Label>
               <Input 
                 value={formData.actualSeal} 
                 onChange={(e) => handleInputChange("actualSeal", e.target.value)}
                 placeholder="Actual Seal"
-                className="bg-white text-black border-gray-300"
               />
             </div>
             <div>
-              <Label className="text-sm text-gray-300">Gross Weight</Label>
+              <Label className="text-sm">Gross Weight</Label>
               <div className="flex gap-2">
                 <Input 
                   value={formData.grossWeight} 
                   onChange={(e) => handleInputChange("grossWeight", e.target.value)}
                   placeholder="Gross Weight"
-                  className="bg-white text-black border-gray-300 flex-1"
+                  className="flex-1"
                 />
                 <Select value={formData.weightUnit} onValueChange={(v) => handleInputChange("weightUnit", v)}>
-                  <SelectTrigger className="bg-white text-black border-gray-300 w-20">
+                  <SelectTrigger className="w-20">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border border-gray-300">
+                  <SelectContent className="bg-popover border border-border">
                     {weightUnits.map(unit => (
                       <SelectItem key={unit} value={unit}>{unit}</SelectItem>
                     ))}
@@ -160,21 +157,20 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
               </div>
             </div>
             <div>
-              <Label className="text-sm text-gray-300">Volume</Label>
+              <Label className="text-sm">Volume</Label>
               <Input 
                 value={formData.volume} 
                 onChange={(e) => handleInputChange("volume", e.target.value)}
                 placeholder="Volume"
-                className="bg-white text-black border-gray-300"
               />
             </div>
             <div>
-              <Label className="text-sm text-gray-300">Description</Label>
+              <Label className="text-sm">Description</Label>
               <Textarea 
                 value={formData.description} 
                 onChange={(e) => handleInputChange("description", e.target.value)}
                 placeholder="Description"
-                className="bg-white text-black border-gray-300 min-h-[80px]"
+                className="min-h-[80px]"
               />
             </div>
           </div>
@@ -184,7 +180,7 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
             <Button 
               variant="outline" 
               onClick={() => onOpenChange(false)}
-              className="bg-[#34495e] hover:bg-[#4a5568] text-white border-[#4a5568] px-6"
+              className="px-6"
             >
               Close
             </Button>
