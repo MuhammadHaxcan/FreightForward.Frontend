@@ -86,6 +86,10 @@ const AddShipment = () => {
     etd: new Date().toISOString().split('T')[0],
     eta: new Date().toISOString().split('T')[0],
     secondLegVessel: false,
+    secondLegVesselName: "",
+    secondLegVoyage: "",
+    secondLegETD: new Date().toISOString().split('T')[0],
+    secondLegETA: new Date().toISOString().split('T')[0],
     marksNumbers: "",
     notes: "",
     internalNotes: "",
@@ -507,6 +511,44 @@ const AddShipment = () => {
                   </div>
                 </div>
               </div>
+
+              {/* 2nd Leg Vessel Row - Conditional */}
+              {formData.secondLegVessel && (
+                <div className="grid grid-cols-4 gap-4">
+                  <div>
+                    <Label className="text-sm">2nd Leg Vessel</Label>
+                    <Input 
+                      value={formData.secondLegVesselName} 
+                      onChange={(e) => handleInputChange("secondLegVesselName", e.target.value)} 
+                      placeholder="OCL France" 
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm">2nd Leg Voyage</Label>
+                    <Input 
+                      value={formData.secondLegVoyage} 
+                      onChange={(e) => handleInputChange("secondLegVoyage", e.target.value)} 
+                      placeholder="78465F1" 
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm">2nd Leg ETD</Label>
+                    <Input 
+                      type="date" 
+                      value={formData.secondLegETD} 
+                      onChange={(e) => handleInputChange("secondLegETD", e.target.value)} 
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm">2nd Leg ETA</Label>
+                    <Input 
+                      type="date" 
+                      value={formData.secondLegETA} 
+                      onChange={(e) => handleInputChange("secondLegETA", e.target.value)} 
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Row 7 - Notes */}
               <div className="grid grid-cols-3 gap-4">
