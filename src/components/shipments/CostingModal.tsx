@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { DateInput } from "@/components/ui/date-input";
 import {
   Select,
   SelectContent,
@@ -258,11 +259,10 @@ export function CostingModal({ open, onOpenChange, onSave }: CostingModalProps) 
               </div>
               <div>
                 <Label className="text-xs">Date</Label>
-                <Input 
-                  type="date"
+                <DateInput 
                   value={formData.costDate} 
-                  onChange={(e) => handleInputChange("costDate", e.target.value)}
-                  className="bg-background border-border h-9"
+                  onChange={(v) => handleInputChange("costDate", v)}
+                  className="h-9"
                 />
               </div>
               <div>
