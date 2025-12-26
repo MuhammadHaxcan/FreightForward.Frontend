@@ -35,7 +35,16 @@ interface SidebarItem {
 
 const sidebarItems: SidebarItem[] = [
   { title: "Dashboard", icon: LayoutDashboard, path: "/" },
-  { title: "Shipments", icon: Truck, path: "/shipments", hasSubmenu: true },
+  { 
+    title: "Shipments", 
+    icon: Truck, 
+    path: "/shipments", 
+    hasSubmenu: true,
+    subMenuItems: [
+      { title: "Shipments", path: "/shipments" },
+      { title: "Add New", path: "/shipments/add" },
+    ]
+  },
   { title: "Master Customers", icon: Users, path: "/master-customers" },
   { 
     title: "Sales", 

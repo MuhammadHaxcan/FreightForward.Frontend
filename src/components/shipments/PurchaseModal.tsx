@@ -1,0 +1,284 @@
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Search } from "lucide-react";
+
+interface PurchaseModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  chargesDetails: any[];
+  onSave: (purchase: any) => void;
+}
+
+const companies = [
+  "BLISS LOGISTICS & SHIPPING PVT LTD",
+  "MMF GLOBAL TRADING LLC",
+  "KADDAH BLDG CLEANING EQUIP. TR CO LLC",
+];
+
+export function PurchaseModal({ open, onOpenChange, chargesDetails, onSave }: PurchaseModalProps) {
+  const [formData, setFormData] = useState({
+    purchaseId: `PIAE${Date.now().toString().slice(-6)}`,
+    companyName: "",
+    invoiceDate: new Date().toISOString().split('T')[0],
+    invoiceNo: "",
+    vDate: new Date().toISOString().split('T')[0],
+    baseCurrency: "",
+    remarks: "",
+    selectedCharges: [] as number[],
+  });
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleCheckCharge = (chargeId: number, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedCharges: checked 
+        ? [...prev.selectedCharges, chargeId]
+        : prev.selectedCharges.filter(id => id !== chargeId)
+    }));
+  };
+
+  const handleCheckAll = (checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedCharges: checked ? chargesDetails.map(c => c.id) : []
+    }));
+  };
+
+  const handleSubmit = () => {
+    // Filter and load selected charges
+  };
+
+  const handleSave = () => {
+    onSave({
+      purchaseId: formData.purchaseId,
+      companyName: formData.companyName,
+      invoiceDate: formData.invoiceDate,
+      invoiceNo: formData.invoiceNo,
+      vDate: formData.vDate,
+      baseCurrency: formData.baseCurrency,
+      remarks: formData.remarks,
+      charges: formData.selectedCharges,
+    });
+    onOpenChange(false);
+  };
+
+  const totalSale = chargesDetails
+    .filter(c => formData.selectedCharges.includes(c.id))
+    .reduce((sum, c) => sum + parseFloat(c.saleLCY || 0), 0);
+  
+  const totalCost = chargesDetails
+    .filter(c => formData.selectedCharges.includes(c.id))
+    .reduce((sum, c) => sum + parseFloat(c.costLCY || 0), 0);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto bg-card border border-border">
+        <DialogHeader>
+          <DialogTitle className="text-foreground text-lg bg-[#2c3e50] text-white p-4 -m-6 mb-0 rounded-t-lg">
+            New Purchase
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-6 pt-6">
+          {/* Purchase Section Header */}
+          <div className="flex justify-between items-center">
+            <h3 className="text-emerald-600 font-semibold">Purchase</h3>
+            <div className="flex gap-2">
+              <Button className="bg-emerald-500 hover:bg-emerald-600 text-white">
+                Save
+              </Button>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Back
+              </Button>
+            </div>
+          </div>
+
+          {/* Purchase Details Row 1 */}
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <Label className="text-sm">Purchase ID</Label>
+              <Input 
+                value={formData.purchaseId} 
+                className="bg-[#34495e] text-white border-[#4a5568]"
+                readOnly
+              />
+            </div>
+            <div>
+              <Label className="text-sm">Company Name</Label>
+              <Select value={formData.companyName} onValueChange={(v) => handleInputChange("companyName", v)}>
+                <SelectTrigger className="bg-background border-border">
+                  <SelectValue placeholder="Select company" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover border border-border">
+                  {companies.map(company => (
+                    <SelectItem key={company} value={company}>{company}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-sm">* Invoice Date</Label>
+              <Input 
+                type="date"
+                value={formData.invoiceDate} 
+                onChange={(e) => handleInputChange("invoiceDate", e.target.value)}
+                className="bg-background border-border"
+              />
+            </div>
+          </div>
+
+          {/* Purchase Details Row 2 */}
+          <div className="grid grid-cols-4 gap-4 items-end">
+            <div>
+              <Label className="text-sm">* Invoice No</Label>
+              <Input 
+                value={formData.invoiceNo} 
+                onChange={(e) => handleInputChange("invoiceNo", e.target.value)}
+                className="bg-background border-border"
+              />
+            </div>
+            <div>
+              <Label className="text-sm">* V.Date</Label>
+              <Input 
+                type="date"
+                value={formData.vDate} 
+                onChange={(e) => handleInputChange("vDate", e.target.value)}
+                className="bg-background border-border"
+              />
+            </div>
+            <div>
+              <Label className="text-sm">* Base Currency</Label>
+              <Input 
+                value={formData.baseCurrency} 
+                onChange={(e) => handleInputChange("baseCurrency", e.target.value)}
+                className="bg-[#5a9bd5] text-white border-[#4a5568]"
+              />
+            </div>
+            <div className="flex gap-2 items-end">
+              <div className="flex-1">
+                <Label className="text-sm">Remarks</Label>
+                <Textarea 
+                  value={formData.remarks} 
+                  onChange={(e) => handleInputChange("remarks", e.target.value)}
+                  className="bg-background border-border min-h-[40px]"
+                />
+              </div>
+              <Button 
+                onClick={handleSubmit}
+                className="bg-emerald-500 hover:bg-emerald-600 text-white"
+              >
+                <Search className="h-4 w-4 mr-1" />
+                Submit
+              </Button>
+            </div>
+          </div>
+
+          {/* Charges Details */}
+          <div className="space-y-4">
+            <h3 className="text-emerald-600 font-semibold">Charges Details</h3>
+            <div className="flex items-center gap-2">
+              <Checkbox 
+                id="checkAllPurchase"
+                checked={formData.selectedCharges.length === chargesDetails.length && chargesDetails.length > 0}
+                onCheckedChange={(checked) => handleCheckAll(checked as boolean)}
+              />
+              <Label htmlFor="checkAllPurchase" className="text-sm">Check All</Label>
+            </div>
+
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-table-header">
+                  <TableHead className="text-table-header-foreground w-10"></TableHead>
+                  <TableHead className="text-table-header-foreground">Sl.No</TableHead>
+                  <TableHead className="text-table-header-foreground">Charges Details</TableHead>
+                  <TableHead className="text-table-header-foreground">No of unit</TableHead>
+                  <TableHead className="text-table-header-foreground">PP/CC</TableHead>
+                  <TableHead className="text-table-header-foreground">Sale/Unit</TableHead>
+                  <TableHead className="text-table-header-foreground">Currency</TableHead>
+                  <TableHead className="text-table-header-foreground">FYC Amount</TableHead>
+                  <TableHead className="text-table-header-foreground">Ex.Rate</TableHead>
+                  <TableHead className="text-table-header-foreground">Local Amount</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {chargesDetails.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={10} className="text-center text-muted-foreground">
+                      No data available in table
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  chargesDetails.map((charge, index) => (
+                    <TableRow key={charge.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
+                      <TableCell>
+                        <Checkbox 
+                          checked={formData.selectedCharges.includes(charge.id)}
+                          onCheckedChange={(checked) => handleCheckCharge(charge.id, checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell>{(index + 1) * 10}</TableCell>
+                      <TableCell>{charge.description}</TableCell>
+                      <TableCell>{charge.costQty}</TableCell>
+                      <TableCell>{charge.ppcc || "Postpaid"}</TableCell>
+                      <TableCell>{charge.costUnit}</TableCell>
+                      <TableCell>{charge.costCurrency}</TableCell>
+                      <TableCell>{charge.costFCY}</TableCell>
+                      <TableCell>{charge.costExRate}</TableCell>
+                      <TableCell>{charge.costLCY}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Totals */}
+          <div className="flex justify-end">
+            <div className="grid grid-cols-3 gap-8 bg-secondary/30 p-4 rounded-lg">
+              <div>
+                <Label className="text-sm font-semibold">Total Sale</Label>
+                <div className="text-emerald-600 font-semibold">| AED {totalSale.toFixed(2)}|</div>
+              </div>
+              <div>
+                <Label className="text-sm font-semibold">Total Cost</Label>
+                <div className="text-foreground font-semibold">AED {totalCost.toFixed(2)}</div>
+              </div>
+              <div>
+                <Label className="text-sm font-semibold">Profit</Label>
+                <div className="text-foreground font-semibold">AED {(totalSale - totalCost).toFixed(2)}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
