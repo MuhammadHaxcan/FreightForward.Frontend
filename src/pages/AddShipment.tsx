@@ -208,26 +208,26 @@ const AddShipment = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="bg-transparent border-b border-border w-full justify-start rounded-none h-auto p-0 gap-0">
-            <TabsTrigger value="shipment-info" className="rounded-t-md rounded-b-none px-4 py-2 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-none border-0">
+          <TabsList className="w-full justify-start mb-4 bg-card border border-border rounded-lg p-1 h-auto flex-wrap">
+            <TabsTrigger value="shipment-info" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5">
               Shipment Info
             </TabsTrigger>
-            <TabsTrigger value="parties" className="rounded-t-md rounded-b-none px-4 py-2 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-none border-0">
+            <TabsTrigger value="parties" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5">
               Parties
             </TabsTrigger>
-            <TabsTrigger value="containers" className="rounded-t-md rounded-b-none px-4 py-2 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-none border-0">
+            <TabsTrigger value="containers" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5">
               Containers
             </TabsTrigger>
-            <TabsTrigger value="costing" className="rounded-t-md rounded-b-none px-4 py-2 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-none border-0">
+            <TabsTrigger value="costing" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5">
               Costing
             </TabsTrigger>
-            <TabsTrigger value="cargo-details" className="rounded-t-md rounded-b-none px-4 py-2 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-none border-0">
+            <TabsTrigger value="cargo-details" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5">
               Cargo Details
             </TabsTrigger>
-            <TabsTrigger value="documents" className="rounded-t-md rounded-b-none px-4 py-2 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-none border-0">
+            <TabsTrigger value="documents" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5">
               Documents
             </TabsTrigger>
-            <TabsTrigger value="shipment-status" className="rounded-t-md rounded-b-none px-4 py-2 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-none border-0">
+            <TabsTrigger value="shipment-status" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5">
               Shipment Status
             </TabsTrigger>
           </TabsList>
