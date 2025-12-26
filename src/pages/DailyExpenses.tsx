@@ -221,7 +221,7 @@ export default function DailyExpenses() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="p-6 space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-foreground">All Expenses</h1>
