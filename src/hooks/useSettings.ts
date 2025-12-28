@@ -288,6 +288,21 @@ export function useAllExpenseTypes() {
   });
 }
 
+export function useExpenseTypesByDirection(paymentDirection: 'Inwards' | 'Outwards' | null) {
+  return useQuery({
+    queryKey: ['expenseTypes', 'byDirection', paymentDirection],
+    queryFn: async () => {
+      if (!paymentDirection) return [];
+      const response = await settingsApi.getExpenseTypesByDirection(paymentDirection);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+    enabled: !!paymentDirection,
+  });
+}
+
 export function useCreateExpenseType() {
   const queryClient = useQueryClient();
 

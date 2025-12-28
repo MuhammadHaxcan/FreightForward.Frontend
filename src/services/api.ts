@@ -1009,6 +1009,8 @@ export const settingsApi = {
   },
   getAllExpenseTypes: () =>
     fetchApi<ExpenseType[]>('/settings/expense-types/all'),
+  getExpenseTypesByDirection: (paymentDirection: 'Inwards' | 'Outwards') =>
+    fetchApi<ExpenseType[]>(`/settings/expense-types/by-direction/${paymentDirection === 'Inwards' ? 0 : 1}`),
   createExpenseType: (data: CreateExpenseTypeRequest) =>
     fetchApi<number>('/settings/expense-types', { method: 'POST', body: JSON.stringify(data) }),
   updateExpenseType: (id: number, data: UpdateExpenseTypeRequest) =>

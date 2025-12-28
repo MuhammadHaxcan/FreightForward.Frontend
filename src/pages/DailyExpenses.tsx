@@ -35,6 +35,8 @@ interface Expense {
   receipt: string;
   currency: string;
   amount: number;
+  chequeNumber?: string;
+  chequeDate?: string;
 }
 
 const mockExpenses: Expense[] = [
@@ -367,7 +369,6 @@ export default function DailyExpenses() {
         }}
         onSubmit={editingExpense ? handleEditExpense : handleAddExpense}
         expense={editingExpense}
-        categories={expenseCategories}
         banks={banks}
       />
     </MainLayout>

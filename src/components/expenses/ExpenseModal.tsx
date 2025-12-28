@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { DateInput } from "@/components/ui/date-input";
 import { format } from "date-fns";
+import { useExpenseTypesByDirection } from "@/hooks/useSettings";
 
 interface Expense {
   id: string;
@@ -29,6 +30,8 @@ interface Expense {
   receipt: string;
   currency: string;
   amount: number;
+  chequeNumber?: string;
+  chequeDate?: string;
 }
 
 interface ExpenseModalProps {
@@ -36,11 +39,10 @@ interface ExpenseModalProps {
   onClose: () => void;
   onSubmit: (expense: Omit<Expense, "id">) => void;
   expense: Expense | null;
-  categories: string[];
   banks: string[];
 }
 
-const paymentTypes = ["Inwards", "Outwards"];
+const paymentTypes = ["Inwards", "Outwards"] as const;
 const paymentModes = ["CASH", "CHEQUE", "BANK WIRE", "BANK TRANSFER", "CARD"];
 const currencies = ["AED", "USD", "EUR", "GBP", "SAR"];
 
@@ -49,12 +51,11 @@ export function ExpenseModal({
   onClose,
   onSubmit,
   expense,
-  categories,
   banks,
 }: ExpenseModalProps) {
   const [formData, setFormData] = useState({
     date: format(new Date(), "yyyy-MM-dd"),
-    paymentType: "",
+    paymentType: "" as "" | "Inwards" | "Outwards",
     paymentMode: "",
     category: "",
     bank: "",
@@ -62,13 +63,23 @@ export function ExpenseModal({
     receipt: "---",
     currency: "AED",
     amount: 0,
+    chequeNumber: "",
+    chequeDate: "",
   });
+
+  // Fetch expense categories based on selected payment type
+  const { data: expenseTypesData, isLoading: isLoadingCategories } = useExpenseTypesByDirection(
+    formData.paymentType || null
+  );
+
+  // Map expense types to category names
+  const categories = expenseTypesData?.map((et) => et.name) || [];
 
   useEffect(() => {
     if (expense) {
       setFormData({
         date: expense.date,
-        paymentType: expense.paymentType,
+        paymentType: expense.paymentType as "" | "Inwards" | "Outwards",
         paymentMode: expense.paymentMode,
         category: expense.category,
         bank: expense.bank,
@@ -76,6 +87,8 @@ export function ExpenseModal({
         receipt: expense.receipt,
         currency: expense.currency,
         amount: expense.amount,
+        chequeNumber: expense.chequeNumber || "",
+        chequeDate: expense.chequeDate || "",
       });
     } else {
       setFormData({
@@ -88,9 +101,18 @@ export function ExpenseModal({
         receipt: "---",
         currency: "AED",
         amount: 0,
+        chequeNumber: "",
+        chequeDate: "",
       });
     }
   }, [expense, isOpen]);
+
+  const isChequeSelected = formData.paymentMode === "CHEQUE";
+
+  const handlePaymentTypeChange = (value: "Inwards" | "Outwards") => {
+    // Clear category when payment type changes since categories are different per type
+    setFormData({ ...formData, paymentType: value, category: "" });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,7 +132,7 @@ export function ExpenseModal({
               <label className="text-sm font-medium mb-1 block">Payment Type</label>
               <Select
                 value={formData.paymentType}
-                onValueChange={(value) => setFormData({ ...formData, paymentType: value })}
+                onValueChange={handlePaymentTypeChange}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select One" />
@@ -127,14 +149,25 @@ export function ExpenseModal({
               <Select
                 value={formData.category}
                 onValueChange={(value) => setFormData({ ...formData, category: value })}
+                disabled={!formData.paymentType || isLoadingCategories}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select Type" />
+                  <SelectValue placeholder={
+                    !formData.paymentType
+                      ? "Select Payment Type first"
+                      : isLoadingCategories
+                        ? "Loading..."
+                        : "Select Category"
+                  } />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                  ))}
+                  {categories.length === 0 && !isLoadingCategories && formData.paymentType ? (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">No categories found</div>
+                  ) : (
+                    categories.map((cat) => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -186,7 +219,7 @@ export function ExpenseModal({
               <label className="text-sm font-medium mb-1 block">Payment Mode</label>
               <Select
                 value={formData.paymentMode}
-                onValueChange={(value) => setFormData({ ...formData, paymentMode: value })}
+                onValueChange={(value) => setFormData({ ...formData, paymentMode: value, chequeNumber: "", chequeDate: "" })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select Payment Type" />
@@ -222,6 +255,27 @@ export function ExpenseModal({
               />
             </div>
           </div>
+
+          {/* Cheque-specific fields - only shown when CHEQUE is selected */}
+          {isChequeSelected && (
+            <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg border">
+              <div>
+                <label className="text-sm font-medium mb-1 block">Cheque Number</label>
+                <Input
+                  placeholder="Enter cheque number"
+                  value={formData.chequeNumber}
+                  onChange={(e) => setFormData({ ...formData, chequeNumber: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Cheque Date</label>
+                <DateInput
+                  value={formData.chequeDate}
+                  onChange={(value) => setFormData({ ...formData, chequeDate: value })}
+                />
+              </div>
+            </div>
+          )}
 
           <div className="flex justify-end gap-2 pt-4">
             <Button type="submit" className="bg-primary hover:bg-primary/90">
