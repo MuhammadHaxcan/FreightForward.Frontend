@@ -8,9 +8,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { ArrowLeft, Plus, ChevronDown, Check, Pencil, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { customerApi, settingsApi, CustomerCategoryType, Currency } from "@/services/api";
+import { useToast } from "@/hooks/use-toast";
 
 interface Contact {
   id: number;
@@ -27,9 +29,8 @@ interface Contact {
   enableRateRequest: boolean;
 }
 
-const customerTypes = ["Consignee(Neutral)", "Shipper", "Neutral", "Notify Party"];
 const countries = ["United Arab Emirates", "Singapore", "Pakistan", "Taiwan", "China", "Ethiopia", "India", "USA", "Qatar"];
-const currencies = ["AED", "USD", "SGD", "PKR", "CNY", "EUR"];
+const currencies: Currency[] = ["AED", "USD", "SGD", "PKR", "CNY", "EUR"];
 
 const tabs = [
   { id: "profile", label: "Profile" },
@@ -41,28 +42,184 @@ const NeutralDetail = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const isViewMode = searchParams.get("mode") === "view";
+  const isEditMode = !!id;
 
   const [activeTab, setActiveTab] = useState("profile");
   const [contactModalOpen, setContactModalOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [categoryTypes, setCategoryTypes] = useState<CustomerCategoryType[]>([]);
 
   // Profile form state
   const [profileData, setProfileData] = useState({
-    code: "NEI0493",
-    masterType: "Neutral",
-    category: ["Consignee(Neutral)"],
-    name: "NOVATEX LIMITED",
-    city: "Karachi",
-    country: "Pakistan",
+    code: "",
+    masterType: "Neutral" as const,
+    categoryIds: [] as number[],
+    name: "",
+    city: "",
+    country: "United Arab Emirates",
     phone: "",
     fax: "",
-    generalEmail: "test.novatex@gmail.com",
+    generalEmail: "",
     ntnVatTaxNo: "",
     taxPercentage: "",
     address: "",
     status: "Active",
-    carrierCode: "0",
+    carrierCode: "",
+    baseCurrency: "AED" as Currency,
   });
+
+  // Load category types and customer data
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        // Load category types
+        const categoryResponse = await settingsApi.getAllCustomerCategoryTypes();
+        if (categoryResponse.data) {
+          setCategoryTypes(categoryResponse.data);
+        }
+
+        // Load customer data if editing
+        if (id) {
+          const customerResponse = await customerApi.getById(parseInt(id));
+          if (customerResponse.data) {
+            const customer = customerResponse.data;
+            setProfileData({
+              code: customer.code,
+              masterType: "Neutral",
+              categoryIds: customer.categories?.map(c => c.id) || [],
+              name: customer.name,
+              city: customer.city || "",
+              country: customer.country || "United Arab Emirates",
+              phone: customer.phone || "",
+              fax: customer.fax || "",
+              generalEmail: customer.email || "",
+              ntnVatTaxNo: customer.taxNo || "",
+              taxPercentage: customer.taxPercentage?.toString() || "",
+              address: customer.address || "",
+              status: customer.status || "Active",
+              carrierCode: customer.carrierCode || "",
+              baseCurrency: customer.baseCurrency || "AED",
+            });
+            // Load contacts
+            if (customer.contacts) {
+              setContacts(customer.contacts.map(c => ({
+                id: c.id,
+                name: c.name,
+                email: c.email || "",
+                mobile: c.mobile || "",
+                position: c.position || "",
+                phone: c.phone || "",
+                designation: c.designation || "",
+                department: c.department || "",
+                directTel: c.directTel || "",
+                whatsapp: c.whatsapp || "",
+                skype: c.skype || "",
+                enableRateRequest: c.enableRateRequest,
+              })));
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error loading data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load data",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [id, toast]);
+
+  // Save handler
+  const handleSave = async () => {
+    if (!profileData.name.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Customer name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      if (isEditMode && id) {
+        // Update existing customer
+        const updateData = {
+          id: parseInt(id),
+          name: profileData.name,
+          masterType: profileData.masterType,
+          categoryIds: profileData.categoryIds,
+          phone: profileData.phone || undefined,
+          fax: profileData.fax || undefined,
+          email: profileData.generalEmail || undefined,
+          country: profileData.country || undefined,
+          city: profileData.city || undefined,
+          address: profileData.address || undefined,
+          baseCurrency: profileData.baseCurrency,
+          taxNo: profileData.ntnVatTaxNo || undefined,
+          taxPercentage: profileData.taxPercentage ? parseFloat(profileData.taxPercentage) : undefined,
+          carrierCode: profileData.carrierCode || undefined,
+          status: profileData.status,
+        };
+
+        const response = await customerApi.update(parseInt(id), updateData);
+        if (response.error) {
+          throw new Error(response.error);
+        }
+
+        toast({
+          title: "Success",
+          description: "Customer updated successfully",
+        });
+      } else {
+        // Create new customer
+        const createData = {
+          name: profileData.name,
+          masterType: profileData.masterType,
+          categoryIds: profileData.categoryIds,
+          phone: profileData.phone || undefined,
+          fax: profileData.fax || undefined,
+          email: profileData.generalEmail || undefined,
+          country: profileData.country || undefined,
+          city: profileData.city || undefined,
+          address: profileData.address || undefined,
+          baseCurrency: profileData.baseCurrency,
+          taxNo: profileData.ntnVatTaxNo || undefined,
+          taxPercentage: profileData.taxPercentage ? parseFloat(profileData.taxPercentage) : undefined,
+          carrierCode: profileData.carrierCode || undefined,
+        };
+
+        const response = await customerApi.create(createData);
+        if (response.error) {
+          throw new Error(response.error);
+        }
+
+        toast({
+          title: "Success",
+          description: "Customer created successfully",
+        });
+        navigate("/master-customers");
+      }
+    } catch (error) {
+      console.error("Error saving customer:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save customer",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // Account Details state
   const [accountDetails, setAccountDetails] = useState({
@@ -85,12 +242,12 @@ const NeutralDetail = () => {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [contactForm, setContactForm] = useState<Partial<Contact>>({});
 
-  const toggleCategory = (type: string) => {
+  const toggleCategory = (categoryId: number) => {
     setProfileData(prev => ({
       ...prev,
-      category: prev.category.includes(type)
-        ? prev.category.filter(c => c !== type)
-        : [...prev.category, type]
+      categoryIds: prev.categoryIds.includes(categoryId)
+        ? prev.categoryIds.filter(id => id !== categoryId)
+        : [...prev.categoryIds, categoryId]
     }));
   };
 
@@ -126,9 +283,12 @@ const NeutralDetail = () => {
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-full justify-between bg-muted/50 font-normal h-10" disabled={isViewMode}>
                 <div className="flex flex-wrap gap-1 flex-1">
-                  {profileData.category.map(type => (
-                    <span key={type} className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary text-primary-foreground rounded-md">× {type}</span>
-                  ))}
+                  {profileData.categoryIds.map(catId => {
+                    const cat = categoryTypes.find(c => c.id === catId);
+                    return cat ? (
+                      <span key={catId} className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary text-primary-foreground rounded-md">× {cat.name}</span>
+                    ) : null;
+                  })}
                 </div>
                 <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
               </Button>
@@ -137,12 +297,12 @@ const NeutralDetail = () => {
               <Command>
                 <CommandList>
                   <CommandGroup>
-                    {customerTypes.map(type => (
-                      <CommandItem key={type} onSelect={() => toggleCategory(type)} className="cursor-pointer">
-                        <div className={cn("mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary", profileData.category.includes(type) ? "bg-primary text-primary-foreground" : "opacity-50")}>
-                          {profileData.category.includes(type) && <Check className="h-3 w-3" />}
+                    {categoryTypes.map(cat => (
+                      <CommandItem key={cat.id} onSelect={() => toggleCategory(cat.id)} className="cursor-pointer">
+                        <div className={cn("mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary", profileData.categoryIds.includes(cat.id) ? "bg-primary text-primary-foreground" : "opacity-50")}>
+                          {profileData.categoryIds.includes(cat.id) && <Check className="h-3 w-3" />}
                         </div>
-                        {type}
+                        {cat.name}
                       </CommandItem>
                     ))}
                   </CommandGroup>
@@ -392,7 +552,9 @@ const NeutralDetail = () => {
               <ArrowLeft size={16} /> Back
             </Button>
             {!isViewMode && (
-              <Button className="btn-success">Save</Button>
+              <Button className="btn-success" onClick={handleSave} disabled={saving}>
+                {saving ? "Saving..." : "Save"}
+              </Button>
             )}
           </div>
         </div>

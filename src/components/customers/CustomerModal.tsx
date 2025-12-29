@@ -6,10 +6,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { ChevronDown, Check, Loader2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { useCreateCustomer, useUpdateCustomer } from "@/hooks/useCustomers";
-import { Customer } from "@/services/api";
+import { Customer, customerApi, settingsApi, NextCustomerCodes, CurrencyType, CustomerCategoryType } from "@/services/api";
+import { useQuery } from "@tanstack/react-query";
 
 interface CustomerModalProps {
   open: boolean;
@@ -18,60 +19,14 @@ interface CustomerModalProps {
   mode: "add" | "edit";
 }
 
-// Customer category values (must match backend enum)
-const customerCategoryValues = [
-  "Shipper",
-  "Consignee",
-  "BookingParty",
-  "Agents",
-  "Forwarder",
-  "Customer",
-  "DeliveryAgent",
-  "OriginAgent",
-  "NotifyParty",
-];
-
-// Display labels for customer categories
-const customerCategoryLabels: Record<string, string> = {
-  Shipper: "Shipper",
-  Consignee: "Consignee",
-  BookingParty: "Booking Party",
-  Agents: "Agents",
-  Forwarder: "Forwarder",
-  Customer: "Customer",
-  DeliveryAgent: "Delivery Agent",
-  OriginAgent: "Origin Agent",
-  NotifyParty: "Notify Party",
-};
-
 const masterTypes = ["Debtors", "Neutral", "Creditors"];
-const currencies = ["USD", "EUR", "GBP", "AED", "PKR", "INR", "CNY"];
-
-const codePrefix: Record<string, string> = {
-  Debtors: "DEI",
-  Neutral: "NEI",
-  Creditors: "CDI",
-};
-
-const lastCodeNumber: Record<string, number> = {
-  Debtors: 510,
-  Neutral: 500,
-  Creditors: 470,
-};
-
-const generateCode = (masterType: string): string => {
-  const prefix = codePrefix[masterType] || "XXX";
-  const nextNumber = (lastCodeNumber[masterType] || 0) + 1;
-  lastCodeNumber[masterType] = nextNumber;
-  return `${prefix}${String(nextNumber).padStart(4, "0")}`;
-};
 
 export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerModalProps) {
   const [formData, setFormData] = useState({
     code: "",
     name: "",
     masterType: "",
-    category: [] as string[],
+    categoryIds: [] as number[],
     phone: "",
     country: "",
     email: "",
@@ -83,15 +38,55 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
   const createMutation = useCreateCustomer();
   const updateMutation = useUpdateCustomer();
 
+  // Fetch currencies from API
+  const { data: currenciesResponse } = useQuery({
+    queryKey: ['currencyTypes', 'all'],
+    queryFn: () => settingsApi.getAllCurrencyTypes(),
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+  const currencies = currenciesResponse?.data ?? [];
+
+  // Fetch customer category types from API
+  const { data: categoryTypesResponse } = useQuery({
+    queryKey: ['customerCategoryTypes', 'all'],
+    queryFn: () => settingsApi.getAllCustomerCategoryTypes(),
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+  const categoryTypes = useMemo(() => categoryTypesResponse?.data ?? [], [categoryTypesResponse?.data]);
+
+  // Fetch next customer codes from API
+  const { data: nextCodesResponse, refetch: refetchNextCodes } = useQuery({
+    queryKey: ['customers', 'nextCodes'],
+    queryFn: () => customerApi.getNextCodes(),
+    enabled: open && mode === 'add', // Only fetch when modal is open in add mode
+  });
+  const nextCodes = nextCodesResponse?.data;
+
+  // Helper function to get code based on master type
+  const getCodeForMasterType = useCallback((masterType: string): string => {
+    if (!nextCodes) return '';
+    switch (masterType) {
+      case 'Debtors': return nextCodes.debtorsCode;
+      case 'Creditors': return nextCodes.creditorsCode;
+      case 'Neutral': return nextCodes.neutralCode;
+      default: return '';
+    }
+  }, [nextCodes]);
+
   const isLoading = createMutation.isPending || updateMutation.isPending;
 
   useEffect(() => {
+    if (!open) return; // Don't run when modal is closed
+
     if (customer && mode === "edit") {
+      // Extract category IDs from the customer's categories array
+      const categoryIds = (customer.categories || []).map(cat => cat.id);
+
       setFormData({
         code: customer.code || "",
         name: customer.name || "",
         masterType: customer.masterType || "",
-        category: customer.categoryList || [],
+        categoryIds: categoryIds,
         phone: customer.phone || "",
         country: customer.country || "",
         email: customer.email || "",
@@ -99,12 +94,13 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
         baseCurrency: customer.baseCurrency || "",
         taxNo: customer.taxNo || "",
       });
-    } else {
+    } else if (mode === "add") {
+      // Reset form for add mode
       setFormData({
         code: "",
         name: "",
         masterType: "",
-        category: [],
+        categoryIds: [],
         phone: "",
         country: "",
         email: "",
@@ -112,30 +108,30 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
         baseCurrency: "",
         taxNo: "",
       });
+      refetchNextCodes();
     }
-  }, [customer, mode, open]);
+  }, [customer, mode, open, refetchNextCodes]);
 
-  const toggleCategory = (type: string) => {
+  const toggleCategory = (categoryId: number) => {
     setFormData((prev) => ({
       ...prev,
-      category: prev.category.includes(type)
-        ? prev.category.filter((t) => t !== type)
-        : [...prev.category, type],
+      categoryIds: prev.categoryIds.includes(categoryId)
+        ? prev.categoryIds.filter((id) => id !== categoryId)
+        : [...prev.categoryIds, categoryId],
     }));
   };
 
   const handleSubmit = async () => {
-    // Map frontend formData to backend expected format
     const requestData = {
       name: formData.name,
       masterType: formData.masterType as 'Debtors' | 'Creditors' | 'Neutral',
-      categories: formData.category,
-      phone: formData.phone,
-      email: formData.email,
-      country: formData.country,
-      city: formData.city,
-      baseCurrency: formData.baseCurrency as 'USD' | 'EUR' | 'GBP' | 'AED' | 'PKR' | 'INR' | 'CNY' | 'SGD' | undefined,
-      taxNo: formData.taxNo,
+      categoryIds: formData.categoryIds,
+      phone: formData.phone || undefined,
+      email: formData.email || undefined,
+      country: formData.country || undefined,
+      city: formData.city || undefined,
+      baseCurrency: formData.baseCurrency ? formData.baseCurrency as 'USD' | 'EUR' | 'GBP' | 'AED' | 'PKR' | 'INR' | 'CNY' | 'SGD' : undefined,
+      taxNo: formData.taxNo || undefined,
     };
 
     if (mode === "add") {
@@ -179,8 +175,9 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
                 id="code"
                 value={formData.code}
                 onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                placeholder="DEI0501"
+                placeholder={mode === "add" ? "Select Master Type to generate" : ""}
                 className="bg-muted/50"
+                readOnly={mode === "add"}
               />
             </div>
 
@@ -204,7 +201,7 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
               <Select
                 value={formData.masterType}
                 onValueChange={(value) => {
-                  const newCode = mode === "add" ? generateCode(value) : formData.code;
+                  const newCode = mode === "add" ? getCodeForMasterType(value) : formData.code;
                   setFormData({ ...formData, masterType: value, code: newCode });
                 }}
               >
@@ -231,27 +228,30 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
                     className="w-full justify-between bg-muted/50 font-normal h-auto min-h-[40px] py-2"
                   >
                     <div className="flex flex-wrap gap-1 flex-1">
-                      {formData.category.length === 0 ? (
+                      {formData.categoryIds.length === 0 ? (
                         <span className="text-muted-foreground">Select customer types...</span>
                       ) : (
-                        formData.category.map((type) => (
-                          <span
-                            key={type}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary text-primary-foreground rounded-md"
-                          >
-                            {customerCategoryLabels[type] || type}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleCategory(type);
-                              }}
-                              className="hover:bg-primary-foreground/20 rounded-full"
+                        formData.categoryIds.map((categoryId) => {
+                          const categoryType = categoryTypes.find(ct => ct.id === categoryId);
+                          return (
+                            <span
+                              key={categoryId}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary text-primary-foreground rounded-md"
                             >
-                              x
-                            </button>
-                          </span>
-                        ))
+                              {categoryType?.name || `Category ${categoryId}`}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleCategory(categoryId);
+                                }}
+                                className="hover:bg-primary-foreground/20 rounded-full"
+                              >
+                                x
+                              </button>
+                            </span>
+                          );
+                        })
                       )}
                     </div>
                     <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
@@ -261,23 +261,23 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
                   <Command>
                     <CommandList>
                       <CommandGroup>
-                        {customerCategoryValues.map((value) => (
+                        {categoryTypes.map((categoryType) => (
                           <CommandItem
-                            key={value}
-                            onSelect={() => toggleCategory(value)}
+                            key={categoryType.id}
+                            onSelect={() => toggleCategory(categoryType.id)}
                             className="cursor-pointer"
                           >
                             <div
                               className={cn(
                                 "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                                formData.category.includes(value)
+                                formData.categoryIds.includes(categoryType.id)
                                   ? "bg-primary text-primary-foreground"
                                   : "opacity-50"
                               )}
                             >
-                              {formData.category.includes(value) && <Check className="h-3 w-3" />}
+                              {formData.categoryIds.includes(categoryType.id) && <Check className="h-3 w-3" />}
                             </div>
-                            {customerCategoryLabels[value]}
+                            {categoryType.name}
                           </CommandItem>
                         ))}
                       </CommandGroup>
@@ -356,8 +356,8 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
                 </SelectTrigger>
                 <SelectContent>
                   {currencies.map((currency) => (
-                    <SelectItem key={currency} value={currency}>
-                      {currency}
+                    <SelectItem key={currency.id} value={currency.code}>
+                      {currency.code} - {currency.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

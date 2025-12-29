@@ -171,13 +171,19 @@ export type CustomerCategory = 'Shipper' | 'Consignee' | 'BookingParty' | 'Agent
 export type Currency = 'USD' | 'EUR' | 'GBP' | 'AED' | 'PKR' | 'INR' | 'CNY' | 'SGD';
 export type PaymentStatus = 'Pending' | 'Paid' | 'PartiallyPaid' | 'Overdue' | 'Closed';
 
+export interface CustomerCategoryInfo {
+  id: number;
+  code: string;
+  name: string;
+}
+
 export interface Customer {
   id: number;
   code: string;
   name: string;
   masterType: MasterType;
   masterTypeDisplay: string;
-  categoryList: string[];
+  categories: CustomerCategoryInfo[];
   phone?: string;
   email?: string;
   country?: string;
@@ -289,7 +295,7 @@ export interface AccountReceivable {
 export interface CreateCustomerRequest {
   name: string;
   masterType: MasterType;
-  categories?: string[];
+  categoryIds?: number[];
   phone?: string;
   fax?: string;
   email?: string;
@@ -302,8 +308,27 @@ export interface CreateCustomerRequest {
   carrierCode?: string;
 }
 
-export interface UpdateCustomerRequest extends CreateCustomerRequest {
+export interface NextCustomerCodes {
+  debtorsCode: string;
+  creditorsCode: string;
+  neutralCode: string;
+}
+
+export interface UpdateCustomerRequest {
   id: number;
+  name: string;
+  masterType: MasterType;
+  categoryIds?: number[];
+  phone?: string;
+  fax?: string;
+  email?: string;
+  country?: string;
+  city?: string;
+  address?: string;
+  baseCurrency?: Currency;
+  taxNo?: string;
+  taxPercentage?: number;
+  carrierCode?: string;
   status?: string;
 }
 
@@ -358,6 +383,7 @@ export const customerApi = {
     return fetchApi<PaginatedList<Customer>>(`/customers?${query}`);
   },
   getById: (id: number) => fetchApi<CustomerDetail>(`/customers/${id}`),
+  getNextCodes: () => fetchApi<NextCustomerCodes>('/customers/next-codes'),
   create: (data: CreateCustomerRequest) =>
     fetchApi<number>('/customers', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: number, data: UpdateCustomerRequest) =>
@@ -909,6 +935,14 @@ export interface ExpenseType {
   description?: string;
 }
 
+export interface CustomerCategoryType {
+  id: number;
+  code: string;
+  name: string;
+  description?: string;
+  sortOrder: number;
+}
+
 export interface CreateCurrencyTypeRequest {
   name: string;
   code: string;
@@ -961,6 +995,8 @@ export const settingsApi = {
     if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
     return fetchApi<PaginatedList<CurrencyType>>(`/settings/currency-types?${query}`);
   },
+  getAllCurrencyTypes: () =>
+    fetchApi<CurrencyType[]>('/settings/currency-types/all'),
   createCurrencyType: (data: CreateCurrencyTypeRequest) =>
     fetchApi<number>('/settings/currency-types', { method: 'POST', body: JSON.stringify(data) }),
   updateCurrencyType: (id: number, data: UpdateCurrencyTypeRequest) =>
@@ -1009,6 +1045,10 @@ export const settingsApi = {
   },
   getAllExpenseTypes: () =>
     fetchApi<ExpenseType[]>('/settings/expense-types/all'),
+
+  // Customer Category Types
+  getAllCustomerCategoryTypes: () =>
+    fetchApi<CustomerCategoryType[]>('/settings/customer-category-types/all'),
   getExpenseTypesByDirection: (paymentDirection: 'Inwards' | 'Outwards') =>
     fetchApi<ExpenseType[]>(`/settings/expense-types/by-direction/${paymentDirection === 'Inwards' ? 0 : 1}`),
   createExpenseType: (data: CreateExpenseTypeRequest) =>
