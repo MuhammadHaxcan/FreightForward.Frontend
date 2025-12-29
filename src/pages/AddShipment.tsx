@@ -1063,6 +1063,7 @@ const AddShipment = () => {
       <CostingModal
         open={costingModalOpen}
         onOpenChange={setCostingModalOpen}
+        parties={parties}
         onSave={handleSaveCosting}
       />
 
@@ -1076,6 +1077,7 @@ const AddShipment = () => {
         open={invoiceModalOpen}
         onOpenChange={setInvoiceModalOpen}
         chargesDetails={costing}
+        parties={parties}
         onSave={(invoice) => {
           toast.success("Invoice generated");
         }}
@@ -1085,6 +1087,7 @@ const AddShipment = () => {
         open={purchaseModalOpen}
         onOpenChange={setPurchaseModalOpen}
         chargesDetails={costing}
+        parties={parties}
         onSave={(purchase) => {
           toast.success("Purchase booked");
         }}

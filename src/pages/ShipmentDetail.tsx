@@ -869,16 +869,16 @@ const ShipmentDetail = () => {
               <div className="flex justify-between items-center">
                 <h3 className="text-emerald-600 font-semibold text-lg">Costing</h3>
                 <div className="flex gap-2">
-                  <Button variant="outline" className="bg-[#2c3e50] hover:bg-[#34495e] text-white border-[#2c3e50]">
-                    <Plus className="h-4 w-4 mr-2" />
+                  <Button variant="outline" size="sm" className="bg-[#2c3e50] hover:bg-[#34495e] text-white border-[#2c3e50] h-9 px-4">
+                    <Plus className="h-4 w-4 mr-1.5" />
                     Create
                   </Button>
-                  <Button className="bg-emerald-500 hover:bg-emerald-600 text-white">
-                    <Plus className="h-4 w-4 mr-2" />
+                  <Button size="sm" className="bg-emerald-500 hover:bg-emerald-600 text-white h-9 px-4">
+                    <Plus className="h-4 w-4 mr-1.5" />
                     Generate Invoice
                   </Button>
-                  <Button className="bg-emerald-500 hover:bg-emerald-600 text-white">
-                    <Plus className="h-4 w-4 mr-2" />
+                  <Button size="sm" className="bg-emerald-500 hover:bg-emerald-600 text-white h-9 px-4">
+                    <Plus className="h-4 w-4 mr-1.5" />
                     Book Purchase Invoice
                   </Button>
                 </div>

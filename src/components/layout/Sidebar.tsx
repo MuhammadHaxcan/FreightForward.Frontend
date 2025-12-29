@@ -113,12 +113,15 @@ export function Sidebar() {
       <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
         {!collapsed && (
           <span className="text-sidebar-foreground font-semibold text-lg animate-fade-in">
-            Admin Panel
+            FreightFlow
           </span>
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="p-2 rounded-md hover:bg-sidebar-accent text-sidebar-foreground transition-colors"
+          className={cn(
+            "p-2 rounded-md hover:bg-sidebar-accent text-sidebar-foreground transition-colors",
+            collapsed && "mx-auto"
+          )}
         >
           {collapsed ? <Menu size={20} /> : <ChevronLeft size={20} />}
         </button>
