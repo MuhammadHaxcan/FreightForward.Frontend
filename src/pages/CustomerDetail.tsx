@@ -420,7 +420,7 @@ const CustomerDetail = () => {
         </div>
         <div className="space-y-2">
           <Label className="text-sm">Master Type</Label>
-          <Select value={profileData.masterType} onValueChange={v => setProfileData({...profileData, masterType: v})} disabled={isViewMode}>
+          <Select value={profileData.masterType} onValueChange={v => setProfileData({...profileData, masterType: v as 'Debtors'})} disabled={isViewMode}>
             <SelectTrigger className="bg-muted/50"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="Debtors">Debtors</SelectItem>

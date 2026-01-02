@@ -730,6 +730,7 @@ const AddShipment = () => {
           id: savedShipmentId,
           data: {
             id: savedShipmentId,
+            jobStatus: 'Opened',
             ...shipmentData,
           },
         });

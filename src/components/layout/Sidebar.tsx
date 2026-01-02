@@ -60,6 +60,7 @@ const sidebarItems: SidebarItem[] = [
     path: "/accounts", 
     hasSubmenu: true,
     subMenuItems: [
+      { title: "Invoices", path: "/accounts/invoices" },
       { title: "Daily Expenses", path: "/accounts/daily-expenses" },
     ]
   },
