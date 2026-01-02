@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -15,7 +15,11 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
 } from "@/components/ui/select";
+import { useQuery } from "@tanstack/react-query";
+import { settingsApi, PackageType } from "@/services/api";
 
 interface ContainerModalProps {
   open: boolean;
@@ -26,22 +30,51 @@ interface ContainerModalProps {
 }
 
 const containerTypes = ["20'DC", "40'DC", "40HC", "45HC", "20'RF", "40'RF"];
-const packageTypes = ["BAGS", "BOXES", "CARTONS", "PALLETS", "DRUMS", "CRATES"];
 const weightUnits = ["Kgs", "Lbs", "MT"];
 
 export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo }: ContainerModalProps) {
-  const [formData, setFormData] = useState({
+  // Fetch package types from API
+  const { data: packageTypesResponse, isLoading: isLoadingPackageTypes } = useQuery({
+    queryKey: ['packageTypes', 'all'],
+    queryFn: () => settingsApi.getAllPackageTypes(),
+    staleTime: 60 * 60 * 1000, // Cache for 1 hour (package types rarely change)
+  });
+
+  const packageTypes = useMemo(() => packageTypesResponse?.data ?? [], [packageTypesResponse?.data]);
+
+  // Group package types by category
+  const packageTypesByCategory = useMemo(() => {
+    const grouped: Record<string, PackageType[]> = {};
+    packageTypes.forEach(pt => {
+      if (!grouped[pt.category]) {
+        grouped[pt.category] = [];
+      }
+      grouped[pt.category].push(pt);
+    });
+    return grouped;
+  }, [packageTypes]);
+
+  const getInitialFormData = () => ({
     sNo: container?.sNo || nextSNo,
-    containerType: container?.type || "20'DC",
-    containerNo: container?.container || "",
-    noOfPcs: container?.noOfPcs || "",
-    packages: container?.packageType || "BAGS",
+    containerType: container?.containerType || container?.type || "20'DC",
+    containerNo: container?.containerNumber || container?.container || "",
+    noOfPcs: container?.noOfPcs?.toString() || "",
+    packages: container?.packageType || "",
     actualSeal: container?.sealNo || "",
-    grossWeight: container?.grossWeight || "",
+    grossWeight: container?.grossWeight?.toString() || "",
     weightUnit: "Kgs",
-    volume: container?.volume || "",
+    volume: container?.volume?.toString() || "",
     description: container?.description || "",
   });
+
+  const [formData, setFormData] = useState(getInitialFormData);
+
+  // Reset form data when container prop changes or modal opens
+  useEffect(() => {
+    if (open) {
+      setFormData(getInitialFormData());
+    }
+  }, [open, container, nextSNo]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -51,8 +84,8 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
     onSave({
       id: container?.id || Date.now(),
       sNo: formData.sNo,
-      container: formData.containerNo,
-      type: formData.containerType,
+      containerNumber: formData.containerNo,
+      containerType: formData.containerType,
       sealNo: formData.actualSeal,
       noOfPcs: parseInt(formData.noOfPcs) || 0,
       packageType: formData.packages,
@@ -63,11 +96,13 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
     onOpenChange(false);
   };
 
+  const isEditing = !!container;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl bg-card border border-border">
         <DialogHeader>
-          <DialogTitle className="text-foreground text-lg">Add Container</DialogTitle>
+          <DialogTitle className="text-foreground text-lg">{isEditing ? "Edit Container" : "Add Container"}</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4 p-4">
@@ -112,13 +147,22 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
             </div>
             <div>
               <Label className="text-sm">Packages</Label>
-              <Select value={formData.packages} onValueChange={(v) => handleInputChange("packages", v)}>
+              <Select
+                value={formData.packages}
+                onValueChange={(v) => handleInputChange("packages", v)}
+                disabled={isLoadingPackageTypes}
+              >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder={isLoadingPackageTypes ? "Loading..." : "Select package type"} />
                 </SelectTrigger>
-                <SelectContent className="bg-popover border border-border">
-                  {packageTypes.map(type => (
-                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                <SelectContent className="bg-popover border border-border max-h-[300px]">
+                  {Object.entries(packageTypesByCategory).map(([category, types]) => (
+                    <SelectGroup key={category}>
+                      <SelectLabel className="text-muted-foreground font-semibold">{category}</SelectLabel>
+                      {types.map(pt => (
+                        <SelectItem key={pt.id} value={pt.code}>{pt.name}</SelectItem>
+                      ))}
+                    </SelectGroup>
                   ))}
                 </SelectContent>
               </Select>
@@ -184,11 +228,11 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
             >
               Close
             </Button>
-            <Button 
+            <Button
               onClick={handleSave}
               className="bg-emerald-500 hover:bg-emerald-600 text-white px-6"
             >
-              Add
+              {isEditing ? "Update" : "Add"}
             </Button>
           </div>
         </div>

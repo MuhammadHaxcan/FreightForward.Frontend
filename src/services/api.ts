@@ -372,14 +372,14 @@ export const customerApi = {
     pageSize?: number;
     searchTerm?: string;
     masterType?: MasterType;
-    category?: CustomerCategory;
+    categoryId?: number;
   }) => {
     const query = new URLSearchParams();
     if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
     if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
     if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
     if (params?.masterType) query.append('masterType', params.masterType);
-    if (params?.category) query.append('category', params.category);
+    if (params?.categoryId) query.append('categoryId', params.categoryId.toString());
     return fetchApi<PaginatedList<Customer>>(`/customers?${query}`);
   },
   getById: (id: number) => fetchApi<CustomerDetail>(`/customers/${id}`),
@@ -442,7 +442,7 @@ export const customerApi = {
 
 // Sales Types
 export type ShippingMode = 'FCLSeaFreight' | 'LCLSeaFreight' | 'AirFreight';
-export type Incoterms = 'EXW' | 'FOB' | 'CFR' | 'CIF' | 'DDU' | 'FCA' | 'DDP' | 'DAP' | 'CPT' | 'CIP';
+export type Incoterms = 'EXW' | 'FCA' | 'FAS' | 'FOB' | 'CFR' | 'CIF' | 'CPT' | 'CIP' | 'DAP' | 'DPU' | 'DDP';
 export type LeadStatus = 'New' | 'Pending' | 'Converted';
 export type RateRequestStatus = 'Pending' | 'Sent' | 'Received';
 export type QuotationStatus = 'Pending' | 'Approved' | 'Rejected';
@@ -626,11 +626,17 @@ export const quotationApi = {
 // Shipment Types
 export type ShipmentStatus = 'Opened' | 'Closed' | 'Cancelled';
 export type ShipmentDirection = 'Import' | 'Export' | 'CrossTrade';
-export type ShipmentMode = 'SeaFreightFCL' | 'SeaFreightLCL' | 'AirFreight';
-export type BLStatus = 'HBL' | 'MBL' | 'Express';
+export type ShipmentMode = 'SeaFreightFCL' | 'SeaFreightLCL' | 'AirFreight' | 'BreakBulk' | 'RoRo';
+export type BLStatus = 'HBL' | 'MBL' | 'HAWB' | 'MAWB' | 'Express';
 export type BLServiceType = 'FCLFCL' | 'LCLLCL';
 export type FreightType = 'Prepaid' | 'Collect';
-export type PartyType = 'Shipper' | 'Consignee' | 'BookingParty' | 'Agents' | 'Forwarder' | 'ShippingLine' | 'AirLine' | 'DeliveryAgent' | 'OriginAgent' | 'NotifyParty' | 'Customer';
+export type PartyType =
+  | 'Shipper' | 'Consignee' | 'Buyer' | 'Supplier' | 'Customer' | 'BookingParty' | 'NotifyParty'
+  | 'Forwarder' | 'CoLoader' | 'Transporter' | 'Courier' | 'ClearingAgent' | 'DeliveryAgent' | 'OriginAgent' | 'OverseasAgents'
+  | 'ShippingLine' | 'AirLine'
+  | 'Warehouse' | 'CFS' | 'Terminal'
+  | 'Customs' | 'Bank'
+  | 'Neutral' | 'ShipperNeutral' | 'ConsigneeNeutral' | 'BuyerNeutral' | 'SupplierNeutral' | 'NotifyPartyNeutral' | 'CustomerNeutral';
 
 export interface Shipment {
   id: number;
@@ -641,9 +647,13 @@ export interface Shipment {
   directionDisplay: string;
   mode: ShipmentMode;
   modeDisplay: string;
+  transportModeId?: number;
+  transportModeName?: string;
   houseBLNo?: string;
   mblNumber?: string;
   customerName?: string;
+  portOfLoadingId?: number;
+  portOfDischargeId?: number;
   portOfLoading?: string;
   portOfDischarge?: string;
   etd?: string;
@@ -672,6 +682,8 @@ export interface ShipmentDetail extends Shipment {
   freeTime?: string;
   networkPartner?: string;
   assignedTo?: string;
+  portOfReceiptId?: number;
+  portOfFinalDestinationId?: number;
   placeOfReceipt?: string;
   portOfReceipt?: string;
   portOfFinalDestination?: string;
@@ -718,24 +730,34 @@ export interface ShipmentContainer {
 export interface ShipmentCosting {
   id: number;
   description: string;
+  remarks?: string;
   saleQty: number;
   saleUnit: number;
   saleCurrency: Currency;
   saleExRate: number;
   saleFCY: number;
   saleLCY: number;
+  saleTaxPercentage: number;
+  saleTaxAmount: number;
   costQty: number;
   costUnit: number;
   costCurrency: Currency;
   costExRate: number;
   costFCY: number;
   costLCY: number;
+  costTaxPercentage: number;
+  costTaxAmount: number;
+  unitId?: number;
   unit?: string;
   gp: number;
   billToCustomerId?: number;
   billToName?: string;
+  vendorCustomerId?: number;
+  vendorName?: string;
   voucherNumber?: string;
   voucherStatus?: string;
+  saleInvoiced: boolean;
+  purchaseInvoiced: boolean;
 }
 
 export interface ShipmentCargo {
@@ -764,6 +786,7 @@ export interface ShipmentStatusLog {
 export interface CreateShipmentRequest {
   direction: ShipmentDirection;
   mode: ShipmentMode;
+  transportModeId?: number;
   incoterms?: Incoterms;
   houseBLNo?: string;
   houseBLDate?: string;
@@ -781,6 +804,10 @@ export interface CreateShipmentRequest {
   carrier?: string;
   freeTime?: string;
   networkPartner?: string;
+  portOfLoadingId?: number;
+  portOfDischargeId?: number;
+  portOfReceiptId?: number;
+  portOfFinalDestinationId?: number;
   placeOfReceipt?: string;
   portOfReceipt?: string;
   portOfLoading?: string;
@@ -832,22 +859,58 @@ export interface AddShipmentContainerRequest {
 export interface AddShipmentCostingRequest {
   shipmentId: number;
   description: string;
+  remarks?: string;
   saleQty: number;
   saleUnit: number;
   saleCurrency: Currency;
   saleExRate: number;
   saleFCY: number;
   saleLCY: number;
+  saleTaxPercentage: number;
+  saleTaxAmount: number;
   costQty: number;
   costUnit: number;
   costCurrency: Currency;
   costExRate: number;
   costFCY: number;
   costLCY: number;
+  costTaxPercentage: number;
+  costTaxAmount: number;
+  unitId?: number;
   unit?: string;
   gp: number;
   billToCustomerId?: number;
   billToName?: string;
+  vendorCustomerId?: number;
+  vendorName?: string;
+}
+
+// Shipment Invoice Types
+export interface ShipmentInvoiceDto {
+  id: number;
+  invoiceNo: string;
+  partyName?: string;
+  amount: number;
+  totalTax: number;
+  currency: Currency;
+  paymentStatus: PaymentStatus;
+  invoiceDate: string;
+}
+
+export interface ShipmentPurchaseInvoiceDto {
+  id: number;
+  purchaseNo: string;
+  partyName?: string;
+  amount: number;
+  totalTax: number;
+  currency: Currency;
+  paymentStatus: PaymentStatus;
+  invoiceDate: string;
+}
+
+export interface ShipmentInvoicesResult {
+  customerInvoices: ShipmentInvoiceDto[];
+  vendorInvoices: ShipmentPurchaseInvoiceDto[];
 }
 
 // Shipment API
@@ -870,6 +933,7 @@ export const shipmentApi = {
     return fetchApi<PaginatedList<Shipment>>(`/shipments?${query}`);
   },
   getById: (id: number) => fetchApi<ShipmentDetail>(`/shipments/${id}`),
+  getNextJobNumber: () => fetchApi<{ jobNumber: string }>('/shipments/next-job-number'),
   create: (data: CreateShipmentRequest) =>
     fetchApi<number>('/shipments', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: number, data: UpdateShipmentRequest) =>
@@ -899,6 +963,10 @@ export const shipmentApi = {
       body: JSON.stringify(data),
     }),
   deleteCosting: (id: number) => fetchApi<void>(`/shipments/costings/${id}`, { method: 'DELETE' }),
+
+  // Invoices
+  getInvoices: (shipmentId: number) =>
+    fetchApi<ShipmentInvoicesResult>(`/shipments/${shipmentId}/invoices`),
 };
 
 // Settings Types
@@ -935,7 +1003,57 @@ export interface ExpenseType {
   description?: string;
 }
 
+export interface IncoTerm {
+  id: number;
+  code: string;
+  name: string;
+  description: string;
+  group: string;
+}
+
 export interface CustomerCategoryType {
+  id: number;
+  code: string;
+  name: string;
+  description?: string;
+  sortOrder: number;
+}
+
+export interface PackageType {
+  id: number;
+  code: string;
+  name: string;
+  description?: string;
+  category: string;
+  sortOrder: number;
+}
+
+export interface NetworkPartner {
+  id: number;
+  code: string;
+  name: string;
+  description?: string;
+  sortOrder: number;
+}
+
+export interface TransportMode {
+  id: number;
+  code: string;
+  name: string;
+  description?: string;
+  sortOrder: number;
+}
+
+export interface BLType {
+  id: number;
+  code: string;
+  name: string;
+  description?: string;
+  category: string; // "Sea", "Air", or "Common"
+  sortOrder: number;
+}
+
+export interface CostingUnit {
   id: number;
   code: string;
   name: string;
@@ -1027,6 +1145,8 @@ export const settingsApi = {
     if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
     return fetchApi<PaginatedList<ChargeItem>>(`/settings/charge-items?${query}`);
   },
+  getAllChargeItems: () =>
+    fetchApi<ChargeItem[]>('/settings/charge-items/all'),
   createChargeItem: (data: CreateChargeItemRequest) =>
     fetchApi<number>('/settings/charge-items', { method: 'POST', body: JSON.stringify(data) }),
   updateChargeItem: (id: number, data: UpdateChargeItemRequest) =>
@@ -1046,9 +1166,44 @@ export const settingsApi = {
   getAllExpenseTypes: () =>
     fetchApi<ExpenseType[]>('/settings/expense-types/all'),
 
+  // IncoTerms
+  getAllIncoTerms: () =>
+    fetchApi<IncoTerm[]>('/settings/incoterms/all'),
+  getIncoTermById: (id: number) =>
+    fetchApi<IncoTerm>(`/settings/incoterms/${id}`),
+
+  // Package Types
+  getAllPackageTypes: () =>
+    fetchApi<PackageType[]>('/settings/package-types/all'),
+  getPackageTypeById: (id: number) =>
+    fetchApi<PackageType>(`/settings/package-types/${id}`),
+
+  // Network Partners
+  getAllNetworkPartners: () =>
+    fetchApi<NetworkPartner[]>('/settings/network-partners/all'),
+  getNetworkPartnerById: (id: number) =>
+    fetchApi<NetworkPartner>(`/settings/network-partners/${id}`),
+
+  // Transport Modes
+  getAllTransportModes: () =>
+    fetchApi<TransportMode[]>('/settings/transport-modes/all'),
+
+  // BL Types
+  getAllBLTypes: () =>
+    fetchApi<BLType[]>('/settings/bl-types/all'),
+
+  // Ports - Get All
+  getAllPorts: () =>
+    fetchApi<Port[]>('/settings/ports/all'),
+
   // Customer Category Types
   getAllCustomerCategoryTypes: () =>
     fetchApi<CustomerCategoryType[]>('/settings/customer-category-types/all'),
+
+  // Costing Units
+  getAllCostingUnits: () =>
+    fetchApi<CostingUnit[]>('/settings/costing-units/all'),
+
   getExpenseTypesByDirection: (paymentDirection: 'Inwards' | 'Outwards') =>
     fetchApi<ExpenseType[]>(`/settings/expense-types/by-direction/${paymentDirection === 'Inwards' ? 0 : 1}`),
   createExpenseType: (data: CreateExpenseTypeRequest) =>
@@ -1057,6 +1212,63 @@ export const settingsApi = {
     fetchApi<void>(`/settings/expense-types/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteExpenseType: (id: number) =>
     fetchApi<void>(`/settings/expense-types/${id}`, { method: 'DELETE' }),
+};
+
+// Invoice Types
+export interface CreateInvoiceItemRequest {
+  shipmentCostingId?: number;
+  chargeDetails: string;
+  noOfUnit: number;
+  ppcc?: string;
+  salePerUnit: number;
+  currency: Currency;
+  fcyAmount: number;
+  exRate: number;
+  localAmount: number;
+  taxPercentage: number;
+  taxAmount: number;
+}
+
+export interface CreateInvoiceRequest {
+  shipmentId: number;
+  customerId: number;
+  invoiceDate: string;
+  baseCurrency: Currency;
+  remarks?: string;
+  items: CreateInvoiceItemRequest[];
+}
+
+export interface CreatePurchaseInvoiceItemRequest {
+  shipmentCostingId?: number;
+  chargeDetails: string;
+  noOfUnit: number;
+  ppcc?: string;
+  costPerUnit: number;
+  currency: Currency;
+  fcyAmount: number;
+  exRate: number;
+  localAmount: number;
+  taxPercentage: number;
+  taxAmount: number;
+}
+
+export interface CreatePurchaseInvoiceRequest {
+  shipmentId: number;
+  vendorId: number;
+  invoiceDate: string;
+  vendorInvoiceNo?: string;
+  vendorInvoiceDate?: string;
+  baseCurrency: Currency;
+  remarks?: string;
+  items: CreatePurchaseInvoiceItemRequest[];
+}
+
+// Invoice API
+export const invoiceApi = {
+  createInvoice: (data: CreateInvoiceRequest) =>
+    fetchApi<number>('/invoices', { method: 'POST', body: JSON.stringify(data) }),
+  createPurchaseInvoice: (data: CreatePurchaseInvoiceRequest) =>
+    fetchApi<number>('/invoices/purchase', { method: 'POST', body: JSON.stringify(data) }),
 };
 
 // Export all APIs
@@ -1068,6 +1280,7 @@ export const api = {
   rateRequests: rateRequestApi,
   quotations: quotationApi,
   shipments: shipmentApi,
+  invoices: invoiceApi,
   settings: settingsApi,
 };
 

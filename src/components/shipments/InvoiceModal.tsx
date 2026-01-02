@@ -25,12 +25,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search } from "lucide-react";
-import { ShipmentParty, Currency } from "@/services/api";
+import { Search, Loader2 } from "lucide-react";
+import { ShipmentParty, Currency, CreateInvoiceItemRequest } from "@/services/api";
+import { useCreateInvoice } from "@/hooks/useInvoices";
 
 interface InvoiceModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  shipmentId: number | null;
   chargesDetails: any[];
   parties: ShipmentParty[];
   onSave: (invoice: any) => void;
@@ -42,11 +44,19 @@ const currencyMap: Record<string, Currency> = {
   default: "AED",
 };
 
-export function InvoiceModal({ open, onOpenChange, chargesDetails, parties, onSave }: InvoiceModalProps) {
+export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, parties, onSave }: InvoiceModalProps) {
+  const createInvoiceMutation = useCreateInvoice();
+
   // Filter parties to only show Debtors
   const debtorParties = useMemo(() =>
     parties.filter(p => p.masterType === 'Debtors'),
     [parties]
+  );
+
+  // Filter charges to only show items with sale quantity > 0 and not already invoiced
+  const filteredCharges = useMemo(() =>
+    chargesDetails.filter(c => parseFloat(c.saleQty || 0) > 0 && !c.saleInvoiced),
+    [chargesDetails]
   );
 
   const [formData, setFormData] = useState({
@@ -101,7 +111,7 @@ export function InvoiceModal({ open, onOpenChange, chargesDetails, parties, onSa
   const handleCheckAll = (checked: boolean) => {
     setFormData(prev => ({
       ...prev,
-      selectedCharges: checked ? chargesDetails.map(c => c.id) : []
+      selectedCharges: checked ? filteredCharges.map(c => c.id) : []
     }));
   };
 
@@ -109,25 +119,64 @@ export function InvoiceModal({ open, onOpenChange, chargesDetails, parties, onSa
     // Filter and load selected charges
   };
 
-  const handleSave = () => {
-    onSave({
-      invoiceId: formData.invoiceId,
-      companyName: formData.companyName,
-      customerId: formData.customerId,
-      invoiceDate: formData.invoiceDate,
-      baseCurrency: formData.baseCurrency,
-      charges: formData.selectedCharges,
-    });
-    onOpenChange(false);
+  const handleSave = async () => {
+    if (!shipmentId) {
+      return;
+    }
+
+    const selectedParty = debtorParties.find(p => p.id.toString() === formData.customerId);
+    if (!selectedParty?.customerId) {
+      return;
+    }
+
+    // Map selected charges to invoice items
+    const items: CreateInvoiceItemRequest[] = filteredCharges
+      .filter(c => formData.selectedCharges.includes(c.id))
+      .map(charge => ({
+        shipmentCostingId: charge.id,
+        chargeDetails: charge.description || '',
+        noOfUnit: parseInt(charge.saleQty) || 1,
+        ppcc: charge.ppcc || 'PP',
+        salePerUnit: parseFloat(charge.saleUnit) || 0,
+        currency: (charge.saleCurrency as Currency) || 'AED',
+        fcyAmount: parseFloat(charge.saleFCY) || 0,
+        exRate: parseFloat(charge.saleExRate) || 1,
+        localAmount: parseFloat(charge.saleLCY) || 0,
+        taxPercentage: parseFloat(charge.saleTaxPercentage) || 0,
+        taxAmount: parseFloat(charge.saleTaxAmount) || 0,
+      }));
+
+    try {
+      await createInvoiceMutation.mutateAsync({
+        shipmentId,
+        customerId: selectedParty.customerId,
+        invoiceDate: formData.invoiceDate,
+        baseCurrency: formData.baseCurrency,
+        remarks: '',
+        items,
+      });
+
+      onSave({
+        invoiceId: formData.invoiceId,
+        companyName: formData.companyName,
+        customerId: formData.customerId,
+        invoiceDate: formData.invoiceDate,
+        baseCurrency: formData.baseCurrency,
+        charges: formData.selectedCharges,
+      });
+      onOpenChange(false);
+    } catch (error) {
+      // Error is handled by the mutation's onError callback
+    }
   };
 
-  const totalSale = chargesDetails
-    .filter(c => formData.selectedCharges.includes(c.id))
-    .reduce((sum, c) => sum + parseFloat(c.saleLCY || 0), 0);
+  const selectedChargesData = filteredCharges.filter(c => formData.selectedCharges.includes(c.id));
 
-  const totalCost = chargesDetails
-    .filter(c => formData.selectedCharges.includes(c.id))
-    .reduce((sum, c) => sum + parseFloat(c.costLCY || 0), 0);
+  const totalSale = selectedChargesData.reduce((sum, c) => sum + parseFloat(c.saleLCY || 0), 0);
+  const totalTax = selectedChargesData.reduce((sum, c) => sum + parseFloat(c.saleTaxAmount || 0), 0);
+  const totalCost = selectedChargesData.reduce((sum, c) => sum + parseFloat(c.costLCY || 0), 0);
+  const totalWithTax = totalSale + totalTax;
+  const profit = totalSale - totalCost;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -143,10 +192,22 @@ export function InvoiceModal({ open, onOpenChange, chargesDetails, parties, onSa
           <div className="flex justify-between items-center">
             <h3 className="text-emerald-600 font-semibold">Invoice</h3>
             <div className="flex gap-2">
-              <Button size="sm" className="bg-emerald-500 hover:bg-emerald-600 text-white h-9">
-                Save
+              <Button
+                size="sm"
+                className="bg-emerald-500 hover:bg-emerald-600 text-white h-9"
+                onClick={handleSave}
+                disabled={!shipmentId || !formData.customerId || formData.selectedCharges.length === 0 || createInvoiceMutation.isPending}
+              >
+                {createInvoiceMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save'
+                )}
               </Button>
-              <Button size="sm" variant="outline" onClick={() => onOpenChange(false)} className="h-9">
+              <Button size="sm" variant="outline" onClick={() => onOpenChange(false)} className="h-9" disabled={createInvoiceMutation.isPending}>
                 Back
               </Button>
             </div>
@@ -215,7 +276,7 @@ export function InvoiceModal({ open, onOpenChange, chargesDetails, parties, onSa
             <div className="flex items-center gap-2">
               <Checkbox
                 id="checkAll"
-                checked={formData.selectedCharges.length === chargesDetails.length && chargesDetails.length > 0}
+                checked={formData.selectedCharges.length === filteredCharges.length && filteredCharges.length > 0}
                 onCheckedChange={(checked) => handleCheckAll(checked as boolean)}
               />
               <Label htmlFor="checkAll" className="text-xs">Check All</Label>
@@ -237,14 +298,14 @@ export function InvoiceModal({ open, onOpenChange, chargesDetails, parties, onSa
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {chargesDetails.length === 0 ? (
+                {filteredCharges.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={10} className="text-center text-muted-foreground text-xs py-4">
-                      No data available in table
+                      No charges with sale quantity available
                     </TableCell>
                   </TableRow>
                 ) : (
-                  chargesDetails.map((charge, index) => (
+                  filteredCharges.map((charge, index) => (
                     <TableRow key={charge.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
                       <TableCell className="py-2">
                         <Checkbox
@@ -270,18 +331,28 @@ export function InvoiceModal({ open, onOpenChange, chargesDetails, parties, onSa
 
           {/* Totals */}
           <div className="flex justify-end">
-            <div className="grid grid-cols-3 gap-6 bg-secondary/30 p-3 rounded-lg">
+            <div className="grid grid-cols-5 gap-4 bg-secondary/30 p-3 rounded-lg">
+              <div>
+                <Label className="text-xs font-semibold">Sub Total</Label>
+                <div className="text-foreground font-semibold text-sm">AED {totalSale.toFixed(2)}</div>
+              </div>
+              <div>
+                <Label className="text-xs font-semibold">VAT</Label>
+                <div className="text-foreground font-semibold text-sm">AED {totalTax.toFixed(2)}</div>
+              </div>
               <div>
                 <Label className="text-xs font-semibold">Total Sale</Label>
-                <div className="text-emerald-600 font-semibold text-sm">AED {totalSale.toFixed(2)}</div>
+                <div className="text-emerald-600 font-semibold text-sm">AED {totalWithTax.toFixed(2)}</div>
               </div>
               <div>
                 <Label className="text-xs font-semibold">Total Cost</Label>
                 <div className="text-foreground font-semibold text-sm">AED {totalCost.toFixed(2)}</div>
               </div>
               <div>
-                <Label className="text-xs font-semibold">Profit</Label>
-                <div className="text-foreground font-semibold text-sm">AED {(totalSale - totalCost).toFixed(2)}</div>
+                <Label className="text-xs font-semibold">Profit (GP)</Label>
+                <div className={`font-semibold text-sm ${profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                  AED {profit.toFixed(2)}
+                </div>
               </div>
             </div>
           </div>

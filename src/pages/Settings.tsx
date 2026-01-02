@@ -36,11 +36,25 @@ import {
   useDeleteExpenseType,
 } from "@/hooks/useSettings";
 import {
+  useCompanies,
+  useCreateCompany,
+  useUpdateCompany,
+  useDeleteCompany,
+} from "@/hooks/useCompanies";
+import {
+  useBanks,
+  useCreateBank,
+  useUpdateBank,
+  useDeleteBank,
+} from "@/hooks/useBanks";
+import {
   CurrencyType,
   Port,
   ChargeItem,
   ExpenseType,
   PaymentType,
+  Company,
+  Bank,
 } from "@/services/api";
 
 const Settings = () => {
@@ -49,29 +63,39 @@ const Settings = () => {
   const [portPage, setPortPage] = useState(1);
   const [chargePage, setChargePage] = useState(1);
   const [expensePage, setExpensePage] = useState(1);
+  const [companyPage, setCompanyPage] = useState(1);
+  const [bankPage, setBankPage] = useState(1);
 
   // Search state
   const [currencySearch, setCurrencySearch] = useState("");
   const [portSearch, setPortSearch] = useState("");
   const [chargeSearch, setChargeSearch] = useState("");
   const [expenseSearch, setExpenseSearch] = useState("");
+  const [companySearch, setCompanySearch] = useState("");
+  const [bankSearch, setBankSearch] = useState("");
 
   // Modal states
   const [addCurrencyModalOpen, setAddCurrencyModalOpen] = useState(false);
   const [addPortModalOpen, setAddPortModalOpen] = useState(false);
   const [addChargeModalOpen, setAddChargeModalOpen] = useState(false);
   const [addExpenseModalOpen, setAddExpenseModalOpen] = useState(false);
+  const [addCompanyModalOpen, setAddCompanyModalOpen] = useState(false);
+  const [addBankModalOpen, setAddBankModalOpen] = useState(false);
 
   const [editCurrencyModalOpen, setEditCurrencyModalOpen] = useState(false);
   const [editPortModalOpen, setEditPortModalOpen] = useState(false);
   const [editChargeModalOpen, setEditChargeModalOpen] = useState(false);
   const [editExpenseModalOpen, setEditExpenseModalOpen] = useState(false);
+  const [editCompanyModalOpen, setEditCompanyModalOpen] = useState(false);
+  const [editBankModalOpen, setEditBankModalOpen] = useState(false);
 
   // Edit form states
   const [editCurrency, setEditCurrency] = useState<CurrencyType | null>(null);
   const [editPort, setEditPort] = useState<Port | null>(null);
   const [editCharge, setEditCharge] = useState<ChargeItem | null>(null);
   const [editExpense, setEditExpense] = useState<ExpenseType | null>(null);
+  const [editCompany, setEditCompany] = useState<Company | null>(null);
+  const [editBank, setEditBank] = useState<Bank | null>(null);
 
   // Form states
   const [currencyForm, setCurrencyForm] = useState({
@@ -95,6 +119,23 @@ const Settings = () => {
   const [expenseForm, setExpenseForm] = useState({
     paymentDirection: "Outwards" as PaymentType,
     name: "",
+  });
+
+  const [companyForm, setCompanyForm] = useState({
+    name: "",
+    email: "",
+    contactNumber: "",
+    addressLine1: "",
+    city: "",
+  });
+
+  const [bankForm, setBankForm] = useState({
+    bankName: "",
+    acHolder: "",
+    acNumber: "",
+    ibanNumber: "",
+    swiftCode: "",
+    branch: "",
   });
 
   // API queries
@@ -122,6 +163,18 @@ const Settings = () => {
     searchTerm: expenseSearch || undefined,
   });
 
+  const { data: companyData, isLoading: companyLoading } = useCompanies({
+    pageNumber: companyPage,
+    pageSize: 10,
+    searchTerm: companySearch || undefined,
+  });
+
+  const { data: bankData, isLoading: bankLoading } = useBanks({
+    pageNumber: bankPage,
+    pageSize: 10,
+    searchTerm: bankSearch || undefined,
+  });
+
   // Mutations
   const createCurrencyMutation = useCreateCurrencyType();
   const updateCurrencyMutation = useUpdateCurrencyType();
@@ -138,6 +191,14 @@ const Settings = () => {
   const createExpenseMutation = useCreateExpenseType();
   const updateExpenseMutation = useUpdateExpenseType();
   const deleteExpenseMutation = useDeleteExpenseType();
+
+  const createCompanyMutation = useCreateCompany();
+  const updateCompanyMutation = useUpdateCompany();
+  const deleteCompanyMutation = useDeleteCompany();
+
+  const createBankMutation = useCreateBank();
+  const updateBankMutation = useUpdateBank();
+  const deleteBankMutation = useDeleteBank();
 
   // Handlers
   const handleAddCurrency = () => {
@@ -302,6 +363,98 @@ const Settings = () => {
     deleteExpenseMutation.mutate(id);
   };
 
+  const handleAddCompany = () => {
+    createCompanyMutation.mutate(
+      {
+        name: companyForm.name,
+        email: companyForm.email || undefined,
+        contactNumber: companyForm.contactNumber || undefined,
+        addressLine1: companyForm.addressLine1 || undefined,
+        city: companyForm.city || undefined,
+      },
+      {
+        onSuccess: () => {
+          setAddCompanyModalOpen(false);
+          resetCompanyForm();
+        },
+      }
+    );
+  };
+
+  const handleUpdateCompany = () => {
+    if (!editCompany) return;
+    updateCompanyMutation.mutate(
+      {
+        id: editCompany.id,
+        data: {
+          id: editCompany.id,
+          name: editCompany.name,
+          email: editCompany.email || undefined,
+          contactNumber: editCompany.contactNumber || undefined,
+          addressLine1: editCompany.addressLine1 || undefined,
+          city: editCompany.city || undefined,
+        },
+      },
+      {
+        onSuccess: () => {
+          setEditCompanyModalOpen(false);
+          setEditCompany(null);
+        },
+      }
+    );
+  };
+
+  const handleDeleteCompany = (id: number) => {
+    deleteCompanyMutation.mutate(id);
+  };
+
+  const handleAddBank = () => {
+    createBankMutation.mutate(
+      {
+        bankName: bankForm.bankName,
+        acHolder: bankForm.acHolder || undefined,
+        acNumber: bankForm.acNumber || undefined,
+        ibanNumber: bankForm.ibanNumber || undefined,
+        swiftCode: bankForm.swiftCode || undefined,
+        branch: bankForm.branch || undefined,
+      },
+      {
+        onSuccess: () => {
+          setAddBankModalOpen(false);
+          resetBankForm();
+        },
+      }
+    );
+  };
+
+  const handleUpdateBank = () => {
+    if (!editBank) return;
+    updateBankMutation.mutate(
+      {
+        id: editBank.id,
+        data: {
+          id: editBank.id,
+          bankName: editBank.bankName,
+          acHolder: editBank.acHolder || undefined,
+          acNumber: editBank.acNumber || undefined,
+          ibanNumber: editBank.ibanNumber || undefined,
+          swiftCode: editBank.swiftCode || undefined,
+          branch: editBank.branch || undefined,
+        },
+      },
+      {
+        onSuccess: () => {
+          setEditBankModalOpen(false);
+          setEditBank(null);
+        },
+      }
+    );
+  };
+
+  const handleDeleteBank = (id: number) => {
+    deleteBankMutation.mutate(id);
+  };
+
   const resetCurrencyForm = () => {
     setCurrencyForm({
       name: "",
@@ -323,6 +476,14 @@ const Settings = () => {
 
   const resetExpenseForm = () => {
     setExpenseForm({ paymentDirection: "Outwards", name: "" });
+  };
+
+  const resetCompanyForm = () => {
+    setCompanyForm({ name: "", email: "", contactNumber: "", addressLine1: "", city: "" });
+  };
+
+  const resetBankForm = () => {
+    setBankForm({ bankName: "", acHolder: "", acNumber: "", ibanNumber: "", swiftCode: "", branch: "" });
   };
 
   const countries = [
@@ -376,6 +537,18 @@ const Settings = () => {
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
             >
               Expense Items
+            </TabsTrigger>
+            <TabsTrigger
+              value="companies"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
+            >
+              Companies
+            </TabsTrigger>
+            <TabsTrigger
+              value="banks"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
+            >
+              Banks
             </TabsTrigger>
           </TabsList>
 
@@ -814,6 +987,234 @@ const Settings = () => {
               )}
             </div>
           </TabsContent>
+
+          {/* Companies Tab */}
+          <TabsContent value="companies">
+            <div className="bg-card rounded-lg border border-border">
+              <div className="flex items-center justify-between p-4 border-b border-border">
+                <h2 className="text-lg font-semibold text-primary">List All Companies</h2>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Search:</span>
+                    <Input
+                      placeholder=""
+                      value={companySearch}
+                      onChange={(e) => setCompanySearch(e.target.value)}
+                      className="h-9 w-48"
+                    />
+                  </div>
+                  <Button className="btn-success gap-2" onClick={() => setAddCompanyModalOpen(true)}>
+                    <Plus size={16} />
+                    Add New
+                  </Button>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                {companyLoading ? (
+                  <div className="flex justify-center items-center p-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-table-header text-table-header-foreground">
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Action</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Name</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Email</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Contact</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">City</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {companyData?.items.map((company, index) => (
+                        <tr
+                          key={company.id}
+                          className={`border-b border-border hover:bg-table-row-hover transition-colors ${
+                            index % 2 === 0 ? "bg-card" : "bg-secondary/30"
+                          }`}
+                        >
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => {
+                                  setEditCompany({ ...company });
+                                  setEditCompanyModalOpen(true);
+                                }}
+                                className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                              >
+                                <Edit size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteCompany(company.id)}
+                                className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-primary font-medium">{company.name}</td>
+                          <td className="px-4 py-3 text-sm text-foreground">{company.email || "-"}</td>
+                          <td className="px-4 py-3 text-sm text-foreground">{company.contactNumber || "-"}</td>
+                          <td className="px-4 py-3 text-sm text-foreground">{company.city || "-"}</td>
+                        </tr>
+                      ))}
+                      {companyData?.items.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+                            No companies found
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+              {companyData && (
+                <div className="flex items-center justify-between p-4">
+                  <p className="text-sm text-muted-foreground">
+                    Showing {((companyPage - 1) * 10) + 1} to {Math.min(companyPage * 10, companyData.totalCount)} of {companyData.totalCount} entries
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3"
+                      disabled={!companyData.hasPreviousPage}
+                      onClick={() => setCompanyPage(p => p - 1)}
+                    >
+                      Previous
+                    </Button>
+                    <Button size="sm" className="h-8 w-8 bg-primary text-primary-foreground">{companyPage}</Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3"
+                      disabled={!companyData.hasNextPage}
+                      onClick={() => setCompanyPage(p => p + 1)}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* Banks Tab */}
+          <TabsContent value="banks">
+            <div className="bg-card rounded-lg border border-border">
+              <div className="flex items-center justify-between p-4 border-b border-border">
+                <h2 className="text-lg font-semibold text-primary">List All Banks</h2>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Search:</span>
+                    <Input
+                      placeholder=""
+                      value={bankSearch}
+                      onChange={(e) => setBankSearch(e.target.value)}
+                      className="h-9 w-48"
+                    />
+                  </div>
+                  <Button className="btn-success gap-2" onClick={() => setAddBankModalOpen(true)}>
+                    <Plus size={16} />
+                    Add New
+                  </Button>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                {bankLoading ? (
+                  <div className="flex justify-center items-center p-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-table-header text-table-header-foreground">
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Action</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Bank Name</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">A/C Holder</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">A/C Number</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">IBAN</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Swift Code</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Branch</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {bankData?.items.map((bank, index) => (
+                        <tr
+                          key={bank.id}
+                          className={`border-b border-border hover:bg-table-row-hover transition-colors ${
+                            index % 2 === 0 ? "bg-card" : "bg-secondary/30"
+                          }`}
+                        >
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => {
+                                  setEditBank({ ...bank });
+                                  setEditBankModalOpen(true);
+                                }}
+                                className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                              >
+                                <Edit size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteBank(bank.id)}
+                                className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-primary font-medium">{bank.bankName}</td>
+                          <td className="px-4 py-3 text-sm text-foreground">{bank.acHolder || "-"}</td>
+                          <td className="px-4 py-3 text-sm text-foreground">{bank.acNumber || "-"}</td>
+                          <td className="px-4 py-3 text-sm text-foreground">{bank.ibanNumber || "-"}</td>
+                          <td className="px-4 py-3 text-sm text-foreground">{bank.swiftCode || "-"}</td>
+                          <td className="px-4 py-3 text-sm text-foreground">{bank.branch || "-"}</td>
+                        </tr>
+                      ))}
+                      {bankData?.items.length === 0 && (
+                        <tr>
+                          <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                            No banks found
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+              {bankData && (
+                <div className="flex items-center justify-between p-4">
+                  <p className="text-sm text-muted-foreground">
+                    Showing {((bankPage - 1) * 10) + 1} to {Math.min(bankPage * 10, bankData.totalCount)} of {bankData.totalCount} entries
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3"
+                      disabled={!bankData.hasPreviousPage}
+                      onClick={() => setBankPage(p => p - 1)}
+                    >
+                      Previous
+                    </Button>
+                    <Button size="sm" className="h-8 w-8 bg-primary text-primary-foreground">{bankPage}</Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3"
+                      disabled={!bankData.hasNextPage}
+                      onClick={() => setBankPage(p => p + 1)}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </TabsContent>
         </Tabs>
       </div>
 
@@ -1143,6 +1544,231 @@ const Settings = () => {
                   disabled={updateExpenseMutation.isPending}
                 >
                   {updateExpenseMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Update
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Company Modal */}
+      <Dialog open={addCompanyModalOpen} onOpenChange={(open) => { setAddCompanyModalOpen(open); if (!open) resetCompanyForm(); }}>
+        <DialogContent className="sm:max-w-md bg-card">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold"><span className="font-bold">Add New</span> Company</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Company Name *</label>
+              <Input
+                placeholder="Enter Company Name"
+                value={companyForm.name}
+                onChange={(e) => setCompanyForm({ ...companyForm, name: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Email</label>
+              <Input
+                placeholder="Enter Email"
+                type="email"
+                value={companyForm.email}
+                onChange={(e) => setCompanyForm({ ...companyForm, email: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Contact Number</label>
+              <Input
+                placeholder="Enter Contact Number"
+                value={companyForm.contactNumber}
+                onChange={(e) => setCompanyForm({ ...companyForm, contactNumber: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Address</label>
+              <Input
+                placeholder="Enter Address"
+                value={companyForm.addressLine1}
+                onChange={(e) => setCompanyForm({ ...companyForm, addressLine1: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">City</label>
+              <Input
+                placeholder="Enter City"
+                value={companyForm.city}
+                onChange={(e) => setCompanyForm({ ...companyForm, city: e.target.value })}
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button variant="outline" onClick={() => setAddCompanyModalOpen(false)}>Cancel</Button>
+              <Button
+                className="btn-success"
+                onClick={handleAddCompany}
+                disabled={createCompanyMutation.isPending}
+              >
+                {createCompanyMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Company Modal */}
+      <Dialog open={editCompanyModalOpen} onOpenChange={setEditCompanyModalOpen}>
+        <DialogContent className="sm:max-w-md bg-card">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold">Edit Company</DialogTitle>
+          </DialogHeader>
+          {editCompany && (
+            <div className="space-y-4 py-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Company Name *</label>
+                <Input value={editCompany.name} onChange={(e) => setEditCompany({ ...editCompany, name: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Email</label>
+                <Input value={editCompany.email || ""} onChange={(e) => setEditCompany({ ...editCompany, email: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Contact Number</label>
+                <Input value={editCompany.contactNumber || ""} onChange={(e) => setEditCompany({ ...editCompany, contactNumber: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Address</label>
+                <Input value={editCompany.addressLine1 || ""} onChange={(e) => setEditCompany({ ...editCompany, addressLine1: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">City</label>
+                <Input value={editCompany.city || ""} onChange={(e) => setEditCompany({ ...editCompany, city: e.target.value })} />
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <Button variant="outline" onClick={() => setEditCompanyModalOpen(false)}>Close</Button>
+                <Button
+                  className="btn-success"
+                  onClick={handleUpdateCompany}
+                  disabled={updateCompanyMutation.isPending}
+                >
+                  {updateCompanyMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Update
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Bank Modal */}
+      <Dialog open={addBankModalOpen} onOpenChange={(open) => { setAddBankModalOpen(open); if (!open) resetBankForm(); }}>
+        <DialogContent className="sm:max-w-md bg-card">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold"><span className="font-bold">Add New</span> Bank</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Bank Name *</label>
+              <Input
+                placeholder="Enter Bank Name"
+                value={bankForm.bankName}
+                onChange={(e) => setBankForm({ ...bankForm, bankName: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Account Holder</label>
+              <Input
+                placeholder="Enter Account Holder Name"
+                value={bankForm.acHolder}
+                onChange={(e) => setBankForm({ ...bankForm, acHolder: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Account Number</label>
+              <Input
+                placeholder="Enter Account Number"
+                value={bankForm.acNumber}
+                onChange={(e) => setBankForm({ ...bankForm, acNumber: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">IBAN Number</label>
+              <Input
+                placeholder="Enter IBAN Number"
+                value={bankForm.ibanNumber}
+                onChange={(e) => setBankForm({ ...bankForm, ibanNumber: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Swift Code</label>
+              <Input
+                placeholder="Enter Swift Code"
+                value={bankForm.swiftCode}
+                onChange={(e) => setBankForm({ ...bankForm, swiftCode: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Branch</label>
+              <Input
+                placeholder="Enter Branch"
+                value={bankForm.branch}
+                onChange={(e) => setBankForm({ ...bankForm, branch: e.target.value })}
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button variant="outline" onClick={() => setAddBankModalOpen(false)}>Cancel</Button>
+              <Button
+                className="btn-success"
+                onClick={handleAddBank}
+                disabled={createBankMutation.isPending}
+              >
+                {createBankMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Bank Modal */}
+      <Dialog open={editBankModalOpen} onOpenChange={setEditBankModalOpen}>
+        <DialogContent className="sm:max-w-md bg-card">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold">Edit Bank</DialogTitle>
+          </DialogHeader>
+          {editBank && (
+            <div className="space-y-4 py-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Bank Name *</label>
+                <Input value={editBank.bankName} onChange={(e) => setEditBank({ ...editBank, bankName: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Account Holder</label>
+                <Input value={editBank.acHolder || ""} onChange={(e) => setEditBank({ ...editBank, acHolder: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Account Number</label>
+                <Input value={editBank.acNumber || ""} onChange={(e) => setEditBank({ ...editBank, acNumber: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">IBAN Number</label>
+                <Input value={editBank.ibanNumber || ""} onChange={(e) => setEditBank({ ...editBank, ibanNumber: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Swift Code</label>
+                <Input value={editBank.swiftCode || ""} onChange={(e) => setEditBank({ ...editBank, swiftCode: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Branch</label>
+                <Input value={editBank.branch || ""} onChange={(e) => setEditBank({ ...editBank, branch: e.target.value })} />
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <Button variant="outline" onClick={() => setEditBankModalOpen(false)}>Close</Button>
+                <Button
+                  className="btn-success"
+                  onClick={handleUpdateBank}
+                  disabled={updateBankMutation.isPending}
+                >
+                  {updateBankMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Update
                 </Button>
               </div>

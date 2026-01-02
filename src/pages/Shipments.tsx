@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -18,182 +18,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Edit, Search, Calendar, CheckCircle } from "lucide-react";
+import { Edit, Search, Calendar, CheckCircle, Loader2, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-
-// Mock shipment data
-const mockShipments = [
-  {
-    id: 1,
-    jobNumber: "25JAE1658",
-    hblNumber: "HSCMBJEA00077",
-    mblNumber: "CGLCMBJEA322725",
-    customer: "KADDAH BLDG CLEANING EQUIP. TR CO LLC",
-    direction: "Import",
-    pol: "Colombo",
-    pod: "Jebel Ali",
-    etd: "24-12-2025",
-    eta: "24-12-2025",
-    carrier: "GULF AGENCY CO PVT LTD",
-    vesselFlight: "EVER URBAN",
-    addedBy: "Mazeeda H-SU",
-    status: "Opened",
-    invoiceGenerated: true,
-  },
-  {
-    id: 2,
-    jobNumber: "25JAE1657",
-    hblNumber: "716-11767442",
-    mblNumber: "716-11767442",
-    customer: "GLOBAL REFINISH FZE DUBAI BRANCH",
-    direction: "Import",
-    pol: "ISTANBUL",
-    pod: "DUBAI",
-    etd: "20-12-2025",
-    eta: "22-12-2025",
-    carrier: "MNG AIRLINE",
-    vesselFlight: "MB",
-    addedBy: "BABAR IRSHAD",
-    status: "Opened",
-    invoiceGenerated: false,
-  },
-  {
-    id: 3,
-    jobNumber: "25JAE1656",
-    hblNumber: "H-SU",
-    mblNumber: "DXB",
-    customer: "",
-    direction: "Export",
-    pol: "Jebel Ali",
-    pod: "Rotterdam",
-    etd: "24-12-2025",
-    eta: "31-12-2025",
-    carrier: "MACNELS",
-    vesselFlight: "CMA CGM GLMINI",
-    addedBy: "Talha Javed",
-    status: "Opened",
-    invoiceGenerated: false,
-  },
-  {
-    id: 4,
-    jobNumber: "25JAE1655",
-    hblNumber: "FCL-SJEA0561001",
-    mblNumber: "HLCUSIN251142612",
-    customer: "NAWANI WORLDWIDE TRADING LLC",
-    direction: "Import",
-    pol: "Singapore",
-    pod: "Jebel Ali",
-    etd: "22-12-2025",
-    eta: "22-12-2025",
-    carrier: "HAPAG LLOYD",
-    vesselFlight: "MAERSK WALLIS",
-    addedBy: "Mazeeda H-SU",
-    status: "Opened",
-    invoiceGenerated: false,
-  },
-  {
-    id: 5,
-    jobNumber: "25JAE1654",
-    hblNumber: "HBL -",
-    mblNumber: "5551311710",
-    customer: "NISSEI ASB FZE",
-    direction: "Export",
-    pol: "DUBAI",
-    pod: "Apapa",
-    etd: "20-12-2025",
-    eta: "20-12-2025",
-    carrier: "ICS",
-    vesselFlight: "",
-    addedBy: "Mazeeda H-SU",
-    status: "Opened",
-    invoiceGenerated: false,
-  },
-  {
-    id: 6,
-    jobNumber: "25JAE1653",
-    hblNumber: "HBL -",
-    mblNumber: "8868788594909",
-    customer: "NISSEI ASB FZE",
-    direction: "Export",
-    pol: "DUBAI",
-    pod: "Abidjan",
-    etd: "20-12-2025",
-    eta: "18-12-2025",
-    carrier: "ICS",
-    vesselFlight: "",
-    addedBy: "Mazeeda H-SU",
-    status: "Opened",
-    invoiceGenerated: false,
-  },
-  {
-    id: 7,
-    jobNumber: "25JAE1652",
-    hblNumber: "FCL-SJEA059101",
-    mblNumber: "EMIVVNESAL001367",
-    customer: "UNITED GENERAL TRADING FZCO",
-    direction: "Import",
-    pol: "Manila",
-    pod: "Jebel Ali",
-    etd: "20-12-2025",
-    eta: "20-12-2025",
-    carrier: "ESL",
-    vesselFlight: "ZHONG GU GUI YANG",
-    addedBy: "Mazeeda H-SU",
-    status: "Opened",
-    invoiceGenerated: false,
-  },
-  {
-    id: 8,
-    jobNumber: "25JAE1651",
-    hblNumber: "25L03182",
-    mblNumber: "HLCUGOA251018A2Q2",
-    customer: "",
-    direction: "Import",
-    pol: "La Spezia",
-    pod: "Jebel Ali",
-    etd: "12-11-2025",
-    eta: "19-12-2025",
-    carrier: "HAPAG LLOYD",
-    vesselFlight: "M/V PHOENIX J",
-    addedBy: "Talha Javed",
-    status: "Opened",
-    invoiceGenerated: false,
-  },
-  {
-    id: 9,
-    jobNumber: "25JAE1650",
-    hblNumber: "FCL-SJEA0560901",
-    mblNumber: "HLCUSIN251147448",
-    customer: "NAWANI WORLDWIDE TRADING LLC",
-    direction: "Import",
-    pol: "Singapore",
-    pod: "Jebel Ali",
-    etd: "27-12-2025",
-    eta: "09-01-2026",
-    carrier: "MAERSK WALLIS",
-    vesselFlight: "",
-    addedBy: "Mazeeda H-SU",
-    status: "Opened",
-    invoiceGenerated: false,
-  },
-  {
-    id: 10,
-    jobNumber: "25JAE1649",
-    hblNumber: "FCL-SJEA0564401",
-    mblNumber: "HLCUSIN251147437",
-    customer: "",
-    direction: "Import",
-    pol: "Singapore",
-    pod: "Jebel Ali",
-    etd: "27-12-2025",
-    eta: "16-01-2026",
-    carrier: "HAPAG LLOYD",
-    vesselFlight: "MAERSK WALLIS",
-    addedBy: "Mazeeda H-SU",
-    status: "Opened",
-    invoiceGenerated: false,
-  },
-];
+import { useShipments } from "@/hooks/useShipments";
+import { Shipment, ShipmentStatus } from "@/services/api";
 
 const Shipments = () => {
   const navigate = useNavigate();
@@ -201,15 +29,55 @@ const Shipments = () => {
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [currentPage, setCurrentPage] = useState(1);
   const [searchBy, setSearchBy] = useState("jobNo");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [dateRange, setDateRange] = useState("December 1, 2025 - December 31, 2025");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
 
-  const shipments = mockShipments;
-  const totalCount = mockShipments.length;
-  const totalPages = Math.ceil(totalCount / parseInt(entriesPerPage));
+  // Build search params based on search type
+  const searchParams = useMemo(() => {
+    const params: {
+      pageNumber: number;
+      pageSize: number;
+      searchTerm?: string;
+      status?: ShipmentStatus;
+      fromDate?: string;
+      toDate?: string;
+    } = {
+      pageNumber: currentPage,
+      pageSize: parseInt(entriesPerPage),
+    };
 
-  const handleEdit = (shipment: typeof mockShipments[0]) => {
+    if (searchTerm) {
+      params.searchTerm = searchTerm;
+    }
+
+    if (statusFilter && statusFilter !== "all") {
+      params.status = statusFilter as ShipmentStatus;
+    }
+
+    if (fromDate) {
+      params.fromDate = fromDate;
+    }
+
+    if (toDate) {
+      params.toDate = toDate;
+    }
+
+    return params;
+  }, [currentPage, entriesPerPage, searchTerm, statusFilter, fromDate, toDate]);
+
+  const { data, isLoading, isError, error } = useShipments(searchParams);
+
+  const shipments = data?.items || [];
+  const totalCount = data?.totalCount || 0;
+  const totalPages = data?.totalPages || 1;
+
+  const handleEdit = (shipment: Shipment) => {
     navigate(`/shipments/${shipment.id}/edit`);
+  };
+
+  const handleAddNew = () => {
+    navigate('/shipments/add');
   };
 
   const getStatusBadge = (status: string) => {
@@ -225,15 +93,68 @@ const Shipments = () => {
     }
   };
 
+  const getDirectionBadge = (direction: string) => {
+    switch (direction) {
+      case "Import":
+        return <Badge variant="outline" className="border-blue-500 text-blue-500">Import</Badge>;
+      case "Export":
+        return <Badge variant="outline" className="border-orange-500 text-orange-500">Export</Badge>;
+      case "CrossTrade":
+        return <Badge variant="outline" className="border-purple-500 text-purple-500">Cross-Trade</Badge>;
+      default:
+        return <Badge variant="outline">{direction}</Badge>;
+    }
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "-";
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    } catch {
+      return dateString;
+    }
+  };
+
+  // Generate page numbers for pagination
+  const getPageNumbers = () => {
+    const pages: number[] = [];
+    const maxVisiblePages = 5;
+
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      const startPage = Math.max(1, currentPage - 2);
+      const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+      for (let i = startPage; i <= endPage; i++) {
+        pages.push(i);
+      }
+    }
+
+    return pages;
+  };
+
   return (
     <MainLayout>
       <div className="p-6 space-y-4">
         {/* Header */}
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-semibold text-foreground">All Shipments</h1>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <CheckCircle size={16} className="text-emerald-500" />
-            <span>- (Atleast One Invoice Generated)</span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <CheckCircle size={16} className="text-emerald-500" />
+              <span>- (Atleast One Invoice Generated)</span>
+            </div>
+            <Button
+              className="bg-emerald-500 hover:bg-emerald-600 text-white gap-2"
+              onClick={handleAddNew}
+            >
+              <Plus size={16} />
+              Add Shipment
+            </Button>
           </div>
         </div>
 
@@ -252,35 +173,64 @@ const Shipments = () => {
           </Select>
 
           <Input
-            placeholder=""
+            placeholder="Search..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
             className="w-[300px] bg-card"
           />
 
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={(value) => {
+            setStatusFilter(value);
+            setCurrentPage(1);
+          }}>
             <SelectTrigger className="w-[150px] bg-card">
               <SelectValue placeholder="All" />
             </SelectTrigger>
             <SelectContent className="bg-popover border border-border">
               <SelectItem value="all">All</SelectItem>
-              <SelectItem value="opened">Opened</SelectItem>
-              <SelectItem value="closed">Closed</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
+              <SelectItem value="Opened">Opened</SelectItem>
+              <SelectItem value="Closed">Closed</SelectItem>
+              <SelectItem value="Cancelled">Cancelled</SelectItem>
             </SelectContent>
           </Select>
 
-          <div className="flex items-center gap-2 border border-border rounded-md px-3 py-2 bg-card flex-1 max-w-[350px]">
-            <Calendar size={16} className="text-muted-foreground" />
-            <Input
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value)}
-              className="border-0 p-0 h-auto bg-transparent focus-visible:ring-0 text-sm"
-              placeholder="Select date range"
-            />
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 border border-border rounded-md px-3 py-2 bg-card">
+              <Calendar size={16} className="text-muted-foreground" />
+              <Input
+                type="date"
+                value={fromDate}
+                onChange={(e) => {
+                  setFromDate(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="border-0 p-0 h-auto bg-transparent focus-visible:ring-0 text-sm w-[130px]"
+                placeholder="From Date"
+              />
+            </div>
+            <span className="text-muted-foreground">to</span>
+            <div className="flex items-center gap-2 border border-border rounded-md px-3 py-2 bg-card">
+              <Calendar size={16} className="text-muted-foreground" />
+              <Input
+                type="date"
+                value={toDate}
+                onChange={(e) => {
+                  setToDate(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="border-0 p-0 h-auto bg-transparent focus-visible:ring-0 text-sm w-[130px]"
+                placeholder="To Date"
+              />
+            </div>
           </div>
 
-          <Button className="bg-emerald-500 hover:bg-emerald-600 text-white gap-2">
+          <Button
+            className="bg-emerald-500 hover:bg-emerald-600 text-white gap-2"
+            onClick={() => setCurrentPage(1)}
+          >
             <Search size={16} />
             Search
           </Button>
@@ -317,17 +267,32 @@ const Shipments = () => {
                   <TableHead className="text-table-header-foreground font-semibold">Document No</TableHead>
                   <TableHead className="text-table-header-foreground font-semibold">Customer</TableHead>
                   <TableHead className="text-table-header-foreground font-semibold">Direction</TableHead>
+                  <TableHead className="text-table-header-foreground font-semibold">Mode</TableHead>
                   <TableHead className="text-table-header-foreground font-semibold">POL</TableHead>
                   <TableHead className="text-table-header-foreground font-semibold">POD</TableHead>
                   <TableHead className="text-table-header-foreground font-semibold">Departure/Arrival</TableHead>
                   <TableHead className="text-table-header-foreground font-semibold">Carrier</TableHead>
-                  <TableHead className="text-table-header-foreground font-semibold">Vessel/Flight</TableHead>
-                  <TableHead className="text-table-header-foreground font-semibold">Added</TableHead>
+                  <TableHead className="text-table-header-foreground font-semibold">Vessel</TableHead>
                   <TableHead className="text-table-header-foreground font-semibold">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {shipments.length === 0 ? (
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={12} className="text-center py-8">
+                      <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        Loading shipments...
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : isError ? (
+                  <TableRow>
+                    <TableCell colSpan={12} className="text-center py-8 text-red-500">
+                      Error loading shipments: {error?.message || 'Unknown error'}
+                    </TableCell>
+                  </TableRow>
+                ) : shipments.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
                       No shipments found
@@ -335,8 +300,8 @@ const Shipments = () => {
                   </TableRow>
                 ) : (
                   shipments.map((shipment, index) => (
-                    <TableRow 
-                      key={shipment.id} 
+                    <TableRow
+                      key={shipment.id}
                       className={`hover:bg-muted/50 ${index % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}
                     >
                       <TableCell>
@@ -349,29 +314,38 @@ const Shipments = () => {
                           <Edit className="h-4 w-4" />
                         </Button>
                       </TableCell>
-                      <TableCell className="font-medium">{shipment.jobNumber}</TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {shipment.jobNumber}
+                          {shipment.invoiceGenerated && (
+                            <CheckCircle size={14} className="text-emerald-500" />
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <div className="space-y-1">
-                          <div className="text-emerald-600 text-sm">HBL - {shipment.hblNumber}</div>
-                          <div className="text-emerald-600 text-sm">MBL - {shipment.mblNumber}</div>
+                          <div className="text-emerald-600 text-sm">HBL - {shipment.houseBLNo || "-"}</div>
+                          <div className="text-emerald-600 text-sm">MBL - {shipment.mblNumber || "-"}</div>
                         </div>
                       </TableCell>
                       <TableCell className="max-w-[200px]">
-                        <span className="text-emerald-600">{shipment.customer || "-"}</span>
+                        <span className="text-emerald-600">{shipment.customerName || "-"}</span>
                       </TableCell>
-                      <TableCell>{shipment.direction}</TableCell>
-                      <TableCell className="text-emerald-600">{shipment.pol}</TableCell>
-                      <TableCell>{shipment.pod}</TableCell>
+                      <TableCell>{getDirectionBadge(shipment.direction)}</TableCell>
+                      <TableCell>
+                        <span className="text-sm">{shipment.transportModeName || shipment.modeDisplay || "-"}</span>
+                      </TableCell>
+                      <TableCell className="text-emerald-600">{shipment.portOfLoading || "-"}</TableCell>
+                      <TableCell>{shipment.portOfDischarge || "-"}</TableCell>
                       <TableCell>
                         <div className="space-y-1 text-sm">
-                          <div>ETD - {shipment.etd}</div>
-                          <div>ETA - {shipment.eta}</div>
+                          <div>ETD - {formatDate(shipment.etd)}</div>
+                          <div>ETA - {formatDate(shipment.eta)}</div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-emerald-600">{shipment.carrier}</TableCell>
-                      <TableCell>{shipment.vesselFlight || "-"}</TableCell>
-                      <TableCell>{shipment.addedBy}</TableCell>
-                      <TableCell>{getStatusBadge(shipment.status)}</TableCell>
+                      <TableCell className="text-emerald-600">{shipment.carrier || "-"}</TableCell>
+                      <TableCell>{shipment.vessel || "-"}</TableCell>
+                      <TableCell>{getStatusBadge(shipment.jobStatus)}</TableCell>
                     </TableRow>
                   ))
                 )}
@@ -383,24 +357,31 @@ const Shipments = () => {
         {/* Pagination */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-emerald-600">
-            Showing 1 to {Math.min(parseInt(entriesPerPage), totalCount)} of {totalCount} entries (filtered from 320 total entries)
+            {totalCount > 0 ? (
+              <>
+                Showing {((currentPage - 1) * parseInt(entriesPerPage)) + 1} to {Math.min(currentPage * parseInt(entriesPerPage), totalCount)} of {totalCount} entries
+              </>
+            ) : (
+              "No entries to show"
+            )}
           </p>
           <div className="flex items-center gap-1">
             <Button
               variant="outline"
               size="sm"
-              disabled={currentPage === 1}
+              disabled={currentPage === 1 || isLoading}
               onClick={() => setCurrentPage(p => p - 1)}
             >
               Previous
             </Button>
-            {[1, 2, 3, 4, 5].map((page) => (
+            {getPageNumbers().map((page) => (
               <Button
                 key={page}
                 variant={page === currentPage ? "default" : "outline"}
                 size="sm"
                 className={page === currentPage ? "bg-emerald-500 hover:bg-emerald-600" : ""}
                 onClick={() => setCurrentPage(page)}
+                disabled={isLoading}
               >
                 {page}
               </Button>
@@ -408,7 +389,7 @@ const Shipments = () => {
             <Button
               variant="outline"
               size="sm"
-              disabled={currentPage >= totalPages}
+              disabled={currentPage >= totalPages || isLoading}
               onClick={() => setCurrentPage(p => p + 1)}
             >
               Next

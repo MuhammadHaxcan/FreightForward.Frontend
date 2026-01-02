@@ -17,39 +17,46 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ShipmentParty, CurrencyType } from "@/services/api";
+import { ShipmentParty, CurrencyType, CostingUnit, settingsApi } from "@/services/api";
 import { useCurrencyTypes } from "@/hooks/useSettings";
+import { useQuery } from "@tanstack/react-query";
 
 interface CostingModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   parties: ShipmentParty[];
+  costing?: any;
   onSave: (costing: any) => void;
 }
 
-const chargeTypes = [
-  "ADDITIONAL PICK UP CHARGES",
-  "HANDLING CHARGES",
-  "BILL OF LADING CHARGES",
-  "FREIGHT CHARGES",
-  "CUSTOMS CLEARANCE",
-  "DOCUMENTATION FEE",
-  "TERMINAL HANDLING",
-];
-
-const units = ["BL", "Container", "Shipment", "CBM", "KG"];
 const ppccOptions = ["Prepaid", "Postpaid"];
 const taxOptions = ["0%", "5%", "10%", "15%"];
 
 // Default local currency (UAE)
 const LOCAL_CURRENCY = "AED";
 
-export function CostingModal({ open, onOpenChange, parties, onSave }: CostingModalProps) {
+export function CostingModal({ open, onOpenChange, parties, costing, onSave }: CostingModalProps) {
   const [activeTab, setActiveTab] = useState("cost");
 
   // Fetch currency types from settings
   const { data: currencyTypesData } = useCurrencyTypes({ pageSize: 100 });
   const currencyTypes = useMemo(() => currencyTypesData?.items || [], [currencyTypesData]);
+
+  // Fetch charge items from settings
+  const { data: chargeItemsResponse } = useQuery({
+    queryKey: ['chargeItems', 'all'],
+    queryFn: () => settingsApi.getAllChargeItems(),
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+  const chargeItems = useMemo(() => chargeItemsResponse?.data || [], [chargeItemsResponse?.data]);
+
+  // Fetch costing units from settings
+  const { data: costingUnitsResponse } = useQuery({
+    queryKey: ['costingUnits', 'all'],
+    queryFn: () => settingsApi.getAllCostingUnits(),
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+  const costingUnits = useMemo(() => costingUnitsResponse?.data || [], [costingUnitsResponse?.data]);
 
   // Filter parties by master type
   const creditorParties = useMemo(() =>
@@ -62,13 +69,13 @@ export function CostingModal({ open, onOpenChange, parties, onSave }: CostingMod
     [parties]
   );
 
-  const [formData, setFormData] = useState({
-    charge: "ADDITIONAL PICK UP CHARGES",
+  const getDefaultFormData = () => ({
+    charge: "",
     description: "",
     ppcc: "Prepaid",
-    unit: "BL",
+    unitId: undefined as number | undefined,
+    unit: "",
     remarks: "",
-    // Cost section
     costCurrency: LOCAL_CURRENCY,
     costExRate: "1.000",
     costNoOfUnit: "",
@@ -77,10 +84,10 @@ export function CostingModal({ open, onOpenChange, parties, onSave }: CostingMod
     costFCYAmount: "0.00",
     costVendor: "",
     costVendorName: "",
+    costVendorCustomerId: "",
     costReferenceNo: "",
     costDate: new Date().toISOString().split('T')[0],
     costTax: "0%",
-    // Sale section
     saleCurrency: LOCAL_CURRENCY,
     saleExRate: "1.000",
     saleNoOfUnit: "",
@@ -89,9 +96,55 @@ export function CostingModal({ open, onOpenChange, parties, onSave }: CostingMod
     saleFCYAmount: "0.00",
     saleBillTo: "",
     saleBillToName: "",
+    saleBillToCustomerId: "",
     saleGP: "0.00",
     saleTax: "0%",
   });
+
+  const [formData, setFormData] = useState(getDefaultFormData());
+
+  // Populate form when editing
+  useEffect(() => {
+    if (open && costing) {
+      // Find the party that matches the vendorCustomerId or billToCustomerId
+      const vendorParty = creditorParties.find(p => p.customerId === costing.vendorCustomerId);
+      const billToParty = debtorParties.find(p => p.customerId === costing.billToCustomerId);
+      
+      setFormData({
+        charge: costing.description || "",
+        description: costing.chargeDescription || costing.description || "", // Use chargeDescription if available, fallback to description
+        ppcc: costing.ppcc || "Prepaid",
+        unitId: costing.unitId || undefined,
+        unit: costing.unit || "",
+        remarks: costing.remarks || "",
+        costCurrency: costing.costCurrency || LOCAL_CURRENCY,
+        costExRate: costing.costExRate?.toString() || "1.000",
+        costNoOfUnit: costing.costQty?.toString() || "",
+        costPerUnit: costing.costUnit?.toString() || "",
+        costLCYAmount: costing.costLCY?.toString() || "0.00",
+        costFCYAmount: costing.costFCY?.toString() || "0.00",
+        costVendor: vendorParty?.id?.toString() || "",
+        costVendorName: costing.vendorName || "",
+        costVendorCustomerId: costing.vendorCustomerId?.toString() || "",
+        costReferenceNo: "",
+        costDate: new Date().toISOString().split('T')[0],
+        costTax: "0%",
+        saleCurrency: costing.saleCurrency || LOCAL_CURRENCY,
+        saleExRate: costing.saleExRate?.toString() || "1.000",
+        saleNoOfUnit: costing.saleQty?.toString() || "",
+        salePerUnit: costing.saleUnit?.toString() || "",
+        saleLCYAmount: costing.saleLCY?.toString() || "0.00",
+        saleFCYAmount: costing.saleFCY?.toString() || "0.00",
+        saleBillTo: billToParty?.id?.toString() || "",
+        saleBillToName: costing.billToName || "",
+        saleBillToCustomerId: costing.billToCustomerId?.toString() || "",
+        saleGP: costing.gp?.toString() || "0.00",
+        saleTax: "0%",
+      });
+    } else if (open && !costing) {
+      setFormData(getDefaultFormData());
+    }
+  }, [open, costing, creditorParties, debtorParties]);
 
   // Get ROE (Rate of Exchange) for a currency code
   const getROE = (currencyCode: string): number => {
@@ -210,6 +263,16 @@ export function CostingModal({ open, onOpenChange, parties, onSave }: CostingMod
     setFormData(newFormData);
   };
 
+  // Handle charge selection - auto-populate description with charge name
+  const handleChargeChange = (chargeName: string) => {
+    setFormData(prev => ({
+      ...prev,
+      charge: chargeName,
+      // Auto-populate description with charge name if description is empty or matches previous charge
+      description: prev.description === "" || prev.description === prev.charge ? chargeName : prev.description
+    }));
+  };
+
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -220,7 +283,9 @@ export function CostingModal({ open, onOpenChange, parties, onSave }: CostingMod
     setFormData(prev => ({
       ...prev,
       costVendor: partyId,
-      costVendorName: party?.customerName || ""
+      costVendorName: party?.customerName || "",
+      // Store the actual customer ID for saving
+      costVendorCustomerId: party?.customerId?.toString() || partyId
     }));
   };
 
@@ -230,14 +295,27 @@ export function CostingModal({ open, onOpenChange, parties, onSave }: CostingMod
     setFormData(prev => ({
       ...prev,
       saleBillTo: partyId,
-      saleBillToName: party?.customerName || ""
+      saleBillToName: party?.customerName || "",
+      // Store the actual customer ID for saving
+      saleBillToCustomerId: party?.customerId?.toString() || partyId
     }));
   };
 
   const handleSave = () => {
+    // Get the actual customer IDs - prefer the stored customer ID, fallback to party ID
+    const vendorCustomerId = formData.costVendorCustomerId 
+      ? parseInt(formData.costVendorCustomerId) 
+      : (formData.costVendor ? parseInt(formData.costVendor) : undefined);
+    
+    const billToCustomerId = formData.saleBillToCustomerId
+      ? parseInt(formData.saleBillToCustomerId)
+      : (formData.saleBillTo ? parseInt(formData.saleBillTo) : undefined);
+
     onSave({
-      id: Date.now(),
-      description: formData.charge,
+      id: costing?.id || Date.now(),
+      description: formData.charge, // The charge name (used as description in backend)
+      chargeDescription: formData.description, // The user-editable description field
+      remarks: formData.remarks,
       ppcc: formData.ppcc,
       saleQty: formData.saleNoOfUnit || "0.000",
       saleUnit: formData.salePerUnit || "0.00",
@@ -251,11 +329,12 @@ export function CostingModal({ open, onOpenChange, parties, onSave }: CostingMod
       costExRate: formData.costExRate,
       costFCY: formData.costFCYAmount,
       costLCY: formData.costLCYAmount,
+      unitId: formData.unitId,
       unit: formData.unit,
       gp: formData.saleGP,
-      vendorId: formData.costVendor,
+      vendorCustomerId: vendorCustomerId,
       vendorName: formData.costVendorName,
-      billToId: formData.saleBillTo,
+      billToCustomerId: billToCustomerId,
       billToName: formData.saleBillToName,
     });
     onOpenChange(false);
@@ -266,7 +345,7 @@ export function CostingModal({ open, onOpenChange, parties, onSave }: CostingMod
       <DialogContent className="max-w-2xl bg-card border border-border">
         <DialogHeader>
           <DialogTitle className="text-foreground text-lg bg-[#2c3e50] text-white p-3 -m-6 mb-0 rounded-t-lg">
-            Costing
+            {costing ? "Edit Costing" : "Add Costing"}
           </DialogTitle>
         </DialogHeader>
 
@@ -275,14 +354,18 @@ export function CostingModal({ open, onOpenChange, parties, onSave }: CostingMod
           <div className="grid grid-cols-4 gap-3">
             <div className="col-span-2">
               <Label className="text-xs font-medium">Charge</Label>
-              <Select value={formData.charge} onValueChange={(v) => handleInputChange("charge", v)}>
+              <Select value={formData.charge} onValueChange={handleChargeChange}>
                 <SelectTrigger className="bg-background border-border h-9">
-                  <SelectValue />
+                  <SelectValue placeholder="Select charge type" />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border border-border">
-                  {chargeTypes.map(type => (
-                    <SelectItem key={type} value={type}>{type}</SelectItem>
-                  ))}
+                  {chargeItems.length > 0 ? (
+                    chargeItems.map(item => (
+                      <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="_none" disabled>No charge items available</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -314,14 +397,28 @@ export function CostingModal({ open, onOpenChange, parties, onSave }: CostingMod
             </div>
             <div>
               <Label className="text-xs font-medium">Unit</Label>
-              <Select value={formData.unit} onValueChange={(v) => handleInputChange("unit", v)}>
+              <Select
+                value={formData.unitId?.toString() || ""}
+                onValueChange={(v) => {
+                  const selectedUnit = costingUnits.find(u => u.id.toString() === v);
+                  setFormData(prev => ({
+                    ...prev,
+                    unitId: selectedUnit?.id,
+                    unit: selectedUnit?.code || ""
+                  }));
+                }}
+              >
                 <SelectTrigger className="bg-background border-border h-9">
-                  <SelectValue />
+                  <SelectValue placeholder="Select unit" />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border border-border">
-                  {units.map(unit => (
-                    <SelectItem key={unit} value={unit}>{unit}</SelectItem>
-                  ))}
+                  {costingUnits.length > 0 ? (
+                    costingUnits.map(unit => (
+                      <SelectItem key={unit.id} value={unit.id.toString()}>{unit.name}</SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="_none" disabled>Loading...</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -404,17 +501,17 @@ export function CostingModal({ open, onOpenChange, parties, onSave }: CostingMod
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">FCY Amt</Label>
+                  <Label className="text-xs">LCY Amt</Label>
                   <Input
-                    value={formData.costFCYAmount}
+                    value={formData.costLCYAmount}
                     className="bg-muted border-border h-8 text-xs"
                     readOnly
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">LCY Amt</Label>
+                  <Label className="text-xs">FCY Amt</Label>
                   <Input
-                    value={formData.costLCYAmount}
+                    value={formData.costFCYAmount}
                     className="bg-muted border-border h-8 text-xs"
                     readOnly
                   />
@@ -524,17 +621,17 @@ export function CostingModal({ open, onOpenChange, parties, onSave }: CostingMod
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">FCY Amt</Label>
+                  <Label className="text-xs">LCY Amt</Label>
                   <Input
-                    value={formData.saleFCYAmount}
+                    value={formData.saleLCYAmount}
                     className="bg-muted border-border h-8 text-xs"
                     readOnly
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">LCY Amt</Label>
+                  <Label className="text-xs">FCY Amt</Label>
                   <Input
-                    value={formData.saleLCYAmount}
+                    value={formData.saleFCYAmount}
                     className="bg-muted border-border h-8 text-xs"
                     readOnly
                   />
@@ -600,7 +697,7 @@ export function CostingModal({ open, onOpenChange, parties, onSave }: CostingMod
               onClick={handleSave}
               className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 h-9"
             >
-              Add
+              {costing ? "Update" : "Add"}
             </Button>
           </div>
         </div>

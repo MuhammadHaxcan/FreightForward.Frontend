@@ -24,38 +24,113 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Edit, Trash2, Plus, Loader2 } from "lucide-react";
-import { useShipment, useUpdateShipment, useAddShipmentParty, useDeleteShipmentParty } from "@/hooks/useShipments";
+import { ContainerModal } from "@/components/shipments/ContainerModal";
+import { CostingModal } from "@/components/shipments/CostingModal";
+import { InvoiceModal } from "@/components/shipments/InvoiceModal";
+import { PurchaseModal } from "@/components/shipments/PurchaseModal";
+import { toast } from "sonner";
+import {
+  useShipment,
+  useUpdateShipment,
+  useAddShipmentParty,
+  useDeleteShipmentParty,
+  useAddShipmentContainer,
+  useDeleteShipmentContainer,
+  useAddShipmentCosting,
+  useDeleteShipmentCosting,
+} from "@/hooks/useShipments";
 import { useCustomers } from "@/hooks/useCustomers";
-import { PartyType, CustomerCategory, MasterType, Customer } from "@/services/api";
+import {
+  PartyType,
+  MasterType,
+  Customer,
+  shipmentApi,
+  settingsApi,
+  ShipmentInvoicesResult,
+  AddShipmentContainerRequest,
+  AddShipmentCostingRequest,
+  ShipmentContainer,
+  ShipmentCosting,
+  Currency,
+} from "@/services/api";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-// Map PartyType to CustomerCategory for filtering customers
-const partyTypeToCategory: Record<PartyType, CustomerCategory | null> = {
+// Map PartyType to category code for finding category ID
+const partyTypeToCategoryCode: Record<PartyType, string> = {
+  // Primary Party Types
   Shipper: 'Shipper',
   Consignee: 'Consignee',
-  BookingParty: 'BookingParty',
-  Agents: 'Agents',
-  Forwarder: 'Forwarder',
+  Buyer: 'Buyer',
+  Supplier: 'Supplier',
   Customer: 'Customer',
+  BookingParty: 'BookingParty',
+  NotifyParty: 'NotifyParty',
+  // Agents & Forwarders
+  Forwarder: 'Forwarder',
+  CoLoader: 'CoLoader',
+  Transporter: 'Transporter',
+  Courier: 'Courier',
+  ClearingAgent: 'ClearingAgent',
   DeliveryAgent: 'DeliveryAgent',
   OriginAgent: 'OriginAgent',
-  NotifyParty: 'NotifyParty',
-  ShippingLine: null, // No matching customer category
-  AirLine: null, // No matching customer category
+  OverseasAgents: 'OverseasAgents',
+  // Carriers
+  ShippingLine: 'ShippingLine',
+  AirLine: 'AirLine',
+  // Facilities
+  Warehouse: 'Warehouse',
+  CFS: 'CFS',
+  Terminal: 'Terminal',
+  // Government & Financial
+  Customs: 'Customs',
+  Bank: 'Bank',
+  // Neutral Types
+  Neutral: 'Neutral',
+  ShipperNeutral: 'ShipperNeutral',
+  ConsigneeNeutral: 'ConsigneeNeutral',
+  BuyerNeutral: 'BuyerNeutral',
+  SupplierNeutral: 'SupplierNeutral',
+  NotifyPartyNeutral: 'NotifyPartyNeutral',
+  CustomerNeutral: 'CustomerNeutral',
 };
 
 // Display labels for party types
 const partyTypeLabels: Record<PartyType, string> = {
+  // Primary Party Types
   Shipper: 'Shipper',
   Consignee: 'Consignee',
-  BookingParty: 'Booking Party',
-  Agents: 'Agents',
-  Forwarder: 'Forwarder',
+  Buyer: 'Buyer',
+  Supplier: 'Supplier',
   Customer: 'Customer',
+  BookingParty: 'Booking Party',
+  NotifyParty: 'Notify Party',
+  // Agents & Forwarders
+  Forwarder: 'Forwarder',
+  CoLoader: 'Co-loader',
+  Transporter: 'Transporter',
+  Courier: 'Courier',
+  ClearingAgent: 'Clearing Agent',
   DeliveryAgent: 'Delivery Agent',
   OriginAgent: 'Origin Agent',
-  NotifyParty: 'Notify Party',
+  OverseasAgents: 'Overseas Agents',
+  // Carriers
   ShippingLine: 'Shipping Line',
   AirLine: 'Air Line',
+  // Facilities
+  Warehouse: 'Warehouse',
+  CFS: 'CFS',
+  Terminal: 'Terminal',
+  // Government & Financial
+  Customs: 'Customs',
+  Bank: 'Bank',
+  // Neutral Types
+  Neutral: 'Neutral',
+  ShipperNeutral: 'Shipper (Neutral)',
+  ConsigneeNeutral: 'Consignee (Neutral)',
+  BuyerNeutral: 'Buyer (Neutral)',
+  SupplierNeutral: 'Supplier (Neutral)',
+  NotifyPartyNeutral: 'Notify Party (Neutral)',
+  CustomerNeutral: 'Customer (Neutral)',
 };
 
 // Mock data for the shipment
@@ -103,50 +178,44 @@ const mockShipmentData = {
   internalNotes: "",
 };
 
-// Mock parties data
-const mockParties = [
-  { id: 1, masterType: "Debtors", type: "Agents", name: "INFINITE SHIPPING PVT LTD", mobile: "0", phone: "", email: "kushla@infinite.lk" },
-  { id: 2, masterType: "Creditors", type: "Shipping Line", name: "GULF AGENCY CO (DUBAI) PVT LTD", mobile: "0", phone: "", email: "LINERDOCDUBAI@GAC.COM" },
-  { id: 3, masterType: "Debtors", type: "Customer", name: "KADDAH BLDG CLEANING EQUIP. TR CO LLC", mobile: "0", phone: "0507466916", email: "XXXXX@GMAIL.COM" },
-  { id: 4, masterType: "Debtors", type: "Consignee", name: "KADDAH BLDG CLEANING EQUIP. TR CO LLC", mobile: "0", phone: "0507466916", email: "XXXXX@GMAIL.COM" },
-  { id: 5, masterType: "Neutral", type: "Shipper(Neutral)", name: "RAVI INDUSTRIES LTD", mobile: "0", phone: "", email: "RAVIINDUSTRIES@LTD.COM" },
-];
 
-// Mock containers data
-const mockContainers = [
-  { id: 1, container: "GESU6251749", type: "40HC", sealNo: "FX44078456", noOfPcs: 1120, packageType: "BAGS", grossWeight: 28224.000, volume: 45.000 },
-  { id: 2, container: "MLDU4363310", type: "40HC", sealNo: "FX44021137", noOfPcs: 1120, packageType: "BAGS", grossWeight: 28224.000, volume: 45.000 },
-  { id: 3, container: "MSDU5652784", type: "40HC", sealNo: "FX44021047", noOfPcs: 1120, packageType: "BAGS", grossWeight: 28224.000, volume: 45.000 },
-  { id: 4, container: "MSDU6686161", type: "40HC", sealNo: "FX44021021", noOfPcs: 1120, packageType: "BAGS", grossWeight: 28224.000, volume: 45.000 },
-  { id: 5, container: "MSDU8495457", type: "40HC", sealNo: "FX43958866", noOfPcs: 1120, packageType: "BAGS", grossWeight: 28224.000, volume: 45.000 },
-  { id: 6, container: "MSMU8504811", type: "40HC", sealNo: "FX43958894", noOfPcs: 1120, packageType: "BAGS", grossWeight: 28224.000, volume: 45.000 },
-];
-
-// Mock costing data
-const mockCosting = [
-  { id: 1, description: "Handling Charges", saleQty: "1.000", saleUnit: "25.00", saleCurrency: "USD", saleExRate: "3.685", saleFCY: "25.00", saleLCY: "92.13", costQty: "0.000", costUnit: "0.00", costCurrency: "AED", costExRate: "1.000", costFCY: "0.00", costLCY: "0.00", unit: "BL", gp: "92.13" },
-  { id: 2, description: "Bill of Lading Charges", saleQty: "1.000", saleUnit: "350.00", saleCurrency: "USD", saleExRate: "3.685", saleFCY: "350.00", saleLCY: "1289.75", costQty: "0.000", costUnit: "0.00", costCurrency: "AED", costExRate: "1.000", costFCY: "0.00", costLCY: "0.00", unit: "BL", gp: "1,289.75" },
-];
-
-// Mock bill to data
-const mockBillTo = [
-  { billTo: "BLISS LOGISTICS & SHIPPING PVT LTD", pSale: "USD 25.00", voucherNumber: "INVAL251836", status: "Opened" },
-  { billTo: "MMF GLOBAL TRADING LLC", pSale: "AED 1,289.75", voucherNumber: "INVAL251799", status: "Opened" },
-];
-
-// All available party types
+// All available party types (grouped logically)
 const partyTypes: PartyType[] = [
+  // Primary Party Types
   'Shipper',
   'Consignee',
+  'Buyer',
+  'Supplier',
+  'Customer',
   'BookingParty',
-  'Agents',
+  'NotifyParty',
+  // Agents & Forwarders
   'Forwarder',
-  'ShippingLine',
-  'AirLine',
+  'CoLoader',
+  'Transporter',
+  'Courier',
+  'ClearingAgent',
   'DeliveryAgent',
   'OriginAgent',
-  'NotifyParty',
-  'Customer',
+  'OverseasAgents',
+  // Carriers
+  'ShippingLine',
+  'AirLine',
+  // Facilities
+  'Warehouse',
+  'CFS',
+  'Terminal',
+  // Government & Financial
+  'Customs',
+  'Bank',
+  // Neutral Types
+  'Neutral',
+  'ShipperNeutral',
+  'ConsigneeNeutral',
+  'BuyerNeutral',
+  'SupplierNeutral',
+  'NotifyPartyNeutral',
+  'CustomerNeutral',
 ];
 
 const ShipmentDetail = () => {
@@ -154,30 +223,71 @@ const ShipmentDetail = () => {
   const navigate = useNavigate();
   const shipmentId = parseInt(id || '0');
 
+  const queryClient = useQueryClient();
+
   // Fetch shipment data from API
-  const { data: shipmentData, isLoading: isLoadingShipment, error: shipmentError } = useShipment(shipmentId);
+  const { data: shipmentData, isLoading: isLoadingShipment, error: shipmentError, refetch: refetchShipment } = useShipment(shipmentId);
 
   // Mutations
   const updateShipmentMutation = useUpdateShipment();
   const addPartyMutation = useAddShipmentParty();
   const deletePartyMutation = useDeleteShipmentParty();
+  const addContainerMutation = useAddShipmentContainer();
+  const deleteContainerMutation = useDeleteShipmentContainer();
+  const addCostingMutation = useAddShipmentCosting();
+  const deleteCostingMutation = useDeleteShipmentCosting();
 
+  // State
   const [activeTab, setActiveTab] = useState("shipment-info");
   const [formData, setFormData] = useState(mockShipmentData);
   const [selectedPartyType, setSelectedPartyType] = useState<PartyType>('Shipper');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
-  const [containers, setContainers] = useState(mockContainers);
   const [cargoDetails, setCargoDetails] = useState({ quantity: "", loadType: "", totalCBM: "", totalWeight: "", description: "" });
   const [documents, setDocuments] = useState<any[]>([]);
   const [shipmentStatus, setShipmentStatus] = useState({ date: "2025-12-26", remarks: "" });
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Get the customer category for the selected party type
-  const selectedCategory = partyTypeToCategory[selectedPartyType];
+  // Modal states
+  const [containerModalOpen, setContainerModalOpen] = useState(false);
+  const [costingModalOpen, setCostingModalOpen] = useState(false);
+  const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
+  const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
+  const [editingContainer, setEditingContainer] = useState<ShipmentContainer | null>(null);
+  const [editingCosting, setEditingCosting] = useState<ShipmentCosting | null>(null);
 
-  // Fetch customers filtered by the selected category
+  // Fetch shipment invoices
+  const { data: shipmentInvoicesResponse } = useQuery({
+    queryKey: ['shipment-invoices', shipmentId],
+    queryFn: () => shipmentApi.getInvoices(shipmentId),
+    enabled: shipmentId > 0,
+  });
+  const shipmentInvoices = shipmentInvoicesResponse?.data;
+
+  // Fetch customer category types
+  const { data: categoryTypesResponse } = useQuery({
+    queryKey: ['customerCategoryTypes', 'all'],
+    queryFn: () => settingsApi.getAllCustomerCategoryTypes(),
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+  const categoryTypes = useMemo(() => categoryTypesResponse?.data ?? [], [categoryTypesResponse?.data]);
+
+  // Get data from shipmentData
+  const containers = shipmentData?.containers || [];
+  const costings = shipmentData?.costings || [];
+  const parties = shipmentData?.parties || [];
+
+  // Get the category ID for the selected party type
+  const selectedCategoryId = useMemo(() => {
+    const categoryCode = partyTypeToCategoryCode[selectedPartyType];
+    if (!categoryCode) return undefined;
+    const category = categoryTypes.find(c => c.code === categoryCode || c.name === categoryCode);
+    return category?.id;
+  }, [selectedPartyType, categoryTypes]);
+
+  // Fetch customers filtered by the selected category ID
   const { data: customersData, isLoading: isLoadingCustomers } = useCustomers({
     pageSize: 100,
-    category: selectedCategory || undefined,
+    categoryId: selectedCategoryId,
   });
 
   // Get the list of customers
@@ -249,7 +359,21 @@ const ShipmentDetail = () => {
   };
 
   const handleAddParty = () => {
-    if (!selectedCustomer || !shipmentId) return;
+    if (!selectedCustomer) {
+      toast.error("Please select a customer");
+      return;
+    }
+    if (!shipmentId) {
+      toast.error("Shipment ID is missing");
+      return;
+    }
+
+    // Check if customer is already added (prevent duplicates)
+    const existingParty = parties.find(p => p.customerId === selectedCustomer.id);
+    if (existingParty) {
+      toast.error(`${selectedCustomer.name} is already added as ${partyTypeLabels[existingParty.partyType]}`);
+      return;
+    }
 
     addPartyMutation.mutate({
       shipmentId,
@@ -273,8 +397,172 @@ const ShipmentDetail = () => {
     deletePartyMutation.mutate({ partyId, shipmentId });
   };
 
-  // Get parties from shipment data
-  const parties = shipmentData?.parties || [];
+  // Container handlers
+  const handleSaveContainer = async (containerData: any) => {
+    if (!shipmentId) {
+      toast.error("Please save the shipment first");
+      return;
+    }
+
+    try {
+      const data: AddShipmentContainerRequest = {
+        shipmentId,
+        containerNumber: containerData.containerNumber,
+        containerType: containerData.containerType,
+        sealNo: containerData.sealNo,
+        noOfPcs: parseInt(containerData.noOfPcs) || 0,
+        packageType: containerData.packageType,
+        grossWeight: parseFloat(containerData.grossWeight) || 0,
+        volume: parseFloat(containerData.volume) || 0,
+      };
+
+      await addContainerMutation.mutateAsync({ shipmentId, data });
+      setContainerModalOpen(false);
+      setEditingContainer(null);
+      refetchShipment();
+    } catch (error) {
+      // Error handled by mutation
+    }
+  };
+
+  const handleEditContainer = (container: ShipmentContainer) => {
+    setEditingContainer(container);
+    setContainerModalOpen(true);
+  };
+
+  const handleDeleteContainer = async (containerId: number) => {
+    if (!shipmentId) return;
+    if (!confirm("Are you sure you want to delete this container?")) return;
+
+    try {
+      await deleteContainerMutation.mutateAsync({ containerId, shipmentId });
+      refetchShipment();
+    } catch (error) {
+      // Error handled by mutation
+    }
+  };
+
+  // Costing handlers
+  const handleSaveCosting = async (costingData: any) => {
+    if (!shipmentId) {
+      toast.error("Please save the shipment first");
+      return;
+    }
+
+    try {
+      const data: AddShipmentCostingRequest = {
+        shipmentId,
+        description: costingData.description,
+        remarks: costingData.remarks,
+        saleQty: parseFloat(costingData.saleQty) || 0,
+        saleUnit: parseFloat(costingData.saleUnit) || 0,
+        saleCurrency: costingData.saleCurrency as Currency,
+        saleExRate: parseFloat(costingData.saleExRate) || 1,
+        saleFCY: parseFloat(costingData.saleFCY) || 0,
+        saleLCY: parseFloat(costingData.saleLCY) || 0,
+        saleTaxPercentage: parseFloat(costingData.saleTaxPercentage) || 0,
+        saleTaxAmount: parseFloat(costingData.saleTaxAmount) || 0,
+        costQty: parseFloat(costingData.costQty) || 0,
+        costUnit: parseFloat(costingData.costUnit) || 0,
+        costCurrency: costingData.costCurrency as Currency,
+        costExRate: parseFloat(costingData.costExRate) || 1,
+        costFCY: parseFloat(costingData.costFCY) || 0,
+        costLCY: parseFloat(costingData.costLCY) || 0,
+        costTaxPercentage: parseFloat(costingData.costTaxPercentage) || 0,
+        costTaxAmount: parseFloat(costingData.costTaxAmount) || 0,
+        unitId: costingData.unitId,
+        unit: costingData.unit,
+        billToCustomerId: costingData.billToCustomerId,
+        vendorCustomerId: costingData.vendorCustomerId,
+      };
+
+      await addCostingMutation.mutateAsync({ shipmentId, data });
+      setCostingModalOpen(false);
+      setEditingCosting(null);
+      refetchShipment();
+    } catch (error) {
+      // Error handled by mutation
+    }
+  };
+
+  const handleEditCosting = (costing: ShipmentCosting) => {
+    setEditingCosting(costing);
+    setCostingModalOpen(true);
+  };
+
+  const handleDeleteCosting = async (costingId: number) => {
+    if (!shipmentId) return;
+    if (!confirm("Are you sure you want to delete this costing entry?")) return;
+
+    try {
+      await deleteCostingMutation.mutateAsync({ costingId, shipmentId });
+      refetchShipment();
+    } catch (error) {
+      // Error handled by mutation
+    }
+  };
+
+  // Handle save shipment
+  const handleSaveShipment = async () => {
+    if (!shipmentId) return;
+    setIsSaving(true);
+    try {
+      await updateShipmentMutation.mutateAsync({
+        id: shipmentId,
+        data: {
+          id: shipmentId,
+          jobNumber: formData.jobNumber,
+          jobDate: formData.jobDate,
+          jobStatus: formData.jobStatus,
+          direction: formData.direction as any,
+          mode: formData.mode === 'Sea Freight FCL' ? 'SeaFreightFCL' :
+                formData.mode === 'Sea Freight LCL' ? 'SeaFreightLCL' : 'AirFreight',
+          incoterms: formData.incoterms || undefined,
+          houseBLNo: formData.houseBLNo || undefined,
+          houseBLDate: formData.houseBLDate || undefined,
+          houseBLStatus: formData.houseBLStatus || undefined,
+          hblServiceType: formData.hblServiceType || undefined,
+          hblNoBLIssued: formData.hblNoBLIssued || undefined,
+          hblFreight: formData.hblFreight || undefined,
+          mblNumber: formData.mblNumber || undefined,
+          mblDate: formData.mblDate || undefined,
+          mblStatus: formData.mblStatus || undefined,
+          mblServiceType: formData.mblServiceType || undefined,
+          mblNoBLIssued: formData.mblNoBLIssued || undefined,
+          mblFreight: formData.mblFreight || undefined,
+          placeOfBLIssue: formData.placeOfBLIssue || undefined,
+          carrier: formData.carrier || undefined,
+          freeTime: formData.freeTime || undefined,
+          networkPartner: formData.networkPartner || undefined,
+          assignedTo: formData.assignedTo || undefined,
+          placeOfReceipt: formData.placeOfReceipt || undefined,
+          portOfReceipt: formData.portOfReceipt || undefined,
+          portOfLoading: formData.portOfLoading || undefined,
+          portOfDischarge: formData.portOfDischarge || undefined,
+          portOfFinalDestination: formData.portOfFinalDestination || undefined,
+          placeOfDelivery: formData.placeOfDelivery || undefined,
+          vessel: formData.vessel || undefined,
+          voyage: formData.voyage || undefined,
+          etd: formData.etd || undefined,
+          eta: formData.eta || undefined,
+          secondLegVessel: formData.secondLegVessel,
+          secondLegVesselName: formData.secondLegVesselName || undefined,
+          secondLegVoyage: formData.secondLegVoyage || undefined,
+          secondLegETD: formData.secondLegETD || undefined,
+          secondLegETA: formData.secondLegETA || undefined,
+          marksNumbers: formData.marksNumbers || undefined,
+          notes: formData.notes || undefined,
+          internalNotes: formData.internalNotes || undefined,
+        }
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Calculate totals for costings
+  const totalSale = costings.reduce((sum, c) => sum + (c.saleLCY || 0), 0);
+  const totalCost = costings.reduce((sum, c) => sum + (c.costLCY || 0), 0);
 
   return (
     <MainLayout>
@@ -285,6 +573,20 @@ const ShipmentDetail = () => {
             Edit Shipment - Job No : <span className="font-bold">{formData.jobNumber}</span>
           </h1>
           <div className="flex gap-2">
+            <Button
+              className="bg-emerald-500 hover:bg-emerald-600 text-white"
+              onClick={handleSaveShipment}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save"
+              )}
+            </Button>
             <Button variant="outline" className="bg-[#2c3e50] hover:bg-[#34495e] text-white border-[#2c3e50]" onClick={() => navigate("/shipments")}>
               Back
             </Button>
@@ -701,12 +1003,11 @@ const ShipmentDetail = () => {
                   <Select
                     value={selectedCustomerId}
                     onValueChange={setSelectedCustomerId}
-                    disabled={isLoadingCustomers || !selectedCategory}
+                    disabled={isLoadingCustomers}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder={
                         isLoadingCustomers ? "Loading..." :
-                        !selectedCategory ? "No customers for this type" :
                         customers.length === 0 ? "No customers found" :
                         "Select a customer"
                       } />
@@ -719,9 +1020,9 @@ const ShipmentDetail = () => {
                       ))}
                     </SelectContent>
                   </Select>
-                  {!selectedCategory && (
+                  {customers.length === 0 && !isLoadingCustomers && (
                     <p className="text-xs text-amber-600 mt-1">
-                      No customer category matches "{partyTypeLabels[selectedPartyType]}". You can add customers manually.
+                      No customers with category "{partyTypeLabels[selectedPartyType]}" found.
                     </p>
                   )}
                 </div>
@@ -793,8 +1094,18 @@ const ShipmentDetail = () => {
               <div className="flex justify-between items-center">
                 <h3 className="text-emerald-600 font-semibold text-lg">Containers</h3>
                 <div className="flex items-center gap-4">
-                  <span className="text-sm text-muted-foreground">Containers - 6 x 40HC, Total Quantity : 6720</span>
-                  <Button className="bg-emerald-500 hover:bg-emerald-600 text-white">
+                  <span className="text-sm text-muted-foreground">
+                    {containers.length > 0
+                      ? `${containers.length} x ${containers[0]?.containerType || 'N/A'}, Total Quantity: ${containers.reduce((sum, c) => sum + (c.noOfPcs || 0), 0)}`
+                      : 'No containers'}
+                  </span>
+                  <Button
+                    className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                    onClick={() => {
+                      setEditingContainer(null);
+                      setContainerModalOpen(true);
+                    }}
+                  >
                     <Plus className="h-4 w-4 mr-2" />
                     Add New Container
                   </Button>
@@ -834,32 +1145,48 @@ const ShipmentDetail = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {containers.map((container, index) => (
-                    <TableRow key={container.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
-                      <TableCell>{index + 1}</TableCell>
-                      <TableCell className="text-emerald-600">{container.container}</TableCell>
-                      <TableCell>{container.type}</TableCell>
-                      <TableCell className="text-emerald-600">{container.sealNo}</TableCell>
-                      <TableCell>{container.noOfPcs}</TableCell>
-                      <TableCell>{container.packageType}</TableCell>
-                      <TableCell>{container.grossWeight.toFixed(3)}</TableCell>
-                      <TableCell className="text-emerald-600">{container.volume.toFixed(3)}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600 text-white rounded">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+                  {containers.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center text-muted-foreground py-8">No containers</TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    containers.map((container, index) => (
+                      <TableRow key={container.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell className="text-emerald-600">{container.containerNumber}</TableCell>
+                        <TableCell>{container.containerType}</TableCell>
+                        <TableCell className="text-emerald-600">{container.sealNo}</TableCell>
+                        <TableCell>{container.noOfPcs}</TableCell>
+                        <TableCell>{container.packageType}</TableCell>
+                        <TableCell>{container.grossWeight?.toFixed(3) || '0.000'}</TableCell>
+                        <TableCell className="text-emerald-600">{container.volume?.toFixed(3) || '0.000'}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600 text-white rounded"
+                              onClick={() => handleEditContainer(container)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded"
+                              onClick={() => handleDeleteContainer(container.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
 
-              <div className="text-sm text-emerald-600">Showing 1 to 6 of 6 entries</div>
+              <div className="text-sm text-emerald-600">Showing {containers.length} entries</div>
             </div>
           </TabsContent>
 
@@ -869,15 +1196,31 @@ const ShipmentDetail = () => {
               <div className="flex justify-between items-center">
                 <h3 className="text-emerald-600 font-semibold text-lg">Costing</h3>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="bg-[#2c3e50] hover:bg-[#34495e] text-white border-[#2c3e50] h-9 px-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="bg-[#2c3e50] hover:bg-[#34495e] text-white border-[#2c3e50] h-9 px-4"
+                    onClick={() => {
+                      setEditingCosting(null);
+                      setCostingModalOpen(true);
+                    }}
+                  >
                     <Plus className="h-4 w-4 mr-1.5" />
                     Create
                   </Button>
-                  <Button size="sm" className="bg-emerald-500 hover:bg-emerald-600 text-white h-9 px-4">
+                  <Button
+                    size="sm"
+                    className="bg-emerald-500 hover:bg-emerald-600 text-white h-9 px-4"
+                    onClick={() => setInvoiceModalOpen(true)}
+                  >
                     <Plus className="h-4 w-4 mr-1.5" />
                     Generate Invoice
                   </Button>
-                  <Button size="sm" className="bg-emerald-500 hover:bg-emerald-600 text-white h-9 px-4">
+                  <Button
+                    size="sm"
+                    className="bg-emerald-500 hover:bg-emerald-600 text-white h-9 px-4"
+                    onClick={() => setPurchaseModalOpen(true)}
+                  >
                     <Plus className="h-4 w-4 mr-1.5" />
                     Book Purchase Invoice
                   </Button>
@@ -908,98 +1251,142 @@ const ShipmentDetail = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {mockCosting.map((cost, index) => (
-                      <TableRow key={cost.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell className="text-emerald-600">{cost.description}</TableCell>
-                        <TableCell>{cost.saleQty}</TableCell>
-                        <TableCell>{cost.saleUnit}</TableCell>
-                        <TableCell>{cost.saleCurrency}</TableCell>
-                        <TableCell>{cost.saleExRate}</TableCell>
-                        <TableCell>{cost.saleFCY}</TableCell>
-                        <TableCell className="text-emerald-600">{cost.saleLCY}</TableCell>
-                        <TableCell>{cost.costQty}</TableCell>
-                        <TableCell>{cost.costUnit}</TableCell>
-                        <TableCell>{cost.costCurrency}</TableCell>
-                        <TableCell>{cost.costExRate}</TableCell>
-                        <TableCell>{cost.costFCY}</TableCell>
-                        <TableCell>{cost.costLCY}</TableCell>
-                        <TableCell>{cost.unit}</TableCell>
-                        <TableCell className="text-emerald-600 font-semibold">{cost.gp}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600 text-white rounded">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
+                    {costings.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={17} className="text-center text-muted-foreground py-8">No costing entries</TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      costings.map((cost, index) => (
+                        <TableRow key={cost.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
+                          <TableCell>{index + 1}</TableCell>
+                          <TableCell className="text-emerald-600">{cost.description}</TableCell>
+                          <TableCell>{cost.saleQty}</TableCell>
+                          <TableCell>{cost.saleUnit}</TableCell>
+                          <TableCell>{cost.saleCurrency}</TableCell>
+                          <TableCell>{cost.saleExRate}</TableCell>
+                          <TableCell>{cost.saleFCY?.toFixed(2)}</TableCell>
+                          <TableCell className="text-emerald-600">{cost.saleLCY?.toFixed(2)}</TableCell>
+                          <TableCell>{cost.costQty}</TableCell>
+                          <TableCell>{cost.costUnit}</TableCell>
+                          <TableCell>{cost.costCurrency}</TableCell>
+                          <TableCell>{cost.costExRate}</TableCell>
+                          <TableCell>{cost.costFCY?.toFixed(2)}</TableCell>
+                          <TableCell>{cost.costLCY?.toFixed(2)}</TableCell>
+                          <TableCell>{cost.unit}</TableCell>
+                          <TableCell className="text-emerald-600 font-semibold">{cost.gp?.toFixed(2)}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600 text-white rounded"
+                                onClick={() => handleEditCosting(cost)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded"
+                                onClick={() => handleDeleteCosting(cost.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>
 
-              {/* Bill To and Vendor Tables */}
-              <div className="grid grid-cols-2 gap-6">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-table-header">
-                      <TableHead className="text-table-header-foreground">Bill To</TableHead>
-                      <TableHead className="text-table-header-foreground">P.Sale</TableHead>
-                      <TableHead className="text-table-header-foreground">Voucher Number</TableHead>
-                      <TableHead className="text-table-header-foreground">Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {mockBillTo.map((bill, index) => (
-                      <TableRow key={index} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
-                        <TableCell className="text-emerald-600">{bill.billTo}</TableCell>
-                        <TableCell>{bill.pSale}</TableCell>
-                        <TableCell className="text-emerald-600">{bill.voucherNumber}</TableCell>
-                        <TableCell>{bill.status}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              {/* Invoices Section */}
+              <div className="mt-6 space-y-4">
+                <h4 className="text-emerald-600 font-semibold">Invoices</h4>
+                <div className="grid grid-cols-2 gap-6">
+                  {/* Customer Invoices (Left) */}
+                  <div className="border border-border rounded-lg p-4">
+                    <h5 className="font-semibold mb-3 text-sm">Customer Invoices</h5>
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-table-header">
+                          <TableHead className="text-table-header-foreground text-xs">Invoice No</TableHead>
+                          <TableHead className="text-table-header-foreground text-xs">Party</TableHead>
+                          <TableHead className="text-table-header-foreground text-xs text-right">Amount</TableHead>
+                          <TableHead className="text-table-header-foreground text-xs text-right">Tax</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {!shipmentInvoices?.customerInvoices?.length ? (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center text-muted-foreground text-sm">No customer invoices</TableCell>
+                          </TableRow>
+                        ) : (
+                          shipmentInvoices.customerInvoices.map((inv, index) => (
+                            <TableRow key={inv.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
+                              <TableCell className="text-xs">{inv.invoiceNo}</TableCell>
+                              <TableCell className="text-xs">{inv.partyName || "-"}</TableCell>
+                              <TableCell className="text-xs text-right">{inv.amount.toFixed(2)}</TableCell>
+                              <TableCell className="text-xs text-right">{inv.totalTax.toFixed(2)}</TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
 
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-table-header">
-                      <TableHead className="text-table-header-foreground">Vendor</TableHead>
-                      <TableHead className="text-table-header-foreground">P.Cost</TableHead>
-                      <TableHead className="text-table-header-foreground">Voucher Number</TableHead>
-                      <TableHead className="text-table-header-foreground">Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center text-muted-foreground py-4">No data available in table</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
+                  {/* Vendor Invoices (Right) */}
+                  <div className="border border-border rounded-lg p-4">
+                    <h5 className="font-semibold mb-3 text-sm">Vendor Invoices</h5>
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-table-header">
+                          <TableHead className="text-table-header-foreground text-xs">Purchase No</TableHead>
+                          <TableHead className="text-table-header-foreground text-xs">Party</TableHead>
+                          <TableHead className="text-table-header-foreground text-xs text-right">Amount</TableHead>
+                          <TableHead className="text-table-header-foreground text-xs text-right">Tax</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {!shipmentInvoices?.vendorInvoices?.length ? (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center text-muted-foreground text-sm">No vendor invoices</TableCell>
+                          </TableRow>
+                        ) : (
+                          shipmentInvoices.vendorInvoices.map((inv, index) => (
+                            <TableRow key={inv.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
+                              <TableCell className="text-xs">{inv.purchaseNo}</TableCell>
+                              <TableCell className="text-xs">{inv.partyName || "-"}</TableCell>
+                              <TableCell className="text-xs text-right">{inv.amount.toFixed(2)}</TableCell>
+                              <TableCell className="text-xs text-right">{inv.totalTax.toFixed(2)}</TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
               </div>
 
               {/* Summary */}
-              <div className="flex justify-center">
-                <Table className="w-auto">
-                  <TableHeader>
-                    <TableRow className="bg-table-header">
-                      <TableHead className="text-table-header-foreground">Total Sale</TableHead>
-                      <TableHead className="text-table-header-foreground">Total Cost</TableHead>
-                      <TableHead className="text-table-header-foreground">Profit</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow className="bg-card">
-                      <TableCell>( AED 1,381.88)</TableCell>
-                      <TableCell></TableCell>
-                      <TableCell className="font-semibold">AED 1381.875</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
+              <div className="flex justify-end">
+                <div className="grid grid-cols-3 gap-8 bg-secondary/30 p-4 rounded-lg">
+                  <div>
+                    <Label className="text-sm font-semibold">Total Sale</Label>
+                    <div className="text-emerald-600 font-semibold">AED {totalSale.toFixed(2)}</div>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-semibold">Total Cost</Label>
+                    <div className="text-foreground font-semibold">AED {totalCost.toFixed(2)}</div>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-semibold">Profit</Label>
+                    <div className={`font-semibold ${(totalSale - totalCost) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      AED {(totalSale - totalCost).toFixed(2)}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </TabsContent>
@@ -1157,6 +1544,53 @@ const ShipmentDetail = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Modals */}
+      <ContainerModal
+        open={containerModalOpen}
+        onOpenChange={(open) => {
+          setContainerModalOpen(open);
+          if (!open) setEditingContainer(null);
+        }}
+        container={editingContainer}
+        onSave={handleSaveContainer}
+        nextSNo={containers.length + 1}
+      />
+
+      <CostingModal
+        open={costingModalOpen}
+        onOpenChange={(open) => {
+          setCostingModalOpen(open);
+          if (!open) setEditingCosting(null);
+        }}
+        parties={parties}
+        costing={editingCosting}
+        onSave={handleSaveCosting}
+      />
+
+      <InvoiceModal
+        open={invoiceModalOpen}
+        onOpenChange={setInvoiceModalOpen}
+        shipmentId={shipmentId}
+        chargesDetails={costings}
+        parties={parties}
+        onSave={() => {
+          refetchShipment();
+          queryClient.invalidateQueries({ queryKey: ['shipment-invoices', shipmentId] });
+        }}
+      />
+
+      <PurchaseModal
+        open={purchaseModalOpen}
+        onOpenChange={setPurchaseModalOpen}
+        shipmentId={shipmentId}
+        chargesDetails={costings}
+        parties={parties}
+        onSave={() => {
+          refetchShipment();
+          queryClient.invalidateQueries({ queryKey: ['shipment-invoices', shipmentId] });
+        }}
+      />
     </MainLayout>
   );
 };

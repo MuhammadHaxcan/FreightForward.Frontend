@@ -7,8 +7,6 @@ import {
   TrendingUp,
   Wallet,
   UserCircle,
-  Building2,
-  Landmark,
   FileText,
   Settings,
   LogOut,
@@ -16,7 +14,6 @@ import {
   ChevronLeft,
   ChevronDown,
   Menu,
-  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -66,18 +63,16 @@ const sidebarItems: SidebarItem[] = [
       { title: "Daily Expenses", path: "/accounts/daily-expenses" },
     ]
   },
-  { 
-    title: "Users", 
-    icon: UserCircle, 
-    path: "/users", 
+  {
+    title: "Users",
+    icon: UserCircle,
+    path: "/users",
     hasSubmenu: true,
     subMenuItems: [
       { title: "All Users", path: "/users/all" },
       { title: "Permission Roles", path: "/users/roles" },
     ]
   },
-  { title: "Companies", icon: Building2, path: "/companies" },
-  { title: "Banks", icon: Landmark, path: "/banks" },
   { title: "General Document", icon: FileText, path: "/general-document" },
   { title: "Settings", icon: Settings, path: "/settings" },
 ];

@@ -31,51 +31,152 @@ import { InvoiceModal } from "@/components/shipments/InvoiceModal";
 import { PurchaseModal } from "@/components/shipments/PurchaseModal";
 import { toast } from "sonner";
 import { useCustomers } from "@/hooks/useCustomers";
-import { PartyType, CustomerCategory, MasterType } from "@/services/api";
+import {
+  PartyType,
+  MasterType,
+  settingsApi,
+  shipmentApi,
+  ShipmentDirection,
+  ShipmentMode,
+  BLStatus,
+  BLServiceType,
+  FreightType,
+  Incoterms,
+  CreateShipmentRequest,
+  AddShipmentPartyRequest,
+  AddShipmentContainerRequest,
+  AddShipmentCostingRequest,
+  Currency,
+  ShipmentInvoicesResult,
+} from "@/services/api";
+import { useQuery } from "@tanstack/react-query";
+import {
+  useCreateShipment,
+  useUpdateShipment,
+  useShipment,
+  useAddShipmentParty,
+  useDeleteShipmentParty,
+  useAddShipmentContainer,
+  useDeleteShipmentContainer,
+  useAddShipmentCosting,
+  useDeleteShipmentCosting,
+} from "@/hooks/useShipments";
 
-// Map PartyType to CustomerCategory for filtering customers
-const partyTypeToCategory: Record<PartyType, CustomerCategory | null> = {
+// Map PartyType to category code for finding category ID
+const partyTypeToCategoryCode: Record<PartyType, string> = {
+  // Primary Party Types
   Shipper: 'Shipper',
   Consignee: 'Consignee',
-  BookingParty: 'BookingParty',
-  Agents: 'Agents',
-  Forwarder: 'Forwarder',
+  Buyer: 'Buyer',
+  Supplier: 'Supplier',
   Customer: 'Customer',
+  BookingParty: 'BookingParty',
+  NotifyParty: 'NotifyParty',
+  // Agents & Forwarders
+  Forwarder: 'Forwarder',
+  CoLoader: 'CoLoader',
+  Transporter: 'Transporter',
+  Courier: 'Courier',
+  ClearingAgent: 'ClearingAgent',
   DeliveryAgent: 'DeliveryAgent',
   OriginAgent: 'OriginAgent',
-  NotifyParty: 'NotifyParty',
-  ShippingLine: null, // No matching customer category
-  AirLine: null, // No matching customer category
+  OverseasAgents: 'OverseasAgents',
+  // Carriers
+  ShippingLine: 'ShippingLine',
+  AirLine: 'AirLine',
+  // Facilities
+  Warehouse: 'Warehouse',
+  CFS: 'CFS',
+  Terminal: 'Terminal',
+  // Government & Financial
+  Customs: 'Customs',
+  Bank: 'Bank',
+  // Neutral Types
+  Neutral: 'Neutral',
+  ShipperNeutral: 'ShipperNeutral',
+  ConsigneeNeutral: 'ConsigneeNeutral',
+  BuyerNeutral: 'BuyerNeutral',
+  SupplierNeutral: 'SupplierNeutral',
+  NotifyPartyNeutral: 'NotifyPartyNeutral',
+  CustomerNeutral: 'CustomerNeutral',
 };
 
 // Display labels for party types
 const partyTypeLabels: Record<PartyType, string> = {
+  // Primary Party Types
   Shipper: 'Shipper',
   Consignee: 'Consignee',
-  BookingParty: 'Booking Party',
-  Agents: 'Agents',
-  Forwarder: 'Forwarder',
+  Buyer: 'Buyer',
+  Supplier: 'Supplier',
   Customer: 'Customer',
+  BookingParty: 'Booking Party',
+  NotifyParty: 'Notify Party',
+  // Agents & Forwarders
+  Forwarder: 'Forwarder',
+  CoLoader: 'Co-loader',
+  Transporter: 'Transporter',
+  Courier: 'Courier',
+  ClearingAgent: 'Clearing Agent',
   DeliveryAgent: 'Delivery Agent',
   OriginAgent: 'Origin Agent',
-  NotifyParty: 'Notify Party',
+  OverseasAgents: 'Overseas Agents',
+  // Carriers
   ShippingLine: 'Shipping Line',
   AirLine: 'Air Line',
+  // Facilities
+  Warehouse: 'Warehouse',
+  CFS: 'CFS',
+  Terminal: 'Terminal',
+  // Government & Financial
+  Customs: 'Customs',
+  Bank: 'Bank',
+  // Neutral Types
+  Neutral: 'Neutral',
+  ShipperNeutral: 'Shipper (Neutral)',
+  ConsigneeNeutral: 'Consignee (Neutral)',
+  BuyerNeutral: 'Buyer (Neutral)',
+  SupplierNeutral: 'Supplier (Neutral)',
+  NotifyPartyNeutral: 'Notify Party (Neutral)',
+  CustomerNeutral: 'Customer (Neutral)',
 };
 
-// All available party types
+// All available party types (grouped logically)
 const partyTypes: PartyType[] = [
+  // Primary Party Types
   'Shipper',
   'Consignee',
+  'Buyer',
+  'Supplier',
+  'Customer',
   'BookingParty',
-  'Agents',
+  'NotifyParty',
+  // Agents & Forwarders
   'Forwarder',
-  'ShippingLine',
-  'AirLine',
+  'CoLoader',
+  'Transporter',
+  'Courier',
+  'ClearingAgent',
   'DeliveryAgent',
   'OriginAgent',
-  'NotifyParty',
-  'Customer',
+  'OverseasAgents',
+  // Carriers
+  'ShippingLine',
+  'AirLine',
+  // Facilities
+  'Warehouse',
+  'CFS',
+  'Terminal',
+  // Government & Financial
+  'Customs',
+  'Bank',
+  // Neutral Types
+  'Neutral',
+  'ShipperNeutral',
+  'ConsigneeNeutral',
+  'BuyerNeutral',
+  'SupplierNeutral',
+  'NotifyPartyNeutral',
+  'CustomerNeutral',
 ];
 
 // Local party type for storing before API submission
@@ -90,44 +191,126 @@ interface LocalParty {
   email?: string;
 }
 
-const generateJobNumber = () => {
-  const now = new Date();
-  const year = now.getFullYear().toString().slice(-2);
-  const month = (now.getMonth() + 1).toString().padStart(2, '0');
-  const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-  return `${year}JAE${random}`;
+// Helper to map frontend values to backend enums
+const mapDirection = (dir: string): ShipmentDirection => {
+  const map: Record<string, ShipmentDirection> = {
+    'Import': 'Import',
+    'Export': 'Export',
+    'Cross-Trade': 'CrossTrade',
+  };
+  return map[dir] || 'Import';
+};
+
+const mapMode = (mode: string): ShipmentMode => {
+  const map: Record<string, ShipmentMode> = {
+    'Sea Freight FCL': 'SeaFreightFCL',
+    'Sea Freight LCL': 'SeaFreightLCL',
+    'Air Freight': 'AirFreight',
+    'Break-Bulk': 'BreakBulk',
+    'RO-RO': 'RoRo',
+  };
+  return map[mode] || 'AirFreight';
+};
+
+const mapBLStatus = (status: string): BLStatus => {
+  const map: Record<string, BLStatus> = {
+    'HBL': 'HBL',
+    'MBL': 'MBL',
+    'HAWB': 'HAWB',
+    'MAWB': 'MAWB',
+    'EXPRESS': 'Express',
+    'Express': 'Express',
+  };
+  return map[status] || 'HBL';
+};
+
+const mapBLServiceType = (type: string): BLServiceType => {
+  const map: Record<string, BLServiceType> = {
+    'FCL/FCL': 'FCLFCL',
+    'LCL/LCL': 'LCLLCL',
+  };
+  return map[type] || 'LCLLCL';
+};
+
+const mapFreightType = (type: string): FreightType => {
+  const map: Record<string, FreightType> = {
+    'Prepaid': 'Prepaid',
+    'Collect': 'Collect',
+  };
+  return map[type] || 'Collect';
+};
+
+const mapIncoterms = (code: string): Incoterms | undefined => {
+  if (!code) return undefined;
+  const validCodes: Incoterms[] = ['EXW', 'FCA', 'FAS', 'FOB', 'CFR', 'CIF', 'CPT', 'CIP', 'DAP', 'DPU', 'DDP'];
+  return validCodes.includes(code as Incoterms) ? (code as Incoterms) : undefined;
 };
 
 const AddShipment = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("shipment-info");
+
+  // Track if shipment has been saved (null = new shipment, number = saved shipment ID)
+  const [savedShipmentId, setSavedShipmentId] = useState<number | null>(null);
+  const [savedJobNumber, setSavedJobNumber] = useState<string>("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  // API hooks for mutations
+  const createShipmentMutation = useCreateShipment();
+  const updateShipmentMutation = useUpdateShipment();
+  const addPartyMutation = useAddShipmentParty();
+  const deletePartyMutation = useDeleteShipmentParty();
+  const addContainerMutation = useAddShipmentContainer();
+  const deleteContainerMutation = useDeleteShipmentContainer();
+  const addCostingMutation = useAddShipmentCosting();
+  const deleteCostingMutation = useDeleteShipmentCosting();
+
+  // Fetch shipment data when we have a saved ID (to get the job number and refresh data)
+  const { data: savedShipmentData, refetch: refetchShipment } = useShipment(savedShipmentId || 0);
+
+  // Fetch next job number for new shipments
+  const { data: nextJobNumberData } = useQuery({
+    queryKey: ['nextJobNumber'],
+    queryFn: async () => {
+      const response = await shipmentApi.getNextJobNumber();
+      if (response.error) throw new Error(response.error);
+      return response.data?.jobNumber;
+    },
+    enabled: !savedShipmentId, // Only fetch when creating a new shipment
+  });
+
   const [formData, setFormData] = useState({
-    jobNumber: generateJobNumber(),
+    jobNumber: "", // Will be generated by backend
     jobDate: new Date().toISOString().split('T')[0],
     jobStatus: "Opened",
     direction: "Cross-Trade",
     mode: "Air Freight",
+    transportModeId: undefined as number | undefined,
     incoterms: "",
     houseBLNo: "",
     houseBLDate: new Date().toISOString().split('T')[0],
     houseBLStatus: "HBL",
     hblServiceType: "LCL/LCL",
-    hblNoBLIssued: "",
+    hblNoBLIssued: "0",
     hblFreight: "Collect",
     mblNumber: "",
     mblDate: new Date().toISOString().split('T')[0],
     mblStatus: "HBL",
     mblServiceType: "LCL/LCL",
-    mblNoBLIssued: "",
+    mblNoBLIssued: "0",
     mblFreight: "Collect",
     placeOfBLIssue: "",
     carrier: "",
-    freeTime: "",
-    networkPartner: "FNC",
+    freeTime: "0",
+    networkPartner: "",
     placeOfReceipt: "",
+    portOfReceiptId: undefined as number | undefined,
     portOfReceipt: "",
+    portOfLoadingId: undefined as number | undefined,
     portOfLoading: "",
+    portOfDischargeId: undefined as number | undefined,
     portOfDischarge: "",
+    portOfFinalDestinationId: undefined as number | undefined,
     portOfFinalDestination: "",
     placeOfDelivery: "",
     vessel: "",
@@ -152,13 +335,84 @@ const AddShipment = () => {
   const [documents, setDocuments] = useState<any[]>([]);
   const [shipmentStatus, setShipmentStatus] = useState({ date: new Date().toISOString().split('T')[0], remarks: "" });
 
-  // Get the customer category for the selected party type
-  const selectedCategory = partyTypeToCategory[selectedPartyType];
+  // Fetch customer category types
+  const { data: categoryTypesResponse } = useQuery({
+    queryKey: ['customerCategoryTypes', 'all'],
+    queryFn: () => settingsApi.getAllCustomerCategoryTypes(),
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+  const categoryTypes = useMemo(() => categoryTypesResponse?.data ?? [], [categoryTypesResponse?.data]);
 
-  // Fetch customers filtered by the selected category
+  // Fetch INCO terms
+  const { data: incoTermsResponse } = useQuery({
+    queryKey: ['incoTerms', 'all'],
+    queryFn: () => settingsApi.getAllIncoTerms(),
+    staleTime: 60 * 60 * 1000, // Cache for 1 hour (INCO terms rarely change)
+  });
+  const incoTerms = useMemo(() => incoTermsResponse?.data ?? [], [incoTermsResponse?.data]);
+
+  // Fetch Network Partners
+  const { data: networkPartnersResponse } = useQuery({
+    queryKey: ['networkPartners', 'all'],
+    queryFn: () => settingsApi.getAllNetworkPartners(),
+    staleTime: 60 * 60 * 1000, // Cache for 1 hour
+  });
+  const networkPartners = useMemo(() => networkPartnersResponse?.data ?? [], [networkPartnersResponse?.data]);
+
+  // Fetch Transport Modes
+  const { data: transportModesResponse } = useQuery({
+    queryKey: ['transportModes', 'all'],
+    queryFn: () => settingsApi.getAllTransportModes(),
+    staleTime: 60 * 60 * 1000, // Cache for 1 hour
+  });
+  const transportModes = useMemo(() => transportModesResponse?.data ?? [], [transportModesResponse?.data]);
+
+  // Fetch BL Types
+  const { data: blTypesResponse } = useQuery({
+    queryKey: ['blTypes', 'all'],
+    queryFn: () => settingsApi.getAllBLTypes(),
+    staleTime: 60 * 60 * 1000, // Cache for 1 hour
+  });
+  const blTypes = useMemo(() => blTypesResponse?.data ?? [], [blTypesResponse?.data]);
+
+  // Fetch shipment invoices when we have a saved shipment ID
+  const { data: shipmentInvoicesResponse } = useQuery({
+    queryKey: ['shipmentInvoices', savedShipmentId],
+    queryFn: () => shipmentApi.getInvoices(savedShipmentId!),
+    enabled: !!savedShipmentId,
+    staleTime: 30 * 1000, // Cache for 30 seconds
+  });
+  const shipmentInvoices = useMemo(() => shipmentInvoicesResponse?.data, [shipmentInvoicesResponse?.data]);
+
+  // Filter BL types based on selected transport mode
+  const filteredBLTypes = useMemo(() => {
+    const isAirFreight = formData.mode === 'Air Freight';
+    return blTypes.filter(bt =>
+      bt.category === 'Common' ||
+      (isAirFreight ? bt.category === 'Air' : bt.category === 'Sea')
+    );
+  }, [blTypes, formData.mode]);
+
+  // Fetch Ports
+  const { data: portsResponse } = useQuery({
+    queryKey: ['ports', 'all'],
+    queryFn: () => settingsApi.getAllPorts(),
+    staleTime: 60 * 60 * 1000, // Cache for 1 hour
+  });
+  const ports = useMemo(() => portsResponse?.data ?? [], [portsResponse?.data]);
+
+  // Get the category ID for the selected party type
+  const selectedCategoryId = useMemo(() => {
+    const categoryCode = partyTypeToCategoryCode[selectedPartyType];
+    if (!categoryCode) return undefined;
+    const category = categoryTypes.find(c => c.code === categoryCode || c.name === categoryCode);
+    return category?.id;
+  }, [selectedPartyType, categoryTypes]);
+
+  // Fetch customers filtered by the selected category ID
   const { data: customersData, isLoading: isLoadingCustomers } = useCustomers({
     pageSize: 100,
-    category: selectedCategory || undefined,
+    categoryId: selectedCategoryId,
   });
 
   // Get the list of customers
@@ -175,6 +429,69 @@ const AddShipment = () => {
     setSelectedCustomerId("");
   }, [selectedPartyType]);
 
+  // Update job number and sync data when shipment is saved and loaded
+  useEffect(() => {
+    if (savedShipmentData) {
+      setSavedJobNumber(savedShipmentData.jobNumber);
+      setFormData(prev => ({ ...prev, jobNumber: savedShipmentData.jobNumber }));
+      // Sync parties from saved data
+      if (savedShipmentData.parties) {
+        setParties(savedShipmentData.parties.map(p => ({
+          id: p.id,
+          masterType: p.masterType,
+          partyType: p.partyType,
+          customerId: p.customerId,
+          customerName: p.customerName,
+          mobile: p.mobile,
+          phone: p.phone,
+          email: p.email,
+        })));
+      }
+      // Sync containers from saved data
+      if (savedShipmentData.containers) {
+        setContainers(savedShipmentData.containers.map(c => ({
+          id: c.id,
+          container: c.containerNumber,
+          type: c.containerType,
+          sealNo: c.sealNo,
+          noOfPcs: c.noOfPcs,
+          packageType: c.packageType,
+          grossWeight: c.grossWeight,
+          volume: c.volume,
+        })));
+      }
+      // Sync costings from saved data
+      if (savedShipmentData.costings) {
+        setCosting(savedShipmentData.costings.map(c => ({
+          id: c.id,
+          description: c.description,
+          chargeDescription: c.description, // Same as description for display
+          remarks: c.remarks || "",
+          saleQty: c.saleQty,
+          saleUnit: c.saleUnit,
+          saleCurrency: c.saleCurrency,
+          saleExRate: c.saleExRate,
+          saleFCY: c.saleFCY,
+          saleLCY: c.saleLCY,
+          costQty: c.costQty,
+          costUnit: c.costUnit,
+          costCurrency: c.costCurrency,
+          costExRate: c.costExRate,
+          costFCY: c.costFCY,
+          costLCY: c.costLCY,
+          unit: c.unit,
+          gp: c.gp,
+          billToCustomerId: c.billToCustomerId,
+          billToName: c.billToName,
+          vendorCustomerId: c.vendorCustomerId,
+          vendorName: c.vendorName,
+          saleInvoiced: c.saleInvoiced || false,
+          purchaseInvoiced: c.purchaseInvoiced || false,
+        })));
+      }
+    }
+  }, [savedShipmentData]);
+
   // Modal states
   const [containerModalOpen, setContainerModalOpen] = useState(false);
   const [costingModalOpen, setCostingModalOpen] = useState(false);
@@ -182,18 +499,30 @@ const AddShipment = () => {
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
   const [editingContainer, setEditingContainer] = useState<any>(null);
+  const [editingCosting, setEditingCosting] = useState<any>(null);
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleAddParty = () => {
+  const handleAddParty = async () => {
     if (!selectedCustomer) {
       toast.error("Please select a customer");
       return;
     }
-    const newParty: LocalParty = {
-      id: Date.now(),
+    if (!savedShipmentId) {
+      toast.error("Please save the shipment first");
+      return;
+    }
+    // Check if customer is already added
+    const existingParty = parties.find(p => p.customerId === selectedCustomer.id);
+    if (existingParty) {
+      toast.error(`${selectedCustomer.name} is already added as ${partyTypeLabels[existingParty.partyType]}`);
+      return;
+    }
+
+    const partyData: AddShipmentPartyRequest = {
+      shipmentId: savedShipmentId,
       masterType: selectedCustomer.masterType,
       partyType: selectedPartyType,
       customerId: selectedCustomer.id,
@@ -202,25 +531,58 @@ const AddShipment = () => {
       phone: selectedCustomer.phone || '',
       email: selectedCustomer.email || '',
     };
-    setParties(prev => [...prev, newParty]);
-    setSelectedCustomerId("");
-    toast.success("Party added successfully");
+
+    try {
+      await addPartyMutation.mutateAsync({ shipmentId: savedShipmentId, data: partyData });
+      setSelectedCustomerId("");
+      refetchShipment();
+    } catch (error) {
+      // Error is handled by mutation
+    }
   };
 
-  const handleDeleteParty = (partyId: number) => {
-    setParties(prev => prev.filter(p => p.id !== partyId));
-    toast.success("Party deleted");
+  const handleDeleteParty = async (partyId: number) => {
+    if (!savedShipmentId) return;
+    try {
+      await deletePartyMutation.mutateAsync({ partyId, shipmentId: savedShipmentId });
+      refetchShipment();
+    } catch (error) {
+      // Error is handled by mutation
+    }
   };
 
-  const handleSaveContainer = (container: any) => {
+  const handleSaveContainer = async (container: any) => {
+    if (!savedShipmentId) {
+      toast.error("Please save the shipment first");
+      return;
+    }
+
     if (editingContainer) {
+      // For now, we just update locally since there's no update endpoint
+      // TODO: Add update container API endpoint
       setContainers(prev => prev.map(c => c.id === container.id ? container : c));
       toast.success("Container updated");
+      setEditingContainer(null);
     } else {
-      setContainers(prev => [...prev, container]);
-      toast.success("Container added");
+      const containerData: AddShipmentContainerRequest = {
+        shipmentId: savedShipmentId,
+        containerNumber: container.container,
+        containerType: container.type,
+        sealNo: container.sealNo,
+        noOfPcs: parseInt(container.noOfPcs) || 0,
+        packageType: container.packageType,
+        grossWeight: parseFloat(container.grossWeight) || 0,
+        volume: parseFloat(container.volume) || 0,
+      };
+
+      try {
+        await addContainerMutation.mutateAsync({ shipmentId: savedShipmentId, data: containerData });
+        refetchShipment();
+        setEditingContainer(null);
+      } catch (error) {
+        // Error is handled by mutation
+      }
     }
-    setEditingContainer(null);
   };
 
   const handleEditContainer = (container: any) => {
@@ -228,19 +590,80 @@ const AddShipment = () => {
     setContainerModalOpen(true);
   };
 
-  const handleDeleteContainer = (containerId: number) => {
-    setContainers(prev => prev.filter(c => c.id !== containerId));
-    toast.success("Container deleted");
+  const handleDeleteContainer = async (containerId: number) => {
+    if (!savedShipmentId) return;
+    try {
+      await deleteContainerMutation.mutateAsync({ containerId, shipmentId: savedShipmentId });
+      refetchShipment();
+    } catch (error) {
+      // Error is handled by mutation
+    }
   };
 
-  const handleSaveCosting = (cost: any) => {
-    setCosting(prev => [...prev, cost]);
-    toast.success("Costing added");
+  const handleSaveCosting = async (cost: any) => {
+    if (!savedShipmentId) {
+      toast.error("Please save the shipment first");
+      return;
+    }
+
+    if (editingCosting) {
+      // For now, we just update locally since there's no update endpoint
+      // TODO: Add update costing API endpoint
+      setCosting(prev => prev.map(c => c.id === cost.id ? cost : c));
+      toast.success("Costing updated");
+      setEditingCosting(null);
+    } else {
+      const costingData: AddShipmentCostingRequest = {
+        shipmentId: savedShipmentId,
+        description: cost.description,
+        remarks: cost.remarks || undefined,
+        saleQty: parseFloat(cost.saleQty) || 0,
+        saleUnit: parseFloat(cost.saleUnit) || 0,
+        saleCurrency: (cost.saleCurrency as Currency) || 'AED',
+        saleExRate: parseFloat(cost.saleExRate) || 1,
+        saleFCY: parseFloat(cost.saleFCY) || 0,
+        saleLCY: parseFloat(cost.saleLCY) || 0,
+        saleTaxPercentage: 0,
+        saleTaxAmount: 0,
+        costQty: parseFloat(cost.costQty) || 0,
+        costUnit: parseFloat(cost.costUnit) || 0,
+        costCurrency: (cost.costCurrency as Currency) || 'AED',
+        costExRate: parseFloat(cost.costExRate) || 1,
+        costFCY: parseFloat(cost.costFCY) || 0,
+        costLCY: parseFloat(cost.costLCY) || 0,
+        costTaxPercentage: 0,
+        costTaxAmount: 0,
+        unit: cost.unit,
+        gp: parseFloat(cost.gp) || 0,
+        billToCustomerId: cost.billToCustomerId || undefined,
+        billToName: cost.billToName || undefined,
+        vendorCustomerId: cost.vendorCustomerId || undefined,
+        vendorName: cost.vendorName || undefined,
+      };
+
+      try {
+        await addCostingMutation.mutateAsync({ shipmentId: savedShipmentId, data: costingData });
+        refetchShipment();
+        setEditingCosting(null);
+      } catch (error) {
+        // Error is handled by mutation
+      }
+    }
   };
 
-  const handleDeleteCosting = (costId: number) => {
-    setCosting(prev => prev.filter(c => c.id !== costId));
-    toast.success("Costing deleted");
+  const handleEditCosting = (cost: any) => {
+    setEditingCosting(cost);
+    setCostingModalOpen(true);
+  };
+
+  const handleDeleteCosting = async (costId: number) => {
+    if (!savedShipmentId) return;
+    try {
+      await deleteCostingMutation.mutateAsync({ costingId: costId, shipmentId: savedShipmentId });
+      refetchShipment();
+    } catch (error) {
+      // Error is handled by mutation
+    }
   };
 
   const handleSaveDocument = (doc: any) => {
@@ -253,9 +676,76 @@ const AddShipment = () => {
     toast.success("Document deleted");
   };
 
-  const handleSaveAndContinue = () => {
-    toast.success("Shipment saved successfully");
-    // Continue to next tab or stay
+  const handleSaveAndContinue = async () => {
+    setIsSaving(true);
+    try {
+      const shipmentData = {
+        direction: mapDirection(formData.direction),
+        mode: mapMode(formData.mode),
+        transportModeId: formData.transportModeId,
+        incoterms: mapIncoterms(formData.incoterms),
+        houseBLNo: formData.houseBLNo || undefined,
+        houseBLDate: formData.houseBLDate || undefined,
+        houseBLStatus: formData.houseBLStatus ? mapBLStatus(formData.houseBLStatus) : undefined,
+        hblServiceType: formData.hblServiceType ? mapBLServiceType(formData.hblServiceType) : undefined,
+        hblNoBLIssued: formData.hblNoBLIssued || undefined,
+        hblFreight: formData.hblFreight ? mapFreightType(formData.hblFreight) : undefined,
+        mblNumber: formData.mblNumber || undefined,
+        mblDate: formData.mblDate || undefined,
+        mblStatus: formData.mblStatus ? mapBLStatus(formData.mblStatus) : undefined,
+        mblServiceType: formData.mblServiceType ? mapBLServiceType(formData.mblServiceType) : undefined,
+        mblNoBLIssued: formData.mblNoBLIssued || undefined,
+        mblFreight: formData.mblFreight ? mapFreightType(formData.mblFreight) : undefined,
+        placeOfBLIssue: formData.placeOfBLIssue || undefined,
+        carrier: formData.carrier || undefined,
+        freeTime: formData.freeTime || undefined,
+        networkPartner: formData.networkPartner || undefined,
+        portOfLoadingId: formData.portOfLoadingId,
+        portOfDischargeId: formData.portOfDischargeId,
+        portOfReceiptId: formData.portOfReceiptId,
+        portOfFinalDestinationId: formData.portOfFinalDestinationId,
+        placeOfReceipt: formData.placeOfReceipt || undefined,
+        portOfReceipt: formData.portOfReceipt || undefined,
+        portOfLoading: formData.portOfLoading || undefined,
+        portOfDischarge: formData.portOfDischarge || undefined,
+        portOfFinalDestination: formData.portOfFinalDestination || undefined,
+        placeOfDelivery: formData.placeOfDelivery || undefined,
+        vessel: formData.vessel || undefined,
+        voyage: formData.voyage || undefined,
+        etd: formData.etd || undefined,
+        eta: formData.eta || undefined,
+        secondLegVessel: formData.secondLegVessel,
+        secondLegVesselName: formData.secondLegVesselName || undefined,
+        secondLegVoyage: formData.secondLegVoyage || undefined,
+        secondLegETD: formData.secondLegETD || undefined,
+        secondLegETA: formData.secondLegETA || undefined,
+        marksNumbers: formData.marksNumbers || undefined,
+        notes: formData.notes || undefined,
+        internalNotes: formData.internalNotes || undefined,
+      };
+
+      if (savedShipmentId) {
+        // Update existing shipment
+        await updateShipmentMutation.mutateAsync({
+          id: savedShipmentId,
+          data: {
+            id: savedShipmentId,
+            ...shipmentData,
+          },
+        });
+      } else {
+        // Create new shipment
+        const newShipmentId = await createShipmentMutation.mutateAsync(shipmentData);
+        setSavedShipmentId(newShipmentId);
+      }
+
+      // Move to the next tab after successful save
+      setActiveTab("parties");
+    } catch (error) {
+      // Error is handled by mutation
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const totalContainerQty = containers.reduce((sum, c) => sum + (c.noOfPcs || 0), 0);
@@ -280,366 +770,559 @@ const AddShipment = () => {
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs value={activeTab} onValueChange={(value) => {
+          // Only allow switching to other tabs if shipment is saved
+          if (value !== "shipment-info" && !savedShipmentId) {
+            toast.error("Please save the shipment first before proceeding to other tabs");
+            return;
+          }
+          setActiveTab(value);
+        }} className="w-full">
           <TabsList className="w-full justify-start mb-4 bg-card border border-border rounded-lg p-1 h-auto flex-wrap">
             <TabsTrigger value="shipment-info" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5">
               Shipment Info
             </TabsTrigger>
-            <TabsTrigger value="parties" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5">
+            <TabsTrigger
+              value="parties"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!savedShipmentId}
+            >
               Parties
             </TabsTrigger>
-            <TabsTrigger value="containers" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5">
+            <TabsTrigger
+              value="containers"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!savedShipmentId}
+            >
               Containers
             </TabsTrigger>
-            <TabsTrigger value="costing" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5">
+            <TabsTrigger
+              value="costing"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!savedShipmentId}
+            >
               Costing
             </TabsTrigger>
-            <TabsTrigger value="cargo-details" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5">
+            <TabsTrigger
+              value="cargo-details"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!savedShipmentId}
+            >
               Cargo Details
             </TabsTrigger>
-            <TabsTrigger value="documents" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5">
+            <TabsTrigger
+              value="documents"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!savedShipmentId}
+            >
               Documents
             </TabsTrigger>
-            <TabsTrigger value="shipment-status" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5">
+            <TabsTrigger
+              value="shipment-status"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!savedShipmentId}
+            >
               Shipment Status
             </TabsTrigger>
           </TabsList>
 
           {/* Shipment Info Tab */}
           <TabsContent value="shipment-info" className="mt-0">
-            <div className="bg-card border border-border rounded-lg p-6 space-y-6">
-              <h3 className="text-emerald-600 font-semibold text-lg">Shipment Info</h3>
-              
-              {/* Row 1 */}
-              <div className="grid grid-cols-6 gap-4">
-                <div>
-                  <Label className="text-sm">Job Number</Label>
-                  <Input value={formData.jobNumber} className="bg-muted" readOnly />
-                </div>
-                <div>
-                  <Label className="text-sm">Date</Label>
-                  <DateInput value={formData.jobDate} onChange={(v) => handleInputChange("jobDate", v)} />
-                </div>
-                <div>
-                  <Label className="text-sm">Job Status</Label>
-                  <Select value={formData.jobStatus} onValueChange={(v) => handleInputChange("jobStatus", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="Opened">Opened</SelectItem>
-                      <SelectItem value="Closed">Closed</SelectItem>
-                      <SelectItem value="Cancelled">Cancelled</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-sm">Direction</Label>
-                  <Select value={formData.direction} onValueChange={(v) => handleInputChange("direction", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="Import">Import</SelectItem>
-                      <SelectItem value="Export">Export</SelectItem>
-                      <SelectItem value="Cross-Trade">Cross-Trade</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-sm">Mode</Label>
-                  <Select value={formData.mode} onValueChange={(v) => handleInputChange("mode", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="Sea Freight FCL">Sea Freight FCL</SelectItem>
-                      <SelectItem value="Sea Freight LCL">Sea Freight LCL</SelectItem>
-                      <SelectItem value="Air Freight">Air Freight</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-sm">INCO Terms</Label>
-                  <Select value={formData.incoterms} onValueChange={(v) => handleInputChange("incoterms", v)}>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="CFR">CFR</SelectItem>
-                      <SelectItem value="CIF">CIF</SelectItem>
-                      <SelectItem value="FOB">FOB</SelectItem>
-                      <SelectItem value="EXW">EXW</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Row 2 - House B/L */}
-              <div className="grid grid-cols-6 gap-4">
-                <div>
-                  <Label className="text-sm">House B/L No</Label>
-                  <Input value={formData.houseBLNo} onChange={(e) => handleInputChange("houseBLNo", e.target.value)} placeholder="B/L No" />
-                </div>
-                <div>
-                  <Label className="text-sm">Date</Label>
-                  <DateInput value={formData.houseBLDate} onChange={(v) => handleInputChange("houseBLDate", v)} />
-                </div>
-                <div>
-                  <Label className="text-sm">BL Status</Label>
-                  <Select value={formData.houseBLStatus} onValueChange={(v) => handleInputChange("houseBLStatus", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="HBL">HBL</SelectItem>
-                      <SelectItem value="Express">Express</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-sm">BL Service Type</Label>
-                  <Select value={formData.hblServiceType} onValueChange={(v) => handleInputChange("hblServiceType", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="LCL/LCL">LCL/LCL</SelectItem>
-                      <SelectItem value="FCL/FCL">FCL/FCL</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-sm">No BL Issued</Label>
-                  <Input value={formData.hblNoBLIssued} onChange={(e) => handleInputChange("hblNoBLIssued", e.target.value)} placeholder="No BL Issued" />
-                </div>
-                <div>
-                  <Label className="text-sm">Freight</Label>
-                  <Select value={formData.hblFreight} onValueChange={(v) => handleInputChange("hblFreight", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="Prepaid">Prepaid</SelectItem>
-                      <SelectItem value="Collect">Collect</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Row 3 - MBL */}
-              <div className="grid grid-cols-6 gap-4">
-                <div>
-                  <Label className="text-sm">MBL Number</Label>
-                  <Input value={formData.mblNumber} onChange={(e) => handleInputChange("mblNumber", e.target.value)} placeholder="MBL Number" />
-                </div>
-                <div>
-                  <Label className="text-sm">Date</Label>
-                  <DateInput value={formData.mblDate} onChange={(v) => handleInputChange("mblDate", v)} />
-                </div>
-                <div>
-                  <Label className="text-sm">BL Status</Label>
-                  <Select value={formData.mblStatus} onValueChange={(v) => handleInputChange("mblStatus", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="MBL">MBL</SelectItem>
-                      <SelectItem value="HBL">HBL</SelectItem>
-                      <SelectItem value="Express">Express</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-sm">BL Service Type</Label>
-                  <Select value={formData.mblServiceType} onValueChange={(v) => handleInputChange("mblServiceType", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="FCL/FCL">FCL/FCL</SelectItem>
-                      <SelectItem value="LCL/LCL">LCL/LCL</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-sm">No BL Issued</Label>
-                  <Input value={formData.mblNoBLIssued} onChange={(e) => handleInputChange("mblNoBLIssued", e.target.value)} placeholder="No BL Issued" />
-                </div>
-                <div>
-                  <Label className="text-sm">Freight</Label>
-                  <Select value={formData.mblFreight} onValueChange={(v) => handleInputChange("mblFreight", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="Prepaid">Prepaid</SelectItem>
-                      <SelectItem value="Collect">Collect</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Row 4 */}
-              <div className="grid grid-cols-4 gap-4">
-                <div>
-                  <Label className="text-sm">Place of BL Issue</Label>
-                  <Input value={formData.placeOfBLIssue} onChange={(e) => handleInputChange("placeOfBLIssue", e.target.value)} placeholder="No BL Issued" />
-                </div>
-                <div>
-                  <Label className="text-sm">Carrier</Label>
-                  <Input value={formData.carrier} onChange={(e) => handleInputChange("carrier", e.target.value)} />
-                </div>
-                <div>
-                  <Label className="text-sm">Free Time</Label>
-                  <Input value={formData.freeTime} onChange={(e) => handleInputChange("freeTime", e.target.value)} placeholder="Free Time" />
-                </div>
-                <div>
-                  <Label className="text-sm">Network Partner</Label>
-                  <Select value={formData.networkPartner} onValueChange={(v) => handleInputChange("networkPartner", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="SELF">SELF</SelectItem>
-                      <SelectItem value="FNC">FNC</SelectItem>
-                      <SelectItem value="Partner 1">Partner 1</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Row 5 - Ports */}
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label className="text-sm">Place of Receipt</Label>
-                  <Select value={formData.placeOfReceipt} onValueChange={(v) => handleInputChange("placeOfReceipt", v)}>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="Colombo">Colombo</SelectItem>
-                      <SelectItem value="Singapore">Singapore</SelectItem>
-                      <SelectItem value="Dubai">Dubai</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-sm">Port of Receipt</Label>
-                  <Select value={formData.portOfReceipt} onValueChange={(v) => handleInputChange("portOfReceipt", v)}>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="Colombo">Colombo</SelectItem>
-                      <SelectItem value="Singapore">Singapore</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-sm">Port of Loading</Label>
-                  <Select value={formData.portOfLoading} onValueChange={(v) => handleInputChange("portOfLoading", v)}>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="Colombo">Colombo</SelectItem>
-                      <SelectItem value="Singapore">Singapore</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label className="text-sm">Port of Discharge</Label>
-                  <Select value={formData.portOfDischarge} onValueChange={(v) => handleInputChange("portOfDischarge", v)}>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="Jebel Ali">Jebel Ali</SelectItem>
-                      <SelectItem value="Dubai">Dubai</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-sm">Port of Final Destination</Label>
-                  <Select value={formData.portOfFinalDestination} onValueChange={(v) => handleInputChange("portOfFinalDestination", v)}>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="Jebel Ali">Jebel Ali</SelectItem>
-                      <SelectItem value="Dubai">Dubai</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-sm">Place of Delivery</Label>
-                  <Select value={formData.placeOfDelivery} onValueChange={(v) => handleInputChange("placeOfDelivery", v)}>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="Jebel Ali">Jebel Ali</SelectItem>
-                      <SelectItem value="Dubai">Dubai</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Row 6 - Vessel & Dates */}
-              <div className="grid grid-cols-5 gap-4">
-                <div>
-                  <Label className="text-sm">Vessel</Label>
-                  <Input value={formData.vessel} onChange={(e) => handleInputChange("vessel", e.target.value)} placeholder="OCL France" />
-                </div>
-                <div>
-                  <Label className="text-sm">Voyage</Label>
-                  <Input value={formData.voyage} onChange={(e) => handleInputChange("voyage", e.target.value)} placeholder="78465F1" />
-                </div>
-                <div>
-                  <Label className="text-sm">ETD</Label>
-                  <DateInput value={formData.etd} onChange={(v) => handleInputChange("etd", v)} />
-                </div>
-                <div>
-                  <Label className="text-sm">ETA</Label>
-                  <DateInput value={formData.eta} onChange={(v) => handleInputChange("eta", v)} />
-                </div>
-                <div className="flex items-end">
-                  <div className="flex items-center gap-2">
-                    <Checkbox 
-                      id="2ndLeg" 
-                      checked={formData.secondLegVessel}
-                      onCheckedChange={(checked) => handleInputChange("secondLegVessel", checked as boolean)}
-                    />
-                    <Label htmlFor="2ndLeg" className="text-sm">2nd Leg Vessel</Label>
-                  </div>
-                </div>
-              </div>
-
-              {/* 2nd Leg Vessel Row - Conditional */}
-              {formData.secondLegVessel && (
-                <div className="grid grid-cols-4 gap-4">
+            <div className="space-y-6">
+              {/* Section 1: Basic Shipment Details */}
+              <div className="bg-card border border-border rounded-lg p-6 space-y-4">
+                <h3 className="text-emerald-600 font-semibold text-lg border-b border-border pb-2">Basic Shipment Details</h3>
+                <div className="grid grid-cols-6 gap-4">
                   <div>
-                    <Label className="text-sm">2nd Leg Vessel</Label>
-                    <Input 
-                      value={formData.secondLegVesselName} 
-                      onChange={(e) => handleInputChange("secondLegVesselName", e.target.value)} 
-                      placeholder="OCL France" 
+                    <Label className="text-sm">Job Number</Label>
+                    <Input
+                      value={savedShipmentId ? savedJobNumber : (nextJobNumberData || "Loading...")}
+                      className="bg-muted"
+                      readOnly
                     />
                   </div>
                   <div>
-                    <Label className="text-sm">2nd Leg Voyage</Label>
-                    <Input 
-                      value={formData.secondLegVoyage} 
-                      onChange={(e) => handleInputChange("secondLegVoyage", e.target.value)} 
-                      placeholder="78465F1" 
-                    />
+                    <Label className="text-sm">Date</Label>
+                    <DateInput value={formData.jobDate} onChange={(v) => handleInputChange("jobDate", v)} />
                   </div>
                   <div>
-                    <Label className="text-sm">2nd Leg ETD</Label>
-                    <DateInput 
-                      value={formData.secondLegETD} 
-                      onChange={(v) => handleInputChange("secondLegETD", v)} 
-                    />
+                    <Label className="text-sm">Job Status</Label>
+                    <Select value={formData.jobStatus} onValueChange={(v) => handleInputChange("jobStatus", v)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-popover border border-border">
+                        <SelectItem value="Opened">Opened</SelectItem>
+                        <SelectItem value="Closed">Closed</SelectItem>
+                        <SelectItem value="Cancelled">Cancelled</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
-                    <Label className="text-sm">2nd Leg ETA</Label>
-                    <DateInput 
-                      value={formData.secondLegETA} 
-                      onChange={(v) => handleInputChange("secondLegETA", v)} 
-                    />
+                    <Label className="text-sm">Direction</Label>
+                    <Select value={formData.direction} onValueChange={(v) => handleInputChange("direction", v)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-popover border border-border">
+                        <SelectItem value="Import">Import</SelectItem>
+                        <SelectItem value="Export">Export</SelectItem>
+                        <SelectItem value="Cross-Trade">Cross-Trade</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                </div>
-              )}
-
-              {/* Row 7 - Notes */}
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label className="text-sm">Marks & Numbers</Label>
-                  <Textarea value={formData.marksNumbers} onChange={(e) => handleInputChange("marksNumbers", e.target.value)} placeholder="Marks & Numbers" />
-                </div>
-                <div>
-                  <Label className="text-sm">Notes</Label>
-                  <Textarea value={formData.notes} onChange={(e) => handleInputChange("notes", e.target.value)} placeholder="Notes" />
-                </div>
-                <div>
-                  <Label className="text-sm">Internal Notes</Label>
-                  <Textarea value={formData.internalNotes} onChange={(e) => handleInputChange("internalNotes", e.target.value)} placeholder="Internal Notes" />
+                  <div>
+                    <Label className="text-sm">Mode</Label>
+                    <Select
+                      value={formData.mode}
+                      onValueChange={(v) => {
+                        handleInputChange("mode", v);
+                        // Also update the transportModeId
+                        const selectedMode = transportModes.find(m => m.name === v);
+                        setFormData(prev => ({ ...prev, transportModeId: selectedMode?.id }));
+                      }}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-popover border border-border">
+                        {transportModes.length > 0 ? (
+                          transportModes.map((mode) => (
+                            <SelectItem key={mode.id} value={mode.name}>{mode.name}</SelectItem>
+                          ))
+                        ) : (
+                          <>
+                            <SelectItem value="Air Freight">Air Freight</SelectItem>
+                            <SelectItem value="Sea Freight FCL">Sea Freight FCL</SelectItem>
+                            <SelectItem value="Sea Freight LCL">Sea Freight LCL</SelectItem>
+                            <SelectItem value="Break-Bulk">Break-Bulk</SelectItem>
+                            <SelectItem value="RO-RO">RO-RO</SelectItem>
+                          </>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-sm">INCO Terms</Label>
+                    <Select value={formData.incoterms} onValueChange={(v) => handleInputChange("incoterms", v)}>
+                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent className="bg-popover border border-border">
+                        {incoTerms.length === 0 ? (
+                          <SelectItem value="_loading" disabled>Loading...</SelectItem>
+                        ) : (
+                          incoTerms.map(term => (
+                            <SelectItem key={term.id} value={term.code}>
+                              {term.code} - {term.name}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
 
-              <Button onClick={handleSaveAndContinue} className="bg-emerald-500 hover:bg-emerald-600 text-white">
-                Save and Continue
-              </Button>
+              {/* Section 2: Bill of Lading Details */}
+              <div className="bg-card border border-border rounded-lg p-6 space-y-4">
+                <h3 className="text-emerald-600 font-semibold text-lg border-b border-border pb-2">Bill of Lading Details</h3>
+
+                {/* House B/L */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-muted-foreground">House B/L</h4>
+                  <div className="grid grid-cols-6 gap-4">
+                    <div>
+                      <Label className="text-sm">House B/L No</Label>
+                      <Input value={formData.houseBLNo} onChange={(e) => handleInputChange("houseBLNo", e.target.value)} placeholder="B/L No" />
+                    </div>
+                    <div>
+                      <Label className="text-sm">Date</Label>
+                      <DateInput value={formData.houseBLDate} onChange={(v) => handleInputChange("houseBLDate", v)} />
+                    </div>
+                    <div>
+                      <Label className="text-sm">{formData.mode === 'Air Freight' ? 'AWB Status' : 'BL Status'}</Label>
+                      <Select value={formData.houseBLStatus} onValueChange={(v) => handleInputChange("houseBLStatus", v)}>
+                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent className="bg-popover border border-border">
+                          {filteredBLTypes.length > 0 ? (
+                            filteredBLTypes
+                              .filter(bt => bt.code === 'HBL' || bt.code === 'HAWB' || bt.code === 'EXPRESS')
+                              .map(bt => (
+                                <SelectItem key={bt.id} value={bt.code}>{bt.code} - {bt.name}</SelectItem>
+                              ))
+                          ) : (
+                            <>
+                              <SelectItem value="HBL">HBL - House Bill of Lading</SelectItem>
+                              <SelectItem value="Express">Express Release</SelectItem>
+                            </>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-sm">BL Service Type</Label>
+                      <Select value={formData.hblServiceType} onValueChange={(v) => handleInputChange("hblServiceType", v)}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent className="bg-popover border border-border">
+                          <SelectItem value="LCL/LCL">LCL/LCL</SelectItem>
+                          <SelectItem value="FCL/FCL">FCL/FCL</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-sm">No BL Issued</Label>
+                      <Input value={formData.hblNoBLIssued} onChange={(e) => handleInputChange("hblNoBLIssued", e.target.value)} placeholder="No BL Issued" />
+                    </div>
+                    <div>
+                      <Label className="text-sm">Freight</Label>
+                      <Select value={formData.hblFreight} onValueChange={(v) => handleInputChange("hblFreight", v)}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent className="bg-popover border border-border">
+                          <SelectItem value="Prepaid">Prepaid</SelectItem>
+                          <SelectItem value="Collect">Collect</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* MBL */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-muted-foreground">Master B/L</h4>
+                  <div className="grid grid-cols-6 gap-4">
+                    <div>
+                      <Label className="text-sm">MBL Number</Label>
+                      <Input value={formData.mblNumber} onChange={(e) => handleInputChange("mblNumber", e.target.value)} placeholder="MBL Number" />
+                    </div>
+                    <div>
+                      <Label className="text-sm">Date</Label>
+                      <DateInput value={formData.mblDate} onChange={(v) => handleInputChange("mblDate", v)} />
+                    </div>
+                    <div>
+                      <Label className="text-sm">{formData.mode === 'Air Freight' ? 'AWB Status' : 'BL Status'}</Label>
+                      <Select value={formData.mblStatus} onValueChange={(v) => handleInputChange("mblStatus", v)}>
+                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent className="bg-popover border border-border">
+                          {filteredBLTypes.length > 0 ? (
+                            filteredBLTypes
+                              .filter(bt => bt.code === 'MBL' || bt.code === 'MAWB' || bt.code === 'EXPRESS')
+                              .map(bt => (
+                                <SelectItem key={bt.id} value={bt.code}>{bt.code} - {bt.name}</SelectItem>
+                              ))
+                          ) : (
+                            <>
+                              <SelectItem value="MBL">MBL - Master Bill of Lading</SelectItem>
+                              <SelectItem value="Express">Express Release</SelectItem>
+                            </>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-sm">BL Service Type</Label>
+                      <Select value={formData.mblServiceType} onValueChange={(v) => handleInputChange("mblServiceType", v)}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent className="bg-popover border border-border">
+                          <SelectItem value="FCL/FCL">FCL/FCL</SelectItem>
+                          <SelectItem value="LCL/LCL">LCL/LCL</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-sm">No BL Issued</Label>
+                      <Input value={formData.mblNoBLIssued} onChange={(e) => handleInputChange("mblNoBLIssued", e.target.value)} placeholder="No BL Issued" />
+                    </div>
+                    <div>
+                      <Label className="text-sm">Freight</Label>
+                      <Select value={formData.mblFreight} onValueChange={(v) => handleInputChange("mblFreight", v)}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent className="bg-popover border border-border">
+                          <SelectItem value="Prepaid">Prepaid</SelectItem>
+                          <SelectItem value="Collect">Collect</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Additional BL Info */}
+                <div className="grid grid-cols-4 gap-4 pt-2">
+                  <div>
+                    <Label className="text-sm">Place of BL Issue</Label>
+                    <Input value={formData.placeOfBLIssue} onChange={(e) => handleInputChange("placeOfBLIssue", e.target.value)} placeholder="Place of BL Issue" />
+                  </div>
+                  <div>
+                    <Label className="text-sm">Carrier</Label>
+                    <Input value={formData.carrier} onChange={(e) => handleInputChange("carrier", e.target.value)} />
+                  </div>
+                  <div>
+                    <Label className="text-sm">Free Time</Label>
+                    <Input value={formData.freeTime} onChange={(e) => handleInputChange("freeTime", e.target.value)} placeholder="Free Time" />
+                  </div>
+                  <div>
+                    <Label className="text-sm">Network Partner</Label>
+                    <Select value={formData.networkPartner} onValueChange={(v) => handleInputChange("networkPartner", v)}>
+                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent className="bg-popover border border-border">
+                        {networkPartners.length === 0 ? (
+                          <SelectItem value="_loading" disabled>Loading...</SelectItem>
+                        ) : (
+                          networkPartners.map(partner => (
+                            <SelectItem key={partner.id} value={partner.code}>
+                              {partner.code} - {partner.name}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3: Route & Schedule */}
+              <div className="bg-card border border-border rounded-lg p-6 space-y-4">
+                <h3 className="text-emerald-600 font-semibold text-lg border-b border-border pb-2">Route & Schedule</h3>
+
+                {/* Origin Ports */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-muted-foreground">Origin</h4>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <Label className="text-sm">Place of Receipt</Label>
+                      <Select value={formData.placeOfReceipt} onValueChange={(v) => handleInputChange("placeOfReceipt", v)}>
+                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent className="bg-popover border border-border max-h-[300px]">
+                          {ports.length === 0 ? (
+                            <SelectItem value="_loading" disabled>Loading...</SelectItem>
+                          ) : (
+                            ports.map(port => (
+                              <SelectItem key={port.id} value={port.name}>
+                                {port.name}{port.code ? ` (${port.code})` : ''} - {port.country}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-sm">Port of Receipt</Label>
+                      <Select
+                        value={formData.portOfReceipt}
+                        onValueChange={(v) => {
+                          handleInputChange("portOfReceipt", v);
+                          const selectedPort = ports.find(p => p.name === v);
+                          setFormData(prev => ({ ...prev, portOfReceiptId: selectedPort?.id }));
+                        }}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent className="bg-popover border border-border max-h-[300px]">
+                          {ports.length === 0 ? (
+                            <SelectItem value="_loading" disabled>Loading...</SelectItem>
+                          ) : (
+                            ports.map(port => (
+                              <SelectItem key={port.id} value={port.name}>
+                                {port.name}{port.code ? ` (${port.code})` : ''} - {port.country}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-sm">Port of Loading</Label>
+                      <Select
+                        value={formData.portOfLoading}
+                        onValueChange={(v) => {
+                          handleInputChange("portOfLoading", v);
+                          const selectedPort = ports.find(p => p.name === v);
+                          setFormData(prev => ({ ...prev, portOfLoadingId: selectedPort?.id }));
+                        }}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent className="bg-popover border border-border max-h-[300px]">
+                          {ports.length === 0 ? (
+                            <SelectItem value="_loading" disabled>Loading...</SelectItem>
+                          ) : (
+                            ports.map(port => (
+                              <SelectItem key={port.id} value={port.name}>
+                                {port.name}{port.code ? ` (${port.code})` : ''} - {port.country}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Destination Ports */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-muted-foreground">Destination</h4>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <Label className="text-sm">Port of Discharge</Label>
+                      <Select
+                        value={formData.portOfDischarge}
+                        onValueChange={(v) => {
+                          handleInputChange("portOfDischarge", v);
+                          const selectedPort = ports.find(p => p.name === v);
+                          setFormData(prev => ({ ...prev, portOfDischargeId: selectedPort?.id }));
+                        }}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent className="bg-popover border border-border max-h-[300px]">
+                          {ports.length === 0 ? (
+                            <SelectItem value="_loading" disabled>Loading...</SelectItem>
+                          ) : (
+                            ports.map(port => (
+                              <SelectItem key={port.id} value={port.name}>
+                                {port.name}{port.code ? ` (${port.code})` : ''} - {port.country}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-sm">Port of Final Destination</Label>
+                      <Select
+                        value={formData.portOfFinalDestination}
+                        onValueChange={(v) => {
+                          handleInputChange("portOfFinalDestination", v);
+                          const selectedPort = ports.find(p => p.name === v);
+                          setFormData(prev => ({ ...prev, portOfFinalDestinationId: selectedPort?.id }));
+                        }}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent className="bg-popover border border-border max-h-[300px]">
+                          {ports.length === 0 ? (
+                            <SelectItem value="_loading" disabled>Loading...</SelectItem>
+                          ) : (
+                            ports.map(port => (
+                              <SelectItem key={port.id} value={port.name}>
+                                {port.name}{port.code ? ` (${port.code})` : ''} - {port.country}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-sm">Place of Delivery</Label>
+                      <Select value={formData.placeOfDelivery} onValueChange={(v) => handleInputChange("placeOfDelivery", v)}>
+                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent className="bg-popover border border-border max-h-[300px]">
+                          {ports.length === 0 ? (
+                            <SelectItem value="_loading" disabled>Loading...</SelectItem>
+                          ) : (
+                            ports.map(port => (
+                              <SelectItem key={port.id} value={port.name}>
+                                {port.name}{port.code ? ` (${port.code})` : ''} - {port.country}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Vessel & Schedule */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-muted-foreground">Vessel & Schedule</h4>
+                  <div className="grid grid-cols-5 gap-4">
+                    <div>
+                      <Label className="text-sm">Vessel</Label>
+                      <Input value={formData.vessel} onChange={(e) => handleInputChange("vessel", e.target.value)} placeholder="OCL France" />
+                    </div>
+                    <div>
+                      <Label className="text-sm">Voyage</Label>
+                      <Input value={formData.voyage} onChange={(e) => handleInputChange("voyage", e.target.value)} placeholder="78465F1" />
+                    </div>
+                    <div>
+                      <Label className="text-sm">ETD</Label>
+                      <DateInput value={formData.etd} onChange={(v) => handleInputChange("etd", v)} />
+                    </div>
+                    <div>
+                      <Label className="text-sm">ETA</Label>
+                      <DateInput value={formData.eta} onChange={(v) => handleInputChange("eta", v)} />
+                    </div>
+                    <div className="flex items-end">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="2ndLeg"
+                          checked={formData.secondLegVessel}
+                          onCheckedChange={(checked) => handleInputChange("secondLegVessel", checked as boolean)}
+                        />
+                        <Label htmlFor="2ndLeg" className="text-sm">2nd Leg Vessel</Label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 2nd Leg Vessel Row - Conditional */}
+                  {formData.secondLegVessel && (
+                    <div className="grid grid-cols-4 gap-4 pt-2">
+                      <div>
+                        <Label className="text-sm">2nd Leg Vessel</Label>
+                        <Input
+                          value={formData.secondLegVesselName}
+                          onChange={(e) => handleInputChange("secondLegVesselName", e.target.value)}
+                          placeholder="OCL France"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-sm">2nd Leg Voyage</Label>
+                        <Input
+                          value={formData.secondLegVoyage}
+                          onChange={(e) => handleInputChange("secondLegVoyage", e.target.value)}
+                          placeholder="78465F1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-sm">2nd Leg ETD</Label>
+                        <DateInput
+                          value={formData.secondLegETD}
+                          onChange={(v) => handleInputChange("secondLegETD", v)}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-sm">2nd Leg ETA</Label>
+                        <DateInput
+                          value={formData.secondLegETA}
+                          onChange={(v) => handleInputChange("secondLegETA", v)}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Notes */}
+                <div className="space-y-2 pt-2">
+                  <h4 className="text-sm font-medium text-muted-foreground">Additional Notes</h4>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <Label className="text-sm">Marks & Numbers</Label>
+                      <Textarea value={formData.marksNumbers} onChange={(e) => handleInputChange("marksNumbers", e.target.value)} placeholder="Marks & Numbers" />
+                    </div>
+                    <div>
+                      <Label className="text-sm">Notes</Label>
+                      <Textarea value={formData.notes} onChange={(e) => handleInputChange("notes", e.target.value)} placeholder="Notes" />
+                    </div>
+                    <div>
+                      <Label className="text-sm">Internal Notes</Label>
+                      <Textarea value={formData.internalNotes} onChange={(e) => handleInputChange("internalNotes", e.target.value)} placeholder="Internal Notes" />
+                    </div>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={handleSaveAndContinue}
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save and Continue"
+                  )}
+                </Button>
+              </div>
             </div>
           </TabsContent>
 
@@ -648,11 +1331,11 @@ const AddShipment = () => {
             <div className="bg-card border border-border rounded-lg p-6 space-y-6">
               <h3 className="text-emerald-600 font-semibold text-lg">Parties</h3>
 
-              <div className="grid grid-cols-3 gap-4 items-end">
-                <div>
+              <div className="flex gap-4 items-end">
+                <div className="flex-1">
                   <Label className="text-sm text-red-500">* Customer Type</Label>
                   <Select value={selectedPartyType} onValueChange={(v) => setSelectedPartyType(v as PartyType)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                     <SelectContent className="bg-popover border border-border">
                       {partyTypes.map(type => (
                         <SelectItem key={type} value={type}>{partyTypeLabels[type]}</SelectItem>
@@ -660,17 +1343,16 @@ const AddShipment = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
+                <div className="flex-1">
                   <Label className="text-sm text-red-500">* Customer Name</Label>
                   <Select
                     value={selectedCustomerId}
                     onValueChange={setSelectedCustomerId}
-                    disabled={isLoadingCustomers || !selectedCategory}
+                    disabled={isLoadingCustomers}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder={
                         isLoadingCustomers ? "Loading..." :
-                        !selectedCategory ? "No customers for this type" :
                         customers.length === 0 ? "No customers found" :
                         "Select a customer"
                       } />
@@ -683,22 +1365,20 @@ const AddShipment = () => {
                       ))}
                     </SelectContent>
                   </Select>
-                  {!selectedCategory && (
-                    <p className="text-xs text-amber-600 mt-1">
-                      No customer category matches "{partyTypeLabels[selectedPartyType]}". You can add customers manually.
-                    </p>
-                  )}
                 </div>
-                <div>
-                  <Button
-                    className="bg-emerald-500 hover:bg-emerald-600 text-white"
-                    onClick={handleAddParty}
-                    disabled={!selectedCustomer}
-                  >
-                    Add Party
-                  </Button>
-                </div>
+                <Button
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white whitespace-nowrap"
+                  onClick={handleAddParty}
+                  disabled={!selectedCustomer}
+                >
+                  Add Party
+                </Button>
               </div>
+              {customers.length === 0 && !isLoadingCustomers && (
+                <p className="text-xs text-amber-600 -mt-4">
+                  No customers with category "{partyTypeLabels[selectedPartyType]}" found.
+                </p>
+              )}
 
               <div className="space-y-4">
                 <h4 className="text-emerald-600 font-semibold">List All Parties</h4>
@@ -816,10 +1496,13 @@ const AddShipment = () => {
               <div className="flex justify-between items-center">
                 <h3 className="text-emerald-600 font-semibold text-lg">Costing</h3>
                 <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="bg-[#2c3e50] hover:bg-[#34495e] text-white border-[#2c3e50]"
-                    onClick={() => setCostingModalOpen(true)}
+                    onClick={() => {
+                      setEditingCosting(null);
+                      setCostingModalOpen(true);
+                    }}
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Create
@@ -841,23 +1524,41 @@ const AddShipment = () => {
                 </div>
               </div>
 
+              {/* Legend for color coding */}
+              {costing.length > 0 && (
+                <div className="flex gap-4 text-xs">
+                  <div className="flex items-center gap-1">
+                    <div className="w-4 h-4 rounded bg-emerald-100 dark:bg-emerald-900/30 border border-emerald-300"></div>
+                    <span>Sale Invoiced</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-4 h-4 rounded bg-orange-100 dark:bg-orange-900/30 border border-orange-300"></div>
+                    <span>Purchase Invoiced</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-4 h-4 rounded bg-violet-100 dark:bg-violet-900/30 border border-violet-300"></div>
+                    <span>Both Invoiced</span>
+                  </div>
+                </div>
+              )}
+
               <Table>
                 <TableHeader>
                   <TableRow className="bg-table-header">
                     <TableHead className="text-table-header-foreground">S.No</TableHead>
                     <TableHead className="text-table-header-foreground">Description</TableHead>
-                    <TableHead className="text-table-header-foreground">Sale Qty</TableHead>
-                    <TableHead className="text-table-header-foreground">Sale Unit</TableHead>
-                    <TableHead className="text-table-header-foreground">Currency</TableHead>
-                    <TableHead className="text-table-header-foreground">Ex.Rate</TableHead>
-                    <TableHead className="text-table-header-foreground">FCY Amount</TableHead>
-                    <TableHead className="text-table-header-foreground">LCY Amount</TableHead>
-                    <TableHead className="text-table-header-foreground">Cost Qty</TableHead>
-                    <TableHead className="text-table-header-foreground">Cost/Unit</TableHead>
-                    <TableHead className="text-table-header-foreground">Currency</TableHead>
-                    <TableHead className="text-table-header-foreground">Ex.Rate</TableHead>
-                    <TableHead className="text-table-header-foreground">FCY</TableHead>
-                    <TableHead className="text-table-header-foreground">LCY</TableHead>
+                    <TableHead className="text-emerald-400">Sale Qty</TableHead>
+                    <TableHead className="text-emerald-400">Sale Unit</TableHead>
+                    <TableHead className="text-emerald-400">Currency</TableHead>
+                    <TableHead className="text-emerald-400">Ex.Rate</TableHead>
+                    <TableHead className="text-emerald-400">FCY Amount</TableHead>
+                    <TableHead className="text-emerald-400">LCY Amount</TableHead>
+                    <TableHead className="text-orange-400">Cost Qty</TableHead>
+                    <TableHead className="text-orange-400">Cost/Unit</TableHead>
+                    <TableHead className="text-orange-400">Currency</TableHead>
+                    <TableHead className="text-orange-400">Ex.Rate</TableHead>
+                    <TableHead className="text-orange-400">FCY</TableHead>
+                    <TableHead className="text-orange-400">LCY</TableHead>
                     <TableHead className="text-table-header-foreground">Unit</TableHead>
                     <TableHead className="text-table-header-foreground">GP</TableHead>
                     <TableHead className="text-table-header-foreground">Action</TableHead>
@@ -869,39 +1570,72 @@ const AddShipment = () => {
                       <TableCell colSpan={17} className="text-center text-muted-foreground">No costing entries</TableCell>
                     </TableRow>
                   ) : (
-                    costing.map((cost, index) => (
-                      <TableRow key={cost.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell className="text-emerald-600">{cost.description}</TableCell>
-                        <TableCell>{cost.saleQty}</TableCell>
-                        <TableCell>{cost.saleUnit}</TableCell>
-                        <TableCell>{cost.saleCurrency}</TableCell>
-                        <TableCell>{cost.saleExRate}</TableCell>
-                        <TableCell>{cost.saleFCY}</TableCell>
-                        <TableCell>{cost.saleLCY}</TableCell>
-                        <TableCell>{cost.costQty}</TableCell>
-                        <TableCell>{cost.costUnit}</TableCell>
-                        <TableCell>{cost.costCurrency}</TableCell>
-                        <TableCell>{cost.costExRate}</TableCell>
-                        <TableCell>{cost.costFCY}</TableCell>
-                        <TableCell>{cost.costLCY}</TableCell>
-                        <TableCell>{cost.unit}</TableCell>
-                        <TableCell>{cost.gp}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600 text-white rounded">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded" onClick={() => handleDeleteCosting(cost.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                    costing.map((cost, index) => {
+                      // Determine row background color based on invoice status
+                      let rowClass = index % 2 === 0 ? "bg-card" : "bg-secondary/30";
+                      if (cost.saleInvoiced && cost.purchaseInvoiced) {
+                        // Both sale and purchase invoiced - fully completed (purple/violet)
+                        rowClass = "bg-violet-100 dark:bg-violet-900/30";
+                      } else if (cost.saleInvoiced) {
+                        // Only sale invoiced (green)
+                        rowClass = "bg-emerald-100 dark:bg-emerald-900/30";
+                      } else if (cost.purchaseInvoiced) {
+                        // Only purchase invoiced (orange)
+                        rowClass = "bg-orange-100 dark:bg-orange-900/30";
+                      }
+                      
+                      return (
+                        <TableRow key={cost.id} className={rowClass}>
+                          <TableCell>{index + 1}</TableCell>
+                          <TableCell className="text-emerald-600">{cost.description}</TableCell>
+                          <TableCell>{cost.saleQty}</TableCell>
+                          <TableCell>{cost.saleUnit}</TableCell>
+                          <TableCell>{cost.saleCurrency}</TableCell>
+                          <TableCell>{cost.saleExRate}</TableCell>
+                          <TableCell>{cost.saleFCY}</TableCell>
+                          <TableCell>{cost.saleLCY}</TableCell>
+                          <TableCell>{cost.costQty}</TableCell>
+                          <TableCell>{cost.costUnit}</TableCell>
+                          <TableCell>{cost.costCurrency}</TableCell>
+                          <TableCell>{cost.costExRate}</TableCell>
+                          <TableCell>{cost.costFCY}</TableCell>
+                          <TableCell>{cost.costLCY}</TableCell>
+                          <TableCell>{cost.unit}</TableCell>
+                          <TableCell>{cost.gp}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600 text-white rounded" onClick={() => handleEditCosting(cost)}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded" onClick={() => handleDeleteCosting(cost.id)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>
+
+              {/* Legend for color coding */}
+              {costing.length > 0 && (
+                <div className="flex gap-4 text-xs">
+                  <div className="flex items-center gap-1">
+                    <div className="w-4 h-4 rounded bg-emerald-100 dark:bg-emerald-900/30 border border-emerald-300"></div>
+                    <span>Sale Invoiced</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-4 h-4 rounded bg-orange-100 dark:bg-orange-900/30 border border-orange-300"></div>
+                    <span>Purchase Invoiced</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-4 h-4 rounded bg-violet-100 dark:bg-violet-900/30 border border-violet-300"></div>
+                    <span>Both Invoiced</span>
+                  </div>
+                </div>
+              )}
 
               {/* Summary */}
               <div className="flex justify-end">
@@ -920,6 +1654,89 @@ const AddShipment = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Invoices Section */}
+              {savedShipmentId && (
+                <div className="mt-6 space-y-4">
+                  <h4 className="text-emerald-600 font-semibold">Invoices</h4>
+                  <div className="grid grid-cols-2 gap-6">
+                    {/* Customer Invoices (Left) */}
+                    <div className="border border-border rounded-lg p-4">
+                      <h5 className="font-semibold mb-3 text-sm">Customer Invoices</h5>
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-table-header">
+                            <TableHead className="text-table-header-foreground text-xs">Invoice No</TableHead>
+                            <TableHead className="text-table-header-foreground text-xs">Party</TableHead>
+                            <TableHead className="text-table-header-foreground text-xs text-right">Amount</TableHead>
+                            <TableHead className="text-table-header-foreground text-xs text-right">Tax</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {!shipmentInvoices?.customerInvoices?.length ? (
+                            <TableRow>
+                              <TableCell colSpan={4} className="text-center text-muted-foreground text-sm">No customer invoices</TableCell>
+                            </TableRow>
+                          ) : (
+                            shipmentInvoices.customerInvoices.map((inv, index) => (
+                              <TableRow key={inv.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
+                                <TableCell className="text-xs">{inv.invoiceNo}</TableCell>
+                                <TableCell className="text-xs">{inv.partyName || "-"}</TableCell>
+                                <TableCell className="text-xs text-right">{inv.amount.toFixed(2)}</TableCell>
+                                <TableCell className="text-xs text-right">{inv.totalTax.toFixed(2)}</TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    {/* Vendor Invoices (Right) */}
+                    <div className="border border-border rounded-lg p-4">
+                      <h5 className="font-semibold mb-3 text-sm">Vendor Invoices</h5>
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-table-header">
+                            <TableHead className="text-table-header-foreground text-xs">Purchase No</TableHead>
+                            <TableHead className="text-table-header-foreground text-xs">Party</TableHead>
+                            <TableHead className="text-table-header-foreground text-xs text-right">Amount</TableHead>
+                            <TableHead className="text-table-header-foreground text-xs text-right">Tax</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {!shipmentInvoices?.vendorInvoices?.length ? (
+                            <TableRow>
+                              <TableCell colSpan={4} className="text-center text-muted-foreground text-sm">No vendor invoices</TableCell>
+                            </TableRow>
+                          ) : (
+                            shipmentInvoices.vendorInvoices.map((inv, index) => (
+                              <TableRow key={inv.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
+                                <TableCell className="text-xs">{inv.purchaseNo}</TableCell>
+                                <TableCell className="text-xs">{inv.partyName || "-"}</TableCell>
+                                <TableCell className="text-xs text-right">{inv.amount.toFixed(2)}</TableCell>
+                                <TableCell className="text-xs text-right">{inv.totalTax.toFixed(2)}</TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+
+                  {/* GP Calculation */}
+                  <div className="flex justify-center">
+                    <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4 text-center">
+                      <Label className="text-sm font-semibold">Gross Profit (GP)</Label>
+                      <div className={`text-xl font-bold ${(totalSale - totalCost) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                        AED {(totalSale - totalCost).toFixed(2)}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Sale ({totalSale.toFixed(2)}) - Cost ({totalCost.toFixed(2)})
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </TabsContent>
 
@@ -1062,8 +1879,12 @@ const AddShipment = () => {
 
       <CostingModal
         open={costingModalOpen}
-        onOpenChange={setCostingModalOpen}
+        onOpenChange={(open) => {
+          setCostingModalOpen(open);
+          if (!open) setEditingCosting(null);
+        }}
         parties={parties}
+        costing={editingCosting}
         onSave={handleSaveCosting}
       />
 
@@ -1076,20 +1897,25 @@ const AddShipment = () => {
       <InvoiceModal
         open={invoiceModalOpen}
         onOpenChange={setInvoiceModalOpen}
+        shipmentId={savedShipmentId}
         chargesDetails={costing}
         parties={parties}
         onSave={(invoice) => {
-          toast.success("Invoice generated");
+          // Refetch shipment data to update saleInvoiced status on costings
+          refetchShipment();
         }}
       />
 
       <PurchaseModal
         open={purchaseModalOpen}
         onOpenChange={setPurchaseModalOpen}
+        shipmentId={savedShipmentId}
         chargesDetails={costing}
         parties={parties}
         onSave={(purchase) => {
-          toast.success("Purchase booked");
+          // Refetch shipment data to update purchaseInvoiced status on costings
+          refetchShipment();
+          // Toast is already shown by the mutation hook
         }}
       />
     </MainLayout>

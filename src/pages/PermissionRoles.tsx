@@ -48,9 +48,8 @@ const initialPermissionGroups: PermissionGroup[] = [
     name: "Dashboard",
     expanded: false,
     permissions: [
-      { id: "dash_all_count", label: "All count", action: "All count", checked: false },
-      { id: "dash_branch_total", label: "Branch total count", action: "Branch total count", checked: false },
-      { id: "dash_employee_add", label: "Employee Add Count", action: "Employee Add Count", checked: false },
+      { id: "dash_view", label: "View Dashboard", action: "View", checked: false },
+      { id: "dash_all_count", label: "View All Count", action: "View", checked: false },
     ],
   },
   {
@@ -58,18 +57,19 @@ const initialPermissionGroups: PermissionGroup[] = [
     name: "Shipments",
     expanded: false,
     permissions: [
-      { id: "ship_show_all", label: "Show All", action: "Show All", checked: false },
+      { id: "ship_show_all", label: "Show All", action: "View", checked: false },
+      { id: "ship_add_new", label: "Add New", action: "Add", checked: false },
       { id: "ship_edit", label: "Edit", action: "Edit", checked: false },
       { id: "ship_view", label: "View", action: "View", checked: false },
-      { id: "ship_add_new", label: "Add New", action: "Add", checked: false },
       { id: "ship_delete", label: "Delete", action: "Delete", checked: false },
     ],
   },
   {
-    id: "customer",
-    name: "Customer",
+    id: "master_customers",
+    name: "Master Customers",
     expanded: false,
     permissions: [
+      { id: "cust_show_all", label: "Show All", action: "View", checked: false },
       { id: "cust_add", label: "Add", action: "Add", checked: false },
       { id: "cust_edit", label: "Edit", action: "Edit", checked: false },
       { id: "cust_view", label: "View", action: "View", checked: false },
@@ -77,11 +77,35 @@ const initialPermissionGroups: PermissionGroup[] = [
     ],
   },
   {
-    id: "quotations",
-    name: "Quotations",
+    id: "sales_leads",
+    name: "Sales - Leads",
     expanded: false,
     permissions: [
-      { id: "quot_show_all", label: "Show All", action: "Show All", checked: false },
+      { id: "leads_show_all", label: "Show All", action: "View", checked: false },
+      { id: "leads_add", label: "Add", action: "Add", checked: false },
+      { id: "leads_edit", label: "Edit", action: "Edit", checked: false },
+      { id: "leads_view", label: "View", action: "View", checked: false },
+      { id: "leads_delete", label: "Delete", action: "Delete", checked: false },
+    ],
+  },
+  {
+    id: "sales_rate_requests",
+    name: "Sales - Rate Requests",
+    expanded: false,
+    permissions: [
+      { id: "rate_show_all", label: "Show All", action: "View", checked: false },
+      { id: "rate_add", label: "Add", action: "Add", checked: false },
+      { id: "rate_edit", label: "Edit", action: "Edit", checked: false },
+      { id: "rate_view", label: "View", action: "View", checked: false },
+      { id: "rate_delete", label: "Delete", action: "Delete", checked: false },
+    ],
+  },
+  {
+    id: "sales_quotations",
+    name: "Sales - Quotations",
+    expanded: false,
+    permissions: [
+      { id: "quot_show_all", label: "Show All", action: "View", checked: false },
       { id: "quot_add", label: "Add", action: "Add", checked: false },
       { id: "quot_edit", label: "Edit", action: "Edit", checked: false },
       { id: "quot_view", label: "View", action: "View", checked: false },
@@ -90,35 +114,117 @@ const initialPermissionGroups: PermissionGroup[] = [
     ],
   },
   {
-    id: "rate_request",
-    name: "Rate Request",
+    id: "accounts_expenses",
+    name: "Accounts - Daily Expenses",
     expanded: false,
     permissions: [
-      { id: "rate_add", label: "Add", action: "Add", checked: false },
-      { id: "rate_edit", label: "Edit", action: "Edit", checked: false },
-      { id: "rate_view", label: "View", action: "View", checked: false },
-      { id: "rate_delete", label: "Delete", action: "Delete", checked: false },
+      { id: "expense_show_all", label: "Show All", action: "View", checked: false },
+      { id: "expense_add", label: "Add", action: "Add", checked: false },
+      { id: "expense_edit", label: "Edit", action: "Edit", checked: false },
+      { id: "expense_view", label: "View", action: "View", checked: false },
+      { id: "expense_delete", label: "Delete", action: "Delete", checked: false },
     ],
   },
   {
     id: "users",
-    name: "Users",
+    name: "Users - All Users",
     expanded: false,
     permissions: [
+      { id: "user_show_all", label: "Show All", action: "View", checked: false },
       { id: "user_add", label: "Add", action: "Add", checked: false },
       { id: "user_edit", label: "Edit", action: "Edit", checked: false },
       { id: "user_view", label: "View", action: "View", checked: false },
       { id: "user_delete", label: "Delete", action: "Delete", checked: false },
-      { id: "user_roles", label: "Roles", action: "View", checked: false },
-      { id: "user_company", label: "Company", action: "View", checked: false },
     ],
   },
   {
-    id: "settings",
-    name: "Settings",
+    id: "users_roles",
+    name: "Users - Permission Roles",
     expanded: false,
     permissions: [
-      { id: "settings_currency", label: "Currency", action: "Add", checked: false },
+      { id: "role_show_all", label: "Show All", action: "View", checked: false },
+      { id: "role_add", label: "Add", action: "Add", checked: false },
+      { id: "role_edit", label: "Edit", action: "Edit", checked: false },
+      { id: "role_view", label: "View", action: "View", checked: false },
+      { id: "role_delete", label: "Delete", action: "Delete", checked: false },
+    ],
+  },
+  {
+    id: "general_document",
+    name: "General Document",
+    expanded: false,
+    permissions: [
+      { id: "doc_show_all", label: "Show All", action: "View", checked: false },
+      { id: "doc_add", label: "Add", action: "Add", checked: false },
+      { id: "doc_edit", label: "Edit", action: "Edit", checked: false },
+      { id: "doc_view", label: "View", action: "View", checked: false },
+      { id: "doc_delete", label: "Delete", action: "Delete", checked: false },
+    ],
+  },
+  {
+    id: "settings_currency",
+    name: "Settings - Currency Type",
+    expanded: false,
+    permissions: [
+      { id: "settings_currency_view", label: "View", action: "View", checked: false },
+      { id: "settings_currency_add", label: "Add", action: "Add", checked: false },
+      { id: "settings_currency_edit", label: "Edit", action: "Edit", checked: false },
+      { id: "settings_currency_delete", label: "Delete", action: "Delete", checked: false },
+    ],
+  },
+  {
+    id: "settings_ports",
+    name: "Settings - Ports",
+    expanded: false,
+    permissions: [
+      { id: "settings_ports_view", label: "View", action: "View", checked: false },
+      { id: "settings_ports_add", label: "Add", action: "Add", checked: false },
+      { id: "settings_ports_edit", label: "Edit", action: "Edit", checked: false },
+      { id: "settings_ports_delete", label: "Delete", action: "Delete", checked: false },
+    ],
+  },
+  {
+    id: "settings_charges",
+    name: "Settings - Charges Items",
+    expanded: false,
+    permissions: [
+      { id: "settings_charges_view", label: "View", action: "View", checked: false },
+      { id: "settings_charges_add", label: "Add", action: "Add", checked: false },
+      { id: "settings_charges_edit", label: "Edit", action: "Edit", checked: false },
+      { id: "settings_charges_delete", label: "Delete", action: "Delete", checked: false },
+    ],
+  },
+  {
+    id: "settings_expense_items",
+    name: "Settings - Expense Items",
+    expanded: false,
+    permissions: [
+      { id: "settings_expense_items_view", label: "View", action: "View", checked: false },
+      { id: "settings_expense_items_add", label: "Add", action: "Add", checked: false },
+      { id: "settings_expense_items_edit", label: "Edit", action: "Edit", checked: false },
+      { id: "settings_expense_items_delete", label: "Delete", action: "Delete", checked: false },
+    ],
+  },
+  {
+    id: "settings_companies",
+    name: "Settings - Companies",
+    expanded: false,
+    permissions: [
+      { id: "settings_companies_view", label: "View", action: "View", checked: false },
+      { id: "settings_companies_add", label: "Add", action: "Add", checked: false },
+      { id: "settings_companies_edit", label: "Edit", action: "Edit", checked: false },
+      { id: "settings_companies_delete", label: "Delete", action: "Delete", checked: false },
+    ],
+  },
+  {
+    id: "settings_banks",
+    name: "Settings - Banks",
+    expanded: false,
+    permissions: [
+      { id: "settings_banks_view", label: "View", action: "View", checked: false },
+      { id: "settings_banks_add", label: "Add", action: "Add", checked: false },
+      { id: "settings_banks_edit", label: "Edit", action: "Edit", checked: false },
+      { id: "settings_banks_delete", label: "Delete", action: "Delete", checked: false },
     ],
   },
 ];
@@ -287,9 +393,9 @@ const PermissionRoles = () => {
             <DialogTitle>Set New Role</DialogTitle>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 py-4">
-            {/* Left Column - Form Fields */}
-            <div className="space-y-4">
+          <div className="space-y-4 py-4">
+            {/* Form Fields */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Role Name</Label>
                 <Input
@@ -312,73 +418,109 @@ const PermissionRoles = () => {
               </div>
             </div>
 
-            {/* Middle Column - Resources */}
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-muted-foreground mb-2">Resources</h3>
-              {permissionGroups.slice(0, 4).map((group) => (
-                <div key={group.id} className="space-y-1">
-                  <div
-                    className="flex items-center gap-2 cursor-pointer"
-                    onClick={() => toggleGroup(group.id)}
-                  >
-                    <span className="text-muted-foreground text-sm">{group.expanded ? "−" : "+"}</span>
-                    <Checkbox
-                      checked={group.permissions.every(p => p.checked)}
-                      onCheckedChange={() => toggleAllInGroup(group.id)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <span className="font-medium text-sm">{group.name}</span>
-                  </div>
-                  {group.expanded && (
-                    <div className="ml-8 space-y-1">
-                      {group.permissions.map((perm) => (
-                        <div key={perm.id} className="flex items-center gap-2">
-                          <Checkbox
-                            checked={perm.checked}
-                            onCheckedChange={() => togglePermission(group.id, perm.id)}
-                          />
-                          <span className="text-sm">{perm.label}</span>
-                          <span className="text-sm text-primary underline cursor-pointer">{perm.action}</span>
+            {/* Permissions Grid */}
+            <div>
+              <h3 className="text-sm font-semibold text-foreground mb-3">Page Permissions</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Column 1 - Main Pages */}
+                <div className="space-y-3">
+                  {permissionGroups.slice(0, 6).map((group) => (
+                    <div key={group.id} className="space-y-1">
+                      <div
+                        className="flex items-center gap-2 cursor-pointer hover:bg-secondary/50 p-1 rounded"
+                        onClick={() => toggleGroup(group.id)}
+                      >
+                        <span className="text-muted-foreground text-sm w-4">{group.expanded ? "−" : "+"}</span>
+                        <Checkbox
+                          checked={group.permissions.every(p => p.checked)}
+                          onCheckedChange={() => toggleAllInGroup(group.id)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <span className="font-medium text-sm">{group.name}</span>
+                      </div>
+                      {group.expanded && (
+                        <div className="ml-8 space-y-1">
+                          {group.permissions.map((perm) => (
+                            <div key={perm.id} className="flex items-center gap-2">
+                              <Checkbox
+                                checked={perm.checked}
+                                onCheckedChange={() => togglePermission(group.id, perm.id)}
+                              />
+                              <span className="text-sm">{perm.label}</span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
-                  )}
+                  ))}
                 </div>
-              ))}
-            </div>
 
-            {/* Right Column - More Resources */}
-            <div className="space-y-3">
-              {permissionGroups.slice(4).map((group) => (
-                <div key={group.id} className="space-y-1">
-                  <div
-                    className="flex items-center gap-2 cursor-pointer"
-                    onClick={() => toggleGroup(group.id)}
-                  >
-                    <span className="text-muted-foreground text-sm">{group.expanded ? "−" : "+"}</span>
-                    <Checkbox
-                      checked={group.permissions.every(p => p.checked)}
-                      onCheckedChange={() => toggleAllInGroup(group.id)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <span className="font-medium text-sm">{group.name}</span>
-                  </div>
-                  {group.expanded && (
-                    <div className="ml-8 space-y-1">
-                      {group.permissions.map((perm) => (
-                        <div key={perm.id} className="flex items-center gap-2">
-                          <Checkbox
-                            checked={perm.checked}
-                            onCheckedChange={() => togglePermission(group.id, perm.id)}
-                          />
-                          <span className="text-sm">{perm.label}</span>
-                          <span className="text-sm text-primary underline cursor-pointer">{perm.action}</span>
+                {/* Column 2 - Users & Documents */}
+                <div className="space-y-3">
+                  {permissionGroups.slice(6, 11).map((group) => (
+                    <div key={group.id} className="space-y-1">
+                      <div
+                        className="flex items-center gap-2 cursor-pointer hover:bg-secondary/50 p-1 rounded"
+                        onClick={() => toggleGroup(group.id)}
+                      >
+                        <span className="text-muted-foreground text-sm w-4">{group.expanded ? "−" : "+"}</span>
+                        <Checkbox
+                          checked={group.permissions.every(p => p.checked)}
+                          onCheckedChange={() => toggleAllInGroup(group.id)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <span className="font-medium text-sm">{group.name}</span>
+                      </div>
+                      {group.expanded && (
+                        <div className="ml-8 space-y-1">
+                          {group.permissions.map((perm) => (
+                            <div key={perm.id} className="flex items-center gap-2">
+                              <Checkbox
+                                checked={perm.checked}
+                                onCheckedChange={() => togglePermission(group.id, perm.id)}
+                              />
+                              <span className="text-sm">{perm.label}</span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
-                  )}
+                  ))}
                 </div>
-              ))}
+
+                {/* Column 3 - Settings */}
+                <div className="space-y-3">
+                  {permissionGroups.slice(11).map((group) => (
+                    <div key={group.id} className="space-y-1">
+                      <div
+                        className="flex items-center gap-2 cursor-pointer hover:bg-secondary/50 p-1 rounded"
+                        onClick={() => toggleGroup(group.id)}
+                      >
+                        <span className="text-muted-foreground text-sm w-4">{group.expanded ? "−" : "+"}</span>
+                        <Checkbox
+                          checked={group.permissions.every(p => p.checked)}
+                          onCheckedChange={() => toggleAllInGroup(group.id)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <span className="font-medium text-sm">{group.name}</span>
+                      </div>
+                      {group.expanded && (
+                        <div className="ml-8 space-y-1">
+                          {group.permissions.map((perm) => (
+                            <div key={perm.id} className="flex items-center gap-2">
+                              <Checkbox
+                                checked={perm.checked}
+                                onCheckedChange={() => togglePermission(group.id, perm.id)}
+                              />
+                              <span className="text-sm">{perm.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
