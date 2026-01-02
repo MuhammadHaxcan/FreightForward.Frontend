@@ -450,6 +450,8 @@ const ShipmentDetail = () => {
     }
 
     try {
+      const saleLCY = parseFloat(costingData.saleLCY) || 0;
+      const costLCY = parseFloat(costingData.costLCY) || 0;
       const data: AddShipmentCostingRequest = {
         shipmentId,
         description: costingData.description,
@@ -459,7 +461,7 @@ const ShipmentDetail = () => {
         saleCurrency: costingData.saleCurrency as Currency,
         saleExRate: parseFloat(costingData.saleExRate) || 1,
         saleFCY: parseFloat(costingData.saleFCY) || 0,
-        saleLCY: parseFloat(costingData.saleLCY) || 0,
+        saleLCY,
         saleTaxPercentage: parseFloat(costingData.saleTaxPercentage) || 0,
         saleTaxAmount: parseFloat(costingData.saleTaxAmount) || 0,
         costQty: parseFloat(costingData.costQty) || 0,
@@ -467,11 +469,12 @@ const ShipmentDetail = () => {
         costCurrency: costingData.costCurrency as Currency,
         costExRate: parseFloat(costingData.costExRate) || 1,
         costFCY: parseFloat(costingData.costFCY) || 0,
-        costLCY: parseFloat(costingData.costLCY) || 0,
+        costLCY,
         costTaxPercentage: parseFloat(costingData.costTaxPercentage) || 0,
         costTaxAmount: parseFloat(costingData.costTaxAmount) || 0,
         unitId: costingData.unitId,
         unit: costingData.unit,
+        gp: saleLCY - costLCY,
         billToCustomerId: costingData.billToCustomerId,
         vendorCustomerId: costingData.vendorCustomerId,
       };
@@ -511,25 +514,23 @@ const ShipmentDetail = () => {
         id: shipmentId,
         data: {
           id: shipmentId,
-          jobNumber: formData.jobNumber,
-          jobDate: formData.jobDate,
-          jobStatus: formData.jobStatus,
+          jobStatus: (formData.jobStatus || 'Opened') as any,
           direction: formData.direction as any,
           mode: formData.mode === 'Sea Freight FCL' ? 'SeaFreightFCL' :
                 formData.mode === 'Sea Freight LCL' ? 'SeaFreightLCL' : 'AirFreight',
-          incoterms: formData.incoterms || undefined,
+          incoterms: (formData.incoterms || undefined) as any,
           houseBLNo: formData.houseBLNo || undefined,
           houseBLDate: formData.houseBLDate || undefined,
-          houseBLStatus: formData.houseBLStatus || undefined,
-          hblServiceType: formData.hblServiceType || undefined,
+          houseBLStatus: (formData.houseBLStatus || undefined) as any,
+          hblServiceType: (formData.hblServiceType || undefined) as any,
           hblNoBLIssued: formData.hblNoBLIssued || undefined,
-          hblFreight: formData.hblFreight || undefined,
+          hblFreight: (formData.hblFreight || undefined) as any,
           mblNumber: formData.mblNumber || undefined,
           mblDate: formData.mblDate || undefined,
-          mblStatus: formData.mblStatus || undefined,
-          mblServiceType: formData.mblServiceType || undefined,
+          mblStatus: (formData.mblStatus || undefined) as any,
+          mblServiceType: (formData.mblServiceType || undefined) as any,
           mblNoBLIssued: formData.mblNoBLIssued || undefined,
-          mblFreight: formData.mblFreight || undefined,
+          mblFreight: (formData.mblFreight || undefined) as any,
           placeOfBLIssue: formData.placeOfBLIssue || undefined,
           carrier: formData.carrier || undefined,
           freeTime: formData.freeTime || undefined,

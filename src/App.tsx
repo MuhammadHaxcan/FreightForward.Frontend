@@ -21,6 +21,8 @@ import RateRequests from "./pages/RateRequests";
 import Quotations from "./pages/Quotations";
 import QuotationView from "./pages/QuotationView";
 import DailyExpenses from "./pages/DailyExpenses";
+import Invoices from "./pages/Invoices";
+import InvoiceView from "./pages/InvoiceView";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,7 +47,9 @@ const App = () => (
           <Route path="/sales/rate-requests" element={<RateRequests />} />
           <Route path="/sales/quotations" element={<Quotations />} />
           <Route path="/sales/quotations/:id/view" element={<QuotationView />} />
-          <Route path="/accounts" element={<DailyExpenses />} />
+          <Route path="/accounts" element={<Invoices />} />
+          <Route path="/accounts/invoices" element={<Invoices />} />
+          <Route path="/accounts/invoices/:id" element={<InvoiceView />} />
           <Route path="/accounts/daily-expenses" element={<DailyExpenses />} />
           <Route path="/users" element={<Dashboard />} />
           <Route path="/users/all" element={<AllUsers />} />
