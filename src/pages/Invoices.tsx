@@ -41,10 +41,10 @@ export default function Invoices() {
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
 
-  // Fetch customers for filter
+  // Fetch customers for filter (only Debtors)
   useEffect(() => {
     const fetchCustomers = async () => {
-      const response = await customerApi.getAll({ pageSize: 1000 });
+      const response = await customerApi.getAll({ pageSize: 1000, masterType: 'Debtors' });
       if (response.data) {
         setCustomers(response.data.items);
       }

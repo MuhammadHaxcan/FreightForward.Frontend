@@ -13,7 +13,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { customerApi, settingsApi, CustomerCategoryType, Currency } from "@/services/api";
+import { customerApi, settingsApi, CustomerCategoryType, Currency, Invoice as ApiInvoice, AccountReceivable as ApiAccountReceivable, PaymentStatus } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
 
 interface Contact {
@@ -40,29 +40,8 @@ interface Receipt {
   narration: string;
 }
 
-interface Invoice {
-  id: number;
-  invoiceDate: string;
-  invoiceNo: string;
-  jobNo: string;
-  hblNo: string;
-  amount: string;
-  paymentStatus: string;
-  status: string;
-}
-
-interface AccountReceivable {
-  id: number;
-  invoiceDate: string;
-  invoiceNo: string;
-  customerRef: string;
-  jobHblNo: string;
-  debit: string;
-  balance: string;
-  paymentStatus: string;
-  status: string;
-  aging: string;
-}
+// Invoice interface is imported from API as ApiInvoice
+// AccountReceivable interface is imported from API as ApiAccountReceivable
 
 interface CreditNote {
   id: number;
@@ -114,6 +93,22 @@ const CustomerDetail = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [categoryTypes, setCategoryTypes] = useState<CustomerCategoryType[]>([]);
+
+  // Invoices state (declared early to avoid reference errors)
+  const [invoices, setInvoices] = useState<ApiInvoice[]>([]);
+  const [invoicesLoading, setInvoicesLoading] = useState(false);
+  const [invoicesPageNumber, setInvoicesPageNumber] = useState(1);
+  const [invoicesPageSize, setInvoicesPageSize] = useState(10);
+  const [invoicesTotalCount, setInvoicesTotalCount] = useState(0);
+  const [invoicesTotalPages, setInvoicesTotalPages] = useState(0);
+
+  // Account Receivables state
+  const [accountReceivables, setAccountReceivables] = useState<ApiAccountReceivable[]>([]);
+  const [arLoading, setArLoading] = useState(false);
+  const [arPageNumber, setArPageNumber] = useState(1);
+  const [arPageSize, setArPageSize] = useState(10);
+  const [arTotalCount, setArTotalCount] = useState(0);
+  const [arTotalPages, setArTotalPages] = useState(0);
 
   // Profile form state
   const [profileData, setProfileData] = useState({
@@ -200,6 +195,89 @@ const CustomerDetail = () => {
 
     loadData();
   }, [id, toast]);
+
+  // Fetch invoices when tab is active
+  const fetchInvoices = async () => {
+    if (!id) return;
+    setInvoicesLoading(true);
+    try {
+      const response = await customerApi.getInvoices(parseInt(id), {
+        pageNumber: invoicesPageNumber,
+        pageSize: invoicesPageSize
+      });
+      if (response.data) {
+        setInvoices(response.data.items);
+        setInvoicesTotalCount(response.data.totalCount);
+        setInvoicesTotalPages(response.data.totalPages);
+      }
+    } catch (error) {
+      console.error("Error fetching invoices:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load invoices",
+        variant: "destructive",
+      });
+    } finally {
+      setInvoicesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'invoices' && id) {
+      fetchInvoices();
+    }
+  }, [activeTab, id, invoicesPageNumber, invoicesPageSize]);
+
+  // Fetch account receivables when tab is active
+  const fetchAccountReceivables = async () => {
+    if (!id) return;
+    setArLoading(true);
+    try {
+      const response = await customerApi.getAccountReceivables(parseInt(id), {
+        pageNumber: arPageNumber,
+        pageSize: arPageSize
+      });
+      if (response.data) {
+        // Backend now filters by payment status (Pending, PartiallyPaid, Paid)
+        setAccountReceivables(response.data.items);
+        setArTotalCount(response.data.totalCount);
+        setArTotalPages(response.data.totalPages);
+      }
+    } catch (error) {
+      console.error("Error fetching account receivables:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load account receivables",
+        variant: "destructive",
+      });
+    } finally {
+      setArLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'account-receivable' && id) {
+      fetchAccountReceivables();
+    }
+  }, [activeTab, id, arPageNumber, arPageSize]);
+
+  // Helper function to get payment status display and styling
+  const getPaymentStatusDisplay = (status: PaymentStatus) => {
+    switch (status) {
+      case 'Pending':
+        return { label: 'Pending', className: 'bg-yellow-100 text-yellow-800' };
+      case 'PartiallyPaid':
+        return { label: 'Partially Paid', className: 'bg-orange-100 text-orange-800' };
+      case 'Paid':
+        return { label: 'Paid', className: 'bg-green-100 text-green-800' };
+      case 'Overdue':
+        return { label: 'Overdue', className: 'bg-red-100 text-red-800' };
+      case 'Closed':
+        return { label: 'Closed', className: 'bg-gray-100 text-gray-800' };
+      default:
+        return { label: status, className: 'bg-gray-100 text-gray-800' };
+    }
+  };
 
   // Save handler
   const handleSave = async () => {
@@ -308,16 +386,6 @@ const CustomerDetail = () => {
   // Receipts
   const [receipts] = useState<Receipt[]>([
     { id: 1, date: "27-11-2025", receiptNo: "RVAE25114", type: "Bank", amount: "AED 2,313.60", narration: "AMOUNT ONLINE RECEIVED FOR AED 2,320/- IN EIB FROM AL ALAMAA FOR INV# INV251762." }
-  ]);
-
-  // Invoices
-  const [invoices] = useState<Invoice[]>([
-    { id: 1, invoiceDate: "19-11-2025", invoiceNo: "INVAE251762", jobNo: "25UAE1582", hblNo: "LLL1BL25A1361SDXB", amount: "AED 2,313.60", paymentStatus: "Paid", status: "Active" }
-  ]);
-
-  // Account Receivable
-  const [accountReceivables] = useState<AccountReceivable[]>([
-    { id: 1, invoiceDate: "19-11-2025", invoiceNo: "INVAE251762", customerRef: "", jobHblNo: "25UAE1582/LLL1BL25A1361EDXB", debit: "AED 2,313.60", balance: "AED 0.00", paymentStatus: "Closed", status: "Active", aging: "8 Days" }
   ]);
 
   // Credit Notes
@@ -737,132 +805,257 @@ const CustomerDetail = () => {
     </div>
   );
 
-  const renderInvoicesTab = () => (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-primary">Invoices</h2>
-        {!isViewMode && (
-          <Button className="btn-success gap-2" onClick={() => setOpeningBalanceModalOpen(true)}>
-            <Plus size={16} /> Add opening Balance
-          </Button>
-        )}
-      </div>
+  const renderInvoicesTab = () => {
+    const startEntry = invoicesTotalCount > 0 ? (invoicesPageNumber - 1) * invoicesPageSize + 1 : 0;
+    const endEntry = Math.min(invoicesPageNumber * invoicesPageSize, invoicesTotalCount);
 
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Show:</span>
-          <Select defaultValue="10">
-            <SelectTrigger className="w-[70px] h-8"><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="10">10</SelectItem></SelectContent>
-          </Select>
-          <span className="text-sm text-muted-foreground">entries</span>
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-primary">Invoices</h2>
+          {!isViewMode && (
+            <Button className="btn-success gap-2" onClick={() => setOpeningBalanceModalOpen(true)}>
+              <Plus size={16} /> Add opening Balance
+            </Button>
+          )}
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Search:</span>
-          <Input className="w-[200px] h-8" />
-        </div>
-      </div>
 
-      <div className="bg-card rounded-lg border border-border overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="bg-table-header text-table-header-foreground">
-              <th className="px-4 py-3 text-left text-sm font-semibold">Invoice Date</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Invoice No.</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Job No.</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">HBL No.</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Amount</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Payment Status</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoices.map((inv, i) => (
-              <tr key={inv.id} className={`border-b border-border ${i % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
-                <td className="px-4 py-3 text-sm">{inv.invoiceDate}</td>
-                <td className="px-4 py-3 text-sm text-primary">{inv.invoiceNo}</td>
-                <td className="px-4 py-3 text-sm">{inv.jobNo}</td>
-                <td className="px-4 py-3 text-sm">{inv.hblNo}</td>
-                <td className="px-4 py-3 text-sm">{inv.amount}</td>
-                <td className="px-4 py-3 text-sm">{inv.paymentStatus}</td>
-                <td className="px-4 py-3 text-sm">{inv.status}</td>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Show:</span>
+            <Select value={invoicesPageSize.toString()} onValueChange={(v) => { setInvoicesPageSize(parseInt(v)); setInvoicesPageNumber(1); }}>
+              <SelectTrigger className="w-[70px] h-8"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-muted-foreground">entries</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Search:</span>
+            <Input className="w-[200px] h-8" />
+          </div>
+        </div>
+
+        <div className="bg-card rounded-lg border border-border overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-table-header text-table-header-foreground">
+                <th className="px-4 py-3 text-left text-sm font-semibold">Invoice Date</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Invoice No.</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Job No.</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">HBL No.</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Amount</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Payment Status</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Status</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">Showing 1 to 1 of 1 entries</p>
-        <div className="flex items-center gap-1">
-          <Button variant="outline" size="sm">Previous</Button>
-          <Button className="btn-success" size="sm">1</Button>
-          <Button variant="outline" size="sm">Next</Button>
+            </thead>
+            <tbody>
+              {invoicesLoading ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">Loading...</td>
+                </tr>
+              ) : invoices.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">No invoices found</td>
+                </tr>
+              ) : (
+                invoices.map((inv, i) => (
+                  <tr key={inv.id} className={`border-b border-border ${i % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
+                    <td className="px-4 py-3 text-sm">{inv.invoiceDate ? format(new Date(inv.invoiceDate), "dd-MM-yyyy") : "-"}</td>
+                    <td className="px-4 py-3 text-sm text-primary">{inv.invoiceNo}</td>
+                    <td className="px-4 py-3 text-sm">{inv.jobNo || "-"}</td>
+                    <td className="px-4 py-3 text-sm">{inv.hblNo || "-"}</td>
+                    <td className="px-4 py-3 text-sm">{inv.currency} {inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td className="px-4 py-3 text-sm">{inv.paymentStatus}</td>
+                    <td className="px-4 py-3 text-sm">{inv.status || "Active"}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Showing {startEntry} to {endEntry} of {invoicesTotalCount} entries
+          </p>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setInvoicesPageNumber(p => Math.max(1, p - 1))}
+              disabled={invoicesPageNumber === 1}
+            >
+              Previous
+            </Button>
+            {Array.from({ length: Math.min(5, invoicesTotalPages) }, (_, i) => {
+              let pageNum: number;
+              if (invoicesTotalPages <= 5) {
+                pageNum = i + 1;
+              } else if (invoicesPageNumber <= 3) {
+                pageNum = i + 1;
+              } else if (invoicesPageNumber >= invoicesTotalPages - 2) {
+                pageNum = invoicesTotalPages - 4 + i;
+              } else {
+                pageNum = invoicesPageNumber - 2 + i;
+              }
+              return (
+                <Button
+                  key={pageNum}
+                  variant={invoicesPageNumber === pageNum ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setInvoicesPageNumber(pageNum)}
+                  className={invoicesPageNumber === pageNum ? "btn-success" : ""}
+                >
+                  {pageNum}
+                </Button>
+              );
+            })}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setInvoicesPageNumber(p => Math.min(invoicesTotalPages, p + 1))}
+              disabled={invoicesPageNumber === invoicesTotalPages || invoicesTotalPages === 0}
+            >
+              Next
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
-  const renderAccountReceivableTab = () => (
-    <div className="space-y-4">
-      <h2 className="text-xl font-semibold text-primary">Account Receivable</h2>
+  const renderAccountReceivableTab = () => {
+    const startEntry = arTotalCount > 0 ? (arPageNumber - 1) * arPageSize + 1 : 0;
+    const endEntry = Math.min(arPageNumber * arPageSize, arTotalCount);
 
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Show:</span>
-          <Select defaultValue="10">
-            <SelectTrigger className="w-[70px] h-8"><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="10">10</SelectItem></SelectContent>
-          </Select>
-          <span className="text-sm text-muted-foreground">entries</span>
+    return (
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-primary">Account Receivable (Unpaid Invoices)</h2>
+
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Show:</span>
+            <Select value={arPageSize.toString()} onValueChange={(v) => { setArPageSize(parseInt(v)); setArPageNumber(1); }}>
+              <SelectTrigger className="w-[70px] h-8"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-muted-foreground">entries</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Search:</span>
+            <Input className="w-[200px] h-8" />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Search:</span>
-          <Input className="w-[200px] h-8" />
-        </div>
-      </div>
 
-      <div className="bg-card rounded-lg border border-border overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="bg-table-header text-table-header-foreground">
-              <th className="px-4 py-3 text-left text-sm font-semibold">Invoice Date</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Invoice No.</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Customer Reference</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Job/HBL No.</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Debit</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Balance</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Payment Status</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Status</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Aging</th>
-            </tr>
-          </thead>
-          <tbody>
-            {accountReceivables.map((ar, i) => (
-              <tr key={ar.id} className={`border-b border-border ${i % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
-                <td className="px-4 py-3 text-sm">{ar.invoiceDate}</td>
-                <td className="px-4 py-3 text-sm text-primary">{ar.invoiceNo}</td>
-                <td className="px-4 py-3 text-sm">{ar.customerRef}</td>
-                <td className="px-4 py-3 text-sm">{ar.jobHblNo}</td>
-                <td className="px-4 py-3 text-sm">{ar.debit}</td>
-                <td className="px-4 py-3 text-sm">{ar.balance}</td>
-                <td className="px-4 py-3 text-sm">{ar.paymentStatus}</td>
-                <td className="px-4 py-3 text-sm">{ar.status}</td>
-                <td className="px-4 py-3 text-sm"><span className="bg-primary text-primary-foreground px-2 py-1 rounded text-xs">{ar.aging}</span></td>
+        <div className="bg-card rounded-lg border border-border overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-table-header text-table-header-foreground">
+                <th className="px-4 py-3 text-left text-sm font-semibold">Invoice Date</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Invoice No.</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Customer Reference</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Job/HBL No.</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Debit</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Balance</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Payment Status</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Status</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Aging</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">Showing 1 to 1 of 1 entries</p>
-        <div className="flex items-center gap-1">
-          <Button variant="outline" size="sm">Previous</Button>
-          <Button className="btn-success" size="sm">1</Button>
-          <Button variant="outline" size="sm">Next</Button>
+            </thead>
+            <tbody>
+              {arLoading ? (
+                <tr>
+                  <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">Loading...</td>
+                </tr>
+              ) : accountReceivables.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">No unpaid invoices found</td>
+                </tr>
+              ) : (
+                accountReceivables.map((ar, i) => {
+                  const statusDisplay = getPaymentStatusDisplay(ar.paymentStatus);
+                  return (
+                    <tr key={ar.id} className={`border-b border-border ${i % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
+                      <td className="px-4 py-3 text-sm">{ar.invoiceDate ? format(new Date(ar.invoiceDate), "dd-MM-yyyy") : "-"}</td>
+                      <td className="px-4 py-3 text-sm text-primary">{ar.invoiceNo}</td>
+                      <td className="px-4 py-3 text-sm">{ar.customerRef || "-"}</td>
+                      <td className="px-4 py-3 text-sm">{ar.jobHblNo || "-"}</td>
+                      <td className="px-4 py-3 text-sm">{ar.debit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className="px-4 py-3 text-sm">{ar.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${statusDisplay.className}`}>
+                          {statusDisplay.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm">{ar.status || "Active"}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="bg-primary text-primary-foreground px-2 py-1 rounded text-xs">
+                          {ar.agingDays} Days
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Showing {startEntry} to {endEntry} of {arTotalCount} entries
+          </p>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setArPageNumber(p => Math.max(1, p - 1))}
+              disabled={arPageNumber === 1}
+            >
+              Previous
+            </Button>
+            {Array.from({ length: Math.min(5, arTotalPages) }, (_, i) => {
+              let pageNum: number;
+              if (arTotalPages <= 5) {
+                pageNum = i + 1;
+              } else if (arPageNumber <= 3) {
+                pageNum = i + 1;
+              } else if (arPageNumber >= arTotalPages - 2) {
+                pageNum = arTotalPages - 4 + i;
+              } else {
+                pageNum = arPageNumber - 2 + i;
+              }
+              return (
+                <Button
+                  key={pageNum}
+                  variant={arPageNumber === pageNum ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setArPageNumber(pageNum)}
+                  className={arPageNumber === pageNum ? "btn-success" : ""}
+                >
+                  {pageNum}
+                </Button>
+              );
+            })}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setArPageNumber(p => Math.min(arTotalPages, p + 1))}
+              disabled={arPageNumber === arTotalPages || arTotalPages === 0}
+            >
+              Next
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderCreditNotesTab = () => (
     <div className="space-y-4">

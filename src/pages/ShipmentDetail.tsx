@@ -28,6 +28,7 @@ import { ContainerModal } from "@/components/shipments/ContainerModal";
 import { CostingModal } from "@/components/shipments/CostingModal";
 import { InvoiceModal } from "@/components/shipments/InvoiceModal";
 import { PurchaseModal } from "@/components/shipments/PurchaseModal";
+import { DeleteConfirmationModal } from "@/components/ui/delete-confirmation-modal";
 import { toast } from "sonner";
 import {
   useShipment,
@@ -35,8 +36,10 @@ import {
   useAddShipmentParty,
   useDeleteShipmentParty,
   useAddShipmentContainer,
+  useUpdateShipmentContainer,
   useDeleteShipmentContainer,
   useAddShipmentCosting,
+  useUpdateShipmentCosting,
   useDeleteShipmentCosting,
 } from "@/hooks/useShipments";
 import { useCustomers } from "@/hooks/useCustomers";
@@ -48,7 +51,9 @@ import {
   settingsApi,
   ShipmentInvoicesResult,
   AddShipmentContainerRequest,
+  UpdateShipmentContainerRequest,
   AddShipmentCostingRequest,
+  UpdateShipmentCostingRequest,
   ShipmentContainer,
   ShipmentCosting,
   Currency,
@@ -133,46 +138,77 @@ const partyTypeLabels: Record<PartyType, string> = {
   CustomerNeutral: 'Customer (Neutral)',
 };
 
-// Mock data for the shipment
-const mockShipmentData = {
-  jobNumber: "25JAE1658",
-  jobDate: "2025-12-24",
-  jobStatus: "Opened",
-  direction: "Import",
-  mode: "Sea Freight FCL",
-  incoterms: "CFR-COST AND FREIGHT",
-  houseBLNo: "HSCMBJEA00077",
-  houseBLDate: "2025-12-24",
-  houseBLStatus: "HBL",
-  hblServiceType: "LCL/LCL",
-  hblNoBLIssued: "3",
-  hblFreight: "Prepaid",
-  mblNumber: "CGLCMBJEA322725",
-  mblDate: "2025-12-24",
-  mblStatus: "MBL",
-  mblServiceType: "FCL/FCL",
-  mblNoBLIssued: "3",
-  mblFreight: "Prepaid",
-  placeOfBLIssue: "COLOMBO,SRILANKA",
-  carrier: "GULF AGENCY CO PVT LTD",
-  freeTime: "14 DAYS",
-  networkPartner: "SELF",
-  assignedTo: "None",
-  placeOfReceipt: "Colombo",
-  portOfReceipt: "Colombo",
-  portOfLoading: "Colombo",
-  portOfDischarge: "Jebel Ali",
-  portOfFinalDestination: "Jebel Ali",
-  placeOfDelivery: "Jebel Ali",
-  vessel: "EVER URBAN",
-  voyage: "221W",
-  etd: "2025-12-24",
-  eta: "2025-12-24",
+// Helper functions for enum mapping
+const mapModeToDisplay = (mode: string): string => {
+  const modeMap: Record<string, string> = {
+    'SeaFreightFCL': 'Sea Freight FCL',
+    'SeaFreightLCL': 'Sea Freight LCL',
+    'AirFreight': 'Air Freight',
+    'BreakBulk': 'Break-Bulk',
+    'RoRo': 'RO-RO',
+  };
+  return modeMap[mode] || mode;
+};
+
+const mapDirectionToDisplay = (direction: string): string => {
+  return direction === 'CrossTrade' ? 'Cross-Trade' : direction;
+};
+
+const mapDisplayToMode = (mode: string): string => {
+  const map: Record<string, string> = {
+    'Sea Freight FCL': 'SeaFreightFCL',
+    'Sea Freight LCL': 'SeaFreightLCL',
+    'Air Freight': 'AirFreight',
+    'Break-Bulk': 'BreakBulk',
+    'RO-RO': 'RoRo',
+  };
+  return map[mode] || mode;
+};
+
+const mapDisplayToDirection = (direction: string): string => {
+  return direction === 'Cross-Trade' ? 'CrossTrade' : direction;
+};
+
+// Empty initial form data
+const emptyFormData = {
+  jobNumber: "",
+  jobDate: "",
+  jobStatus: "",
+  direction: "",
+  mode: "",
+  incoterms: "",
+  houseBLNo: "",
+  houseBLDate: "",
+  houseBLStatus: "",
+  hblServiceType: "",
+  hblNoBLIssued: "",
+  hblFreight: "",
+  mblNumber: "",
+  mblDate: "",
+  mblStatus: "",
+  mblServiceType: "",
+  mblNoBLIssued: "",
+  mblFreight: "",
+  placeOfBLIssue: "",
+  carrier: "",
+  freeTime: "",
+  networkPartner: "",
+  assignedTo: "",
+  placeOfReceipt: "",
+  portOfReceipt: "",
+  portOfLoading: "",
+  portOfDischarge: "",
+  portOfFinalDestination: "",
+  placeOfDelivery: "",
+  vessel: "",
+  voyage: "",
+  etd: "",
+  eta: "",
   secondLegVessel: false,
   secondLegVesselName: "",
   secondLegVoyage: "",
-  secondLegETD: "2025-12-24",
-  secondLegETA: "2025-12-24",
+  secondLegETD: "",
+  secondLegETA: "",
   marksNumbers: "",
   notes: "",
   internalNotes: "",
@@ -233,16 +269,19 @@ const ShipmentDetail = () => {
   const addPartyMutation = useAddShipmentParty();
   const deletePartyMutation = useDeleteShipmentParty();
   const addContainerMutation = useAddShipmentContainer();
+  const updateContainerMutation = useUpdateShipmentContainer();
   const deleteContainerMutation = useDeleteShipmentContainer();
   const addCostingMutation = useAddShipmentCosting();
+  const updateCostingMutation = useUpdateShipmentCosting();
   const deleteCostingMutation = useDeleteShipmentCosting();
 
   // State
   const [activeTab, setActiveTab] = useState("shipment-info");
-  const [formData, setFormData] = useState(mockShipmentData);
+  const [formData, setFormData] = useState(emptyFormData);
   const [selectedPartyType, setSelectedPartyType] = useState<PartyType>('Shipper');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
-  const [cargoDetails, setCargoDetails] = useState({ quantity: "", loadType: "", totalCBM: "", totalWeight: "", description: "" });
+  const [cargoDetails, setCargoDetails] = useState<any[]>([]);
+  const [newCargoEntry, setNewCargoEntry] = useState({ quantity: "", loadType: "", totalCBM: "", totalWeight: "", description: "" });
   const [documents, setDocuments] = useState<any[]>([]);
   const [shipmentStatus, setShipmentStatus] = useState({ date: "2025-12-26", remarks: "" });
   const [isSaving, setIsSaving] = useState(false);
@@ -254,6 +293,15 @@ const ShipmentDetail = () => {
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
   const [editingContainer, setEditingContainer] = useState<ShipmentContainer | null>(null);
   const [editingCosting, setEditingCosting] = useState<ShipmentCosting | null>(null);
+
+  // Delete confirmation modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteModalConfig, setDeleteModalConfig] = useState<{
+    type: 'party' | 'container' | 'costing';
+    id: number;
+    name?: string;
+  } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch shipment invoices
   const { data: shipmentInvoicesResponse } = useQuery({
@@ -270,6 +318,55 @@ const ShipmentDetail = () => {
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
   const categoryTypes = useMemo(() => categoryTypesResponse?.data ?? [], [categoryTypesResponse?.data]);
+
+  // Fetch INCO terms
+  const { data: incoTermsResponse } = useQuery({
+    queryKey: ['incoTerms', 'all'],
+    queryFn: () => settingsApi.getAllIncoTerms(),
+    staleTime: 60 * 60 * 1000, // Cache for 1 hour (INCO terms rarely change)
+  });
+  const incoTerms = useMemo(() => incoTermsResponse?.data ?? [], [incoTermsResponse?.data]);
+
+  // Fetch Network Partners
+  const { data: networkPartnersResponse } = useQuery({
+    queryKey: ['networkPartners', 'all'],
+    queryFn: () => settingsApi.getAllNetworkPartners(),
+    staleTime: 60 * 60 * 1000, // Cache for 1 hour
+  });
+  const networkPartners = useMemo(() => networkPartnersResponse?.data ?? [], [networkPartnersResponse?.data]);
+
+  // Fetch Transport Modes
+  const { data: transportModesResponse } = useQuery({
+    queryKey: ['transportModes', 'all'],
+    queryFn: () => settingsApi.getAllTransportModes(),
+    staleTime: 60 * 60 * 1000, // Cache for 1 hour
+  });
+  const transportModes = useMemo(() => transportModesResponse?.data ?? [], [transportModesResponse?.data]);
+
+  // Fetch BL Types
+  const { data: blTypesResponse } = useQuery({
+    queryKey: ['blTypes', 'all'],
+    queryFn: () => settingsApi.getAllBLTypes(),
+    staleTime: 60 * 60 * 1000, // Cache for 1 hour
+  });
+  const blTypes = useMemo(() => blTypesResponse?.data ?? [], [blTypesResponse?.data]);
+
+  // Filter BL types based on selected transport mode
+  const filteredBLTypes = useMemo(() => {
+    const isAirFreight = formData.mode === 'Air Freight';
+    return blTypes.filter(bt =>
+      bt.category === 'Common' ||
+      (isAirFreight ? bt.category === 'Air' : bt.category === 'Sea')
+    );
+  }, [blTypes, formData.mode]);
+
+  // Fetch Ports
+  const { data: portsResponse } = useQuery({
+    queryKey: ['ports', 'all'],
+    queryFn: () => settingsApi.getAllPorts(),
+    staleTime: 60 * 60 * 1000, // Cache for 1 hour
+  });
+  const ports = useMemo(() => portsResponse?.data ?? [], [portsResponse?.data]);
 
   // Get data from shipmentData
   const containers = shipmentData?.containers || [];
@@ -306,27 +403,26 @@ const ShipmentDetail = () => {
         jobNumber: shipmentData.jobNumber,
         jobDate: shipmentData.jobDate?.split('T')[0] || '',
         jobStatus: shipmentData.jobStatus,
-        direction: shipmentData.direction,
-        mode: shipmentData.mode === 'SeaFreightFCL' ? 'Sea Freight FCL' :
-              shipmentData.mode === 'SeaFreightLCL' ? 'Sea Freight LCL' : 'Air Freight',
+        direction: mapDirectionToDisplay(shipmentData.direction),
+        mode: mapModeToDisplay(shipmentData.mode),
         incoterms: shipmentData.incoterms || '',
         houseBLNo: shipmentData.houseBLNo || '',
         houseBLDate: shipmentData.houseBLDate?.split('T')[0] || '',
-        houseBLStatus: shipmentData.houseBLStatus || 'HBL',
-        hblServiceType: shipmentData.hblServiceType || 'LCL/LCL',
+        houseBLStatus: shipmentData.houseBLStatus || '',
+        hblServiceType: shipmentData.hblServiceType || '',
         hblNoBLIssued: shipmentData.hblNoBLIssued || '',
-        hblFreight: shipmentData.hblFreight || 'Prepaid',
+        hblFreight: shipmentData.hblFreight || '',
         mblNumber: shipmentData.mblNumber || '',
         mblDate: shipmentData.mblDate?.split('T')[0] || '',
-        mblStatus: shipmentData.mblStatus || 'MBL',
-        mblServiceType: shipmentData.mblServiceType || 'FCL/FCL',
+        mblStatus: shipmentData.mblStatus || '',
+        mblServiceType: shipmentData.mblServiceType || '',
         mblNoBLIssued: shipmentData.mblNoBLIssued || '',
-        mblFreight: shipmentData.mblFreight || 'Prepaid',
+        mblFreight: shipmentData.mblFreight || '',
         placeOfBLIssue: shipmentData.placeOfBLIssue || '',
         carrier: shipmentData.carrier || '',
         freeTime: shipmentData.freeTime || '',
-        networkPartner: shipmentData.networkPartner || 'SELF',
-        assignedTo: shipmentData.assignedTo || 'None',
+        networkPartner: shipmentData.networkPartner || '',
+        assignedTo: shipmentData.assignedTo || '',
         placeOfReceipt: shipmentData.placeOfReceipt || '',
         portOfReceipt: shipmentData.portOfReceipt || '',
         portOfLoading: shipmentData.portOfLoading || '',
@@ -346,6 +442,14 @@ const ShipmentDetail = () => {
         notes: shipmentData.notes || '',
         internalNotes: shipmentData.internalNotes || '',
       });
+      // Load cargo details from API
+      if (shipmentData.cargos) {
+        setCargoDetails(shipmentData.cargos);
+      }
+      // Load documents from API
+      if (shipmentData.documents) {
+        setDocuments(shipmentData.documents);
+      }
     }
   }, [shipmentData]);
 
@@ -392,9 +496,10 @@ const ShipmentDetail = () => {
     setSelectedCustomerId("");
   };
 
-  const handleDeleteParty = (partyId: number) => {
+  const handleDeleteParty = (partyId: number, partyName?: string) => {
     if (!shipmentId) return;
-    deletePartyMutation.mutate({ partyId, shipmentId });
+    setDeleteModalConfig({ type: 'party', id: partyId, name: partyName });
+    setDeleteModalOpen(true);
   };
 
   // Container handlers
@@ -405,18 +510,36 @@ const ShipmentDetail = () => {
     }
 
     try {
-      const data: AddShipmentContainerRequest = {
-        shipmentId,
-        containerNumber: containerData.containerNumber,
-        containerType: containerData.containerType,
-        sealNo: containerData.sealNo,
-        noOfPcs: parseInt(containerData.noOfPcs) || 0,
-        packageType: containerData.packageType,
-        grossWeight: parseFloat(containerData.grossWeight) || 0,
-        volume: parseFloat(containerData.volume) || 0,
-      };
+      if (editingContainer) {
+        // Update existing container
+        const data: UpdateShipmentContainerRequest = {
+          id: editingContainer.id,
+          shipmentId,
+          containerNumber: containerData.containerNumber,
+          containerType: containerData.containerType,
+          sealNo: containerData.sealNo,
+          noOfPcs: parseInt(containerData.noOfPcs) || 0,
+          packageType: containerData.packageType,
+          grossWeight: parseFloat(containerData.grossWeight) || 0,
+          volume: parseFloat(containerData.volume) || 0,
+        };
 
-      await addContainerMutation.mutateAsync({ shipmentId, data });
+        await updateContainerMutation.mutateAsync({ shipmentId, containerId: editingContainer.id, data });
+      } else {
+        // Add new container
+        const data: AddShipmentContainerRequest = {
+          shipmentId,
+          containerNumber: containerData.containerNumber,
+          containerType: containerData.containerType,
+          sealNo: containerData.sealNo,
+          noOfPcs: parseInt(containerData.noOfPcs) || 0,
+          packageType: containerData.packageType,
+          grossWeight: parseFloat(containerData.grossWeight) || 0,
+          volume: parseFloat(containerData.volume) || 0,
+        };
+
+        await addContainerMutation.mutateAsync({ shipmentId, data });
+      }
       setContainerModalOpen(false);
       setEditingContainer(null);
       refetchShipment();
@@ -430,16 +553,10 @@ const ShipmentDetail = () => {
     setContainerModalOpen(true);
   };
 
-  const handleDeleteContainer = async (containerId: number) => {
+  const handleDeleteContainer = (containerId: number, containerNumber?: string) => {
     if (!shipmentId) return;
-    if (!confirm("Are you sure you want to delete this container?")) return;
-
-    try {
-      await deleteContainerMutation.mutateAsync({ containerId, shipmentId });
-      refetchShipment();
-    } catch (error) {
-      // Error handled by mutation
-    }
+    setDeleteModalConfig({ type: 'container', id: containerId, name: containerNumber });
+    setDeleteModalOpen(true);
   };
 
   // Costing handlers
@@ -452,34 +569,69 @@ const ShipmentDetail = () => {
     try {
       const saleLCY = parseFloat(costingData.saleLCY) || 0;
       const costLCY = parseFloat(costingData.costLCY) || 0;
-      const data: AddShipmentCostingRequest = {
-        shipmentId,
-        description: costingData.description,
-        remarks: costingData.remarks,
-        saleQty: parseFloat(costingData.saleQty) || 0,
-        saleUnit: parseFloat(costingData.saleUnit) || 0,
-        saleCurrency: costingData.saleCurrency as Currency,
-        saleExRate: parseFloat(costingData.saleExRate) || 1,
-        saleFCY: parseFloat(costingData.saleFCY) || 0,
-        saleLCY,
-        saleTaxPercentage: parseFloat(costingData.saleTaxPercentage) || 0,
-        saleTaxAmount: parseFloat(costingData.saleTaxAmount) || 0,
-        costQty: parseFloat(costingData.costQty) || 0,
-        costUnit: parseFloat(costingData.costUnit) || 0,
-        costCurrency: costingData.costCurrency as Currency,
-        costExRate: parseFloat(costingData.costExRate) || 1,
-        costFCY: parseFloat(costingData.costFCY) || 0,
-        costLCY,
-        costTaxPercentage: parseFloat(costingData.costTaxPercentage) || 0,
-        costTaxAmount: parseFloat(costingData.costTaxAmount) || 0,
-        unitId: costingData.unitId,
-        unit: costingData.unit,
-        gp: saleLCY - costLCY,
-        billToCustomerId: costingData.billToCustomerId,
-        vendorCustomerId: costingData.vendorCustomerId,
-      };
 
-      await addCostingMutation.mutateAsync({ shipmentId, data });
+      if (editingCosting) {
+        // Update existing costing
+        const data: UpdateShipmentCostingRequest = {
+          id: editingCosting.id,
+          shipmentId,
+          description: costingData.description,
+          remarks: costingData.remarks,
+          saleQty: parseFloat(costingData.saleQty) || 0,
+          saleUnit: parseFloat(costingData.saleUnit) || 0,
+          saleCurrency: costingData.saleCurrency as Currency,
+          saleExRate: parseFloat(costingData.saleExRate) || 1,
+          saleFCY: parseFloat(costingData.saleFCY) || 0,
+          saleLCY,
+          saleTaxPercentage: parseFloat(costingData.saleTaxPercentage) || 0,
+          saleTaxAmount: parseFloat(costingData.saleTaxAmount) || 0,
+          costQty: parseFloat(costingData.costQty) || 0,
+          costUnit: parseFloat(costingData.costUnit) || 0,
+          costCurrency: costingData.costCurrency as Currency,
+          costExRate: parseFloat(costingData.costExRate) || 1,
+          costFCY: parseFloat(costingData.costFCY) || 0,
+          costLCY,
+          costTaxPercentage: parseFloat(costingData.costTaxPercentage) || 0,
+          costTaxAmount: parseFloat(costingData.costTaxAmount) || 0,
+          unitId: costingData.unitId,
+          unit: costingData.unit,
+          gp: saleLCY - costLCY,
+          billToCustomerId: costingData.billToCustomerId,
+          vendorCustomerId: costingData.vendorCustomerId,
+        };
+
+        await updateCostingMutation.mutateAsync({ shipmentId, costingId: editingCosting.id, data });
+      } else {
+        // Add new costing
+        const data: AddShipmentCostingRequest = {
+          shipmentId,
+          description: costingData.description,
+          remarks: costingData.remarks,
+          saleQty: parseFloat(costingData.saleQty) || 0,
+          saleUnit: parseFloat(costingData.saleUnit) || 0,
+          saleCurrency: costingData.saleCurrency as Currency,
+          saleExRate: parseFloat(costingData.saleExRate) || 1,
+          saleFCY: parseFloat(costingData.saleFCY) || 0,
+          saleLCY,
+          saleTaxPercentage: parseFloat(costingData.saleTaxPercentage) || 0,
+          saleTaxAmount: parseFloat(costingData.saleTaxAmount) || 0,
+          costQty: parseFloat(costingData.costQty) || 0,
+          costUnit: parseFloat(costingData.costUnit) || 0,
+          costCurrency: costingData.costCurrency as Currency,
+          costExRate: parseFloat(costingData.costExRate) || 1,
+          costFCY: parseFloat(costingData.costFCY) || 0,
+          costLCY,
+          costTaxPercentage: parseFloat(costingData.costTaxPercentage) || 0,
+          costTaxAmount: parseFloat(costingData.costTaxAmount) || 0,
+          unitId: costingData.unitId,
+          unit: costingData.unit,
+          gp: saleLCY - costLCY,
+          billToCustomerId: costingData.billToCustomerId,
+          vendorCustomerId: costingData.vendorCustomerId,
+        };
+
+        await addCostingMutation.mutateAsync({ shipmentId, data });
+      }
       setCostingModalOpen(false);
       setEditingCosting(null);
       refetchShipment();
@@ -493,15 +645,36 @@ const ShipmentDetail = () => {
     setCostingModalOpen(true);
   };
 
-  const handleDeleteCosting = async (costingId: number) => {
+  const handleDeleteCosting = (costingId: number, description?: string) => {
     if (!shipmentId) return;
-    if (!confirm("Are you sure you want to delete this costing entry?")) return;
+    setDeleteModalConfig({ type: 'costing', id: costingId, name: description });
+    setDeleteModalOpen(true);
+  };
+
+  // Handle delete confirmation
+  const handleConfirmDelete = async () => {
+    if (!shipmentId || !deleteModalConfig) return;
+    setIsDeleting(true);
 
     try {
-      await deleteCostingMutation.mutateAsync({ costingId, shipmentId });
+      switch (deleteModalConfig.type) {
+        case 'party':
+          await deletePartyMutation.mutateAsync({ partyId: deleteModalConfig.id, shipmentId });
+          break;
+        case 'container':
+          await deleteContainerMutation.mutateAsync({ containerId: deleteModalConfig.id, shipmentId });
+          break;
+        case 'costing':
+          await deleteCostingMutation.mutateAsync({ costingId: deleteModalConfig.id, shipmentId });
+          break;
+      }
       refetchShipment();
+      setDeleteModalOpen(false);
+      setDeleteModalConfig(null);
     } catch (error) {
       // Error handled by mutation
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -515,9 +688,8 @@ const ShipmentDetail = () => {
         data: {
           id: shipmentId,
           jobStatus: (formData.jobStatus || 'Opened') as any,
-          direction: formData.direction as any,
-          mode: formData.mode === 'Sea Freight FCL' ? 'SeaFreightFCL' :
-                formData.mode === 'Sea Freight LCL' ? 'SeaFreightLCL' : 'AirFreight',
+          direction: mapDisplayToDirection(formData.direction) as any,
+          mode: mapDisplayToMode(formData.mode) as any,
           incoterms: (formData.incoterms || undefined) as any,
           houseBLNo: formData.houseBLNo || undefined,
           houseBLDate: formData.houseBLDate || undefined,
@@ -594,11 +766,36 @@ const ShipmentDetail = () => {
           </div>
         </div>
 
-        {/* Tabs */}
+        {/* Loading State */}
+        {isLoadingShipment && (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
+            <span className="ml-2 text-muted-foreground">Loading shipment...</span>
+          </div>
+        )}
+
+        {/* Error State */}
+        {shipmentError && !isLoadingShipment && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 text-center">
+            <p className="text-red-600 dark:text-red-400">
+              Failed to load shipment: {shipmentError instanceof Error ? shipmentError.message : 'Unknown error'}
+            </p>
+            <Button
+              onClick={() => refetchShipment()}
+              variant="outline"
+              className="mt-4"
+            >
+              Try Again
+            </Button>
+          </div>
+        )}
+
+        {/* Tabs - Only show when data is loaded */}
+        {!isLoadingShipment && !shipmentError && (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full justify-start mb-4 bg-card border border-border rounded-lg p-1 h-auto flex-wrap">
-            <TabsTrigger 
-              value="shipment-info" 
+            <TabsTrigger
+              value="shipment-info"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
             >
               Shipment Info
@@ -643,342 +840,425 @@ const ShipmentDetail = () => {
 
           {/* Shipment Info Tab */}
           <TabsContent value="shipment-info" className="mt-0">
-            <div className="bg-card border border-border rounded-lg p-6 space-y-6">
-              <h3 className="text-emerald-600 font-semibold text-lg">Shipment Info</h3>
-              
-              {/* Row 1 */}
-              <div className="grid grid-cols-6 gap-4">
-                <div>
-                  <Label className="text-sm">Job Number</Label>
-                  <Input value={formData.jobNumber} readOnly className="bg-muted" />
-                </div>
-                <div>
-                  <Label className="text-sm">Job Date</Label>
-                  <DateInput value={formData.jobDate} onChange={(v) => handleInputChange("jobDate", v)} />
-                </div>
-                <div>
-                  <Label className="text-sm">Job Status</Label>
-                  <Select value={formData.jobStatus} onValueChange={(v) => handleInputChange("jobStatus", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="Opened">Opened</SelectItem>
-                      <SelectItem value="Closed">Closed</SelectItem>
-                      <SelectItem value="Cancelled">Cancelled</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-sm">Direction</Label>
-                  <Select value={formData.direction} onValueChange={(v) => handleInputChange("direction", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="Import">Import</SelectItem>
-                      <SelectItem value="Export">Export</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-sm">Mode</Label>
-                  <Select value={formData.mode} onValueChange={(v) => handleInputChange("mode", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="Sea Freight FCL">Sea Freight FCL</SelectItem>
-                      <SelectItem value="Sea Freight LCL">Sea Freight LCL</SelectItem>
-                      <SelectItem value="Air Freight">Air Freight</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-sm">INCO Terms</Label>
-                  <Select value={formData.incoterms} onValueChange={(v) => handleInputChange("incoterms", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="CFR-COST AND FREIGHT">CFR-COST AND FREIGHT</SelectItem>
-                      <SelectItem value="CIF">CIF</SelectItem>
-                      <SelectItem value="FOB">FOB</SelectItem>
-                      <SelectItem value="EXW">EXW</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Row 2 - House B/L */}
-              <div className="grid grid-cols-6 gap-4">
-                <div>
-                  <Label className="text-sm text-emerald-600">House B/L No</Label>
-                  <Input value={formData.houseBLNo} onChange={(e) => handleInputChange("houseBLNo", e.target.value)} className="border-emerald-300" />
-                </div>
-                <div>
-                  <Label className="text-sm">Date</Label>
-                  <DateInput value={formData.houseBLDate} onChange={(v) => handleInputChange("houseBLDate", v)} />
-                </div>
-                <div>
-                  <Label className="text-sm">BL Status</Label>
-                  <Select value={formData.houseBLStatus} onValueChange={(v) => handleInputChange("houseBLStatus", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="HBL">HBL</SelectItem>
-                      <SelectItem value="Express">Express</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-sm">BL Service Type</Label>
-                  <Select value={formData.hblServiceType} onValueChange={(v) => handleInputChange("hblServiceType", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="LCL/LCL">LCL/LCL</SelectItem>
-                      <SelectItem value="FCL/FCL">FCL/FCL</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-sm">No BL Issued</Label>
-                  <Input value={formData.hblNoBLIssued} onChange={(e) => handleInputChange("hblNoBLIssued", e.target.value)} />
-                </div>
-                <div>
-                  <Label className="text-sm">Freight</Label>
-                  <Select value={formData.hblFreight} onValueChange={(v) => handleInputChange("hblFreight", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="Prepaid">Prepaid</SelectItem>
-                      <SelectItem value="Collect">Collect</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Row 3 - MBL */}
-              <div className="grid grid-cols-6 gap-4">
-                <div>
-                  <Label className="text-sm">MBL Number</Label>
-                  <Input value={formData.mblNumber} onChange={(e) => handleInputChange("mblNumber", e.target.value)} />
-                </div>
-                <div>
-                  <Label className="text-sm">Date</Label>
-                  <DateInput value={formData.mblDate} onChange={(v) => handleInputChange("mblDate", v)} />
-                </div>
-                <div>
-                  <Label className="text-sm">BL Status</Label>
-                  <Select value={formData.mblStatus} onValueChange={(v) => handleInputChange("mblStatus", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="MBL">MBL</SelectItem>
-                      <SelectItem value="Express">Express</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-sm">BL Service Type</Label>
-                  <Select value={formData.mblServiceType} onValueChange={(v) => handleInputChange("mblServiceType", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="FCL/FCL">FCL/FCL</SelectItem>
-                      <SelectItem value="LCL/LCL">LCL/LCL</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-sm">No BL Issued</Label>
-                  <Input value={formData.mblNoBLIssued} onChange={(e) => handleInputChange("mblNoBLIssued", e.target.value)} />
-                </div>
-                <div>
-                  <Label className="text-sm">Freight</Label>
-                  <Select value={formData.mblFreight} onValueChange={(v) => handleInputChange("mblFreight", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="Prepaid">Prepaid</SelectItem>
-                      <SelectItem value="Collect">Collect</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Row 4 */}
-              <div className="grid grid-cols-5 gap-4">
-                <div>
-                  <Label className="text-sm">Place of BL Issue</Label>
-                  <Input value={formData.placeOfBLIssue} onChange={(e) => handleInputChange("placeOfBLIssue", e.target.value)} />
-                </div>
-                <div>
-                  <Label className="text-sm">Carrier</Label>
-                  <Input value={formData.carrier} onChange={(e) => handleInputChange("carrier", e.target.value)} />
-                </div>
-                <div>
-                  <Label className="text-sm">Free Time</Label>
-                  <Input value={formData.freeTime} onChange={(e) => handleInputChange("freeTime", e.target.value)} />
-                </div>
-                <div>
-                  <Label className="text-sm">Network Partner</Label>
-                  <Select value={formData.networkPartner} onValueChange={(v) => handleInputChange("networkPartner", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="SELF">SELF</SelectItem>
-                      <SelectItem value="Partner 1">Partner 1</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-sm">Assigned To</Label>
-                  <Select value={formData.assignedTo} onValueChange={(v) => handleInputChange("assignedTo", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="None">None</SelectItem>
-                      <SelectItem value="User 1">User 1</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Row 5 - Ports */}
-              <div className="grid grid-cols-6 gap-4">
-                <div>
-                  <Label className="text-sm">Place of Receipt</Label>
-                  <Select value={formData.placeOfReceipt} onValueChange={(v) => handleInputChange("placeOfReceipt", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="Colombo">Colombo</SelectItem>
-                      <SelectItem value="Singapore">Singapore</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-sm">Port of Receipt</Label>
-                  <Select value={formData.portOfReceipt} onValueChange={(v) => handleInputChange("portOfReceipt", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="Colombo">Colombo</SelectItem>
-                      <SelectItem value="Singapore">Singapore</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-sm">Port of Loading</Label>
-                  <Select value={formData.portOfLoading} onValueChange={(v) => handleInputChange("portOfLoading", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="Colombo">Colombo</SelectItem>
-                      <SelectItem value="Singapore">Singapore</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-sm">Port of Discharge</Label>
-                  <Select value={formData.portOfDischarge} onValueChange={(v) => handleInputChange("portOfDischarge", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="Jebel Ali">Jebel Ali</SelectItem>
-                      <SelectItem value="Dubai">Dubai</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-sm">Port of Final Destination</Label>
-                  <Select value={formData.portOfFinalDestination} onValueChange={(v) => handleInputChange("portOfFinalDestination", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="Jebel Ali">Jebel Ali</SelectItem>
-                      <SelectItem value="Dubai">Dubai</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-sm">Place of Delivery</Label>
-                  <Select value={formData.placeOfDelivery} onValueChange={(v) => handleInputChange("placeOfDelivery", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="Jebel Ali">Jebel Ali</SelectItem>
-                      <SelectItem value="Dubai">Dubai</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Row 6 - Vessel & Dates */}
-              <div className="grid grid-cols-5 gap-4">
-                <div>
-                  <Label className="text-sm">Vessel</Label>
-                  <Input value={formData.vessel} onChange={(e) => handleInputChange("vessel", e.target.value)} />
-                </div>
-                <div>
-                  <Label className="text-sm">Voyage</Label>
-                  <Input value={formData.voyage} onChange={(e) => handleInputChange("voyage", e.target.value)} />
-                </div>
-                <div>
-                  <Label className="text-sm">ETD</Label>
-                  <DateInput value={formData.etd} onChange={(v) => handleInputChange("etd", v)} />
-                </div>
-                <div>
-                  <Label className="text-sm">ETA</Label>
-                  <DateInput value={formData.eta} onChange={(v) => handleInputChange("eta", v)} />
-                </div>
-                <div className="flex items-end">
-                  <div className="flex items-center gap-2">
-                    <Checkbox 
-                      id="2ndLeg" 
-                      checked={formData.secondLegVessel}
-                      onCheckedChange={(checked) => handleInputChange("secondLegVessel", checked as boolean)}
-                    />
-                    <Label htmlFor="2ndLeg" className="text-sm">2nd Leg Vessel</Label>
-                  </div>
-                </div>
-              </div>
-
-              {/* 2nd Leg Vessel Row - Conditional */}
-              {formData.secondLegVessel && (
-                <div className="grid grid-cols-4 gap-4">
+            <div className="space-y-6">
+              {/* Section 1: Basic Shipment Details */}
+              <div className="bg-card border border-border rounded-lg p-6 space-y-4">
+                <h3 className="text-emerald-600 font-semibold text-lg border-b border-border pb-2">Basic Shipment Details</h3>
+                <div className="grid grid-cols-6 gap-4">
                   <div>
-                    <Label className="text-sm">2nd Leg Vessel</Label>
-                    <Input 
-                      value={formData.secondLegVesselName} 
-                      onChange={(e) => handleInputChange("secondLegVesselName", e.target.value)} 
-                      placeholder="OCL France" 
-                    />
+                    <Label className="text-sm">Job Number</Label>
+                    <Input value={formData.jobNumber} readOnly className="bg-muted" />
                   </div>
                   <div>
-                    <Label className="text-sm">2nd Leg Voyage</Label>
-                    <Input 
-                      value={formData.secondLegVoyage} 
-                      onChange={(e) => handleInputChange("secondLegVoyage", e.target.value)} 
-                      placeholder="78465F1" 
-                    />
+                    <Label className="text-sm">Date</Label>
+                    <DateInput value={formData.jobDate} onChange={(v) => handleInputChange("jobDate", v)} />
                   </div>
                   <div>
-                    <Label className="text-sm">2nd Leg ETD</Label>
-                    <DateInput 
-                      value={formData.secondLegETD} 
-                      onChange={(v) => handleInputChange("secondLegETD", v)} 
-                    />
+                    <Label className="text-sm">Job Status</Label>
+                    <Select value={formData.jobStatus} onValueChange={(v) => handleInputChange("jobStatus", v)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-popover border border-border">
+                        <SelectItem value="Opened">Opened</SelectItem>
+                        <SelectItem value="Closed">Closed</SelectItem>
+                        <SelectItem value="Cancelled">Cancelled</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
-                    <Label className="text-sm">2nd Leg ETA</Label>
-                    <DateInput 
-                      value={formData.secondLegETA} 
-                      onChange={(v) => handleInputChange("secondLegETA", v)} 
-                    />
+                    <Label className="text-sm">Direction</Label>
+                    <Select value={formData.direction} onValueChange={(v) => handleInputChange("direction", v)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-popover border border-border">
+                        <SelectItem value="Import">Import</SelectItem>
+                        <SelectItem value="Export">Export</SelectItem>
+                        <SelectItem value="Cross-Trade">Cross-Trade</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                </div>
-              )}
-
-              {/* Row 7 - Notes */}
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label className="text-sm">Marks & Numbers</Label>
-                  <Textarea value={formData.marksNumbers} onChange={(e) => handleInputChange("marksNumbers", e.target.value)} placeholder="Marks & Numbers" />
-                </div>
-                <div>
-                  <Label className="text-sm">Notes</Label>
-                  <Textarea value={formData.notes} onChange={(e) => handleInputChange("notes", e.target.value)} placeholder="Notes" />
-                </div>
-                <div>
-                  <Label className="text-sm">Internal Notes</Label>
-                  <Textarea value={formData.internalNotes} onChange={(e) => handleInputChange("internalNotes", e.target.value)} placeholder="Internal Notes" />
+                  <div>
+                    <Label className="text-sm">Mode</Label>
+                    <Select value={formData.mode} onValueChange={(v) => handleInputChange("mode", v)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-popover border border-border">
+                        {transportModes.length > 0 ? (
+                          transportModes.map((mode) => (
+                            <SelectItem key={mode.id} value={mode.name}>{mode.name}</SelectItem>
+                          ))
+                        ) : (
+                          <>
+                            <SelectItem value="Air Freight">Air Freight</SelectItem>
+                            <SelectItem value="Sea Freight FCL">Sea Freight FCL</SelectItem>
+                            <SelectItem value="Sea Freight LCL">Sea Freight LCL</SelectItem>
+                            <SelectItem value="Break-Bulk">Break-Bulk</SelectItem>
+                            <SelectItem value="RO-RO">RO-RO</SelectItem>
+                          </>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-sm">INCO Terms</Label>
+                    <Select value={formData.incoterms} onValueChange={(v) => handleInputChange("incoterms", v)}>
+                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent className="bg-popover border border-border">
+                        {incoTerms.length === 0 ? (
+                          <SelectItem value="_loading" disabled>Loading...</SelectItem>
+                        ) : (
+                          incoTerms.map(term => (
+                            <SelectItem key={term.id} value={term.code}>
+                              {term.code} - {term.name}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
 
-              <Button className="bg-emerald-500 hover:bg-emerald-600 text-white">
-                Update & Continue
-              </Button>
+              {/* Section 2: Bill of Lading Details */}
+              <div className="bg-card border border-border rounded-lg p-6 space-y-4">
+                <h3 className="text-emerald-600 font-semibold text-lg border-b border-border pb-2">Bill of Lading Details</h3>
+
+                {/* House B/L */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-muted-foreground">House B/L</h4>
+                  <div className="grid grid-cols-6 gap-4">
+                    <div>
+                      <Label className="text-sm">House B/L No</Label>
+                      <Input value={formData.houseBLNo} onChange={(e) => handleInputChange("houseBLNo", e.target.value)} placeholder="B/L No" />
+                    </div>
+                    <div>
+                      <Label className="text-sm">Date</Label>
+                      <DateInput value={formData.houseBLDate} onChange={(v) => handleInputChange("houseBLDate", v)} />
+                    </div>
+                    <div>
+                      <Label className="text-sm">{formData.mode === 'Air Freight' ? 'AWB Status' : 'BL Status'}</Label>
+                      <Select value={formData.houseBLStatus} onValueChange={(v) => handleInputChange("houseBLStatus", v)}>
+                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent className="bg-popover border border-border">
+                          {filteredBLTypes.length > 0 ? (
+                            filteredBLTypes
+                              .filter(bt => bt.code === 'HBL' || bt.code === 'HAWB' || bt.code === 'EXPRESS')
+                              .map(bt => (
+                                <SelectItem key={bt.id} value={bt.code}>{bt.code} - {bt.name}</SelectItem>
+                              ))
+                          ) : (
+                            <>
+                              <SelectItem value="HBL">HBL - House Bill of Lading</SelectItem>
+                              <SelectItem value="Express">Express Release</SelectItem>
+                            </>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-sm">BL Service Type</Label>
+                      <Select value={formData.hblServiceType} onValueChange={(v) => handleInputChange("hblServiceType", v)}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent className="bg-popover border border-border">
+                          <SelectItem value="LCL/LCL">LCL/LCL</SelectItem>
+                          <SelectItem value="FCL/FCL">FCL/FCL</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-sm">No BL Issued</Label>
+                      <Input value={formData.hblNoBLIssued} onChange={(e) => handleInputChange("hblNoBLIssued", e.target.value)} placeholder="No BL Issued" />
+                    </div>
+                    <div>
+                      <Label className="text-sm">Freight</Label>
+                      <Select value={formData.hblFreight} onValueChange={(v) => handleInputChange("hblFreight", v)}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent className="bg-popover border border-border">
+                          <SelectItem value="Prepaid">Prepaid</SelectItem>
+                          <SelectItem value="Collect">Collect</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Master B/L */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-muted-foreground">Master B/L</h4>
+                  <div className="grid grid-cols-6 gap-4">
+                    <div>
+                      <Label className="text-sm">MBL Number</Label>
+                      <Input value={formData.mblNumber} onChange={(e) => handleInputChange("mblNumber", e.target.value)} placeholder="MBL Number" />
+                    </div>
+                    <div>
+                      <Label className="text-sm">Date</Label>
+                      <DateInput value={formData.mblDate} onChange={(v) => handleInputChange("mblDate", v)} />
+                    </div>
+                    <div>
+                      <Label className="text-sm">{formData.mode === 'Air Freight' ? 'AWB Status' : 'BL Status'}</Label>
+                      <Select value={formData.mblStatus} onValueChange={(v) => handleInputChange("mblStatus", v)}>
+                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent className="bg-popover border border-border">
+                          {filteredBLTypes.length > 0 ? (
+                            filteredBLTypes
+                              .filter(bt => bt.code === 'MBL' || bt.code === 'MAWB' || bt.code === 'EXPRESS')
+                              .map(bt => (
+                                <SelectItem key={bt.id} value={bt.code}>{bt.code} - {bt.name}</SelectItem>
+                              ))
+                          ) : (
+                            <>
+                              <SelectItem value="MBL">MBL - Master Bill of Lading</SelectItem>
+                              <SelectItem value="Express">Express Release</SelectItem>
+                            </>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-sm">BL Service Type</Label>
+                      <Select value={formData.mblServiceType} onValueChange={(v) => handleInputChange("mblServiceType", v)}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent className="bg-popover border border-border">
+                          <SelectItem value="FCL/FCL">FCL/FCL</SelectItem>
+                          <SelectItem value="LCL/LCL">LCL/LCL</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-sm">No BL Issued</Label>
+                      <Input value={formData.mblNoBLIssued} onChange={(e) => handleInputChange("mblNoBLIssued", e.target.value)} placeholder="No BL Issued" />
+                    </div>
+                    <div>
+                      <Label className="text-sm">Freight</Label>
+                      <Select value={formData.mblFreight} onValueChange={(v) => handleInputChange("mblFreight", v)}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent className="bg-popover border border-border">
+                          <SelectItem value="Prepaid">Prepaid</SelectItem>
+                          <SelectItem value="Collect">Collect</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Additional B/L Info */}
+                <div className="grid grid-cols-4 gap-4 pt-2">
+                  <div>
+                    <Label className="text-sm">Place of BL Issue</Label>
+                    <Input value={formData.placeOfBLIssue} onChange={(e) => handleInputChange("placeOfBLIssue", e.target.value)} placeholder="Place of BL Issue" />
+                  </div>
+                  <div>
+                    <Label className="text-sm">Carrier</Label>
+                    <Input value={formData.carrier} onChange={(e) => handleInputChange("carrier", e.target.value)} placeholder="Carrier" />
+                  </div>
+                  <div>
+                    <Label className="text-sm">Free Time</Label>
+                    <Input value={formData.freeTime} onChange={(e) => handleInputChange("freeTime", e.target.value)} placeholder="Free Time" />
+                  </div>
+                  <div>
+                    <Label className="text-sm">Network Partner</Label>
+                    <Select value={formData.networkPartner} onValueChange={(v) => handleInputChange("networkPartner", v)}>
+                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent className="bg-popover border border-border">
+                        {networkPartners.length > 0 ? (
+                          networkPartners.map(partner => (
+                            <SelectItem key={partner.id} value={partner.name}>{partner.name}</SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="SELF">SELF</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3: Route & Schedule */}
+              <div className="bg-card border border-border rounded-lg p-6 space-y-4">
+                <h3 className="text-emerald-600 font-semibold text-lg border-b border-border pb-2">Route & Schedule</h3>
+
+                {/* Origin */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-muted-foreground">Origin</h4>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <Label className="text-sm">Place of Receipt</Label>
+                      <Input value={formData.placeOfReceipt} onChange={(e) => handleInputChange("placeOfReceipt", e.target.value)} placeholder="Place of Receipt" />
+                    </div>
+                    <div>
+                      <Label className="text-sm">Port of Receipt</Label>
+                      <Select value={formData.portOfReceipt} onValueChange={(v) => handleInputChange("portOfReceipt", v)}>
+                        <SelectTrigger><SelectValue placeholder="Select Port" /></SelectTrigger>
+                        <SelectContent className="bg-popover border border-border max-h-[300px]">
+                          {ports.length > 0 ? (
+                            ports.map(port => (
+                              <SelectItem key={port.id} value={port.name}>{port.code} - {port.name}</SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="_loading" disabled>Loading ports...</SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-sm">Port of Loading</Label>
+                      <Select value={formData.portOfLoading} onValueChange={(v) => handleInputChange("portOfLoading", v)}>
+                        <SelectTrigger><SelectValue placeholder="Select Port" /></SelectTrigger>
+                        <SelectContent className="bg-popover border border-border max-h-[300px]">
+                          {ports.length > 0 ? (
+                            ports.map(port => (
+                              <SelectItem key={port.id} value={port.name}>{port.code} - {port.name}</SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="_loading" disabled>Loading ports...</SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Destination */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-muted-foreground">Destination</h4>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <Label className="text-sm">Port of Discharge</Label>
+                      <Select value={formData.portOfDischarge} onValueChange={(v) => handleInputChange("portOfDischarge", v)}>
+                        <SelectTrigger><SelectValue placeholder="Select Port" /></SelectTrigger>
+                        <SelectContent className="bg-popover border border-border max-h-[300px]">
+                          {ports.length > 0 ? (
+                            ports.map(port => (
+                              <SelectItem key={port.id} value={port.name}>{port.code} - {port.name}</SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="_loading" disabled>Loading ports...</SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-sm">Port of Final Destination</Label>
+                      <Select value={formData.portOfFinalDestination} onValueChange={(v) => handleInputChange("portOfFinalDestination", v)}>
+                        <SelectTrigger><SelectValue placeholder="Select Port" /></SelectTrigger>
+                        <SelectContent className="bg-popover border border-border max-h-[300px]">
+                          {ports.length > 0 ? (
+                            ports.map(port => (
+                              <SelectItem key={port.id} value={port.name}>{port.code} - {port.name}</SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="_loading" disabled>Loading ports...</SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-sm">Place of Delivery</Label>
+                      <Input value={formData.placeOfDelivery} onChange={(e) => handleInputChange("placeOfDelivery", e.target.value)} placeholder="Place of Delivery" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Vessel & Schedule */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-muted-foreground">Vessel & Schedule</h4>
+                  <div className="grid grid-cols-5 gap-4">
+                    <div>
+                      <Label className="text-sm">Vessel</Label>
+                      <Input value={formData.vessel} onChange={(e) => handleInputChange("vessel", e.target.value)} placeholder="Vessel Name" />
+                    </div>
+                    <div>
+                      <Label className="text-sm">Voyage</Label>
+                      <Input value={formData.voyage} onChange={(e) => handleInputChange("voyage", e.target.value)} placeholder="Voyage No" />
+                    </div>
+                    <div>
+                      <Label className="text-sm">ETD</Label>
+                      <DateInput value={formData.etd} onChange={(v) => handleInputChange("etd", v)} />
+                    </div>
+                    <div>
+                      <Label className="text-sm">ETA</Label>
+                      <DateInput value={formData.eta} onChange={(v) => handleInputChange("eta", v)} />
+                    </div>
+                    <div className="flex items-end">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="2ndLeg"
+                          checked={formData.secondLegVessel}
+                          onCheckedChange={(checked) => handleInputChange("secondLegVessel", checked as boolean)}
+                        />
+                        <Label htmlFor="2ndLeg" className="text-sm">2nd Leg Vessel</Label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Conditional 2nd Leg */}
+                  {formData.secondLegVessel && (
+                    <div className="grid grid-cols-4 gap-4 pt-2">
+                      <div>
+                        <Label className="text-sm">2nd Leg Vessel</Label>
+                        <Input
+                          value={formData.secondLegVesselName}
+                          onChange={(e) => handleInputChange("secondLegVesselName", e.target.value)}
+                          placeholder="Vessel Name"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-sm">2nd Leg Voyage</Label>
+                        <Input
+                          value={formData.secondLegVoyage}
+                          onChange={(e) => handleInputChange("secondLegVoyage", e.target.value)}
+                          placeholder="Voyage No"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-sm">2nd Leg ETD</Label>
+                        <DateInput
+                          value={formData.secondLegETD}
+                          onChange={(v) => handleInputChange("secondLegETD", v)}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-sm">2nd Leg ETA</Label>
+                        <DateInput
+                          value={formData.secondLegETA}
+                          onChange={(v) => handleInputChange("secondLegETA", v)}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Notes */}
+                <div className="space-y-2 pt-2">
+                  <h4 className="text-sm font-medium text-muted-foreground">Additional Notes</h4>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <Label className="text-sm">Marks & Numbers</Label>
+                      <Textarea value={formData.marksNumbers} onChange={(e) => handleInputChange("marksNumbers", e.target.value)} placeholder="Marks & Numbers" />
+                    </div>
+                    <div>
+                      <Label className="text-sm">Notes</Label>
+                      <Textarea value={formData.notes} onChange={(e) => handleInputChange("notes", e.target.value)} placeholder="Notes" />
+                    </div>
+                    <div>
+                      <Label className="text-sm">Internal Notes</Label>
+                      <Textarea value={formData.internalNotes} onChange={(e) => handleInputChange("internalNotes", e.target.value)} placeholder="Internal Notes" />
+                    </div>
+                  </div>
+                </div>
+
+                <Button
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                  onClick={handleSaveShipment}
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Update & Continue"
+                  )}
+                </Button>
+              </div>
             </div>
           </TabsContent>
 
@@ -1074,7 +1354,7 @@ const ShipmentDetail = () => {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded"
-                              onClick={() => handleDeleteParty(party.id)}
+                              onClick={() => handleDeleteParty(party.id, party.customerName)}
                               disabled={deletePartyMutation.isPending}
                             >
                               <Trash2 className="h-4 w-4" />
@@ -1175,7 +1455,7 @@ const ShipmentDetail = () => {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded"
-                              onClick={() => handleDeleteContainer(container.id)}
+                              onClick={() => handleDeleteContainer(container.id, container.containerNumber)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -1289,7 +1569,7 @@ const ShipmentDetail = () => {
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded"
-                                onClick={() => handleDeleteCosting(cost.id)}
+                                onClick={() => handleDeleteCosting(cost.id, cost.description)}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -1396,15 +1676,16 @@ const ShipmentDetail = () => {
           <TabsContent value="cargo-details" className="mt-0">
             <div className="bg-card border border-border rounded-lg p-6 space-y-6">
               <h3 className="text-emerald-600 font-semibold text-lg">Cargo Details</h3>
-              
+
+              {/* Add New Cargo Entry Form */}
               <div className="grid grid-cols-6 gap-4 items-end">
                 <div>
                   <Label className="text-sm font-semibold">Quantity</Label>
-                  <Input value={cargoDetails.quantity} onChange={(e) => setCargoDetails(prev => ({ ...prev, quantity: e.target.value }))} />
+                  <Input value={newCargoEntry.quantity} onChange={(e) => setNewCargoEntry(prev => ({ ...prev, quantity: e.target.value }))} />
                 </div>
                 <div>
                   <Label className="text-sm font-semibold">Load Type</Label>
-                  <Select value={cargoDetails.loadType} onValueChange={(v) => setCargoDetails(prev => ({ ...prev, loadType: v }))}>
+                  <Select value={newCargoEntry.loadType} onValueChange={(v) => setNewCargoEntry(prev => ({ ...prev, loadType: v }))}>
                     <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                     <SelectContent className="bg-popover border border-border">
                       <SelectItem value="FCL">FCL</SelectItem>
@@ -1415,15 +1696,15 @@ const ShipmentDetail = () => {
                 </div>
                 <div>
                   <Label className="text-sm font-semibold">Total CBM</Label>
-                  <Input value={cargoDetails.totalCBM} onChange={(e) => setCargoDetails(prev => ({ ...prev, totalCBM: e.target.value }))} placeholder="Total CBM" />
+                  <Input value={newCargoEntry.totalCBM} onChange={(e) => setNewCargoEntry(prev => ({ ...prev, totalCBM: e.target.value }))} placeholder="Total CBM" />
                 </div>
                 <div>
                   <Label className="text-sm font-semibold">Total Weight</Label>
-                  <Input value={cargoDetails.totalWeight} onChange={(e) => setCargoDetails(prev => ({ ...prev, totalWeight: e.target.value }))} placeholder="Total Weight" />
+                  <Input value={newCargoEntry.totalWeight} onChange={(e) => setNewCargoEntry(prev => ({ ...prev, totalWeight: e.target.value }))} placeholder="Total Weight" />
                 </div>
                 <div>
                   <Label className="text-sm font-semibold">Description</Label>
-                  <Textarea value={cargoDetails.description} onChange={(e) => setCargoDetails(prev => ({ ...prev, description: e.target.value }))} placeholder="Description" className="min-h-[40px]" />
+                  <Textarea value={newCargoEntry.description} onChange={(e) => setNewCargoEntry(prev => ({ ...prev, description: e.target.value }))} placeholder="Description" className="min-h-[40px]" />
                 </div>
                 <div>
                   <Button className="bg-emerald-500 hover:bg-emerald-600 text-white">
@@ -1432,6 +1713,48 @@ const ShipmentDetail = () => {
                   </Button>
                 </div>
               </div>
+
+              {/* Cargo List Table */}
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-table-header">
+                    <TableHead className="text-table-header-foreground">S.No</TableHead>
+                    <TableHead className="text-table-header-foreground">Quantity</TableHead>
+                    <TableHead className="text-table-header-foreground">Load Type</TableHead>
+                    <TableHead className="text-table-header-foreground">Total CBM</TableHead>
+                    <TableHead className="text-table-header-foreground">Total Weight</TableHead>
+                    <TableHead className="text-table-header-foreground">Description</TableHead>
+                    <TableHead className="text-table-header-foreground">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {cargoDetails.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">No cargo details</TableCell>
+                    </TableRow>
+                  ) : (
+                    cargoDetails.map((cargo, index) => (
+                      <TableRow key={cargo.id || index} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell>{cargo.quantity}</TableCell>
+                        <TableCell>{cargo.loadType}</TableCell>
+                        <TableCell>{cargo.totalCBM?.toFixed(3) || '0.000'}</TableCell>
+                        <TableCell>{cargo.totalWeight?.toFixed(3) || '0.000'}</TableCell>
+                        <TableCell>{cargo.description || '-'}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
 
               <Button className="bg-emerald-500 hover:bg-emerald-600 text-white">
                 Save and Continue
@@ -1544,6 +1867,7 @@ const ShipmentDetail = () => {
             </div>
           </TabsContent>
         </Tabs>
+        )}
       </div>
 
       {/* Modals */}
@@ -1591,6 +1915,22 @@ const ShipmentDetail = () => {
           refetchShipment();
           queryClient.invalidateQueries({ queryKey: ['shipment-invoices', shipmentId] });
         }}
+      />
+
+      <DeleteConfirmationModal
+        open={deleteModalOpen}
+        onOpenChange={(open) => {
+          setDeleteModalOpen(open);
+          if (!open) setDeleteModalConfig(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        title={
+          deleteModalConfig?.type === 'party' ? 'Delete Party' :
+          deleteModalConfig?.type === 'container' ? 'Delete Container' :
+          deleteModalConfig?.type === 'costing' ? 'Delete Costing' : 'Delete Item'
+        }
+        itemName={deleteModalConfig?.name}
+        isLoading={isDeleting}
       />
     </MainLayout>
   );

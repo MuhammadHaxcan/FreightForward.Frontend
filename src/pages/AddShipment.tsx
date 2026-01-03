@@ -29,6 +29,7 @@ import { CostingModal } from "@/components/shipments/CostingModal";
 import { DocumentModal } from "@/components/shipments/DocumentModal";
 import { InvoiceModal } from "@/components/shipments/InvoiceModal";
 import { PurchaseModal } from "@/components/shipments/PurchaseModal";
+import { DeleteConfirmationModal } from "@/components/ui/delete-confirmation-modal";
 import { toast } from "sonner";
 import { useCustomers } from "@/hooks/useCustomers";
 import {
@@ -45,7 +46,9 @@ import {
   CreateShipmentRequest,
   AddShipmentPartyRequest,
   AddShipmentContainerRequest,
+  UpdateShipmentContainerRequest,
   AddShipmentCostingRequest,
+  UpdateShipmentCostingRequest,
   Currency,
   ShipmentInvoicesResult,
 } from "@/services/api";
@@ -57,8 +60,10 @@ import {
   useAddShipmentParty,
   useDeleteShipmentParty,
   useAddShipmentContainer,
+  useUpdateShipmentContainer,
   useDeleteShipmentContainer,
   useAddShipmentCosting,
+  useUpdateShipmentCosting,
   useDeleteShipmentCosting,
 } from "@/hooks/useShipments";
 
@@ -261,8 +266,10 @@ const AddShipment = () => {
   const addPartyMutation = useAddShipmentParty();
   const deletePartyMutation = useDeleteShipmentParty();
   const addContainerMutation = useAddShipmentContainer();
+  const updateContainerMutation = useUpdateShipmentContainer();
   const deleteContainerMutation = useDeleteShipmentContainer();
   const addCostingMutation = useAddShipmentCosting();
+  const updateCostingMutation = useUpdateShipmentCosting();
   const deleteCostingMutation = useDeleteShipmentCosting();
 
   // Fetch shipment data when we have a saved ID (to get the job number and refresh data)
@@ -501,6 +508,15 @@ const AddShipment = () => {
   const [editingContainer, setEditingContainer] = useState<any>(null);
   const [editingCosting, setEditingCosting] = useState<any>(null);
 
+  // Delete confirmation modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteModalConfig, setDeleteModalConfig] = useState<{
+    type: 'party' | 'container' | 'costing' | 'document';
+    id: number;
+    name?: string;
+  } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -541,14 +557,10 @@ const AddShipment = () => {
     }
   };
 
-  const handleDeleteParty = async (partyId: number) => {
+  const handleDeleteParty = (partyId: number, partyName?: string) => {
     if (!savedShipmentId) return;
-    try {
-      await deletePartyMutation.mutateAsync({ partyId, shipmentId: savedShipmentId });
-      refetchShipment();
-    } catch (error) {
-      // Error is handled by mutation
-    }
+    setDeleteModalConfig({ type: 'party', id: partyId, name: partyName });
+    setDeleteModalOpen(true);
   };
 
   const handleSaveContainer = async (container: any) => {
@@ -557,31 +569,41 @@ const AddShipment = () => {
       return;
     }
 
-    if (editingContainer) {
-      // For now, we just update locally since there's no update endpoint
-      // TODO: Add update container API endpoint
-      setContainers(prev => prev.map(c => c.id === container.id ? container : c));
-      toast.success("Container updated");
-      setEditingContainer(null);
-    } else {
-      const containerData: AddShipmentContainerRequest = {
-        shipmentId: savedShipmentId,
-        containerNumber: container.container,
-        containerType: container.type,
-        sealNo: container.sealNo,
-        noOfPcs: parseInt(container.noOfPcs) || 0,
-        packageType: container.packageType,
-        grossWeight: parseFloat(container.grossWeight) || 0,
-        volume: parseFloat(container.volume) || 0,
-      };
+    try {
+      if (editingContainer) {
+        // Update existing container
+        const containerData: UpdateShipmentContainerRequest = {
+          id: editingContainer.id,
+          shipmentId: savedShipmentId,
+          containerNumber: container.containerNumber,
+          containerType: container.containerType,
+          sealNo: container.sealNo,
+          noOfPcs: parseInt(container.noOfPcs) || 0,
+          packageType: container.packageType,
+          grossWeight: parseFloat(container.grossWeight) || 0,
+          volume: parseFloat(container.volume) || 0,
+        };
 
-      try {
+        await updateContainerMutation.mutateAsync({ shipmentId: savedShipmentId, containerId: editingContainer.id, data: containerData });
+      } else {
+        // Add new container
+        const containerData: AddShipmentContainerRequest = {
+          shipmentId: savedShipmentId,
+          containerNumber: container.containerNumber,
+          containerType: container.containerType,
+          sealNo: container.sealNo,
+          noOfPcs: parseInt(container.noOfPcs) || 0,
+          packageType: container.packageType,
+          grossWeight: parseFloat(container.grossWeight) || 0,
+          volume: parseFloat(container.volume) || 0,
+        };
+
         await addContainerMutation.mutateAsync({ shipmentId: savedShipmentId, data: containerData });
-        refetchShipment();
-        setEditingContainer(null);
-      } catch (error) {
-        // Error is handled by mutation
       }
+      refetchShipment();
+      setEditingContainer(null);
+    } catch (error) {
+      // Error is handled by mutation
     }
   };
 
@@ -590,14 +612,10 @@ const AddShipment = () => {
     setContainerModalOpen(true);
   };
 
-  const handleDeleteContainer = async (containerId: number) => {
+  const handleDeleteContainer = (containerId: number, containerNumber?: string) => {
     if (!savedShipmentId) return;
-    try {
-      await deleteContainerMutation.mutateAsync({ containerId, shipmentId: savedShipmentId });
-      refetchShipment();
-    } catch (error) {
-      // Error is handled by mutation
-    }
+    setDeleteModalConfig({ type: 'container', id: containerId, name: containerNumber });
+    setDeleteModalOpen(true);
   };
 
   const handleSaveCosting = async (cost: any) => {
@@ -606,48 +624,75 @@ const AddShipment = () => {
       return;
     }
 
-    if (editingCosting) {
-      // For now, we just update locally since there's no update endpoint
-      // TODO: Add update costing API endpoint
-      setCosting(prev => prev.map(c => c.id === cost.id ? cost : c));
-      toast.success("Costing updated");
-      setEditingCosting(null);
-    } else {
-      const costingData: AddShipmentCostingRequest = {
-        shipmentId: savedShipmentId,
-        description: cost.description,
-        remarks: cost.remarks || undefined,
-        saleQty: parseFloat(cost.saleQty) || 0,
-        saleUnit: parseFloat(cost.saleUnit) || 0,
-        saleCurrency: (cost.saleCurrency as Currency) || 'AED',
-        saleExRate: parseFloat(cost.saleExRate) || 1,
-        saleFCY: parseFloat(cost.saleFCY) || 0,
-        saleLCY: parseFloat(cost.saleLCY) || 0,
-        saleTaxPercentage: 0,
-        saleTaxAmount: 0,
-        costQty: parseFloat(cost.costQty) || 0,
-        costUnit: parseFloat(cost.costUnit) || 0,
-        costCurrency: (cost.costCurrency as Currency) || 'AED',
-        costExRate: parseFloat(cost.costExRate) || 1,
-        costFCY: parseFloat(cost.costFCY) || 0,
-        costLCY: parseFloat(cost.costLCY) || 0,
-        costTaxPercentage: 0,
-        costTaxAmount: 0,
-        unit: cost.unit,
-        gp: parseFloat(cost.gp) || 0,
-        billToCustomerId: cost.billToCustomerId || undefined,
-        billToName: cost.billToName || undefined,
-        vendorCustomerId: cost.vendorCustomerId || undefined,
-        vendorName: cost.vendorName || undefined,
-      };
+    try {
+      if (editingCosting) {
+        // Update existing costing
+        const costingData: UpdateShipmentCostingRequest = {
+          id: editingCosting.id,
+          shipmentId: savedShipmentId,
+          description: cost.description,
+          remarks: cost.remarks || undefined,
+          saleQty: parseFloat(cost.saleQty) || 0,
+          saleUnit: parseFloat(cost.saleUnit) || 0,
+          saleCurrency: (cost.saleCurrency as Currency) || 'AED',
+          saleExRate: parseFloat(cost.saleExRate) || 1,
+          saleFCY: parseFloat(cost.saleFCY) || 0,
+          saleLCY: parseFloat(cost.saleLCY) || 0,
+          saleTaxPercentage: 0,
+          saleTaxAmount: 0,
+          costQty: parseFloat(cost.costQty) || 0,
+          costUnit: parseFloat(cost.costUnit) || 0,
+          costCurrency: (cost.costCurrency as Currency) || 'AED',
+          costExRate: parseFloat(cost.costExRate) || 1,
+          costFCY: parseFloat(cost.costFCY) || 0,
+          costLCY: parseFloat(cost.costLCY) || 0,
+          costTaxPercentage: 0,
+          costTaxAmount: 0,
+          unit: cost.unit,
+          gp: parseFloat(cost.gp) || 0,
+          billToCustomerId: cost.billToCustomerId || undefined,
+          billToName: cost.billToName || undefined,
+          vendorCustomerId: cost.vendorCustomerId || undefined,
+          vendorName: cost.vendorName || undefined,
+        };
 
-      try {
+        await updateCostingMutation.mutateAsync({ shipmentId: savedShipmentId, costingId: editingCosting.id, data: costingData });
+      } else {
+        // Add new costing
+        const costingData: AddShipmentCostingRequest = {
+          shipmentId: savedShipmentId,
+          description: cost.description,
+          remarks: cost.remarks || undefined,
+          saleQty: parseFloat(cost.saleQty) || 0,
+          saleUnit: parseFloat(cost.saleUnit) || 0,
+          saleCurrency: (cost.saleCurrency as Currency) || 'AED',
+          saleExRate: parseFloat(cost.saleExRate) || 1,
+          saleFCY: parseFloat(cost.saleFCY) || 0,
+          saleLCY: parseFloat(cost.saleLCY) || 0,
+          saleTaxPercentage: 0,
+          saleTaxAmount: 0,
+          costQty: parseFloat(cost.costQty) || 0,
+          costUnit: parseFloat(cost.costUnit) || 0,
+          costCurrency: (cost.costCurrency as Currency) || 'AED',
+          costExRate: parseFloat(cost.costExRate) || 1,
+          costFCY: parseFloat(cost.costFCY) || 0,
+          costLCY: parseFloat(cost.costLCY) || 0,
+          costTaxPercentage: 0,
+          costTaxAmount: 0,
+          unit: cost.unit,
+          gp: parseFloat(cost.gp) || 0,
+          billToCustomerId: cost.billToCustomerId || undefined,
+          billToName: cost.billToName || undefined,
+          vendorCustomerId: cost.vendorCustomerId || undefined,
+          vendorName: cost.vendorName || undefined,
+        };
+
         await addCostingMutation.mutateAsync({ shipmentId: savedShipmentId, data: costingData });
-        refetchShipment();
-        setEditingCosting(null);
-      } catch (error) {
-        // Error is handled by mutation
       }
+      refetchShipment();
+      setEditingCosting(null);
+    } catch (error) {
+      // Error is handled by mutation
     }
   };
 
@@ -656,14 +701,10 @@ const AddShipment = () => {
     setCostingModalOpen(true);
   };
 
-  const handleDeleteCosting = async (costId: number) => {
+  const handleDeleteCosting = (costId: number, description?: string) => {
     if (!savedShipmentId) return;
-    try {
-      await deleteCostingMutation.mutateAsync({ costingId: costId, shipmentId: savedShipmentId });
-      refetchShipment();
-    } catch (error) {
-      // Error is handled by mutation
-    }
+    setDeleteModalConfig({ type: 'costing', id: costId, name: description });
+    setDeleteModalOpen(true);
   };
 
   const handleSaveDocument = (doc: any) => {
@@ -671,9 +712,48 @@ const AddShipment = () => {
     toast.success("Document added");
   };
 
-  const handleDeleteDocument = (docId: number) => {
-    setDocuments(prev => prev.filter(d => d.id !== docId));
-    toast.success("Document deleted");
+  const handleDeleteDocument = (docId: number, docType?: string) => {
+    setDeleteModalConfig({ type: 'document', id: docId, name: docType });
+    setDeleteModalOpen(true);
+  };
+
+  // Handle delete confirmation
+  const handleConfirmDelete = async () => {
+    if (!deleteModalConfig) return;
+    setIsDeleting(true);
+
+    try {
+      switch (deleteModalConfig.type) {
+        case 'party':
+          if (savedShipmentId) {
+            await deletePartyMutation.mutateAsync({ partyId: deleteModalConfig.id, shipmentId: savedShipmentId });
+            refetchShipment();
+          }
+          break;
+        case 'container':
+          if (savedShipmentId) {
+            await deleteContainerMutation.mutateAsync({ containerId: deleteModalConfig.id, shipmentId: savedShipmentId });
+            refetchShipment();
+          }
+          break;
+        case 'costing':
+          if (savedShipmentId) {
+            await deleteCostingMutation.mutateAsync({ costingId: deleteModalConfig.id, shipmentId: savedShipmentId });
+            refetchShipment();
+          }
+          break;
+        case 'document':
+          setDocuments(prev => prev.filter(d => d.id !== deleteModalConfig.id));
+          toast.success("Document deleted");
+          break;
+      }
+      setDeleteModalOpen(false);
+      setDeleteModalConfig(null);
+    } catch (error) {
+      // Error handled by mutation
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleSaveAndContinue = async () => {
@@ -1410,7 +1490,7 @@ const AddShipment = () => {
                           <TableCell>{party.phone || "-"}</TableCell>
                           <TableCell className="text-emerald-600">{party.email || "-"}</TableCell>
                           <TableCell>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded" onClick={() => handleDeleteParty(party.id)}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded" onClick={() => handleDeleteParty(party.id, party.customerName)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </TableCell>
@@ -1478,7 +1558,7 @@ const AddShipment = () => {
                             <Button variant="ghost" size="icon" className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600 text-white rounded" onClick={() => handleEditContainer(container)}>
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded" onClick={() => handleDeleteContainer(container.id)}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded" onClick={() => handleDeleteContainer(container.id, container.containerNumber)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -1608,7 +1688,7 @@ const AddShipment = () => {
                               <Button variant="ghost" size="icon" className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600 text-white rounded" onClick={() => handleEditCosting(cost)}>
                                 <Edit className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded" onClick={() => handleDeleteCosting(cost.id)}>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded" onClick={() => handleDeleteCosting(cost.id, cost.description)}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
@@ -1823,7 +1903,7 @@ const AddShipment = () => {
                             <Button variant="ghost" size="icon" className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600 text-white rounded">
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded" onClick={() => handleDeleteDocument(doc.id)}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded" onClick={() => handleDeleteDocument(doc.id, doc.documentType)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -1918,6 +1998,23 @@ const AddShipment = () => {
           refetchShipment();
           // Toast is already shown by the mutation hook
         }}
+      />
+
+      <DeleteConfirmationModal
+        open={deleteModalOpen}
+        onOpenChange={(open) => {
+          setDeleteModalOpen(open);
+          if (!open) setDeleteModalConfig(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        title={
+          deleteModalConfig?.type === 'party' ? 'Delete Party' :
+          deleteModalConfig?.type === 'container' ? 'Delete Container' :
+          deleteModalConfig?.type === 'costing' ? 'Delete Costing' :
+          deleteModalConfig?.type === 'document' ? 'Delete Document' : 'Delete Item'
+        }
+        itemName={deleteModalConfig?.name}
+        isLoading={isDeleting}
       />
     </MainLayout>
   );

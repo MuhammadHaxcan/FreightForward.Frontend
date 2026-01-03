@@ -5,7 +5,9 @@ import {
   UpdateShipmentRequest,
   AddShipmentPartyRequest,
   AddShipmentContainerRequest,
+  UpdateShipmentContainerRequest,
   AddShipmentCostingRequest,
+  UpdateShipmentCostingRequest,
   ShipmentStatus,
 } from '@/services/api';
 import { toast } from 'sonner';
@@ -173,6 +175,27 @@ export function useAddShipmentContainer() {
   });
 }
 
+export function useUpdateShipmentContainer() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ shipmentId, containerId, data }: { shipmentId: number; containerId: number; data: UpdateShipmentContainerRequest }) => {
+      const response = await shipmentApi.updateContainer(shipmentId, containerId, data);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['shipments', variables.shipmentId] });
+      toast.success('Container updated successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update container');
+    },
+  });
+}
+
 export function useDeleteShipmentContainer() {
   const queryClient = useQueryClient();
 
@@ -212,6 +235,27 @@ export function useAddShipmentCosting() {
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to add costing');
+    },
+  });
+}
+
+export function useUpdateShipmentCosting() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ shipmentId, costingId, data }: { shipmentId: number; costingId: number; data: UpdateShipmentCostingRequest }) => {
+      const response = await shipmentApi.updateCosting(shipmentId, costingId, data);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['shipments', variables.shipmentId] });
+      toast.success('Costing updated successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update costing');
     },
   });
 }
