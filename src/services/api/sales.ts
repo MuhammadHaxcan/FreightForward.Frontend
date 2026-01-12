@@ -158,10 +158,10 @@ export const rateRequestApi = {
     if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
     if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
     if (params?.status) query.append('status', params.status);
-    return fetchApi<PaginatedList<RateRequest>>(`/sales/raterequests?${query}`);
+    return fetchApi<PaginatedList<RateRequest>>(`/sales/rate-requests?${query}`);
   },
   create: (data: CreateRateRequestRequest) =>
-    fetchApi<number>('/sales/raterequests', { method: 'POST', body: JSON.stringify(data) }),
+    fetchApi<number>('/sales/rate-requests', { method: 'POST', body: JSON.stringify(data) }),
 };
 
 export const quotationApi = {

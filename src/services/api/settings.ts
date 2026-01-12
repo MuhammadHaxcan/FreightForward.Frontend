@@ -199,9 +199,9 @@ export const settingsApi = {
 
   // IncoTerms
   getAllIncoTerms: () =>
-    fetchApi<IncoTerm[]>('/settings/incoterms/all'),
+    fetchApi<IncoTerm[]>('/settings/inco-terms/all'),
   getIncoTermById: (id: number) =>
-    fetchApi<IncoTerm>(`/settings/incoterms/${id}`),
+    fetchApi<IncoTerm>(`/settings/inco-terms/${id}`),
 
   // Package Types
   getAllPackageTypes: () =>

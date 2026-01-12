@@ -53,12 +53,6 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
     [parties]
   );
 
-  // Filter charges to only show items with sale quantity > 0 and not already invoiced
-  const filteredCharges = useMemo(() =>
-    chargesDetails.filter(c => parseFloat(c.saleQty || 0) > 0 && !c.saleInvoiced),
-    [chargesDetails]
-  );
-
   const [formData, setFormData] = useState({
     invoiceId: `INVAE${Date.now().toString().slice(-6)}`,
     companyName: "",
@@ -67,6 +61,22 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
     baseCurrency: "AED" as Currency,
     selectedCharges: [] as number[],
   });
+
+  // Filter charges to only show items with sale quantity > 0, not already invoiced,
+  // and assigned to the selected debtor
+  const filteredCharges = useMemo(() => {
+    const selectedParty = debtorParties.find(p => p.id.toString() === formData.customerId);
+    const selectedCustomerId = selectedParty?.customerId;
+
+    return chargesDetails.filter(c => {
+      const hasValidSale = parseFloat(c.saleQty || 0) > 0 && !c.saleInvoiced;
+      // Only show costings explicitly assigned to this debtor (exclude null)
+      const matchesCustomer = selectedCustomerId
+        ? c.billToCustomerId === selectedCustomerId
+        : false;
+      return hasValidSale && matchesCustomer;
+    });
+  }, [chargesDetails, formData.customerId, debtorParties]);
 
   // Update currency when company selection changes
   useEffect(() => {
@@ -95,6 +105,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
         ...prev,
         customerId: partyId,
         companyName: selectedParty.customerName,
+        selectedCharges: [], // Reset selections when debtor changes
       }));
     }
   };
@@ -301,7 +312,9 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
                 {filteredCharges.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={10} className="text-center text-muted-foreground text-xs py-4">
-                      No charges with sale quantity available
+                      {!formData.customerId
+                        ? "Select a debtor to see available charges"
+                        : "No uninvoiced charges assigned to this debtor"}
                     </TableCell>
                   </TableRow>
                 ) : (

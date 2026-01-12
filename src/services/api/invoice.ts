@@ -56,11 +56,11 @@ export interface AccountInvoice {
   invoiceDate: string;
   jobNumber?: string;
   customerName: string;
-  customerId?: number;
+  customerId: number;
   amount: number;
   currency: Currency;
   dueDate?: string;
-  agingDays: number;
+  agingDays?: number;
   addedBy?: string;
   paymentStatus: PaymentStatus;
   status: string;
@@ -122,5 +122,5 @@ export const invoiceApi = {
   createInvoice: (data: CreateInvoiceRequest) =>
     fetchApi<number>('/invoices', { method: 'POST', body: JSON.stringify(data) }),
   createPurchaseInvoice: (data: CreatePurchaseInvoiceRequest) =>
-    fetchApi<number>('/invoices/purchase', { method: 'POST', body: JSON.stringify(data) }),
+    fetchApi<number>('/invoices/purchases', { method: 'POST', body: JSON.stringify(data) }),
 };

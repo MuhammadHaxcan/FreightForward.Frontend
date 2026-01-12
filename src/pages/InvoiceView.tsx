@@ -150,17 +150,17 @@ export default function InvoiceView() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {invoice.items.map((item, index) => (
+              {(invoice.items || []).map((item, index) => (
                 <TableRow key={item.id || index}>
                   <TableCell className="text-blue-600">{item.chargeDetails}</TableCell>
                   <TableCell>{item.basis || "BL"}</TableCell>
                   <TableCell>{item.currency}</TableCell>
-                  <TableCell className="text-right">{item.rate.toFixed(2)}</TableCell>
-                  <TableCell className="text-right">{item.quantity.toFixed(3)}</TableCell>
-                  <TableCell className="text-right text-blue-600">{item.roe.toFixed(3)}</TableCell>
-                  <TableCell className="text-right">{item.taxPercentage}</TableCell>
-                  <TableCell className="text-right">{item.taxAmount.toFixed(2)}</TableCell>
-                  <TableCell className="text-right">{item.amount.toFixed(2)}</TableCell>
+                  <TableCell className="text-right">{(item.rate ?? 0).toFixed(2)}</TableCell>
+                  <TableCell className="text-right">{(item.quantity ?? 0).toFixed(3)}</TableCell>
+                  <TableCell className="text-right text-blue-600">{(item.roe ?? 1).toFixed(3)}</TableCell>
+                  <TableCell className="text-right">{item.taxPercentage ?? 0}</TableCell>
+                  <TableCell className="text-right">{(item.taxAmount ?? 0).toFixed(2)}</TableCell>
+                  <TableCell className="text-right">{(item.amount ?? 0).toFixed(2)}</TableCell>
                 </TableRow>
               ))}
               {/* Remarks Row */}
@@ -178,15 +178,15 @@ export default function InvoiceView() {
           <div className="w-80 space-y-2">
             <div className="flex justify-between">
               <span>Sub Total</span>
-              <span className="font-semibold">{formatCurrency(invoice.subTotal, invoice.currency)}</span>
+              <span className="font-semibold">{formatCurrency(invoice.subTotal ?? 0, invoice.currency)}</span>
             </div>
             <div className="flex justify-between">
               <span>Total Tax</span>
-              <span className="font-semibold">{formatCurrency(invoice.totalTax, invoice.currency)}</span>
+              <span className="font-semibold">{formatCurrency(invoice.totalTax ?? 0, invoice.currency)}</span>
             </div>
             <div className="flex justify-between text-lg font-bold border-t pt-2">
               <span>Total</span>
-              <span className="text-green-600">{formatCurrency(invoice.total, invoice.currency)}</span>
+              <span className="text-green-600">{formatCurrency(invoice.total ?? 0, invoice.currency)}</span>
             </div>
           </div>
         </div>

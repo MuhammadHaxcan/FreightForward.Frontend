@@ -53,12 +53,6 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, chargesDetails, 
     [parties]
   );
 
-  // Filter charges to only show items with cost quantity > 0 and not already purchase invoiced
-  const filteredCharges = useMemo(() =>
-    chargesDetails.filter(c => parseFloat(c.costQty || 0) > 0 && !c.purchaseInvoiced),
-    [chargesDetails]
-  );
-
   const [formData, setFormData] = useState({
     purchaseId: `PIAE${Date.now().toString().slice(-6)}`,
     companyName: "",
@@ -70,6 +64,22 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, chargesDetails, 
     remarks: "",
     selectedCharges: [] as number[],
   });
+
+  // Filter charges to only show items with cost quantity > 0, not already purchase invoiced,
+  // and assigned to the selected creditor
+  const filteredCharges = useMemo(() => {
+    const selectedParty = creditorParties.find(p => p.id.toString() === formData.customerId);
+    const selectedCustomerId = selectedParty?.customerId;
+
+    return chargesDetails.filter(c => {
+      const hasValidCost = parseFloat(c.costQty || 0) > 0 && !c.purchaseInvoiced;
+      // Only show costings explicitly assigned to this creditor (exclude null)
+      const matchesVendor = selectedCustomerId
+        ? c.vendorCustomerId === selectedCustomerId
+        : false;
+      return hasValidCost && matchesVendor;
+    });
+  }, [chargesDetails, formData.customerId, creditorParties]);
 
   // Update currency when company selection changes
   useEffect(() => {
@@ -98,6 +108,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, chargesDetails, 
         ...prev,
         customerId: partyId,
         companyName: selectedParty.customerName,
+        selectedCharges: [], // Reset selections when creditor changes
       }));
     }
   };
@@ -338,7 +349,9 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, chargesDetails, 
                 {filteredCharges.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={10} className="text-center text-muted-foreground text-xs py-4">
-                      No charges with cost quantity available
+                      {!formData.customerId
+                        ? "Select a creditor to see available charges"
+                        : "No uninvoiced charges assigned to this creditor"}
                     </TableCell>
                   </TableRow>
                 ) : (

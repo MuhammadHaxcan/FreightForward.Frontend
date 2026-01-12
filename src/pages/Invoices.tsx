@@ -93,8 +93,8 @@ export default function Invoices() {
     return `${currency} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  const getAgingDisplay = (days: number) => {
-    if (days <= 0) return "-";
+  const getAgingDisplay = (days?: number) => {
+    if (days === undefined || days === null || days <= 0) return "-";
     return `${days} Day${days > 1 ? "s" : ""}`;
   };
 
