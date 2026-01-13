@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DateInput } from "@/components/ui/date-input";
+import { getTodayDateOnly } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -30,7 +31,7 @@ export function DocumentModal({ open, onOpenChange, onSave }: DocumentModalProps
   const [formData, setFormData] = useState({
     documentType: "Invoice",
     documentNo: "",
-    docDate: new Date().toISOString().split('T')[0],
+    docDate: getTodayDateOnly(),
     remarks: "",
     file: null as File | null,
   });

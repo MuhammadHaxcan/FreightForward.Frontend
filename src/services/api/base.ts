@@ -1,5 +1,5 @@
 // API Configuration and Base Client
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://localhost:7001/api';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://localhost:7001/api';
 
 // Common Types
 export interface PaginatedList<T> {

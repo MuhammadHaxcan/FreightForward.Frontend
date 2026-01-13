@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer } from "lucide-react";
-import { format } from "date-fns";
+import { formatDate } from "@/lib/utils";
 
 interface Expense {
   id: string;
@@ -27,9 +27,7 @@ export function ExpensePrintView({ expenses, startDate, endDate, onClose }: Expe
     window.print();
   };
 
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), "dd-MM-yyyy");
-  };
+  // Using formatDate from utils to avoid timezone issues with DateOnly strings
 
   // Group expenses by payment method and type
   const cashPayments = expenses.filter(e => e.paymentMode === "CASH" && e.paymentType === "Outwards");

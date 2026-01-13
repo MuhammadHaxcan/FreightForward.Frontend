@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DateInput } from "@/components/ui/date-input";
+import { getTodayDateOnly } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -57,7 +58,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
     invoiceId: `INVAE${Date.now().toString().slice(-6)}`,
     companyName: "",
     customerId: "",
-    invoiceDate: new Date().toISOString().split('T')[0],
+    invoiceDate: getTodayDateOnly(),
     baseCurrency: "AED" as Currency,
     selectedCharges: [] as number[],
   });

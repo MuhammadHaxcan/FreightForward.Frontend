@@ -92,6 +92,15 @@ export interface CostingUnit {
   sortOrder: number;
 }
 
+export interface ContainerType {
+  id: number;
+  code: string;
+  name: string;
+  description?: string;
+  category: string;
+  sortOrder: number;
+}
+
 export interface CreateCurrencyTypeRequest {
   name: string;
   code: string;
@@ -234,6 +243,10 @@ export const settingsApi = {
   // Costing Units
   getAllCostingUnits: () =>
     fetchApi<CostingUnit[]>('/settings/costing-units/all'),
+
+  // Container Types
+  getAllContainerTypes: () =>
+    fetchApi<ContainerType[]>('/settings/container-types/all'),
 
   getExpenseTypesByDirection: (paymentDirection: 'Inwards' | 'Outwards') =>
     fetchApi<ExpenseType[]>(`/settings/expense-types/by-direction/${paymentDirection === 'Inwards' ? 0 : 1}`),

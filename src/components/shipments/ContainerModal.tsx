@@ -19,7 +19,7 @@ import {
   SelectLabel,
 } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
-import { settingsApi, PackageType } from "@/services/api";
+import { settingsApi, PackageType, ContainerType } from "@/services/api";
 
 interface ContainerModalProps {
   open: boolean;
@@ -29,10 +29,30 @@ interface ContainerModalProps {
   nextSNo: number;
 }
 
-const containerTypes = ["20'DC", "40'DC", "40HC", "45HC", "20'RF", "40'RF"];
 const weightUnits = ["Kgs", "Lbs", "MT"];
 
 export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo }: ContainerModalProps) {
+  // Fetch container types from API
+  const { data: containerTypesResponse, isLoading: isLoadingContainerTypes } = useQuery({
+    queryKey: ['containerTypes', 'all'],
+    queryFn: () => settingsApi.getAllContainerTypes(),
+    staleTime: 60 * 60 * 1000, // Cache for 1 hour
+  });
+
+  const containerTypes = useMemo(() => containerTypesResponse?.data ?? [], [containerTypesResponse?.data]);
+
+  // Group container types by category
+  const containerTypesByCategory = useMemo(() => {
+    const grouped: Record<string, ContainerType[]> = {};
+    containerTypes.forEach(ct => {
+      if (!grouped[ct.category]) {
+        grouped[ct.category] = [];
+      }
+      grouped[ct.category].push(ct);
+    });
+    return grouped;
+  }, [containerTypes]);
+
   // Fetch package types from API
   const { data: packageTypesResponse, isLoading: isLoadingPackageTypes } = useQuery({
     queryKey: ['packageTypes', 'all'],
@@ -56,10 +76,10 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
 
   const getInitialFormData = () => ({
     sNo: container?.sNo || nextSNo,
-    containerType: container?.containerType || container?.type || "20'DC",
+    containerTypeId: container?.containerTypeId?.toString() || "",
     containerNo: container?.containerNumber || container?.container || "",
     noOfPcs: container?.noOfPcs?.toString() || "",
-    packages: container?.packageType || "",
+    packageTypeId: container?.packageTypeId?.toString() || "",
     actualSeal: container?.sealNo || "",
     grossWeight: container?.grossWeight?.toString() || "",
     weightUnit: "Kgs",
@@ -81,14 +101,20 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
   };
 
   const handleSave = () => {
+    // Find the selected container type and package type names for display
+    const selectedContainerType = containerTypes.find(ct => ct.id.toString() === formData.containerTypeId);
+    const selectedPackageType = packageTypes.find(pt => pt.id.toString() === formData.packageTypeId);
+
     onSave({
       id: container?.id || Date.now(),
       sNo: formData.sNo,
       containerNumber: formData.containerNo,
-      containerType: formData.containerType,
+      containerTypeId: formData.containerTypeId ? parseInt(formData.containerTypeId) : null,
+      containerTypeName: selectedContainerType?.name || null,
       sealNo: formData.actualSeal,
       noOfPcs: parseInt(formData.noOfPcs) || 0,
-      packageType: formData.packages,
+      packageTypeId: formData.packageTypeId ? parseInt(formData.packageTypeId) : null,
+      packageTypeName: selectedPackageType?.name || null,
       grossWeight: parseFloat(formData.grossWeight) || 0,
       volume: parseFloat(formData.volume) || 0,
       description: formData.description,
@@ -118,13 +144,22 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
             </div>
             <div>
               <Label className="text-sm">Container Type</Label>
-              <Select value={formData.containerType} onValueChange={(v) => handleInputChange("containerType", v)}>
+              <Select
+                value={formData.containerTypeId}
+                onValueChange={(v) => handleInputChange("containerTypeId", v)}
+                disabled={isLoadingContainerTypes}
+              >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder={isLoadingContainerTypes ? "Loading..." : "Select container type"} />
                 </SelectTrigger>
-                <SelectContent className="bg-popover border border-border">
-                  {containerTypes.map(type => (
-                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                <SelectContent className="bg-popover border border-border max-h-[300px]">
+                  {Object.entries(containerTypesByCategory).map(([category, types]) => (
+                    <SelectGroup key={category}>
+                      <SelectLabel className="text-muted-foreground font-semibold">{category}</SelectLabel>
+                      {types.map(ct => (
+                        <SelectItem key={ct.id} value={ct.id.toString()}>{ct.name}</SelectItem>
+                      ))}
+                    </SelectGroup>
                   ))}
                 </SelectContent>
               </Select>
@@ -148,8 +183,8 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
             <div>
               <Label className="text-sm">Packages</Label>
               <Select
-                value={formData.packages}
-                onValueChange={(v) => handleInputChange("packages", v)}
+                value={formData.packageTypeId}
+                onValueChange={(v) => handleInputChange("packageTypeId", v)}
                 disabled={isLoadingPackageTypes}
               >
                 <SelectTrigger>
@@ -160,7 +195,7 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
                     <SelectGroup key={category}>
                       <SelectLabel className="text-muted-foreground font-semibold">{category}</SelectLabel>
                       {types.map(pt => (
-                        <SelectItem key={pt.id} value={pt.code}>{pt.name}</SelectItem>
+                        <SelectItem key={pt.id} value={pt.id.toString()}>{pt.name}</SelectItem>
                       ))}
                     </SelectGroup>
                   ))}

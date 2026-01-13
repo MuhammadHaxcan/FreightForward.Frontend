@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { format, parse } from "date-fns";
 import { CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, parseDateOnly, formatDateToISO } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -23,15 +23,12 @@ export function DateInput({ value, onChange, placeholder = "dd-mm-yyyy", classNa
   const [open, setOpen] = useState(false);
 
   // Convert ISO date to dd-mm-yyyy format for display
+  // Uses parseDateOnly to avoid timezone issues with DateOnly strings
   const formatDisplayDate = (isoDate: string) => {
     if (!isoDate) return "";
-    try {
-      const date = new Date(isoDate);
-      if (isNaN(date.getTime())) return isoDate;
-      return format(date, "dd-MM-yyyy");
-    } catch {
-      return isoDate;
-    }
+    const date = parseDateOnly(isoDate);
+    if (!date) return isoDate;
+    return format(date, "dd-MM-yyyy");
   };
 
   // Convert dd-mm-yyyy to ISO format for storage
@@ -47,14 +44,10 @@ export function DateInput({ value, onChange, placeholder = "dd-mm-yyyy", classNa
   };
 
   // Get Date object from ISO string
+  // Uses parseDateOnly to avoid timezone issues with DateOnly strings
   const getDateFromValue = () => {
     if (!value) return undefined;
-    try {
-      const date = new Date(value);
-      return isNaN(date.getTime()) ? undefined : date;
-    } catch {
-      return undefined;
-    }
+    return parseDateOnly(value) ?? undefined;
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,7 +63,7 @@ export function DateInput({ value, onChange, placeholder = "dd-mm-yyyy", classNa
 
   const handleCalendarSelect = (date: Date | undefined) => {
     if (date) {
-      onChange(format(date, "yyyy-MM-dd"));
+      onChange(formatDateToISO(date));
     }
     setOpen(false);
   };

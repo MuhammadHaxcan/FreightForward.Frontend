@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -83,15 +84,7 @@ export default function Leads() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "-";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    }).replace(/\//g, "-");
-  };
+  // formatDate imported from utils
 
   return (
     <MainLayout>
@@ -198,7 +191,7 @@ export default function Leads() {
                         </Button>
                       </TableCell>
                       <TableCell className="font-medium">{lead.leadNo}</TableCell>
-                      <TableCell>{formatDate(lead.leadDate)}</TableCell>
+                      <TableCell>{formatDate(lead.leadDate, "dd-MM-yyyy")}</TableCell>
                       <TableCell className="text-green-600">{lead.customerName}</TableCell>
                       <TableCell>{lead.mode}</TableCell>
                       <TableCell>{lead.incoterms}</TableCell>

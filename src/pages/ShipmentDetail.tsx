@@ -176,6 +176,7 @@ const emptyFormData = {
   jobStatus: "",
   direction: "",
   mode: "",
+  transportModeId: undefined as number | undefined,
   incoterms: "",
   houseBLNo: "",
   houseBLDate: "",
@@ -192,12 +193,16 @@ const emptyFormData = {
   placeOfBLIssue: "",
   carrier: "",
   freeTime: "",
-  networkPartner: "",
+  networkPartnerId: undefined as number | undefined,
   assignedTo: "",
   placeOfReceipt: "",
+  portOfReceiptId: undefined as number | undefined,
   portOfReceipt: "",
+  portOfLoadingId: undefined as number | undefined,
   portOfLoading: "",
+  portOfDischargeId: undefined as number | undefined,
   portOfDischarge: "",
+  portOfFinalDestinationId: undefined as number | undefined,
   portOfFinalDestination: "",
   placeOfDelivery: "",
   vessel: "",
@@ -405,10 +410,11 @@ const ShipmentDetail = () => {
         jobStatus: shipmentData.jobStatus,
         direction: mapDirectionToDisplay(shipmentData.direction),
         mode: mapModeToDisplay(shipmentData.mode),
+        transportModeId: shipmentData.transportModeId,
         incoterms: shipmentData.incoterms || '',
         houseBLNo: shipmentData.houseBLNo || '',
-        houseBLDate: shipmentData.houseBLDate?.split('T')[0] || '',
-        houseBLStatus: shipmentData.houseBLStatus || '',
+        houseBLDate: shipmentData.hblDate?.split('T')[0] || '',
+        houseBLStatus: shipmentData.hblStatus || '',
         hblServiceType: shipmentData.hblServiceType || '',
         hblNoBLIssued: shipmentData.hblNoBLIssued || '',
         hblFreight: shipmentData.hblFreight || '',
@@ -421,13 +427,17 @@ const ShipmentDetail = () => {
         placeOfBLIssue: shipmentData.placeOfBLIssue || '',
         carrier: shipmentData.carrier || '',
         freeTime: shipmentData.freeTime || '',
-        networkPartner: shipmentData.networkPartner || '',
+        networkPartnerId: shipmentData.networkPartnerId,
         assignedTo: shipmentData.assignedTo || '',
         placeOfReceipt: shipmentData.placeOfReceipt || '',
-        portOfReceipt: shipmentData.portOfReceipt || '',
+        portOfReceiptId: shipmentData.porId,
+        portOfReceipt: shipmentData.porName || '',
+        portOfLoadingId: shipmentData.portOfLoadingId,
         portOfLoading: shipmentData.portOfLoading || '',
+        portOfDischargeId: shipmentData.portOfDischargeId,
         portOfDischarge: shipmentData.portOfDischarge || '',
-        portOfFinalDestination: shipmentData.portOfFinalDestination || '',
+        portOfFinalDestinationId: shipmentData.pfdId,
+        portOfFinalDestination: shipmentData.pfdName || '',
         placeOfDelivery: shipmentData.placeOfDelivery || '',
         vessel: shipmentData.vessel || '',
         voyage: shipmentData.voyage || '',
@@ -436,8 +446,8 @@ const ShipmentDetail = () => {
         secondLegVessel: shipmentData.secondLegVessel || false,
         secondLegVesselName: shipmentData.secondLegVesselName || '',
         secondLegVoyage: shipmentData.secondLegVoyage || '',
-        secondLegETD: shipmentData.secondLegETD?.split('T')[0] || '',
-        secondLegETA: shipmentData.secondLegETA?.split('T')[0] || '',
+        secondLegETD: shipmentData.secondLegEtd?.split('T')[0] || '',
+        secondLegETA: shipmentData.secondLegEta?.split('T')[0] || '',
         marksNumbers: shipmentData.marksNumbers || '',
         notes: shipmentData.notes || '',
         internalNotes: shipmentData.internalNotes || '',
@@ -516,10 +526,10 @@ const ShipmentDetail = () => {
           id: editingContainer.id,
           shipmentId,
           containerNumber: containerData.containerNumber,
-          containerType: containerData.containerType,
+          containerTypeId: containerData.containerTypeId || null,
           sealNo: containerData.sealNo,
           noOfPcs: parseInt(containerData.noOfPcs) || 0,
-          packageType: containerData.packageType,
+          packageTypeId: containerData.packageTypeId || null,
           grossWeight: parseFloat(containerData.grossWeight) || 0,
           volume: parseFloat(containerData.volume) || 0,
         };
@@ -530,10 +540,10 @@ const ShipmentDetail = () => {
         const data: AddShipmentContainerRequest = {
           shipmentId,
           containerNumber: containerData.containerNumber,
-          containerType: containerData.containerType,
+          containerTypeId: containerData.containerTypeId || null,
           sealNo: containerData.sealNo,
           noOfPcs: parseInt(containerData.noOfPcs) || 0,
-          packageType: containerData.packageType,
+          packageTypeId: containerData.packageTypeId || null,
           grossWeight: parseFloat(containerData.grossWeight) || 0,
           volume: parseFloat(containerData.volume) || 0,
         };
@@ -548,8 +558,11 @@ const ShipmentDetail = () => {
     }
   };
 
-  const handleEditContainer = (container: ShipmentContainer) => {
+  const [editingContainerIndex, setEditingContainerIndex] = useState<number | null>(null);
+
+  const handleEditContainer = (container: ShipmentContainer, index: number) => {
     setEditingContainer(container);
+    setEditingContainerIndex(index);
     setContainerModalOpen(true);
   };
 
@@ -690,14 +703,15 @@ const ShipmentDetail = () => {
           jobStatus: (formData.jobStatus || 'Opened') as any,
           direction: mapDisplayToDirection(formData.direction) as any,
           mode: mapDisplayToMode(formData.mode) as any,
+          transportModeId: formData.transportModeId,
           incoterms: (formData.incoterms || undefined) as any,
-          houseBLNo: formData.houseBLNo || undefined,
-          houseBLDate: formData.houseBLDate || undefined,
-          houseBLStatus: (formData.houseBLStatus || undefined) as any,
+          hblNo: formData.houseBLNo || undefined,
+          hblDate: formData.houseBLDate || undefined,
+          hblStatus: (formData.houseBLStatus || undefined) as any,
           hblServiceType: (formData.hblServiceType || undefined) as any,
           hblNoBLIssued: formData.hblNoBLIssued || undefined,
           hblFreight: (formData.hblFreight || undefined) as any,
-          mblNumber: formData.mblNumber || undefined,
+          mblNo: formData.mblNumber || undefined,
           mblDate: formData.mblDate || undefined,
           mblStatus: (formData.mblStatus || undefined) as any,
           mblServiceType: (formData.mblServiceType || undefined) as any,
@@ -706,13 +720,13 @@ const ShipmentDetail = () => {
           placeOfBLIssue: formData.placeOfBLIssue || undefined,
           carrier: formData.carrier || undefined,
           freeTime: formData.freeTime || undefined,
-          networkPartner: formData.networkPartner || undefined,
+          networkPartnerId: formData.networkPartnerId,
           assignedTo: formData.assignedTo || undefined,
           placeOfReceipt: formData.placeOfReceipt || undefined,
-          portOfReceipt: formData.portOfReceipt || undefined,
-          portOfLoading: formData.portOfLoading || undefined,
-          portOfDischarge: formData.portOfDischarge || undefined,
-          portOfFinalDestination: formData.portOfFinalDestination || undefined,
+          porId: formData.portOfReceiptId,
+          polId: formData.portOfLoadingId,
+          podId: formData.portOfDischargeId,
+          pfdId: formData.portOfFinalDestinationId,
           placeOfDelivery: formData.placeOfDelivery || undefined,
           vessel: formData.vessel || undefined,
           voyage: formData.voyage || undefined,
@@ -721,8 +735,8 @@ const ShipmentDetail = () => {
           secondLegVessel: formData.secondLegVessel,
           secondLegVesselName: formData.secondLegVesselName || undefined,
           secondLegVoyage: formData.secondLegVoyage || undefined,
-          secondLegETD: formData.secondLegETD || undefined,
-          secondLegETA: formData.secondLegETA || undefined,
+          secondLegEtd: formData.secondLegETD || undefined,
+          secondLegEta: formData.secondLegETA || undefined,
           marksNumbers: formData.marksNumbers || undefined,
           notes: formData.notes || undefined,
           internalNotes: formData.internalNotes || undefined,
@@ -1054,15 +1068,20 @@ const ShipmentDetail = () => {
                   </div>
                   <div>
                     <Label className="text-sm">Network Partner</Label>
-                    <Select value={formData.networkPartner} onValueChange={(v) => handleInputChange("networkPartner", v)}>
+                    <Select
+                      value={formData.networkPartnerId?.toString() || ""}
+                      onValueChange={(v) => setFormData(prev => ({ ...prev, networkPartnerId: v ? parseInt(v) : undefined }))}
+                    >
                       <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent className="bg-popover border border-border">
-                        {networkPartners.length > 0 ? (
-                          networkPartners.map(partner => (
-                            <SelectItem key={partner.id} value={partner.name}>{partner.name}</SelectItem>
-                          ))
+                        {networkPartners.length === 0 ? (
+                          <SelectItem value="_loading" disabled>Loading...</SelectItem>
                         ) : (
-                          <SelectItem value="SELF">SELF</SelectItem>
+                          networkPartners.map(partner => (
+                            <SelectItem key={partner.id} value={partner.id.toString()}>
+                              {partner.code} - {partner.name}
+                            </SelectItem>
+                          ))
                         )}
                       </SelectContent>
                     </Select>
@@ -1080,16 +1099,36 @@ const ShipmentDetail = () => {
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <Label className="text-sm">Place of Receipt</Label>
-                      <Input value={formData.placeOfReceipt} onChange={(e) => handleInputChange("placeOfReceipt", e.target.value)} placeholder="Place of Receipt" />
+                      <Select value={formData.placeOfReceipt} onValueChange={(v) => handleInputChange("placeOfReceipt", v)}>
+                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent className="bg-popover border border-border max-h-[300px]">
+                          {ports.length === 0 ? (
+                            <SelectItem value="_loading" disabled>Loading...</SelectItem>
+                          ) : (
+                            ports.map(port => (
+                              <SelectItem key={port.id} value={port.name}>
+                                {port.name}{port.code ? ` (${port.code})` : ''} - {port.country}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
                       <Label className="text-sm">Port of Receipt</Label>
-                      <Select value={formData.portOfReceipt} onValueChange={(v) => handleInputChange("portOfReceipt", v)}>
+                      <Select
+                        value={formData.portOfReceipt}
+                        onValueChange={(v) => {
+                          handleInputChange("portOfReceipt", v);
+                          const selectedPort = ports.find(p => p.name === v);
+                          setFormData(prev => ({ ...prev, portOfReceiptId: selectedPort?.id }));
+                        }}
+                      >
                         <SelectTrigger><SelectValue placeholder="Select Port" /></SelectTrigger>
                         <SelectContent className="bg-popover border border-border max-h-[300px]">
                           {ports.length > 0 ? (
                             ports.map(port => (
-                              <SelectItem key={port.id} value={port.name}>{port.code} - {port.name}</SelectItem>
+                              <SelectItem key={port.id} value={port.name}>{port.name}{port.code ? ` (${port.code})` : ''} - {port.country}</SelectItem>
                             ))
                           ) : (
                             <SelectItem value="_loading" disabled>Loading ports...</SelectItem>
@@ -1099,12 +1138,19 @@ const ShipmentDetail = () => {
                     </div>
                     <div>
                       <Label className="text-sm">Port of Loading</Label>
-                      <Select value={formData.portOfLoading} onValueChange={(v) => handleInputChange("portOfLoading", v)}>
+                      <Select
+                        value={formData.portOfLoading}
+                        onValueChange={(v) => {
+                          handleInputChange("portOfLoading", v);
+                          const selectedPort = ports.find(p => p.name === v);
+                          setFormData(prev => ({ ...prev, portOfLoadingId: selectedPort?.id }));
+                        }}
+                      >
                         <SelectTrigger><SelectValue placeholder="Select Port" /></SelectTrigger>
                         <SelectContent className="bg-popover border border-border max-h-[300px]">
                           {ports.length > 0 ? (
                             ports.map(port => (
-                              <SelectItem key={port.id} value={port.name}>{port.code} - {port.name}</SelectItem>
+                              <SelectItem key={port.id} value={port.name}>{port.name}{port.code ? ` (${port.code})` : ''} - {port.country}</SelectItem>
                             ))
                           ) : (
                             <SelectItem value="_loading" disabled>Loading ports...</SelectItem>
@@ -1121,12 +1167,19 @@ const ShipmentDetail = () => {
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <Label className="text-sm">Port of Discharge</Label>
-                      <Select value={formData.portOfDischarge} onValueChange={(v) => handleInputChange("portOfDischarge", v)}>
+                      <Select
+                        value={formData.portOfDischarge}
+                        onValueChange={(v) => {
+                          handleInputChange("portOfDischarge", v);
+                          const selectedPort = ports.find(p => p.name === v);
+                          setFormData(prev => ({ ...prev, portOfDischargeId: selectedPort?.id }));
+                        }}
+                      >
                         <SelectTrigger><SelectValue placeholder="Select Port" /></SelectTrigger>
                         <SelectContent className="bg-popover border border-border max-h-[300px]">
                           {ports.length > 0 ? (
                             ports.map(port => (
-                              <SelectItem key={port.id} value={port.name}>{port.code} - {port.name}</SelectItem>
+                              <SelectItem key={port.id} value={port.name}>{port.name}{port.code ? ` (${port.code})` : ''} - {port.country}</SelectItem>
                             ))
                           ) : (
                             <SelectItem value="_loading" disabled>Loading ports...</SelectItem>
@@ -1136,12 +1189,19 @@ const ShipmentDetail = () => {
                     </div>
                     <div>
                       <Label className="text-sm">Port of Final Destination</Label>
-                      <Select value={formData.portOfFinalDestination} onValueChange={(v) => handleInputChange("portOfFinalDestination", v)}>
+                      <Select
+                        value={formData.portOfFinalDestination}
+                        onValueChange={(v) => {
+                          handleInputChange("portOfFinalDestination", v);
+                          const selectedPort = ports.find(p => p.name === v);
+                          setFormData(prev => ({ ...prev, portOfFinalDestinationId: selectedPort?.id }));
+                        }}
+                      >
                         <SelectTrigger><SelectValue placeholder="Select Port" /></SelectTrigger>
                         <SelectContent className="bg-popover border border-border max-h-[300px]">
                           {ports.length > 0 ? (
                             ports.map(port => (
-                              <SelectItem key={port.id} value={port.name}>{port.code} - {port.name}</SelectItem>
+                              <SelectItem key={port.id} value={port.name}>{port.name}{port.code ? ` (${port.code})` : ''} - {port.country}</SelectItem>
                             ))
                           ) : (
                             <SelectItem value="_loading" disabled>Loading ports...</SelectItem>
@@ -1151,7 +1211,20 @@ const ShipmentDetail = () => {
                     </div>
                     <div>
                       <Label className="text-sm">Place of Delivery</Label>
-                      <Input value={formData.placeOfDelivery} onChange={(e) => handleInputChange("placeOfDelivery", e.target.value)} placeholder="Place of Delivery" />
+                      <Select value={formData.placeOfDelivery} onValueChange={(v) => handleInputChange("placeOfDelivery", v)}>
+                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent className="bg-popover border border-border max-h-[300px]">
+                          {ports.length === 0 ? (
+                            <SelectItem value="_loading" disabled>Loading...</SelectItem>
+                          ) : (
+                            ports.map(port => (
+                              <SelectItem key={port.id} value={port.name}>
+                                {port.name}{port.code ? ` (${port.code})` : ''} - {port.country}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 </div>
@@ -1435,10 +1508,10 @@ const ShipmentDetail = () => {
                       <TableRow key={container.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
                         <TableCell>{index + 1}</TableCell>
                         <TableCell className="text-emerald-600">{container.containerNumber}</TableCell>
-                        <TableCell>{container.containerType}</TableCell>
+                        <TableCell>{container.containerTypeName || '-'}</TableCell>
                         <TableCell className="text-emerald-600">{container.sealNo}</TableCell>
                         <TableCell>{container.noOfPcs}</TableCell>
-                        <TableCell>{container.packageType}</TableCell>
+                        <TableCell>{container.packageTypeName || '-'}</TableCell>
                         <TableCell>{container.grossWeight?.toFixed(3) || '0.000'}</TableCell>
                         <TableCell className="text-emerald-600">{container.volume?.toFixed(3) || '0.000'}</TableCell>
                         <TableCell>
@@ -1447,7 +1520,7 @@ const ShipmentDetail = () => {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600 text-white rounded"
-                              onClick={() => handleEditContainer(container)}
+                              onClick={() => handleEditContainer(container, index)}
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -1856,7 +1929,7 @@ const ShipmentDetail = () => {
                 <div>
                   <Button className="bg-emerald-500 hover:bg-emerald-600 text-white">
                     <Plus className="h-4 w-4 mr-2" />
-                    Add Cargo
+                    Add Status
                   </Button>
                 </div>
               </div>
@@ -1875,11 +1948,14 @@ const ShipmentDetail = () => {
         open={containerModalOpen}
         onOpenChange={(open) => {
           setContainerModalOpen(open);
-          if (!open) setEditingContainer(null);
+          if (!open) {
+            setEditingContainer(null);
+            setEditingContainerIndex(null);
+          }
         }}
         container={editingContainer}
         onSave={handleSaveContainer}
-        nextSNo={containers.length + 1}
+        nextSNo={editingContainerIndex !== null ? editingContainerIndex + 1 : containers.length + 1}
       />
 
       <CostingModal

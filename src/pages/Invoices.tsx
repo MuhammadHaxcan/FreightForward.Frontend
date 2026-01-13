@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { format } from "date-fns";
+import { formatDate, formatDateToISO, formatDateForDisplay } from "@/lib/utils";
 import { Search, Calendar, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,8 +61,8 @@ export default function Invoices() {
         pageSize,
         searchTerm: searchTerm || undefined,
         customerId: selectedCustomer !== "all" ? parseInt(selectedCustomer) : undefined,
-        fromDate: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
-        toDate: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
+        fromDate: dateRange?.from ? formatDateToISO(dateRange.from) : undefined,
+        toDate: dateRange?.to ? formatDateToISO(dateRange.to) : undefined,
       });
       if (response.data) {
         setInvoices(response.data.items);
@@ -150,11 +150,11 @@ export default function Invoices() {
                   {dateRange?.from ? (
                     dateRange.to ? (
                       <>
-                        {format(dateRange.from, "MMM d, yyyy")} -{" "}
-                        {format(dateRange.to, "MMM d, yyyy")}
+                        {formatDateForDisplay(dateRange.from, "MMM d, yyyy")} -{" "}
+                        {formatDateForDisplay(dateRange.to, "MMM d, yyyy")}
                       </>
                     ) : (
-                      format(dateRange.from, "MMM d, yyyy")
+                      formatDateForDisplay(dateRange.from, "MMM d, yyyy")
                     )
                   ) : (
                     <span>Pick a date range</span>
@@ -246,14 +246,14 @@ export default function Invoices() {
                 <TableRow key={invoice.id} className="hover:bg-muted/50">
                   <TableCell>
                     <div>
-                      <div className="text-sm">Date - {format(new Date(invoice.invoiceDate), "dd-MMM-yy")}</div>
+                      <div className="text-sm">Date - {formatDate(invoice.invoiceDate)}</div>
                       <div className="text-sm">No - {invoice.invoiceNo}</div>
                     </div>
                   </TableCell>
                   <TableCell>{invoice.jobNumber || "-"}</TableCell>
                   <TableCell className="text-blue-600">{invoice.customerName}</TableCell>
                   <TableCell>{formatCurrency(invoice.amount, invoice.currency)}</TableCell>
-                  <TableCell>{invoice.dueDate ? format(new Date(invoice.dueDate), "dd-MM-yyyy") : "-"}</TableCell>
+                  <TableCell>{formatDate(invoice.dueDate)}</TableCell>
                   <TableCell className="font-semibold">{getAgingDisplay(invoice.agingDays)}</TableCell>
                   <TableCell className="text-blue-600">{invoice.addedBy || "-"}</TableCell>
                   <TableCell>{getPaymentStatusBadge(invoice.paymentStatus)}</TableCell>

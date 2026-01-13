@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DateInput } from "@/components/ui/date-input";
+import { getTodayDateOnly } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -86,7 +87,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
     costVendorName: "",
     costVendorCustomerId: "",
     costReferenceNo: "",
-    costDate: new Date().toISOString().split('T')[0],
+    costDate: getTodayDateOnly(),
     costTax: "0%",
     saleCurrency: LOCAL_CURRENCY,
     saleExRate: "1.000",
@@ -127,7 +128,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
         costVendorName: costing.vendorName || "",
         costVendorCustomerId: costing.vendorCustomerId?.toString() || "",
         costReferenceNo: "",
-        costDate: new Date().toISOString().split('T')[0],
+        costDate: getTodayDateOnly(),
         costTax: "0%",
         saleCurrency: costing.saleCurrency || LOCAL_CURRENCY,
         saleExRate: costing.saleExRate?.toString() || "1.000",

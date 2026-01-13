@@ -12,13 +12,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { invoiceApi, AccountInvoiceDetail } from "@/services/api";
+import { invoiceApi, AccountPurchaseInvoiceDetail } from "@/services/api";
 import { API_BASE_URL } from "@/services/api/base";
 
-export default function InvoiceView() {
+export default function PurchaseInvoiceView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [invoice, setInvoice] = useState<AccountInvoiceDetail | null>(null);
+  const [invoice, setInvoice] = useState<AccountPurchaseInvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -26,12 +26,12 @@ export default function InvoiceView() {
       if (!id) return;
       setLoading(true);
       try {
-        const response = await invoiceApi.getById(parseInt(id));
+        const response = await invoiceApi.getPurchaseInvoiceById(parseInt(id));
         if (response.data) {
           setInvoice(response.data);
         }
       } catch (error) {
-        console.error("Error fetching invoice:", error);
+        console.error("Error fetching purchase invoice:", error);
       } finally {
         setLoading(false);
       }
@@ -41,19 +41,19 @@ export default function InvoiceView() {
 
   const handlePrint = () => {
     if (!id) return;
-    window.open(`${API_BASE_URL}/invoices/${id}/pdf`, '_blank');
+    window.open(`${API_BASE_URL}/invoices/purchases/${id}/pdf`, '_blank');
   };
 
   const handleDownload = async () => {
     if (!id) return;
     try {
-      const response = await fetch(`${API_BASE_URL}/invoices/${id}/pdf`);
+      const response = await fetch(`${API_BASE_URL}/invoices/purchases/${id}/pdf`);
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${invoice?.invoiceNo || 'invoice'}.pdf`;
+        a.download = `${invoice?.purchaseNo || 'purchase-invoice'}.pdf`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
@@ -78,10 +78,10 @@ export default function InvoiceView() {
     return (
       <MainLayout>
         <div className="p-6 flex flex-col items-center justify-center min-h-[400px]">
-          <div className="text-lg mb-4">Invoice not found</div>
-          <Button onClick={() => navigate("/accounts/invoices")}>
+          <div className="text-lg mb-4">Purchase Invoice not found</div>
+          <Button onClick={() => navigate("/accounts/purchase-invoices")}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Invoices
+            Back to Purchase Invoices
           </Button>
         </div>
       </MainLayout>
@@ -93,9 +93,9 @@ export default function InvoiceView() {
   };
 
   // Calculate totals
-  const subTotal = invoice.subTotal || invoice.items?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
-  const totalTax = invoice.totalTax || invoice.items?.reduce((sum, item) => sum + (item.taxAmount || 0), 0) || 0;
-  const total = invoice.total || subTotal + totalTax;
+  const subTotal = invoice.items?.reduce((sum, item) => sum + (item.localAmount || 0), 0) || 0;
+  const totalTax = invoice.items?.reduce((sum, item) => sum + (item.taxAmount || 0), 0) || 0;
+  const total = invoice.amount || subTotal + totalTax;
 
   return (
     <MainLayout>
@@ -105,7 +105,7 @@ export default function InvoiceView() {
           <Button
             variant="default"
             className="bg-gray-800 hover:bg-gray-900 text-white"
-            onClick={() => navigate("/accounts/invoices")}
+            onClick={() => navigate("/accounts/purchase-invoices")}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
@@ -125,22 +125,20 @@ export default function InvoiceView() {
           {/* Header Section */}
           <div className="flex justify-between items-start mb-8">
             <div>
-              <h2 className="text-2xl font-semibold mb-4">Bill To:</h2>
+              <h2 className="text-2xl font-semibold mb-4">Invoice From:</h2>
               <div className="space-y-1">
-                <p className="font-bold text-lg">{invoice.customerName}</p>
-                <p className="text-muted-foreground">Address : {invoice.customerAddress || ""}</p>
-                <p className="text-muted-foreground">Phone : {invoice.customerPhone || ""}</p>
-                <p className="text-muted-foreground">Email : {invoice.customerEmail || ""}</p>
+                <p className="font-bold text-lg">{invoice.vendorName || "-"}</p>
+                <p className="text-muted-foreground">Address :</p>
+                <p className="text-muted-foreground">Phone :</p>
+                <p className="text-muted-foreground">Email :</p>
               </div>
             </div>
             <div className="text-right">
-              <h1 className="text-4xl font-light text-muted-foreground mb-4">Sales Invoice</h1>
+              <h1 className="text-4xl font-light text-muted-foreground mb-4">Purchase Invoice</h1>
               <div className="space-y-1 text-sm">
-                <p className="font-bold">{invoice.invoiceNo}</p>
-                <p>Date : {formatDate(invoice.invoiceDate)}</p>
-                {invoice.dueDate && (
-                  <p>Due Date : {formatDate(invoice.dueDate)}</p>
-                )}
+                <p className="font-bold">{invoice.purchaseNo}</p>
+                <p>Date : {formatDate(invoice.purchaseDate)}</p>
+                <p>Due Date : {formatDate(invoice.purchaseDate)}</p>
               </div>
             </div>
           </div>
@@ -165,10 +163,10 @@ export default function InvoiceView() {
                     <TableCell className="text-blue-600">{item.chargeDetails}</TableCell>
                     <TableCell className="text-center">{(item.quantity ?? 0).toFixed(0)}</TableCell>
                     <TableCell className="text-center">{item.currency}</TableCell>
-                    <TableCell className="text-right">{(item.rate ?? 0).toFixed(2)}</TableCell>
-                    <TableCell className="text-right">{(item.roe ?? 1).toFixed(2)}</TableCell>
+                    <TableCell className="text-right">{(item.costPerUnit ?? 0).toFixed(2)}</TableCell>
+                    <TableCell className="text-right">{(item.exRate ?? 1).toFixed(2)}</TableCell>
                     <TableCell className="text-right">{(item.quantity ?? 0).toFixed(3)}</TableCell>
-                    <TableCell className="text-right">{(item.amount ?? 0).toFixed(2)}</TableCell>
+                    <TableCell className="text-right">{(item.localAmount ?? 0).toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
                 {invoice.items?.length === 0 && (

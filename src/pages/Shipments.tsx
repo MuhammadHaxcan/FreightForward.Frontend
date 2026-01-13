@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -106,15 +107,7 @@ const Shipments = () => {
     }
   };
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "-";
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    } catch {
-      return dateString;
-    }
-  };
+  // formatDate imported from utils
 
   // Generate page numbers for pagination
   const getPageNumbers = () => {
@@ -339,8 +332,8 @@ const Shipments = () => {
                       <TableCell>{shipment.portOfDischarge || "-"}</TableCell>
                       <TableCell>
                         <div className="space-y-1 text-sm">
-                          <div>ETD - {formatDate(shipment.etd)}</div>
-                          <div>ETA - {formatDate(shipment.eta)}</div>
+                          <div>ETD - {formatDate(shipment.etd, "dd/MM/yyyy")}</div>
+                          <div>ETA - {formatDate(shipment.eta, "dd/MM/yyyy")}</div>
                         </div>
                       </TableCell>
                       <TableCell className="text-emerald-600">{shipment.carrier || "-"}</TableCell>

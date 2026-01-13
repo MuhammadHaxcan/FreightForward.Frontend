@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -70,15 +71,7 @@ export default function RateRequests() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "-";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    }).replace(/\//g, "-");
-  };
+  // formatDate imported from utils
 
   const handleConvertToQuotation = (request: RateRequest) => {
     navigate("/sales/quotations", { state: { rateRequest: request } });
@@ -199,7 +192,7 @@ export default function RateRequests() {
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">{request.rateRequestNo}</TableCell>
-                      <TableCell>{formatDate(request.requestDate)}</TableCell>
+                      <TableCell>{formatDate(request.requestDate, "dd-MM-yyyy")}</TableCell>
                       <TableCell>{request.mode}</TableCell>
                       <TableCell>{request.incoterms}</TableCell>
                       <TableCell className="text-green-600">{request.vendorName}</TableCell>

@@ -7,7 +7,7 @@ import { customerApi as _customerApi } from './customer';
 import { leadApi as _leadApi, rateRequestApi as _rateRequestApi, quotationApi as _quotationApi } from './sales';
 import { shipmentApi as _shipmentApi } from './shipment';
 import { settingsApi as _settingsApi } from './settings';
-import { invoiceApi as _invoiceApi } from './invoice';
+import { invoiceApi as _invoiceApi, receiptApi as _receiptApi } from './invoice';
 
 // Base types and utilities
 export { fetchApi, type PaginatedList, type ApiResponse, type MasterType, type Currency, type PaymentStatus } from './base';
@@ -105,6 +105,7 @@ export {
   type TransportMode,
   type BLType,
   type CostingUnit,
+  type ContainerType,
   type CreateCurrencyTypeRequest,
   type UpdateCurrencyTypeRequest,
   type CreatePortRequest,
@@ -118,6 +119,8 @@ export {
 // Invoice
 export {
   invoiceApi,
+  receiptApi,
+  type PaymentMode,
   type CreateInvoiceItemRequest,
   type CreateInvoiceRequest,
   type CreatePurchaseInvoiceItemRequest,
@@ -125,6 +128,16 @@ export {
   type AccountInvoice,
   type AccountInvoiceDetail,
   type AccountInvoiceItem,
+  type AccountPurchaseInvoice,
+  type AccountPurchaseInvoiceDetail,
+  type AccountPurchaseInvoiceItem,
+  type Receipt as ReceiptVoucher,
+  type ReceiptInvoice,
+  type ReceiptDetail,
+  type CreateReceiptInvoiceRequest,
+  type CreateReceiptRequest,
+  type UnpaidInvoice,
+  type PaymentType,
 } from './invoice';
 
 // Export combined API object for convenience
@@ -137,6 +150,7 @@ export const api = {
   quotations: _quotationApi,
   shipments: _shipmentApi,
   invoices: _invoiceApi,
+  receipts: _receiptApi,
   settings: _settingsApi,
 };
 

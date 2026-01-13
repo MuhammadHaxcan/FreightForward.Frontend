@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -86,15 +87,7 @@ export default function Quotations() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return "-";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    }).replace(/\//g, "-");
-  };
+  // formatDate imported from utils
 
   const openModal = (mode: ModalMode, quotation?: Quotation) => {
     setModalMode(mode);
@@ -222,14 +215,14 @@ export default function Quotations() {
                     ) : (
                       quotations.map((quotation) => (
                         <TableRow key={quotation.id} className="hover:bg-muted/50">
-                          <TableCell>{formatDate(quotation.quotationDate)}</TableCell>
+                          <TableCell>{formatDate(quotation.quotationDate, "dd-MM-yyyy")}</TableCell>
                           <TableCell className="font-medium">{quotation.quotationNo}</TableCell>
                           <TableCell className="text-green-600">{quotation.customerName}</TableCell>
                           <TableCell className="text-green-600">{quotation.incoterms}</TableCell>
                           <TableCell>{quotation.mode}</TableCell>
                           <TableCell className="text-green-600">{quotation.pol}</TableCell>
                           <TableCell className="text-green-600">{quotation.pod}</TableCell>
-                          <TableCell>{formatDate(quotation.quoteExpiryDate)}</TableCell>
+                          <TableCell>{formatDate(quotation.quoteExpiryDate, "dd-MM-yyyy")}</TableCell>
                           <TableCell>{getStatusBadge(quotation.quotationStatus)}</TableCell>
                           <TableCell>
                             <div className="flex gap-1">

@@ -11,8 +11,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { ArrowLeft, Plus, ChevronDown, Check, CalendarIcon, Pencil, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { cn, formatDate } from "@/lib/utils";
 import { customerApi, settingsApi, CustomerCategoryType, Currency, Invoice as ApiInvoice, AccountReceivable as ApiAccountReceivable, PaymentStatus } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
 
@@ -864,7 +863,7 @@ const CustomerDetail = () => {
               ) : (
                 invoices.map((inv, i) => (
                   <tr key={inv.id} className={`border-b border-border ${i % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
-                    <td className="px-4 py-3 text-sm">{inv.invoiceDate ? format(new Date(inv.invoiceDate), "dd-MM-yyyy") : "-"}</td>
+                    <td className="px-4 py-3 text-sm">{formatDate(inv.invoiceDate)}</td>
                     <td className="px-4 py-3 text-sm text-primary">{inv.invoiceNo}</td>
                     <td className="px-4 py-3 text-sm">{inv.jobNo || "-"}</td>
                     <td className="px-4 py-3 text-sm">{inv.hblNo || "-"}</td>
@@ -983,7 +982,7 @@ const CustomerDetail = () => {
                   const statusDisplay = getPaymentStatusDisplay(ar.paymentStatus);
                   return (
                     <tr key={ar.id} className={`border-b border-border ${i % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
-                      <td className="px-4 py-3 text-sm">{ar.invoiceDate ? format(new Date(ar.invoiceDate), "dd-MM-yyyy") : "-"}</td>
+                      <td className="px-4 py-3 text-sm">{formatDate(ar.invoiceDate)}</td>
                       <td className="px-4 py-3 text-sm text-primary">{ar.invoiceNo}</td>
                       <td className="px-4 py-3 text-sm">{ar.customerRef || "-"}</td>
                       <td className="px-4 py-3 text-sm">{ar.jobHblNo || "-"}</td>

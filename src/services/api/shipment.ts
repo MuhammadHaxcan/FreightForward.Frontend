@@ -46,8 +46,8 @@ export interface Shipment {
 
 export interface ShipmentDetail extends Shipment {
   incoterms?: Incoterms;
-  houseBLDate?: string;
-  houseBLStatus?: BLStatus;
+  hblDate?: string;
+  hblStatus?: BLStatus;
   hblServiceType?: BLServiceType;
   hblNoBLIssued?: string;
   hblFreight?: FreightType;
@@ -58,20 +58,21 @@ export interface ShipmentDetail extends Shipment {
   mblFreight?: FreightType;
   placeOfBLIssue?: string;
   freeTime?: string;
-  networkPartner?: string;
+  networkPartnerId?: number;
+  networkPartnerName?: string;
   assignedTo?: string;
-  portOfReceiptId?: number;
-  portOfFinalDestinationId?: number;
+  porId?: number;
+  pfdId?: number;
   placeOfReceipt?: string;
-  portOfReceipt?: string;
-  portOfFinalDestination?: string;
+  porName?: string;
+  pfdName?: string;
   placeOfDelivery?: string;
   voyage?: string;
   secondLegVessel: boolean;
   secondLegVesselName?: string;
   secondLegVoyage?: string;
-  secondLegETD?: string;
-  secondLegETA?: string;
+  secondLegEtd?: string;
+  secondLegEta?: string;
   marksNumbers?: string;
   notes?: string;
   internalNotes?: string;
@@ -97,10 +98,12 @@ export interface ShipmentParty {
 export interface ShipmentContainer {
   id: number;
   containerNumber: string;
-  containerType?: string;
+  containerTypeId?: number;
+  containerTypeName?: string;
   sealNo?: string;
   noOfPcs: number;
-  packageType?: string;
+  packageTypeId?: number;
+  packageTypeName?: string;
   grossWeight: number;
   volume: number;
 }
@@ -166,13 +169,13 @@ export interface CreateShipmentRequest {
   mode: ShipmentMode;
   transportModeId?: number;
   incoterms?: Incoterms;
-  houseBLNo?: string;
-  houseBLDate?: string;
-  houseBLStatus?: BLStatus;
+  hblNo?: string;
+  hblDate?: string;
+  hblStatus?: BLStatus;
   hblServiceType?: BLServiceType;
   hblNoBLIssued?: string;
   hblFreight?: FreightType;
-  mblNumber?: string;
+  mblNo?: string;
   mblDate?: string;
   mblStatus?: BLStatus;
   mblServiceType?: BLServiceType;
@@ -181,16 +184,12 @@ export interface CreateShipmentRequest {
   placeOfBLIssue?: string;
   carrier?: string;
   freeTime?: string;
-  networkPartner?: string;
-  portOfLoadingId?: number;
-  portOfDischargeId?: number;
-  portOfReceiptId?: number;
-  portOfFinalDestinationId?: number;
+  networkPartnerId?: number;
+  polId?: number;
+  podId?: number;
+  porId?: number;
+  pfdId?: number;
   placeOfReceipt?: string;
-  portOfReceipt?: string;
-  portOfLoading?: string;
-  portOfDischarge?: string;
-  portOfFinalDestination?: string;
   placeOfDelivery?: string;
   vessel?: string;
   voyage?: string;
@@ -199,8 +198,8 @@ export interface CreateShipmentRequest {
   secondLegVessel?: boolean;
   secondLegVesselName?: string;
   secondLegVoyage?: string;
-  secondLegETD?: string;
-  secondLegETA?: string;
+  secondLegEtd?: string;
+  secondLegEta?: string;
   marksNumbers?: string;
   notes?: string;
   internalNotes?: string;
@@ -226,10 +225,10 @@ export interface AddShipmentPartyRequest {
 export interface AddShipmentContainerRequest {
   shipmentId: number;
   containerNumber: string;
-  containerType?: string;
+  containerTypeId?: number | null;
   sealNo?: string;
   noOfPcs: number;
-  packageType?: string;
+  packageTypeId?: number | null;
   grossWeight: number;
   volume: number;
 }
@@ -238,10 +237,10 @@ export interface UpdateShipmentContainerRequest {
   id: number;
   shipmentId: number;
   containerNumber: string;
-  containerType?: string;
+  containerTypeId?: number | null;
   sealNo?: string;
   noOfPcs: number;
-  packageType?: string;
+  packageTypeId?: number | null;
   grossWeight: number;
   volume: number;
 }
@@ -375,7 +374,7 @@ export const shipmentApi = {
       body: JSON.stringify(data),
     }),
   updateContainer: (shipmentId: number, id: number, data: UpdateShipmentContainerRequest) =>
-    fetchApi<void>(`/shipments/${shipmentId}/containers/${id}`, {
+    fetchApi<void>(`/shipments/containers/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
