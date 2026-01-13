@@ -127,8 +127,8 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
         costVendor: vendorParty?.id?.toString() || "",
         costVendorName: costing.vendorName || "",
         costVendorCustomerId: costing.vendorCustomerId?.toString() || "",
-        costReferenceNo: "",
-        costDate: getTodayDateOnly(),
+        costReferenceNo: costing.costReferenceNo || "",
+        costDate: costing.costDate?.split('T')[0] || getTodayDateOnly(),
         costTax: "0%",
         saleCurrency: costing.saleCurrency || LOCAL_CURRENCY,
         saleExRate: costing.saleExRate?.toString() || "1.000",
@@ -337,6 +337,8 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
       vendorName: formData.costVendorName,
       billToCustomerId: billToCustomerId,
       billToName: formData.saleBillToName,
+      costReferenceNo: formData.costReferenceNo || null,
+      costDate: formData.costDate || null,
     });
     onOpenChange(false);
   };

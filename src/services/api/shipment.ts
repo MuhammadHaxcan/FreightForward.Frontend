@@ -30,10 +30,20 @@ export interface Shipment {
   houseBLNo?: string;
   mblNumber?: string;
   customerName?: string;
+  placeOfReceiptId?: number;
+  placeOfDeliveryId?: number;
+  portOfReceiptId?: number;
   portOfLoadingId?: number;
   portOfDischargeId?: number;
-  portOfLoading?: string;
-  portOfDischarge?: string;
+  portOfFinalDestinationId?: number;
+  placeOfReceiptName?: string;
+  placeOfDeliveryName?: string;
+  portOfReceiptName?: string;
+  portOfLoadingName?: string;
+  portOfDischargeName?: string;
+  portOfFinalDestinationName?: string;
+  placeOfReceipt?: string;
+  placeOfDelivery?: string;
   etd?: string;
   eta?: string;
   carrier?: string;
@@ -46,36 +56,36 @@ export interface Shipment {
 
 export interface ShipmentDetail extends Shipment {
   incoterms?: Incoterms;
+  // House B/L fields - camelCase of backend DTO property names
   hblDate?: string;
   hblStatus?: BLStatus;
   hblServiceType?: BLServiceType;
   hblNoBLIssued?: string;
   hblFreight?: FreightType;
+  // MBL fields
   mblDate?: string;
   mblStatus?: BLStatus;
   mblServiceType?: BLServiceType;
   mblNoBLIssued?: string;
   mblFreight?: FreightType;
+  // Other info
   placeOfBLIssue?: string;
   freeTime?: string;
   networkPartnerId?: number;
   networkPartnerName?: string;
   assignedTo?: string;
-  porId?: number;
-  pfdId?: number;
-  placeOfReceipt?: string;
-  porName?: string;
-  pfdName?: string;
-  placeOfDelivery?: string;
+  // Vessel & Schedule
   voyage?: string;
   secondLegVessel: boolean;
   secondLegVesselName?: string;
   secondLegVoyage?: string;
   secondLegEtd?: string;
   secondLegEta?: string;
+  // Notes
   marksNumbers?: string;
   notes?: string;
   internalNotes?: string;
+  // Collections
   parties: ShipmentParty[];
   containers: ShipmentContainer[];
   costings: ShipmentCosting[];
@@ -106,6 +116,7 @@ export interface ShipmentContainer {
   packageTypeName?: string;
   grossWeight: number;
   volume: number;
+  description?: string;
 }
 
 export interface ShipmentCosting {
@@ -135,6 +146,8 @@ export interface ShipmentCosting {
   billToName?: string;
   vendorCustomerId?: number;
   vendorName?: string;
+  costReferenceNo?: string;
+  costDate?: string;
   voucherNumber?: string;
   voucherStatus?: string;
   saleInvoiced: boolean;
@@ -165,6 +178,7 @@ export interface ShipmentStatusLog {
 }
 
 export interface CreateShipmentRequest {
+  jobDate: string;
   direction: ShipmentDirection;
   mode: ShipmentMode;
   transportModeId?: number;
@@ -185,10 +199,12 @@ export interface CreateShipmentRequest {
   carrier?: string;
   freeTime?: string;
   networkPartnerId?: number;
-  polId?: number;
-  podId?: number;
-  porId?: number;
-  pfdId?: number;
+  placeOfReceiptId?: number;
+  placeOfDeliveryId?: number;
+  portOfReceiptId?: number;
+  portOfLoadingId?: number;
+  portOfDischargeId?: number;
+  portOfFinalDestinationId?: number;
   placeOfReceipt?: string;
   placeOfDelivery?: string;
   vessel?: string;
@@ -231,6 +247,7 @@ export interface AddShipmentContainerRequest {
   packageTypeId?: number | null;
   grossWeight: number;
   volume: number;
+  description?: string;
 }
 
 export interface UpdateShipmentContainerRequest {
@@ -243,6 +260,7 @@ export interface UpdateShipmentContainerRequest {
   packageTypeId?: number | null;
   grossWeight: number;
   volume: number;
+  description?: string;
 }
 
 export interface AddShipmentCostingRequest {
@@ -272,6 +290,8 @@ export interface AddShipmentCostingRequest {
   billToName?: string;
   vendorCustomerId?: number;
   vendorName?: string;
+  costReferenceNo?: string;
+  costDate?: string;
 }
 
 export interface UpdateShipmentCostingRequest {
@@ -302,6 +322,8 @@ export interface UpdateShipmentCostingRequest {
   billToName?: string;
   vendorCustomerId?: number;
   vendorName?: string;
+  costReferenceNo?: string;
+  costDate?: string;
 }
 
 // Shipment Invoice Types
@@ -374,7 +396,7 @@ export const shipmentApi = {
       body: JSON.stringify(data),
     }),
   updateContainer: (shipmentId: number, id: number, data: UpdateShipmentContainerRequest) =>
-    fetchApi<void>(`/shipments/containers/${id}`, {
+    fetchApi<void>(`/shipments/${shipmentId}/containers/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),

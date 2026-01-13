@@ -195,7 +195,10 @@ const emptyFormData = {
   freeTime: "",
   networkPartnerId: undefined as number | undefined,
   assignedTo: "",
-  placeOfReceipt: "",
+  placeOfReceiptId: undefined as number | undefined,
+  placeOfReceiptName: "",
+  placeOfDeliveryId: undefined as number | undefined,
+  placeOfDeliveryName: "",
   portOfReceiptId: undefined as number | undefined,
   portOfReceipt: "",
   portOfLoadingId: undefined as number | undefined,
@@ -204,6 +207,7 @@ const emptyFormData = {
   portOfDischarge: "",
   portOfFinalDestinationId: undefined as number | undefined,
   portOfFinalDestination: "",
+  placeOfReceipt: "",
   placeOfDelivery: "",
   vessel: "",
   voyage: "",
@@ -413,6 +417,7 @@ const ShipmentDetail = () => {
         transportModeId: shipmentData.transportModeId,
         incoterms: shipmentData.incoterms || '',
         houseBLNo: shipmentData.houseBLNo || '',
+        // Use correct field names from backend DTO (camelCase of HblDate, HblStatus, etc.)
         houseBLDate: shipmentData.hblDate?.split('T')[0] || '',
         houseBLStatus: shipmentData.hblStatus || '',
         hblServiceType: shipmentData.hblServiceType || '',
@@ -429,15 +434,19 @@ const ShipmentDetail = () => {
         freeTime: shipmentData.freeTime || '',
         networkPartnerId: shipmentData.networkPartnerId,
         assignedTo: shipmentData.assignedTo || '',
-        placeOfReceipt: shipmentData.placeOfReceipt || '',
-        portOfReceiptId: shipmentData.porId,
-        portOfReceipt: shipmentData.porName || '',
+        placeOfReceiptId: shipmentData.placeOfReceiptId,
+        placeOfReceiptName: shipmentData.placeOfReceiptName || '',
+        placeOfDeliveryId: shipmentData.placeOfDeliveryId,
+        placeOfDeliveryName: shipmentData.placeOfDeliveryName || '',
+        portOfReceiptId: shipmentData.portOfReceiptId,
+        portOfReceipt: shipmentData.portOfReceiptName || '',
         portOfLoadingId: shipmentData.portOfLoadingId,
-        portOfLoading: shipmentData.portOfLoading || '',
+        portOfLoading: shipmentData.portOfLoadingName || '',
         portOfDischargeId: shipmentData.portOfDischargeId,
-        portOfDischarge: shipmentData.portOfDischarge || '',
-        portOfFinalDestinationId: shipmentData.pfdId,
-        portOfFinalDestination: shipmentData.pfdName || '',
+        portOfDischarge: shipmentData.portOfDischargeName || '',
+        portOfFinalDestinationId: shipmentData.portOfFinalDestinationId,
+        portOfFinalDestination: shipmentData.portOfFinalDestinationName || '',
+        placeOfReceipt: shipmentData.placeOfReceipt || '',
         placeOfDelivery: shipmentData.placeOfDelivery || '',
         vessel: shipmentData.vessel || '',
         voyage: shipmentData.voyage || '',
@@ -532,6 +541,7 @@ const ShipmentDetail = () => {
           packageTypeId: containerData.packageTypeId || null,
           grossWeight: parseFloat(containerData.grossWeight) || 0,
           volume: parseFloat(containerData.volume) || 0,
+          description: containerData.description || null,
         };
 
         await updateContainerMutation.mutateAsync({ shipmentId, containerId: editingContainer.id, data });
@@ -546,6 +556,7 @@ const ShipmentDetail = () => {
           packageTypeId: containerData.packageTypeId || null,
           grossWeight: parseFloat(containerData.grossWeight) || 0,
           volume: parseFloat(containerData.volume) || 0,
+          description: containerData.description || null,
         };
 
         await addContainerMutation.mutateAsync({ shipmentId, data });
@@ -611,6 +622,8 @@ const ShipmentDetail = () => {
           gp: saleLCY - costLCY,
           billToCustomerId: costingData.billToCustomerId,
           vendorCustomerId: costingData.vendorCustomerId,
+          costReferenceNo: costingData.costReferenceNo || undefined,
+          costDate: costingData.costDate || undefined,
         };
 
         await updateCostingMutation.mutateAsync({ shipmentId, costingId: editingCosting.id, data });
@@ -641,6 +654,8 @@ const ShipmentDetail = () => {
           gp: saleLCY - costLCY,
           billToCustomerId: costingData.billToCustomerId,
           vendorCustomerId: costingData.vendorCustomerId,
+          costReferenceNo: costingData.costReferenceNo || undefined,
+          costDate: costingData.costDate || undefined,
         };
 
         await addCostingMutation.mutateAsync({ shipmentId, data });
@@ -700,6 +715,7 @@ const ShipmentDetail = () => {
         id: shipmentId,
         data: {
           id: shipmentId,
+          jobDate: formData.jobDate,
           jobStatus: (formData.jobStatus || 'Opened') as any,
           direction: mapDisplayToDirection(formData.direction) as any,
           mode: mapDisplayToMode(formData.mode) as any,
@@ -722,11 +738,13 @@ const ShipmentDetail = () => {
           freeTime: formData.freeTime || undefined,
           networkPartnerId: formData.networkPartnerId,
           assignedTo: formData.assignedTo || undefined,
+          placeOfReceiptId: formData.placeOfReceiptId,
+          placeOfDeliveryId: formData.placeOfDeliveryId,
+          portOfReceiptId: formData.portOfReceiptId,
+          portOfLoadingId: formData.portOfLoadingId,
+          portOfDischargeId: formData.portOfDischargeId,
+          portOfFinalDestinationId: formData.portOfFinalDestinationId,
           placeOfReceipt: formData.placeOfReceipt || undefined,
-          porId: formData.portOfReceiptId,
-          polId: formData.portOfLoadingId,
-          podId: formData.portOfDischargeId,
-          pfdId: formData.portOfFinalDestinationId,
           placeOfDelivery: formData.placeOfDelivery || undefined,
           vessel: formData.vessel || undefined,
           voyage: formData.voyage || undefined,
@@ -971,8 +989,8 @@ const ShipmentDetail = () => {
                       <Select value={formData.hblServiceType} onValueChange={(v) => handleInputChange("hblServiceType", v)}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent className="bg-popover border border-border">
-                          <SelectItem value="LCL/LCL">LCL/LCL</SelectItem>
-                          <SelectItem value="FCL/FCL">FCL/FCL</SelectItem>
+                          <SelectItem value="LCLLCL">LCL/LCL</SelectItem>
+                          <SelectItem value="FCLFCL">FCL/FCL</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1030,8 +1048,8 @@ const ShipmentDetail = () => {
                       <Select value={formData.mblServiceType} onValueChange={(v) => handleInputChange("mblServiceType", v)}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent className="bg-popover border border-border">
-                          <SelectItem value="FCL/FCL">FCL/FCL</SelectItem>
-                          <SelectItem value="LCL/LCL">LCL/LCL</SelectItem>
+                          <SelectItem value="FCLFCL">FCL/FCL</SelectItem>
+                          <SelectItem value="LCLLCL">LCL/LCL</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1093,7 +1111,7 @@ const ShipmentDetail = () => {
               <div className="bg-card border border-border rounded-lg p-6 space-y-4">
                 <h3 className="text-emerald-600 font-semibold text-lg border-b border-border pb-2">Route & Schedule</h3>
 
-                {/* Origin */}
+                {/* Origin Ports */}
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium text-muted-foreground">Origin</h4>
                   <div className="grid grid-cols-3 gap-4">
@@ -1124,14 +1142,16 @@ const ShipmentDetail = () => {
                           setFormData(prev => ({ ...prev, portOfReceiptId: selectedPort?.id }));
                         }}
                       >
-                        <SelectTrigger><SelectValue placeholder="Select Port" /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                         <SelectContent className="bg-popover border border-border max-h-[300px]">
-                          {ports.length > 0 ? (
-                            ports.map(port => (
-                              <SelectItem key={port.id} value={port.name}>{port.name}{port.code ? ` (${port.code})` : ''} - {port.country}</SelectItem>
-                            ))
+                          {ports.length === 0 ? (
+                            <SelectItem value="_loading" disabled>Loading...</SelectItem>
                           ) : (
-                            <SelectItem value="_loading" disabled>Loading ports...</SelectItem>
+                            ports.map(port => (
+                              <SelectItem key={port.id} value={port.name}>
+                                {port.name}{port.code ? ` (${port.code})` : ''} - {port.country}
+                              </SelectItem>
+                            ))
                           )}
                         </SelectContent>
                       </Select>
@@ -1146,14 +1166,16 @@ const ShipmentDetail = () => {
                           setFormData(prev => ({ ...prev, portOfLoadingId: selectedPort?.id }));
                         }}
                       >
-                        <SelectTrigger><SelectValue placeholder="Select Port" /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                         <SelectContent className="bg-popover border border-border max-h-[300px]">
-                          {ports.length > 0 ? (
-                            ports.map(port => (
-                              <SelectItem key={port.id} value={port.name}>{port.name}{port.code ? ` (${port.code})` : ''} - {port.country}</SelectItem>
-                            ))
+                          {ports.length === 0 ? (
+                            <SelectItem value="_loading" disabled>Loading...</SelectItem>
                           ) : (
-                            <SelectItem value="_loading" disabled>Loading ports...</SelectItem>
+                            ports.map(port => (
+                              <SelectItem key={port.id} value={port.name}>
+                                {port.name}{port.code ? ` (${port.code})` : ''} - {port.country}
+                              </SelectItem>
+                            ))
                           )}
                         </SelectContent>
                       </Select>
@@ -1161,7 +1183,7 @@ const ShipmentDetail = () => {
                   </div>
                 </div>
 
-                {/* Destination */}
+                {/* Destination Ports */}
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium text-muted-foreground">Destination</h4>
                   <div className="grid grid-cols-3 gap-4">
@@ -1175,14 +1197,16 @@ const ShipmentDetail = () => {
                           setFormData(prev => ({ ...prev, portOfDischargeId: selectedPort?.id }));
                         }}
                       >
-                        <SelectTrigger><SelectValue placeholder="Select Port" /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                         <SelectContent className="bg-popover border border-border max-h-[300px]">
-                          {ports.length > 0 ? (
-                            ports.map(port => (
-                              <SelectItem key={port.id} value={port.name}>{port.name}{port.code ? ` (${port.code})` : ''} - {port.country}</SelectItem>
-                            ))
+                          {ports.length === 0 ? (
+                            <SelectItem value="_loading" disabled>Loading...</SelectItem>
                           ) : (
-                            <SelectItem value="_loading" disabled>Loading ports...</SelectItem>
+                            ports.map(port => (
+                              <SelectItem key={port.id} value={port.name}>
+                                {port.name}{port.code ? ` (${port.code})` : ''} - {port.country}
+                              </SelectItem>
+                            ))
                           )}
                         </SelectContent>
                       </Select>
@@ -1197,14 +1221,16 @@ const ShipmentDetail = () => {
                           setFormData(prev => ({ ...prev, portOfFinalDestinationId: selectedPort?.id }));
                         }}
                       >
-                        <SelectTrigger><SelectValue placeholder="Select Port" /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                         <SelectContent className="bg-popover border border-border max-h-[300px]">
-                          {ports.length > 0 ? (
-                            ports.map(port => (
-                              <SelectItem key={port.id} value={port.name}>{port.name}{port.code ? ` (${port.code})` : ''} - {port.country}</SelectItem>
-                            ))
+                          {ports.length === 0 ? (
+                            <SelectItem value="_loading" disabled>Loading...</SelectItem>
                           ) : (
-                            <SelectItem value="_loading" disabled>Loading ports...</SelectItem>
+                            ports.map(port => (
+                              <SelectItem key={port.id} value={port.name}>
+                                {port.name}{port.code ? ` (${port.code})` : ''} - {port.country}
+                              </SelectItem>
+                            ))
                           )}
                         </SelectContent>
                       </Select>

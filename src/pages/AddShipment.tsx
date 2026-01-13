@@ -761,6 +761,7 @@ const AddShipment = () => {
     setIsSaving(true);
     try {
       const shipmentData = {
+        jobDate: formData.jobDate,
         direction: mapDirection(formData.direction),
         mode: mapMode(formData.mode),
         transportModeId: formData.transportModeId,
@@ -781,10 +782,10 @@ const AddShipment = () => {
         carrier: formData.carrier || undefined,
         freeTime: formData.freeTime || undefined,
         networkPartnerId: formData.networkPartnerId,
-        polId: formData.portOfLoadingId,
-        podId: formData.portOfDischargeId,
-        porId: formData.portOfReceiptId,
-        pfdId: formData.portOfFinalDestinationId,
+        portOfLoadingId: formData.portOfLoadingId,
+        portOfDischargeId: formData.portOfDischargeId,
+        portOfReceiptId: formData.portOfReceiptId,
+        portOfFinalDestinationId: formData.portOfFinalDestinationId,
         placeOfReceipt: formData.placeOfReceipt || undefined,
         placeOfDelivery: formData.placeOfDelivery || undefined,
         vessel: formData.vessel || undefined,
