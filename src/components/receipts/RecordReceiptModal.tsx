@@ -439,22 +439,22 @@ export default function RecordReceiptModal({
             />
           </div>
 
-          {/* Remarks */}
+          {/* Narration */}
           <div className="space-y-2">
-            <Label>Remarks</Label>
+            <Label>Narration</Label>
             <Textarea
               value={remarks}
               onChange={(e) => setRemarks(e.target.value)}
-              placeholder="Remarks"
+              placeholder="Narration"
               rows={1}
             />
           </div>
 
-          {/* Currency */}
+          {/* Currency - Locked to customer's base currency */}
           <div className="space-y-2">
             <Label>Currency</Label>
-            <Select value={currency} onValueChange={(v) => setCurrency(v as Currency)}>
-              <SelectTrigger>
+            <Select value={currency} onValueChange={(v) => setCurrency(v as Currency)} disabled={!!customerId}>
+              <SelectTrigger className={customerId ? "bg-muted" : ""}>
                 <SelectValue placeholder="Select Currency" />
               </SelectTrigger>
               <SelectContent>

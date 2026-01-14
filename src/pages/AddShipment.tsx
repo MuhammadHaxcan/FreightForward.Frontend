@@ -1678,35 +1678,26 @@ const AddShipment = () => {
                     </TableRow>
                   ) : (
                     costing.map((cost, index) => {
-                      // Determine row background color based on invoice status
-                      let rowClass = index % 2 === 0 ? "bg-card" : "bg-secondary/30";
-                      if (cost.saleInvoiced && cost.purchaseInvoiced) {
-                        // Both sale and purchase invoiced - fully completed (purple/violet)
-                        rowClass = "bg-violet-100 dark:bg-violet-900/30";
-                      } else if (cost.saleInvoiced) {
-                        // Only sale invoiced (green)
-                        rowClass = "bg-emerald-100 dark:bg-emerald-900/30";
-                      } else if (cost.purchaseInvoiced) {
-                        // Only purchase invoiced (orange)
-                        rowClass = "bg-orange-100 dark:bg-orange-900/30";
-                      }
-                      
+                      // Column-level highlighting based on invoice status
+                      const saleHighlight = cost.saleInvoiced ? "bg-emerald-100 dark:bg-emerald-900/30" : "";
+                      const costHighlight = cost.purchaseInvoiced ? "bg-orange-100 dark:bg-orange-900/30" : "";
+
                       return (
-                        <TableRow key={cost.id} className={rowClass}>
+                        <TableRow key={cost.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
                           <TableCell>{index + 1}</TableCell>
                           <TableCell className="text-emerald-600">{cost.description}</TableCell>
-                          <TableCell>{cost.saleQty}</TableCell>
-                          <TableCell>{cost.saleUnit}</TableCell>
-                          <TableCell>{cost.saleCurrency}</TableCell>
-                          <TableCell>{cost.saleExRate}</TableCell>
-                          <TableCell>{cost.saleFCY}</TableCell>
-                          <TableCell>{cost.saleLCY}</TableCell>
-                          <TableCell>{cost.costQty}</TableCell>
-                          <TableCell>{cost.costUnit}</TableCell>
-                          <TableCell>{cost.costCurrency}</TableCell>
-                          <TableCell>{cost.costExRate}</TableCell>
-                          <TableCell>{cost.costFCY}</TableCell>
-                          <TableCell>{cost.costLCY}</TableCell>
+                          <TableCell className={saleHighlight}>{cost.saleQty}</TableCell>
+                          <TableCell className={saleHighlight}>{cost.saleUnit}</TableCell>
+                          <TableCell className={saleHighlight}>{cost.saleCurrency}</TableCell>
+                          <TableCell className={saleHighlight}>{cost.saleExRate}</TableCell>
+                          <TableCell className={saleHighlight}>{cost.saleFCY}</TableCell>
+                          <TableCell className={saleHighlight}>{cost.saleLCY}</TableCell>
+                          <TableCell className={costHighlight}>{cost.costQty}</TableCell>
+                          <TableCell className={costHighlight}>{cost.costUnit}</TableCell>
+                          <TableCell className={costHighlight}>{cost.costCurrency}</TableCell>
+                          <TableCell className={costHighlight}>{cost.costExRate}</TableCell>
+                          <TableCell className={costHighlight}>{cost.costFCY}</TableCell>
+                          <TableCell className={costHighlight}>{cost.costLCY}</TableCell>
                           <TableCell>{cost.unitName}</TableCell>
                           <TableCell>{cost.gp}</TableCell>
                           <TableCell>
@@ -1731,15 +1722,11 @@ const AddShipment = () => {
                 <div className="flex gap-4 text-xs">
                   <div className="flex items-center gap-1">
                     <div className="w-4 h-4 rounded bg-emerald-100 dark:bg-emerald-900/30 border border-emerald-300"></div>
-                    <span>Sale Invoiced</span>
+                    <span>Sale Invoiced (Sale columns)</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <div className="w-4 h-4 rounded bg-orange-100 dark:bg-orange-900/30 border border-orange-300"></div>
-                    <span>Purchase Invoiced</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-4 h-4 rounded bg-violet-100 dark:bg-violet-900/30 border border-violet-300"></div>
-                    <span>Both Invoiced</span>
+                    <span>Purchase Invoiced (Cost columns)</span>
                   </div>
                 </div>
               )}
@@ -2017,6 +2004,7 @@ const AddShipment = () => {
         open={purchaseModalOpen}
         onOpenChange={setPurchaseModalOpen}
         shipmentId={savedShipmentId}
+        jobNumber={savedJobNumber}
         chargesDetails={costing}
         parties={parties}
         onSave={(purchase) => {

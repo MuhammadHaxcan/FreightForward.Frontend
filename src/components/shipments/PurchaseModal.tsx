@@ -34,6 +34,7 @@ interface PurchaseModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   shipmentId: number | null;
+  jobNumber?: string;
   chargesDetails: any[];
   parties: ShipmentParty[];
   onSave: (purchase: any) => void;
@@ -45,7 +46,7 @@ const currencyMap: Record<string, Currency> = {
   default: "AED",
 };
 
-export function PurchaseModal({ open, onOpenChange, shipmentId, chargesDetails, parties, onSave }: PurchaseModalProps) {
+export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, chargesDetails, parties, onSave }: PurchaseModalProps) {
   const createPurchaseInvoiceMutation = useCreatePurchaseInvoice();
 
   // Filter parties to only show Creditors
@@ -165,10 +166,11 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, chargesDetails, 
       await createPurchaseInvoiceMutation.mutateAsync({
         shipmentId,
         vendorId: selectedParty.customerId,
-        invoiceDate: formData.invoiceDate,
+        purchaseDate: formData.invoiceDate,
         vendorInvoiceNo: formData.invoiceNo || undefined,
         vendorInvoiceDate: formData.vDate || undefined,
-        baseCurrency: formData.baseCurrency,
+        jobNo: jobNumber || undefined,
+        currency: formData.baseCurrency,
         remarks: formData.remarks || undefined,
         items,
       });

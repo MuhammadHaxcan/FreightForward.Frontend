@@ -1656,22 +1656,25 @@ const ShipmentDetail = () => {
                         <TableCell colSpan={17} className="text-center text-muted-foreground py-8">No costing entries</TableCell>
                       </TableRow>
                     ) : (
-                      costings.map((cost, index) => (
+                      costings.map((cost, index) => {
+                        const saleHighlight = cost.saleInvoiced ? "bg-emerald-100 dark:bg-emerald-900/30" : "";
+                        const costHighlight = cost.purchaseInvoiced ? "bg-orange-100 dark:bg-orange-900/30" : "";
+                        return (
                         <TableRow key={cost.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
                           <TableCell>{index + 1}</TableCell>
                           <TableCell className="text-emerald-600">{cost.description}</TableCell>
-                          <TableCell>{cost.saleQty}</TableCell>
-                          <TableCell>{cost.saleUnit}</TableCell>
-                          <TableCell>{cost.saleCurrency}</TableCell>
-                          <TableCell>{cost.saleExRate}</TableCell>
-                          <TableCell>{cost.saleFCY?.toFixed(2)}</TableCell>
-                          <TableCell className="text-emerald-600">{cost.saleLCY?.toFixed(2)}</TableCell>
-                          <TableCell>{cost.costQty}</TableCell>
-                          <TableCell>{cost.costUnit}</TableCell>
-                          <TableCell>{cost.costCurrency}</TableCell>
-                          <TableCell>{cost.costExRate}</TableCell>
-                          <TableCell>{cost.costFCY?.toFixed(2)}</TableCell>
-                          <TableCell>{cost.costLCY?.toFixed(2)}</TableCell>
+                          <TableCell className={saleHighlight}>{cost.saleQty}</TableCell>
+                          <TableCell className={saleHighlight}>{cost.saleUnit}</TableCell>
+                          <TableCell className={saleHighlight}>{cost.saleCurrency}</TableCell>
+                          <TableCell className={saleHighlight}>{cost.saleExRate}</TableCell>
+                          <TableCell className={saleHighlight}>{cost.saleFCY?.toFixed(2)}</TableCell>
+                          <TableCell className={`${saleHighlight} text-emerald-600`}>{cost.saleLCY?.toFixed(2)}</TableCell>
+                          <TableCell className={costHighlight}>{cost.costQty}</TableCell>
+                          <TableCell className={costHighlight}>{cost.costUnit}</TableCell>
+                          <TableCell className={costHighlight}>{cost.costCurrency}</TableCell>
+                          <TableCell className={costHighlight}>{cost.costExRate}</TableCell>
+                          <TableCell className={costHighlight}>{cost.costFCY?.toFixed(2)}</TableCell>
+                          <TableCell className={costHighlight}>{cost.costLCY?.toFixed(2)}</TableCell>
                           <TableCell>{cost.unitName}</TableCell>
                           <TableCell className="text-emerald-600 font-semibold">{cost.gp?.toFixed(2)}</TableCell>
                           <TableCell>
@@ -1695,7 +1698,8 @@ const ShipmentDetail = () => {
                             </div>
                           </TableCell>
                         </TableRow>
-                      ))
+                        );
+                      })
                     )}
                   </TableBody>
                 </Table>
@@ -2031,6 +2035,7 @@ const ShipmentDetail = () => {
         open={purchaseModalOpen}
         onOpenChange={setPurchaseModalOpen}
         shipmentId={shipmentId}
+        jobNumber={shipmentData?.jobNumber}
         chargesDetails={costings}
         parties={parties}
         onSave={() => {

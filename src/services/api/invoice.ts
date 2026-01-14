@@ -44,10 +44,11 @@ export interface CreatePurchaseInvoiceItemRequest {
 export interface CreatePurchaseInvoiceRequest {
   shipmentId: number;
   vendorId: number;
-  invoiceDate: string;
+  purchaseDate: string;
   vendorInvoiceNo?: string;
   vendorInvoiceDate?: string;
-  baseCurrency: Currency;
+  jobNo?: string;
+  currency: Currency;
   remarks?: string;
   items: CreatePurchaseInvoiceItemRequest[];
 }

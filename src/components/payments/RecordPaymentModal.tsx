@@ -86,7 +86,6 @@ export default function RecordPaymentModal({
   const [chequeDate, setChequeDate] = useState("");
   const [chequeBank, setChequeBank] = useState("");
   const [narration, setNarration] = useState("");
-  const [remarks, setRemarks] = useState("");
 
   // Get current payment type config
   const currentPaymentType = paymentTypes.find(pt => pt.code === paymentMode);
@@ -458,22 +457,11 @@ export default function RecordPaymentModal({
             />
           </div>
 
-          {/* Remarks */}
-          <div className="space-y-2">
-            <Label>Remarks</Label>
-            <Textarea
-              value={remarks}
-              onChange={(e) => setRemarks(e.target.value)}
-              placeholder="Remarks"
-              rows={1}
-            />
-          </div>
-
-          {/* Currency */}
+          {/* Currency - Locked to vendor's base currency */}
           <div className="space-y-2">
             <Label>Currency</Label>
-            <Select value={currency} onValueChange={(v) => setCurrency(v as Currency)}>
-              <SelectTrigger>
+            <Select value={currency} onValueChange={(v) => setCurrency(v as Currency)} disabled={!!vendorId}>
+              <SelectTrigger className={vendorId ? "bg-muted" : ""}>
                 <SelectValue placeholder="Select Currency" />
               </SelectTrigger>
               <SelectContent>
