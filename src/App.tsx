@@ -27,6 +27,8 @@ import PurchaseInvoices from "./pages/PurchaseInvoices";
 import PurchaseInvoiceView from "./pages/PurchaseInvoiceView";
 import ReceiptVouchers from "./pages/ReceiptVouchers";
 import ReceiptView from "./pages/ReceiptView";
+import PaymentVouchers from "./pages/PaymentVouchers";
+import PaymentView from "./pages/PaymentView";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -59,6 +61,8 @@ const App = () => (
           <Route path="/accounts/daily-expenses" element={<DailyExpenses />} />
           <Route path="/accounts/receipt-vouchers" element={<ReceiptVouchers />} />
           <Route path="/accounts/receipt-vouchers/:id" element={<ReceiptView />} />
+          <Route path="/accounts/payment-vouchers" element={<PaymentVouchers />} />
+          <Route path="/accounts/payment-vouchers/:id" element={<PaymentView />} />
           <Route path="/users" element={<Dashboard />} />
           <Route path="/users/all" element={<AllUsers />} />
           <Route path="/users/roles" element={<PermissionRoles />} />

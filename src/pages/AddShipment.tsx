@@ -459,13 +459,16 @@ const AddShipment = () => {
       if (savedShipmentData.containers) {
         setContainers(savedShipmentData.containers.map(c => ({
           id: c.id,
-          container: c.containerNumber,
-          type: c.containerType,
+          containerNumber: c.containerNumber,
+          containerTypeId: c.containerTypeId,
+          containerTypeName: c.containerTypeName,
           sealNo: c.sealNo,
           noOfPcs: c.noOfPcs,
-          packageType: c.packageType,
+          packageTypeId: c.packageTypeId,
+          packageTypeName: c.packageTypeName,
           grossWeight: c.grossWeight,
           volume: c.volume,
+          description: c.description,
         })));
       }
       // Sync costings from saved data
@@ -487,7 +490,7 @@ const AddShipment = () => {
           costExRate: c.costExRate,
           costFCY: c.costFCY,
           costLCY: c.costLCY,
-          unit: c.unit,
+          unitName: c.unitName,
           gp: c.gp,
           billToCustomerId: c.billToCustomerId,
           billToName: c.billToName,
@@ -577,12 +580,13 @@ const AddShipment = () => {
           id: editingContainer.id,
           shipmentId: savedShipmentId,
           containerNumber: container.containerNumber,
-          containerType: container.containerType,
+          containerTypeId: container.containerTypeId || null,
           sealNo: container.sealNo,
           noOfPcs: parseInt(container.noOfPcs) || 0,
-          packageType: container.packageType,
+          packageTypeId: container.packageTypeId || null,
           grossWeight: parseFloat(container.grossWeight) || 0,
           volume: parseFloat(container.volume) || 0,
+          description: container.description,
         };
 
         await updateContainerMutation.mutateAsync({ shipmentId: savedShipmentId, containerId: editingContainer.id, data: containerData });
@@ -591,12 +595,13 @@ const AddShipment = () => {
         const containerData: AddShipmentContainerRequest = {
           shipmentId: savedShipmentId,
           containerNumber: container.containerNumber,
-          containerType: container.containerType,
+          containerTypeId: container.containerTypeId || null,
           sealNo: container.sealNo,
           noOfPcs: parseInt(container.noOfPcs) || 0,
-          packageType: container.packageType,
+          packageTypeId: container.packageTypeId || null,
           grossWeight: parseFloat(container.grossWeight) || 0,
           volume: parseFloat(container.volume) || 0,
+          description: container.description,
         };
 
         await addContainerMutation.mutateAsync({ shipmentId: savedShipmentId, data: containerData });
@@ -649,7 +654,7 @@ const AddShipment = () => {
           costLCY: parseFloat(cost.costLCY) || 0,
           costTaxPercentage: 0,
           costTaxAmount: 0,
-          unit: cost.unit,
+          unitName: cost.unitName,
           gp: parseFloat(cost.gp) || 0,
           billToCustomerId: cost.billToCustomerId || undefined,
           billToName: cost.billToName || undefined,
@@ -680,7 +685,7 @@ const AddShipment = () => {
           costLCY: parseFloat(cost.costLCY) || 0,
           costTaxPercentage: 0,
           costTaxAmount: 0,
-          unit: cost.unit,
+          unitName: cost.unitName,
           gp: parseFloat(cost.gp) || 0,
           billToCustomerId: cost.billToCustomerId || undefined,
           billToName: cost.billToName || undefined,
@@ -828,8 +833,19 @@ const AddShipment = () => {
   };
 
   const totalContainerQty = containers.reduce((sum, c) => sum + (c.noOfPcs || 0), 0);
-  const containerSummary = containers.length > 0 
-    ? `${containers.length} x ${containers[0]?.type || 'N/A'}, Total Quantity : ${totalContainerQty}`
+  const containerSummary = containers.length > 0
+    ? (() => {
+        // Group containers by type name
+        const typeCount: Record<string, number> = {};
+        containers.forEach(c => {
+          const typeName = c.containerTypeName || 'N/A';
+          typeCount[typeName] = (typeCount[typeName] || 0) + 1;
+        });
+        const typeSummary = Object.entries(typeCount)
+          .map(([type, count]) => `${count} x ${type}`)
+          .join(', ');
+        return `${typeSummary}, Total Quantity: ${totalContainerQty}`;
+      })()
     : "No containers";
 
   const totalSale = costing.reduce((sum, c) => sum + parseFloat(c.saleLCY || 0), 0);
@@ -1166,7 +1182,7 @@ const AddShipment = () => {
                       <Label className="text-sm">Place of Receipt</Label>
                       <Select value={formData.placeOfReceipt} onValueChange={(v) => handleInputChange("placeOfReceipt", v)}>
                         <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                        <SelectContent className="bg-popover border border-border max-h-[300px]">
+                        <SelectContent className="bg-popover border border-border">
                           {ports.length === 0 ? (
                             <SelectItem value="_loading" disabled>Loading...</SelectItem>
                           ) : (
@@ -1190,7 +1206,7 @@ const AddShipment = () => {
                         }}
                       >
                         <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                        <SelectContent className="bg-popover border border-border max-h-[300px]">
+                        <SelectContent className="bg-popover border border-border">
                           {ports.length === 0 ? (
                             <SelectItem value="_loading" disabled>Loading...</SelectItem>
                           ) : (
@@ -1214,7 +1230,7 @@ const AddShipment = () => {
                         }}
                       >
                         <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                        <SelectContent className="bg-popover border border-border max-h-[300px]">
+                        <SelectContent className="bg-popover border border-border">
                           {ports.length === 0 ? (
                             <SelectItem value="_loading" disabled>Loading...</SelectItem>
                           ) : (
@@ -1245,7 +1261,7 @@ const AddShipment = () => {
                         }}
                       >
                         <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                        <SelectContent className="bg-popover border border-border max-h-[300px]">
+                        <SelectContent className="bg-popover border border-border">
                           {ports.length === 0 ? (
                             <SelectItem value="_loading" disabled>Loading...</SelectItem>
                           ) : (
@@ -1269,7 +1285,7 @@ const AddShipment = () => {
                         }}
                       >
                         <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                        <SelectContent className="bg-popover border border-border max-h-[300px]">
+                        <SelectContent className="bg-popover border border-border">
                           {ports.length === 0 ? (
                             <SelectItem value="_loading" disabled>Loading...</SelectItem>
                           ) : (
@@ -1286,7 +1302,7 @@ const AddShipment = () => {
                       <Label className="text-sm">Place of Delivery</Label>
                       <Select value={formData.placeOfDelivery} onValueChange={(v) => handleInputChange("placeOfDelivery", v)}>
                         <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                        <SelectContent className="bg-popover border border-border max-h-[300px]">
+                        <SelectContent className="bg-popover border border-border">
                           {ports.length === 0 ? (
                             <SelectItem value="_loading" disabled>Loading...</SelectItem>
                           ) : (
@@ -1439,7 +1455,7 @@ const AddShipment = () => {
                         "Select a customer"
                       } />
                     </SelectTrigger>
-                    <SelectContent className="bg-popover border border-border max-h-[300px]">
+                    <SelectContent className="bg-popover border border-border">
                       {customers.map(customer => (
                         <SelectItem key={customer.id} value={customer.id.toString()}>
                           {customer.name} ({customer.code})
@@ -1482,8 +1498,17 @@ const AddShipment = () => {
                         <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No parties added yet</TableCell>
                       </TableRow>
                     ) : (
-                      parties.map((party, index) => (
-                        <TableRow key={party.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
+                      parties.map((party) => (
+                        <TableRow
+                          key={party.id}
+                          className={
+                            party.masterType === 'Debtors'
+                              ? "bg-green-50 dark:bg-green-950/30"
+                              : party.masterType === 'Creditors'
+                                ? "bg-red-50 dark:bg-red-950/30"
+                                : "bg-gray-50 dark:bg-gray-800/30"
+                          }
+                        >
                           <TableCell>{party.masterType}</TableCell>
                           <TableCell className="text-emerald-600">{partyTypeLabels[party.partyType] || party.partyType}</TableCell>
                           <TableCell className="text-emerald-600">{party.customerName}</TableCell>
@@ -1547,11 +1572,11 @@ const AddShipment = () => {
                     containers.map((container, index) => (
                       <TableRow key={container.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
                         <TableCell>{index + 1}</TableCell>
-                        <TableCell className="text-emerald-600">{container.container}</TableCell>
-                        <TableCell>{container.type}</TableCell>
+                        <TableCell className="text-emerald-600">{container.containerNumber}</TableCell>
+                        <TableCell>{container.containerTypeName || '-'}</TableCell>
                         <TableCell className="text-emerald-600">{container.sealNo}</TableCell>
                         <TableCell>{container.noOfPcs}</TableCell>
-                        <TableCell>{container.packageType}</TableCell>
+                        <TableCell>{container.packageTypeName || '-'}</TableCell>
                         <TableCell>{(container.grossWeight || 0).toFixed(3)}</TableCell>
                         <TableCell className="text-emerald-600">{(container.volume || 0).toFixed(3)}</TableCell>
                         <TableCell>
@@ -1682,7 +1707,7 @@ const AddShipment = () => {
                           <TableCell>{cost.costExRate}</TableCell>
                           <TableCell>{cost.costFCY}</TableCell>
                           <TableCell>{cost.costLCY}</TableCell>
-                          <TableCell>{cost.unit}</TableCell>
+                          <TableCell>{cost.unitName}</TableCell>
                           <TableCell>{cost.gp}</TableCell>
                           <TableCell>
                             <div className="flex gap-1">

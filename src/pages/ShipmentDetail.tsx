@@ -1119,7 +1119,7 @@ const ShipmentDetail = () => {
                       <Label className="text-sm">Place of Receipt</Label>
                       <Select value={formData.placeOfReceipt} onValueChange={(v) => handleInputChange("placeOfReceipt", v)}>
                         <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                        <SelectContent className="bg-popover border border-border max-h-[300px]">
+                        <SelectContent className="bg-popover border border-border">
                           {ports.length === 0 ? (
                             <SelectItem value="_loading" disabled>Loading...</SelectItem>
                           ) : (
@@ -1143,7 +1143,7 @@ const ShipmentDetail = () => {
                         }}
                       >
                         <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                        <SelectContent className="bg-popover border border-border max-h-[300px]">
+                        <SelectContent className="bg-popover border border-border">
                           {ports.length === 0 ? (
                             <SelectItem value="_loading" disabled>Loading...</SelectItem>
                           ) : (
@@ -1167,7 +1167,7 @@ const ShipmentDetail = () => {
                         }}
                       >
                         <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                        <SelectContent className="bg-popover border border-border max-h-[300px]">
+                        <SelectContent className="bg-popover border border-border">
                           {ports.length === 0 ? (
                             <SelectItem value="_loading" disabled>Loading...</SelectItem>
                           ) : (
@@ -1198,7 +1198,7 @@ const ShipmentDetail = () => {
                         }}
                       >
                         <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                        <SelectContent className="bg-popover border border-border max-h-[300px]">
+                        <SelectContent className="bg-popover border border-border">
                           {ports.length === 0 ? (
                             <SelectItem value="_loading" disabled>Loading...</SelectItem>
                           ) : (
@@ -1222,7 +1222,7 @@ const ShipmentDetail = () => {
                         }}
                       >
                         <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                        <SelectContent className="bg-popover border border-border max-h-[300px]">
+                        <SelectContent className="bg-popover border border-border">
                           {ports.length === 0 ? (
                             <SelectItem value="_loading" disabled>Loading...</SelectItem>
                           ) : (
@@ -1239,7 +1239,7 @@ const ShipmentDetail = () => {
                       <Label className="text-sm">Place of Delivery</Label>
                       <Select value={formData.placeOfDelivery} onValueChange={(v) => handleInputChange("placeOfDelivery", v)}>
                         <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                        <SelectContent className="bg-popover border border-border max-h-[300px]">
+                        <SelectContent className="bg-popover border border-border">
                           {ports.length === 0 ? (
                             <SelectItem value="_loading" disabled>Loading...</SelectItem>
                           ) : (
@@ -1392,7 +1392,7 @@ const ShipmentDetail = () => {
                         "Select a customer"
                       } />
                     </SelectTrigger>
-                    <SelectContent className="bg-popover border border-border max-h-[300px]">
+                    <SelectContent className="bg-popover border border-border">
                       {customers.map(customer => (
                         <SelectItem key={customer.id} value={customer.id.toString()}>
                           {customer.name} ({customer.code})
@@ -1440,8 +1440,17 @@ const ShipmentDetail = () => {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      parties.map((party, index) => (
-                        <TableRow key={party.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
+                      parties.map((party) => (
+                        <TableRow
+                          key={party.id}
+                          className={
+                            party.masterType === 'Debtors'
+                              ? "bg-green-50 dark:bg-green-950/30"
+                              : party.masterType === 'Creditors'
+                                ? "bg-red-50 dark:bg-red-950/30"
+                                : "bg-gray-50 dark:bg-gray-800/30"
+                          }
+                        >
                           <TableCell>{party.masterType}</TableCell>
                           <TableCell className="text-emerald-600">{partyTypeLabels[party.partyType] || party.partyType}</TableCell>
                           <TableCell className="text-emerald-600">{party.customerName}</TableCell>
@@ -1476,7 +1485,18 @@ const ShipmentDetail = () => {
                 <div className="flex items-center gap-4">
                   <span className="text-sm text-muted-foreground">
                     {containers.length > 0
-                      ? `${containers.length} x ${containers[0]?.containerType || 'N/A'}, Total Quantity: ${containers.reduce((sum, c) => sum + (c.noOfPcs || 0), 0)}`
+                      ? (() => {
+                          const typeCount: Record<string, number> = {};
+                          containers.forEach(c => {
+                            const typeName = c.containerTypeName || 'N/A';
+                            typeCount[typeName] = (typeCount[typeName] || 0) + 1;
+                          });
+                          const typeSummary = Object.entries(typeCount)
+                            .map(([type, count]) => `${count} x ${type}`)
+                            .join(', ');
+                          const totalQty = containers.reduce((sum, c) => sum + (c.noOfPcs || 0), 0);
+                          return `${typeSummary}, Total Quantity: ${totalQty}`;
+                        })()
                       : 'No containers'}
                   </span>
                   <Button
@@ -1652,7 +1672,7 @@ const ShipmentDetail = () => {
                           <TableCell>{cost.costExRate}</TableCell>
                           <TableCell>{cost.costFCY?.toFixed(2)}</TableCell>
                           <TableCell>{cost.costLCY?.toFixed(2)}</TableCell>
-                          <TableCell>{cost.unit}</TableCell>
+                          <TableCell>{cost.unitName}</TableCell>
                           <TableCell className="text-emerald-600 font-semibold">{cost.gp?.toFixed(2)}</TableCell>
                           <TableCell>
                             <div className="flex gap-1">

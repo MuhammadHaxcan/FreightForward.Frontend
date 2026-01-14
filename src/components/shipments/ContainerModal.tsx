@@ -152,7 +152,7 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
                 <SelectTrigger>
                   <SelectValue placeholder={isLoadingContainerTypes ? "Loading..." : "Select container type"} />
                 </SelectTrigger>
-                <SelectContent className="bg-popover border border-border max-h-[300px]">
+                <SelectContent className="bg-popover border border-border">
                   {Object.entries(containerTypesByCategory).map(([category, types]) => (
                     <SelectGroup key={category}>
                       <SelectLabel className="text-muted-foreground font-semibold">{category}</SelectLabel>
@@ -190,7 +190,7 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
                 <SelectTrigger>
                   <SelectValue placeholder={isLoadingPackageTypes ? "Loading..." : "Select package type"} />
                 </SelectTrigger>
-                <SelectContent className="bg-popover border border-border max-h-[300px]">
+                <SelectContent className="bg-popover border border-border">
                   {Object.entries(packageTypesByCategory).map(([category, types]) => (
                     <SelectGroup key={category}>
                       <SelectLabel className="text-muted-foreground font-semibold">{category}</SelectLabel>

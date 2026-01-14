@@ -63,6 +63,7 @@ const sidebarItems: SidebarItem[] = [
       { title: "Invoices", path: "/accounts/invoices" },
       { title: "Purchase Invoices", path: "/accounts/purchase-invoices" },
       { title: "Receipt Vouchers", path: "/accounts/receipt-vouchers" },
+      { title: "Payment Vouchers", path: "/accounts/payment-vouchers" },
       { title: "Daily Expenses", path: "/accounts/daily-expenses" },
     ]
   },

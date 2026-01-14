@@ -328,8 +328,8 @@ const Shipments = () => {
                       <TableCell>
                         <span className="text-sm">{shipment.transportModeName || shipment.modeDisplay || "-"}</span>
                       </TableCell>
-                      <TableCell className="text-emerald-600">{shipment.portOfLoading || "-"}</TableCell>
-                      <TableCell>{shipment.portOfDischarge || "-"}</TableCell>
+                      <TableCell className="text-emerald-600">{shipment.portOfLoadingName || "-"}</TableCell>
+                      <TableCell>{shipment.portOfDischargeName || "-"}</TableCell>
                       <TableCell>
                         <div className="space-y-1 text-sm">
                           <div>ETD - {formatDate(shipment.etd, "dd/MM/yyyy")}</div>

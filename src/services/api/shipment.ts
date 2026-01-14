@@ -140,7 +140,7 @@ export interface ShipmentCosting {
   costTaxPercentage: number;
   costTaxAmount: number;
   unitId?: number;
-  unit?: string;
+  unitName?: string;
   gp: number;
   billToCustomerId?: number;
   billToName?: string;
@@ -284,7 +284,7 @@ export interface AddShipmentCostingRequest {
   costTaxPercentage: number;
   costTaxAmount: number;
   unitId?: number;
-  unit?: string;
+  unitName?: string;
   gp: number;
   billToCustomerId?: number;
   billToName?: string;
@@ -316,7 +316,7 @@ export interface UpdateShipmentCostingRequest {
   costTaxPercentage: number;
   costTaxAmount: number;
   unitId?: number;
-  unit?: string;
+  unitName?: string;
   gp: number;
   billToCustomerId?: number;
   billToName?: string;

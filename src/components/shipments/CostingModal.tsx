@@ -116,7 +116,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
         description: costing.chargeDescription || costing.description || "", // Use chargeDescription if available, fallback to description
         ppcc: costing.ppcc || "Prepaid",
         unitId: costing.unitId || undefined,
-        unit: costing.unit || "",
+        unit: costing.unitName || "",
         remarks: costing.remarks || "",
         costCurrency: costing.costCurrency || LOCAL_CURRENCY,
         costExRate: costing.costExRate?.toString() || "1.000",
@@ -331,7 +331,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
       costFCY: formData.costFCYAmount,
       costLCY: formData.costLCYAmount,
       unitId: formData.unitId,
-      unit: formData.unit,
+      unitName: formData.unit,
       gp: formData.saleGP,
       vendorCustomerId: vendorCustomerId,
       vendorName: formData.costVendorName,

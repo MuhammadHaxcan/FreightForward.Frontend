@@ -4,7 +4,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { ChevronDown, Check, Loader2 } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { cn } from "@/lib/utils";
@@ -257,32 +256,39 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
                     <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[280px] p-0" align="start">
-                  <Command>
-                    <CommandList>
-                      <CommandGroup>
-                        {categoryTypes.map((categoryType) => (
-                          <CommandItem
-                            key={categoryType.id}
-                            onSelect={() => toggleCategory(categoryType.id)}
-                            className="cursor-pointer"
-                          >
-                            <div
-                              className={cn(
-                                "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                                formData.categoryIds.includes(categoryType.id)
-                                  ? "bg-primary text-primary-foreground"
-                                  : "opacity-50"
-                              )}
-                            >
-                              {formData.categoryIds.includes(categoryType.id) && <Check className="h-3 w-3" />}
-                            </div>
-                            {categoryType.name}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
+                <PopoverContent
+                  className="w-[var(--radix-popover-trigger-width)] p-0"
+                  align="start"
+                  onWheel={(e) => e.stopPropagation()}
+                >
+                  <div
+                    className="max-h-[180px] overflow-y-auto p-1 overscroll-contain [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                    onWheel={(e) => {
+                      e.stopPropagation();
+                      const target = e.currentTarget;
+                      target.scrollTop += e.deltaY;
+                    }}
+                  >
+                    {categoryTypes.map((categoryType) => (
+                      <div
+                        key={categoryType.id}
+                        onClick={() => toggleCategory(categoryType.id)}
+                        className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                      >
+                        <div
+                          className={cn(
+                            "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                            formData.categoryIds.includes(categoryType.id)
+                              ? "bg-primary text-primary-foreground"
+                              : "opacity-50"
+                          )}
+                        >
+                          {formData.categoryIds.includes(categoryType.id) && <Check className="h-3 w-3" />}
+                        </div>
+                        {categoryType.name}
+                      </div>
+                    ))}
+                  </div>
                 </PopoverContent>
               </Popover>
             </div>
