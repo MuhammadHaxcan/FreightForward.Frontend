@@ -90,6 +90,7 @@ export {
   type AddShipmentCargoRequest,
   type UpdateShipmentCargoRequest,
   type AddShipmentDocumentRequest,
+  type AddShipmentStatusLogRequest,
   type FileUploadResponse,
   type ShipmentInvoiceDto,
   type ShipmentPurchaseInvoiceDto,

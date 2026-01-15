@@ -209,6 +209,11 @@ export interface ShipmentStatusLog {
   remarks?: string;
 }
 
+export interface AddShipmentStatusLogRequest {
+  statusDate: string;
+  remarks?: string;
+}
+
 export interface CreateShipmentRequest {
   jobDate: string;
   direction: ShipmentDirection;
@@ -467,6 +472,14 @@ export const shipmentApi = {
       body: JSON.stringify(data),
     }),
   deleteDocument: (documentId: number) => fetchApi<void>(`/shipments/documents/${documentId}`, { method: 'DELETE' }),
+
+  // Status Logs
+  addStatusLog: (shipmentId: number, data: AddShipmentStatusLogRequest) =>
+    fetchApi<number>(`/shipments/${shipmentId}/status-logs`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  deleteStatusLog: (statusLogId: number) => fetchApi<void>(`/shipments/status-logs/${statusLogId}`, { method: 'DELETE' }),
 
   // Invoices
   getInvoices: (shipmentId: number) =>
