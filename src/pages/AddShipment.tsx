@@ -24,7 +24,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Edit, Trash2, Plus, Loader2 } from "lucide-react";
+import { Edit, Trash2, Plus, Loader2, AlertTriangle } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ContainerModal } from "@/components/shipments/ContainerModal";
 import { CostingModal } from "@/components/shipments/CostingModal";
 import { DocumentModal } from "@/components/shipments/DocumentModal";
@@ -521,6 +530,10 @@ const AddShipment = () => {
   } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Warning modal state
+  const [warningModalOpen, setWarningModalOpen] = useState(false);
+  const [warningMessage, setWarningMessage] = useState("");
+
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -732,8 +745,17 @@ const AddShipment = () => {
       switch (deleteModalConfig.type) {
         case 'party':
           if (savedShipmentId) {
-            await deletePartyMutation.mutateAsync({ partyId: deleteModalConfig.id, shipmentId: savedShipmentId });
-            refetchShipment();
+            try {
+              await deletePartyMutation.mutateAsync({ partyId: deleteModalConfig.id, shipmentId: savedShipmentId });
+              refetchShipment();
+            } catch (error: any) {
+              // Show warning modal for party deletion errors (e.g., costings assigned)
+              setWarningMessage(error.message || 'Failed to delete party');
+              setWarningModalOpen(true);
+              setDeleteModalOpen(false);
+              setDeleteModalConfig(null);
+              return;
+            }
           }
           break;
         case 'container':
@@ -2030,6 +2052,24 @@ const AddShipment = () => {
         itemName={deleteModalConfig?.name}
         isLoading={isDeleting}
       />
+
+      {/* Warning Modal */}
+      <AlertDialog open={warningModalOpen} onOpenChange={setWarningModalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
+              <AlertTriangle className="h-5 w-5" />
+              Warning
+            </AlertDialogTitle>
+            <AlertDialogDescription>{warningMessage}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setWarningModalOpen(false)}>
+              OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 };

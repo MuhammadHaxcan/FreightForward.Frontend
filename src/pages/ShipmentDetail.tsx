@@ -23,7 +23,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Edit, Trash2, Plus, Loader2 } from "lucide-react";
+import { Edit, Trash2, Plus, Loader2, AlertTriangle } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ContainerModal } from "@/components/shipments/ContainerModal";
 import { CostingModal } from "@/components/shipments/CostingModal";
 import { InvoiceModal } from "@/components/shipments/InvoiceModal";
@@ -311,6 +320,10 @@ const ShipmentDetail = () => {
     name?: string;
   } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Warning modal state
+  const [warningModalOpen, setWarningModalOpen] = useState(false);
+  const [warningMessage, setWarningMessage] = useState("");
 
   // Fetch shipment invoices
   const { data: shipmentInvoicesResponse } = useQuery({
@@ -687,7 +700,16 @@ const ShipmentDetail = () => {
     try {
       switch (deleteModalConfig.type) {
         case 'party':
-          await deletePartyMutation.mutateAsync({ partyId: deleteModalConfig.id, shipmentId });
+          try {
+            await deletePartyMutation.mutateAsync({ partyId: deleteModalConfig.id, shipmentId });
+          } catch (error: any) {
+            // Show warning modal for party deletion errors (e.g., costings assigned)
+            setWarningMessage(error.message || 'Failed to delete party');
+            setWarningModalOpen(true);
+            setDeleteModalOpen(false);
+            setDeleteModalConfig(null);
+            return;
+          }
           break;
         case 'container':
           await deleteContainerMutation.mutateAsync({ containerId: deleteModalConfig.id, shipmentId });
@@ -2059,6 +2081,24 @@ const ShipmentDetail = () => {
         itemName={deleteModalConfig?.name}
         isLoading={isDeleting}
       />
+
+      {/* Warning Modal */}
+      <AlertDialog open={warningModalOpen} onOpenChange={setWarningModalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
+              <AlertTriangle className="h-5 w-5" />
+              Warning
+            </AlertDialogTitle>
+            <AlertDialogDescription>{warningMessage}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setWarningModalOpen(false)}>
+              OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 };

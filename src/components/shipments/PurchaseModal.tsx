@@ -27,7 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Search, Loader2 } from "lucide-react";
-import { ShipmentParty, Currency, CreatePurchaseInvoiceItemRequest } from "@/services/api";
+import { ShipmentParty, Currency, CreatePurchaseInvoiceItemRequest, invoiceApi } from "@/services/api";
 import { useCreatePurchaseInvoice } from "@/hooks/useInvoices";
 
 interface PurchaseModalProps {
@@ -56,7 +56,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
   );
 
   const [formData, setFormData] = useState({
-    purchaseId: `PIAE${Date.now().toString().slice(-6)}`,
+    purchaseId: "",
     companyName: "",
     customerId: "",
     invoiceDate: getTodayDateOnly(),
@@ -66,6 +66,17 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
     remarks: "",
     selectedCharges: [] as number[],
   });
+
+  // Fetch next purchase number when modal opens
+  useEffect(() => {
+    if (open) {
+      invoiceApi.getNextPurchaseNumber().then(response => {
+        if (response.data) {
+          setFormData(prev => ({ ...prev, purchaseId: response.data as string }));
+        }
+      });
+    }
+  }, [open]);
 
   // Filter charges to only show items with cost quantity > 0, not already purchase invoiced,
   // and assigned to the selected creditor

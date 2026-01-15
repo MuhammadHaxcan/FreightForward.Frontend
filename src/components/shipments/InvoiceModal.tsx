@@ -27,7 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Search, Loader2 } from "lucide-react";
-import { ShipmentParty, Currency, CreateInvoiceItemRequest } from "@/services/api";
+import { ShipmentParty, Currency, CreateInvoiceItemRequest, invoiceApi } from "@/services/api";
 import { useCreateInvoice } from "@/hooks/useInvoices";
 
 interface InvoiceModalProps {
@@ -55,13 +55,24 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
   );
 
   const [formData, setFormData] = useState({
-    invoiceId: `INVAE${Date.now().toString().slice(-6)}`,
+    invoiceId: "",
     companyName: "",
     customerId: "",
     invoiceDate: getTodayDateOnly(),
     baseCurrency: "AED" as Currency,
     selectedCharges: [] as number[],
   });
+
+  // Fetch next invoice number when modal opens
+  useEffect(() => {
+    if (open) {
+      invoiceApi.getNextInvoiceNumber().then(response => {
+        if (response.data) {
+          setFormData(prev => ({ ...prev, invoiceId: response.data as string }));
+        }
+      });
+    }
+  }, [open]);
 
   // Filter charges to only show items with sale quantity > 0, not already invoiced,
   // and assigned to the selected debtor

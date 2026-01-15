@@ -187,6 +187,34 @@ export const invoiceApi = {
     return fetchApi<PaginatedList<AccountInvoice>>(`/invoices?${query}`);
   },
   getById: (id: number) => fetchApi<AccountInvoiceDetail>(`/invoices/${id}`),
+  getNextInvoiceNumber: async () => {
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://localhost:7001/api';
+      const response = await fetch(`${API_BASE_URL}/invoices/next-number`);
+      if (!response.ok) {
+        return { error: `HTTP error! status: ${response.status}` };
+      }
+      const text = await response.text();
+      const data = text.replace(/^"|"$/g, '');
+      return { data };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : 'An unknown error occurred' };
+    }
+  },
+  getNextPurchaseNumber: async () => {
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://localhost:7001/api';
+      const response = await fetch(`${API_BASE_URL}/invoices/purchases/next-number`);
+      if (!response.ok) {
+        return { error: `HTTP error! status: ${response.status}` };
+      }
+      const text = await response.text();
+      const data = text.replace(/^"|"$/g, '');
+      return { data };
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : 'An unknown error occurred' };
+    }
+  },
   createInvoice: (data: CreateInvoiceRequest) =>
     fetchApi<number>('/invoices', { method: 'POST', body: JSON.stringify(data) }),
   createPurchaseInvoice: (data: CreatePurchaseInvoiceRequest) =>

@@ -203,7 +203,6 @@ export default function RecordPaymentModal({
     setChequeDate("");
     setChequeBank("");
     setNarration("");
-    setRemarks("");
   };
 
   const handleInvoiceSelect = (invoice: UnpaidPurchaseInvoice, isSelected: boolean) => {
