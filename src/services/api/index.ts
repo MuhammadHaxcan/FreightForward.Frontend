@@ -5,7 +5,7 @@ import { bankApi as _bankApi } from './bank';
 import { companyApi as _companyApi } from './company';
 import { customerApi as _customerApi } from './customer';
 import { leadApi as _leadApi, rateRequestApi as _rateRequestApi, quotationApi as _quotationApi } from './sales';
-import { shipmentApi as _shipmentApi } from './shipment';
+import { shipmentApi as _shipmentApi, fileApi as _fileApi } from './shipment';
 import { settingsApi as _settingsApi } from './settings';
 import { invoiceApi as _invoiceApi, receiptApi as _receiptApi } from './invoice';
 import { costSheetApi as _costSheetApi } from './costSheet';
@@ -64,6 +64,7 @@ export {
 // Shipment
 export {
   shipmentApi,
+  fileApi,
   type ShipmentStatus,
   type ShipmentDirection,
   type ShipmentMode,
@@ -86,6 +87,10 @@ export {
   type UpdateShipmentContainerRequest,
   type AddShipmentCostingRequest,
   type UpdateShipmentCostingRequest,
+  type AddShipmentCargoRequest,
+  type UpdateShipmentCargoRequest,
+  type AddShipmentDocumentRequest,
+  type FileUploadResponse,
   type ShipmentInvoiceDto,
   type ShipmentPurchaseInvoiceDto,
   type ShipmentInvoicesResult,
@@ -107,6 +112,7 @@ export {
   type BLType,
   type CostingUnit,
   type ContainerType,
+  type DocumentType,
   type CreateCurrencyTypeRequest,
   type UpdateCurrencyTypeRequest,
   type CreatePortRequest,

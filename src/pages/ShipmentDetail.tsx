@@ -37,6 +37,7 @@ import { ContainerModal } from "@/components/shipments/ContainerModal";
 import { CostingModal } from "@/components/shipments/CostingModal";
 import { InvoiceModal } from "@/components/shipments/InvoiceModal";
 import { PurchaseModal } from "@/components/shipments/PurchaseModal";
+import { DocumentModal } from "@/components/shipments/DocumentModal";
 import { DeleteConfirmationModal } from "@/components/ui/delete-confirmation-modal";
 import { toast } from "sonner";
 import {
@@ -58,14 +59,20 @@ import {
   Customer,
   shipmentApi,
   settingsApi,
+  fileApi,
   ShipmentInvoicesResult,
   AddShipmentContainerRequest,
   UpdateShipmentContainerRequest,
   AddShipmentCostingRequest,
   UpdateShipmentCostingRequest,
+  AddShipmentCargoRequest,
+  AddShipmentDocumentRequest,
   ShipmentContainer,
   ShipmentCosting,
+  ShipmentCargo,
+  ShipmentDocument,
   Currency,
+  PackageType,
 } from "@/services/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -298,9 +305,11 @@ const ShipmentDetail = () => {
   const [formData, setFormData] = useState(emptyFormData);
   const [selectedPartyType, setSelectedPartyType] = useState<PartyType>('Shipper');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
-  const [cargoDetails, setCargoDetails] = useState<any[]>([]);
-  const [newCargoEntry, setNewCargoEntry] = useState({ quantity: "", loadType: "", totalCBM: "", totalWeight: "", description: "" });
-  const [documents, setDocuments] = useState<any[]>([]);
+  const [cargoDetails, setCargoDetails] = useState<ShipmentCargo[]>([]);
+  const [newCargoEntry, setNewCargoEntry] = useState({ quantity: "", packageTypeId: "", totalCBM: "", totalWeight: "", description: "" });
+  const [isSavingCargo, setIsSavingCargo] = useState(false);
+  const [documents, setDocuments] = useState<ShipmentDocument[]>([]);
+  const [documentModalOpen, setDocumentModalOpen] = useState(false);
   const [shipmentStatus, setShipmentStatus] = useState({ date: "2025-12-26", remarks: "" });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -315,9 +324,10 @@ const ShipmentDetail = () => {
   // Delete confirmation modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteModalConfig, setDeleteModalConfig] = useState<{
-    type: 'party' | 'container' | 'costing';
+    type: 'party' | 'container' | 'costing' | 'cargo' | 'document';
     id: number;
     name?: string;
+    filePath?: string;
   } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -348,6 +358,25 @@ const ShipmentDetail = () => {
     staleTime: 60 * 60 * 1000, // Cache for 1 hour (INCO terms rarely change)
   });
   const incoTerms = useMemo(() => incoTermsResponse?.data ?? [], [incoTermsResponse?.data]);
+
+  // Fetch Package Types for cargo dropdown
+  const { data: packageTypesResponse } = useQuery({
+    queryKey: ['packageTypes', 'all'],
+    queryFn: () => settingsApi.getAllPackageTypes(),
+    staleTime: 60 * 60 * 1000, // Cache for 1 hour
+  });
+  const packageTypes = useMemo(() => packageTypesResponse?.data ?? [], [packageTypesResponse?.data]);
+
+  // Group package types by category
+  const packageTypesByCategory = useMemo(() => {
+    const grouped: Record<string, PackageType[]> = {};
+    packageTypes.forEach(pt => {
+      const category = pt.category || 'Other';
+      if (!grouped[category]) grouped[category] = [];
+      grouped[category].push(pt);
+    });
+    return grouped;
+  }, [packageTypes]);
 
   // Fetch Network Partners
   const { data: networkPartnersResponse } = useQuery({
@@ -692,6 +721,53 @@ const ShipmentDetail = () => {
     setDeleteModalOpen(true);
   };
 
+  const handleDeleteCargo = (cargoId: number, description?: string) => {
+    if (!shipmentId) return;
+    setDeleteModalConfig({ type: 'cargo', id: cargoId, name: description || `Cargo #${cargoId}` });
+    setDeleteModalOpen(true);
+  };
+
+  const handleAddCargo = async () => {
+    if (!shipmentId) return;
+    if (!newCargoEntry.quantity) {
+      toast.error("Quantity is required");
+      return;
+    }
+
+    setIsSavingCargo(true);
+    try {
+      const selectedPackageType = packageTypes.find(pt => pt.id.toString() === newCargoEntry.packageTypeId);
+      const request: AddShipmentCargoRequest = {
+        quantity: parseInt(newCargoEntry.quantity) || 0,
+        packageTypeId: newCargoEntry.packageTypeId ? parseInt(newCargoEntry.packageTypeId) : null,
+        totalCBM: newCargoEntry.totalCBM ? parseFloat(newCargoEntry.totalCBM) : null,
+        totalWeight: newCargoEntry.totalWeight ? parseFloat(newCargoEntry.totalWeight) : null,
+        description: newCargoEntry.description || undefined,
+      };
+
+      const response = await shipmentApi.addCargo(shipmentId, request);
+      if (response.data) {
+        // Add the new cargo to the local state
+        const newCargo: ShipmentCargo = {
+          id: response.data,
+          quantity: request.quantity,
+          packageTypeId: request.packageTypeId || undefined,
+          packageTypeName: selectedPackageType?.name,
+          totalCBM: request.totalCBM || undefined,
+          totalWeight: request.totalWeight || undefined,
+          description: request.description,
+        };
+        setCargoDetails(prev => [...prev, newCargo]);
+        setNewCargoEntry({ quantity: "", packageTypeId: "", totalCBM: "", totalWeight: "", description: "" });
+        toast.success("Cargo added successfully");
+      }
+    } catch (error) {
+      toast.error("Failed to add cargo");
+    } finally {
+      setIsSavingCargo(false);
+    }
+  };
+
   // Handle delete confirmation
   const handleConfirmDelete = async () => {
     if (!shipmentId || !deleteModalConfig) return;
@@ -717,6 +793,24 @@ const ShipmentDetail = () => {
         case 'costing':
           await deleteCostingMutation.mutateAsync({ costingId: deleteModalConfig.id, shipmentId });
           break;
+        case 'cargo':
+          await shipmentApi.deleteCargo(deleteModalConfig.id);
+          setCargoDetails(prev => prev.filter(c => c.id !== deleteModalConfig.id));
+          toast.success("Cargo deleted successfully");
+          break;
+        case 'document':
+          await shipmentApi.deleteDocument(deleteModalConfig.id);
+          // Also delete the file from server if it exists
+          if (deleteModalConfig.filePath) {
+            try {
+              await fileApi.delete(deleteModalConfig.filePath);
+            } catch (fileError) {
+              console.error("Failed to delete file:", fileError);
+            }
+          }
+          setDocuments(prev => prev.filter(d => d.id !== deleteModalConfig.id));
+          toast.success("Document deleted successfully");
+          break;
       }
       refetchShipment();
       setDeleteModalOpen(false);
@@ -726,6 +820,38 @@ const ShipmentDetail = () => {
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  // Handle add document
+  const handleAddDocument = async (documentData: AddShipmentDocumentRequest) => {
+    if (!shipmentId) {
+      toast.error("Please save the shipment first");
+      return;
+    }
+
+    try {
+      const newDocumentId = await shipmentApi.addDocument(shipmentId, documentData);
+      if (newDocumentId.data) {
+        // Refetch shipment to get updated documents with type names
+        refetchShipment();
+        toast.success("Document added successfully");
+      }
+    } catch (error) {
+      console.error("Failed to add document:", error);
+      toast.error("Failed to add document");
+      throw error;
+    }
+  };
+
+  // Handle delete document
+  const handleDeleteDocument = (doc: ShipmentDocument) => {
+    setDeleteModalConfig({
+      type: 'document',
+      id: doc.id,
+      name: doc.documentNo,
+      filePath: doc.filePath,
+    });
+    setDeleteModalOpen(true);
   };
 
   // Handle save shipment
@@ -1825,35 +1951,67 @@ const ShipmentDetail = () => {
               {/* Add New Cargo Entry Form */}
               <div className="grid grid-cols-6 gap-4 items-end">
                 <div>
-                  <Label className="text-sm font-semibold">Quantity</Label>
-                  <Input value={newCargoEntry.quantity} onChange={(e) => setNewCargoEntry(prev => ({ ...prev, quantity: e.target.value }))} />
+                  <Label className="text-sm font-semibold">Quantity *</Label>
+                  <Input
+                    type="number"
+                    value={newCargoEntry.quantity}
+                    onChange={(e) => setNewCargoEntry(prev => ({ ...prev, quantity: e.target.value }))}
+                    placeholder="Enter quantity"
+                  />
                 </div>
                 <div>
-                  <Label className="text-sm font-semibold">Load Type</Label>
-                  <Select value={newCargoEntry.loadType} onValueChange={(v) => setNewCargoEntry(prev => ({ ...prev, loadType: v }))}>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="FCL">FCL</SelectItem>
-                      <SelectItem value="LCL">LCL</SelectItem>
-                      <SelectItem value="Bulk">Bulk</SelectItem>
+                  <Label className="text-sm font-semibold">Package Type</Label>
+                  <Select value={newCargoEntry.packageTypeId} onValueChange={(v) => setNewCargoEntry(prev => ({ ...prev, packageTypeId: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Select package type" /></SelectTrigger>
+                    <SelectContent className="bg-popover border border-border max-h-[300px]">
+                      {Object.entries(packageTypesByCategory).map(([category, types]) => (
+                        <div key={category}>
+                          <div className="px-2 py-1 text-xs font-semibold text-muted-foreground bg-secondary/50">{category}</div>
+                          {types.map(pt => (
+                            <SelectItem key={pt.id} value={pt.id.toString()}>
+                              {pt.code} - {pt.name}
+                            </SelectItem>
+                          ))}
+                        </div>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label className="text-sm font-semibold">Total CBM</Label>
-                  <Input value={newCargoEntry.totalCBM} onChange={(e) => setNewCargoEntry(prev => ({ ...prev, totalCBM: e.target.value }))} placeholder="Total CBM" />
+                  <Input
+                    type="number"
+                    step="0.001"
+                    value={newCargoEntry.totalCBM}
+                    onChange={(e) => setNewCargoEntry(prev => ({ ...prev, totalCBM: e.target.value }))}
+                    placeholder="0.000"
+                  />
                 </div>
                 <div>
-                  <Label className="text-sm font-semibold">Total Weight</Label>
-                  <Input value={newCargoEntry.totalWeight} onChange={(e) => setNewCargoEntry(prev => ({ ...prev, totalWeight: e.target.value }))} placeholder="Total Weight" />
+                  <Label className="text-sm font-semibold">Total Weight (KG)</Label>
+                  <Input
+                    type="number"
+                    step="0.001"
+                    value={newCargoEntry.totalWeight}
+                    onChange={(e) => setNewCargoEntry(prev => ({ ...prev, totalWeight: e.target.value }))}
+                    placeholder="0.000"
+                  />
                 </div>
                 <div>
                   <Label className="text-sm font-semibold">Description</Label>
                   <Textarea value={newCargoEntry.description} onChange={(e) => setNewCargoEntry(prev => ({ ...prev, description: e.target.value }))} placeholder="Description" className="min-h-[40px]" />
                 </div>
                 <div>
-                  <Button className="bg-emerald-500 hover:bg-emerald-600 text-white">
-                    <Plus className="h-4 w-4 mr-2" />
+                  <Button
+                    className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                    onClick={handleAddCargo}
+                    disabled={isSavingCargo}
+                  >
+                    {isSavingCargo ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4 mr-2" />
+                    )}
                     Add Cargo
                   </Button>
                 </div>
@@ -1865,7 +2023,7 @@ const ShipmentDetail = () => {
                   <TableRow className="bg-table-header">
                     <TableHead className="text-table-header-foreground">S.No</TableHead>
                     <TableHead className="text-table-header-foreground">Quantity</TableHead>
-                    <TableHead className="text-table-header-foreground">Load Type</TableHead>
+                    <TableHead className="text-table-header-foreground">Package Type</TableHead>
                     <TableHead className="text-table-header-foreground">Total CBM</TableHead>
                     <TableHead className="text-table-header-foreground">Total Weight</TableHead>
                     <TableHead className="text-table-header-foreground">Description</TableHead>
@@ -1882,7 +2040,7 @@ const ShipmentDetail = () => {
                       <TableRow key={cargo.id || index} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
                         <TableCell>{index + 1}</TableCell>
                         <TableCell>{cargo.quantity}</TableCell>
-                        <TableCell>{cargo.loadType}</TableCell>
+                        <TableCell>{cargo.packageTypeName || '-'}</TableCell>
                         <TableCell>{cargo.totalCBM?.toFixed(3) || '0.000'}</TableCell>
                         <TableCell>{cargo.totalWeight?.toFixed(3) || '0.000'}</TableCell>
                         <TableCell>{cargo.description || '-'}</TableCell>
@@ -1891,6 +2049,7 @@ const ShipmentDetail = () => {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded"
+                            onClick={() => handleDeleteCargo(cargo.id, cargo.description)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -1901,7 +2060,7 @@ const ShipmentDetail = () => {
                 </TableBody>
               </Table>
 
-              <Button className="bg-emerald-500 hover:bg-emerald-600 text-white">
+              <Button className="bg-emerald-500 hover:bg-emerald-600 text-white" disabled>
                 Save and Continue
               </Button>
             </div>
@@ -1912,7 +2071,10 @@ const ShipmentDetail = () => {
             <div className="bg-card border border-border rounded-lg p-6 space-y-6">
               <div className="flex justify-between items-center">
                 <h3 className="text-emerald-600 font-semibold text-lg">Documents</h3>
-                <Button className="bg-[#2c3e50] hover:bg-[#34495e] text-white">
+                <Button
+                  className="bg-[#2c3e50] hover:bg-[#34495e] text-white"
+                  onClick={() => setDocumentModalOpen(true)}
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   Create
                 </Button>
@@ -1943,27 +2105,44 @@ const ShipmentDetail = () => {
                     <TableHead className="text-table-header-foreground">Document Type</TableHead>
                     <TableHead className="text-table-header-foreground">Document No</TableHead>
                     <TableHead className="text-table-header-foreground">Doc.Date</TableHead>
+                    <TableHead className="text-table-header-foreground">File</TableHead>
+                    <TableHead className="text-table-header-foreground">Remarks</TableHead>
                     <TableHead className="text-table-header-foreground">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {documents.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">No data available in table</TableCell>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">No data available in table</TableCell>
                     </TableRow>
                   ) : (
                     documents.map((doc, index) => (
-                      <TableRow key={index} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
+                      <TableRow key={doc.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
                         <TableCell>{index + 1}</TableCell>
-                        <TableCell>{doc.type}</TableCell>
-                        <TableCell>{doc.number}</TableCell>
-                        <TableCell>{doc.date}</TableCell>
+                        <TableCell>{doc.documentTypeName || '-'}</TableCell>
+                        <TableCell>{doc.documentNo}</TableCell>
+                        <TableCell>{doc.docDate}</TableCell>
+                        <TableCell>
+                          {doc.filePath ? (
+                            <a
+                              href={fileApi.getDownloadUrl(doc.filePath)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-500 hover:underline"
+                            >
+                              {doc.originalFileName || 'Download'}
+                            </a>
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell>{doc.remarks || '-'}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600 text-white rounded">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded"
+                              onClick={() => handleDeleteDocument(doc)}
+                            >
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -2066,6 +2245,12 @@ const ShipmentDetail = () => {
         }}
       />
 
+      <DocumentModal
+        open={documentModalOpen}
+        onOpenChange={setDocumentModalOpen}
+        onSave={handleAddDocument}
+      />
+
       <DeleteConfirmationModal
         open={deleteModalOpen}
         onOpenChange={(open) => {
@@ -2076,7 +2261,9 @@ const ShipmentDetail = () => {
         title={
           deleteModalConfig?.type === 'party' ? 'Delete Party' :
           deleteModalConfig?.type === 'container' ? 'Delete Container' :
-          deleteModalConfig?.type === 'costing' ? 'Delete Costing' : 'Delete Item'
+          deleteModalConfig?.type === 'costing' ? 'Delete Costing' :
+          deleteModalConfig?.type === 'cargo' ? 'Delete Cargo' :
+          deleteModalConfig?.type === 'document' ? 'Delete Document' : 'Delete Item'
         }
         itemName={deleteModalConfig?.name}
         isLoading={isDeleting}

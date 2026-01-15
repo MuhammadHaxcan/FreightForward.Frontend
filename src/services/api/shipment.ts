@@ -157,18 +157,50 @@ export interface ShipmentCosting {
 export interface ShipmentCargo {
   id: number;
   quantity: number;
-  loadType?: string;
+  packageTypeId?: number;
+  packageTypeName?: string;
   totalCBM?: number;
   totalWeight?: number;
   description?: string;
 }
 
+export interface AddShipmentCargoRequest {
+  quantity: number;
+  packageTypeId?: number | null;
+  totalCBM?: number | null;
+  totalWeight?: number | null;
+  description?: string;
+}
+
+export interface UpdateShipmentCargoRequest extends AddShipmentCargoRequest {
+  id: number;
+}
+
 export interface ShipmentDocument {
   id: number;
-  documentType: string;
+  documentTypeId?: number;
+  documentTypeName?: string;
   documentNo: string;
   docDate: string;
   filePath?: string;
+  originalFileName?: string;
+  remarks?: string;
+}
+
+export interface AddShipmentDocumentRequest {
+  documentTypeId?: number | null;
+  documentNo: string;
+  docDate: string;
+  filePath?: string;
+  originalFileName?: string;
+  remarks?: string;
+}
+
+export interface FileUploadResponse {
+  fileName: string;
+  originalFileName: string;
+  size: number;
+  contentType: string;
 }
 
 export interface ShipmentStatusLog {
@@ -415,7 +447,63 @@ export const shipmentApi = {
     }),
   deleteCosting: (id: number) => fetchApi<void>(`/shipments/costings/${id}`, { method: 'DELETE' }),
 
+  // Cargos
+  addCargo: (shipmentId: number, data: AddShipmentCargoRequest) =>
+    fetchApi<number>(`/shipments/${shipmentId}/cargos`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateCargo: (cargoId: number, data: AddShipmentCargoRequest) =>
+    fetchApi<void>(`/shipments/cargos/${cargoId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deleteCargo: (cargoId: number) => fetchApi<void>(`/shipments/cargos/${cargoId}`, { method: 'DELETE' }),
+
+  // Documents
+  addDocument: (shipmentId: number, data: AddShipmentDocumentRequest) =>
+    fetchApi<number>(`/shipments/${shipmentId}/documents`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  deleteDocument: (documentId: number) => fetchApi<void>(`/shipments/documents/${documentId}`, { method: 'DELETE' }),
+
   // Invoices
   getInvoices: (shipmentId: number) =>
     fetchApi<ShipmentInvoicesResult>(`/shipments/${shipmentId}/invoices`),
+};
+
+// File Upload API - Import base URL from base module
+import { API_BASE_URL } from './base';
+
+export const fileApi = {
+  upload: async (file: File): Promise<FileUploadResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${API_BASE_URL}/files/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`File upload failed: ${response.statusText}`);
+    }
+
+    return response.json();
+  },
+
+  getDownloadUrl: (fileName: string): string => {
+    return `${API_BASE_URL}/files/${encodeURIComponent(fileName)}`;
+  },
+
+  delete: async (fileName: string): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/files/${encodeURIComponent(fileName)}`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      throw new Error(`File delete failed: ${response.statusText}`);
+    }
+  },
 };

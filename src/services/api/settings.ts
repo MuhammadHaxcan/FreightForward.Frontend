@@ -101,6 +101,14 @@ export interface ContainerType {
   sortOrder: number;
 }
 
+export interface DocumentType {
+  id: number;
+  code: string;
+  name: string;
+  description?: string;
+  sortOrder: number;
+}
+
 export interface CreateCurrencyTypeRequest {
   name: string;
   code: string;
@@ -247,6 +255,10 @@ export const settingsApi = {
   // Container Types
   getAllContainerTypes: () =>
     fetchApi<ContainerType[]>('/settings/container-types/all'),
+
+  // Document Types
+  getAllDocumentTypes: () =>
+    fetchApi<DocumentType[]>('/settings/document-types/all'),
 
   getExpenseTypesByDirection: (paymentDirection: 'Inwards' | 'Outwards') =>
     fetchApi<ExpenseType[]>(`/settings/expense-types/by-direction/${paymentDirection === 'Inwards' ? 0 : 1}`),
