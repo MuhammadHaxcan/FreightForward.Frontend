@@ -14,6 +14,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { cn, formatDate } from "@/lib/utils";
 import { customerApi, settingsApi, CustomerCategoryType, Currency, Invoice as ApiInvoice, AccountReceivable as ApiAccountReceivable, PaymentStatus } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 
 interface Contact {
   id: number;
