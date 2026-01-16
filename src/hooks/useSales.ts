@@ -32,6 +32,20 @@ export function useLeads(params?: {
   });
 }
 
+export function useLead(id: number) {
+  return useQuery({
+    queryKey: ['leads', id],
+    queryFn: async () => {
+      const response = await leadApi.getById(id);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+    enabled: id > 0,
+  });
+}
+
 export function useCreateLead() {
   const queryClient = useQueryClient();
 

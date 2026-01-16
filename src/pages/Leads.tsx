@@ -19,19 +19,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Edit, Send, Loader2 } from "lucide-react";
+import { Edit, Send, Loader2, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { useLeads } from "@/hooks/useSales";
-import { Lead } from "@/services/api";
+import { LeadFormModal } from "@/components/leads/LeadFormModal";
+import { SendRateRequestModal } from "@/components/leads/SendRateRequestModal";
 
 export default function Leads() {
-  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedLeads, setSelectedLeads] = useState<number[]>([]);
+  const [selectedLeadId, setSelectedLeadId] = useState<number | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingLeadId, setEditingLeadId] = useState<number | null>(null);
+  const [sendRateRequestModalOpen, setSendRateRequestModalOpen] = useState(false);
 
   const { data, isLoading, error } = useLeads({
     pageNumber: currentPage,
@@ -44,31 +46,40 @@ export default function Leads() {
   const totalPages = data?.totalPages || 1;
 
   const handleSelectLead = (leadId: number) => {
-    setSelectedLeads((prev) =>
-      prev.includes(leadId)
-        ? prev.filter((id) => id !== leadId)
-        : [...prev, leadId]
-    );
-  };
-
-  const handleSelectAll = () => {
-    if (selectedLeads.length === leads.length) {
-      setSelectedLeads([]);
-    } else {
-      setSelectedLeads(leads.map((l) => l.id));
-    }
+    setSelectedLeadId(selectedLeadId === leadId ? null : leadId);
   };
 
   const handleSendRateRequest = () => {
-    if (selectedLeads.length === 0) {
+    if (!selectedLeadId) {
       toast({
-        title: "No leads selected",
-        description: "Please select at least one lead to send rate request",
+        title: "No lead selected",
+        description: "Please select a lead to send rate request",
         variant: "destructive",
       });
       return;
     }
-    navigate("/sales/rate-requests/new", { state: { selectedLeads: selectedLeads.map(id => leads.find(l => l.id === id)) } });
+    setSendRateRequestModalOpen(true);
+  };
+
+  const handleRateRequestSuccess = () => {
+    setSelectedLeadId(null);
+  };
+
+  const handleGenerateLead = () => {
+    setEditingLeadId(null);
+    setModalOpen(true);
+  };
+
+  const handleEditLead = (leadId: number) => {
+    setEditingLeadId(leadId);
+    setModalOpen(true);
+  };
+
+  const handleModalClose = (open: boolean) => {
+    setModalOpen(open);
+    if (!open) {
+      setEditingLeadId(null);
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -91,13 +102,23 @@ export default function Leads() {
       <div className="p-6 space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-semibold text-foreground">Leads</h1>
-          <Button
-            onClick={handleSendRateRequest}
-            className="bg-green-600 hover:bg-green-700 text-white"
-          >
-            <Send className="h-4 w-4 mr-2" />
-            Send Rate Request
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleGenerateLead}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Generate Lead
+            </Button>
+            <Button
+              onClick={handleSendRateRequest}
+              variant="outline"
+              className="border-green-600 text-green-600 hover:bg-green-50"
+            >
+              <Send className="h-4 w-4 mr-2" />
+              Send Rate Request
+            </Button>
+          </div>
         </div>
 
         <div className="bg-card rounded-lg border border-border">
@@ -146,21 +167,16 @@ export default function Leads() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-[#2c3e50]">
-                  <TableHead className="text-white">
-                    <Checkbox
-                      checked={selectedLeads.length === leads.length && leads.length > 0}
-                      onCheckedChange={handleSelectAll}
-                    />
-                  </TableHead>
+                  <TableHead className="text-white w-12"></TableHead>
                   <TableHead className="text-white">Action</TableHead>
                   <TableHead className="text-white">Lead No.</TableHead>
                   <TableHead className="text-white">Date</TableHead>
                   <TableHead className="text-white">Customer Name</TableHead>
-                  <TableHead className="text-white">Mode</TableHead>
-                  <TableHead className="text-white">Incoterms</TableHead>
-                  <TableHead className="text-white">POL Country</TableHead>
-                  <TableHead className="text-white">POD Country</TableHead>
-                  <TableHead className="text-white">Quantity</TableHead>
+                  <TableHead className="text-white">Freight Mode</TableHead>
+                  <TableHead className="text-white">Inco Terms</TableHead>
+                  <TableHead className="text-white">Pickup Country</TableHead>
+                  <TableHead className="text-white">Delivery Country</TableHead>
+                  <TableHead className="text-white">Items</TableHead>
                   <TableHead className="text-white">Weight</TableHead>
                   <TableHead className="text-white">Status</TableHead>
                 </TableRow>
@@ -177,7 +193,7 @@ export default function Leads() {
                     <TableRow key={lead.id} className="hover:bg-muted/50">
                       <TableCell>
                         <Checkbox
-                          checked={selectedLeads.includes(lead.id)}
+                          checked={selectedLeadId === lead.id}
                           onCheckedChange={() => handleSelectLead(lead.id)}
                         />
                       </TableCell>
@@ -186,19 +202,20 @@ export default function Leads() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 bg-green-500 hover:bg-green-600 text-white rounded"
+                          onClick={() => handleEditLead(lead.id)}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
                       </TableCell>
                       <TableCell className="font-medium">{lead.leadNo}</TableCell>
                       <TableCell>{formatDate(lead.leadDate, "dd-MM-yyyy")}</TableCell>
-                      <TableCell className="text-green-600">{lead.customerName}</TableCell>
-                      <TableCell>{lead.mode}</TableCell>
-                      <TableCell>{lead.incoterms}</TableCell>
-                      <TableCell className="text-green-600">{lead.polCountry}</TableCell>
-                      <TableCell>{lead.podCountry}</TableCell>
-                      <TableCell>{lead.quantity}</TableCell>
-                      <TableCell>{lead.weight}</TableCell>
+                      <TableCell className="text-green-600">{lead.fullName || lead.customerName}</TableCell>
+                      <TableCell>{lead.freightMode || "-"}</TableCell>
+                      <TableCell>{lead.incoTermCode || "-"}</TableCell>
+                      <TableCell className="text-green-600">{lead.polCountry || lead.pickupCountryName || "-"}</TableCell>
+                      <TableCell>{lead.podCountry || lead.deliveryCountryName || "-"}</TableCell>
+                      <TableCell>{lead.quantity || "-"}</TableCell>
+                      <TableCell>{lead.weight || "-"}</TableCell>
                       <TableCell>{getStatusBadge(lead.leadStatus)}</TableCell>
                     </TableRow>
                   ))
@@ -242,6 +259,21 @@ export default function Leads() {
             </div>
           </div>
         </div>
+
+        <LeadFormModal
+          open={modalOpen}
+          onOpenChange={handleModalClose}
+          leadId={editingLeadId}
+        />
+
+        {selectedLeadId && (
+          <SendRateRequestModal
+            open={sendRateRequestModalOpen}
+            onOpenChange={setSendRateRequestModalOpen}
+            leadId={selectedLeadId}
+            onSuccess={handleRateRequestSuccess}
+          />
+        )}
       </div>
     </MainLayout>
   );

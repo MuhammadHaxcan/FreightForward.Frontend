@@ -7,18 +7,76 @@ export type LeadStatus = 'New' | 'Pending' | 'Converted';
 export type RateRequestStatus = 'Pending' | 'Sent' | 'Received';
 export type QuotationStatus = 'Pending' | 'Approved' | 'Rejected';
 
+// New Lead form types
+export type FreightMode = 'SeaFreight' | 'AirFreight' | 'LandFreight';
+export type UnitOfMeasurement = 'KG' | 'LB';
+export type ShippingType = 'FTL' | 'LTL';
+export type MeasurementType = 'Total' | 'PerUnit';
+
+// LeadDetail item (for Equipment and BoxPallet)
+export interface LeadDetailItem {
+  id?: number;
+  detailType: string; // "Equipment" or "BoxPallet"
+  quantity: number;
+  containerTypeId?: number;
+  containerTypeName?: string;
+  subCategory?: string;
+  packageTypeId?: number;
+  packageTypeName?: string;
+  length?: number;
+  width?: number;
+  height?: number;
+  measurementType?: MeasurementType;
+  volume?: number;
+  weight: number;
+}
+
 export interface Lead {
   id: number;
   leadNo: string;
   leadDate: string;
+
+  // Section 1: Contact Information
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  freightMode: FreightMode;
+
+  // Section 2: Shipping Details
+  unitOfMeasurement: UnitOfMeasurement;
+  shippingType: ShippingType;
+  details?: LeadDetailItem[];
+
+  // Section 3: Pickup & Drop-Off
+  pickupCountryId?: number;
+  pickupCountryName?: string;
+  loadingPortId?: number;
+  loadingPortName?: string;
+  pickupAddress?: string;
+  deliveryCountryId?: number;
+  deliveryCountryName?: string;
+  destinationPortId?: number;
+  destinationPortName?: string;
+  deliveryAddress?: string;
+  goodsReadyDate?: string;
+  customerReferenceNo?: string;
+  hsCode?: string;
+
+  // Section 4: Product Details
+  productType?: string;
+  productDescription?: string;
+  incoTermId?: number;
+  incoTermCode?: string;
+
+  // Existing fields for compatibility
   customerName: string;
   customerId?: number;
-  mode: ShippingMode;
-  modeDisplay: string;
-  incoterms: Incoterms;
+  mode?: ShippingMode;
+  modeDisplay?: string;
+  incoterms?: Incoterms;
   polCountry?: string;
   podCountry?: string;
-  quantity: number;
+  quantity?: number;
   weight?: number;
   weightUnit?: string;
   leadStatus: LeadStatus;
@@ -26,20 +84,45 @@ export interface Lead {
   createdAt: string;
 }
 
-export interface CreateLeadRequest {
-  customerName: string;
-  customerId?: number;
-  mode: ShippingMode;
-  incoterms: Incoterms;
-  polCountry?: string;
-  podCountry?: string;
+// Request DTOs
+export interface CreateLeadDetailRequest {
+  detailType: string;
   quantity: number;
-  weight?: number;
-  weightUnit?: string;
+  containerTypeId?: number;
+  subCategory?: string;
+  packageTypeId?: number;
+  length?: number;
+  width?: number;
+  height?: number;
+  measurementType?: string;
+  volume?: number;
+  weight: number;
+}
+
+export interface CreateLeadRequest {
+  customerId?: number;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  freightMode: FreightMode;
+  unitOfMeasurement: UnitOfMeasurement;
+  shippingType: ShippingType;
+  details?: CreateLeadDetailRequest[];
+  pickupCountryId?: number;
+  loadingPortId?: number;
+  pickupAddress?: string;
+  deliveryCountryId?: number;
+  destinationPortId?: number;
+  deliveryAddress?: string;
+  goodsReadyDate?: string;
+  customerReferenceNo?: string;
+  hsCode?: string;
+  productType?: string;
+  productDescription?: string;
+  incoTermId?: number;
 }
 
 export interface UpdateLeadRequest extends CreateLeadRequest {
-  id: number;
   leadStatus: LeadStatus;
 }
 
@@ -58,16 +141,48 @@ export interface RateRequest {
   requestStatus: RateRequestStatus;
   status?: string;
   createdAt: string;
+
+  // NEW vendor fields
+  vendorType?: string;
+  vendorEmail?: string;
+
+  // Lead-like fields
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  freightMode: string;
+  unitOfMeasurement: string;
+  shippingType: string;
+  pickupCountryId?: number;
+  pickupCountryName?: string;
+  loadingPortId?: number;
+  loadingPortName?: string;
+  pickupAddress?: string;
+  deliveryCountryId?: number;
+  deliveryCountryName?: string;
+  destinationPortId?: number;
+  destinationPortName?: string;
+  deliveryAddress?: string;
+  goodsReadyDate?: string;
+  customerReferenceNo?: string;
+  hsCode?: string;
+  productType?: string;
+  productDescription?: string;
+  incoTermId?: number;
+  incoTermCode?: string;
 }
 
 export interface CreateRateRequestRequest {
   leadId?: number;
-  mode: ShippingMode;
-  incoterms: Incoterms;
+  mode?: ShippingMode;
+  incoterms?: Incoterms;
   vendorName: string;
   vendorId?: number;
   polCountry?: string;
   podCountry?: string;
+  // NEW vendor fields
+  vendorType?: string;
+  vendorEmail?: string;
 }
 
 export interface Quotation {
@@ -140,6 +255,7 @@ export const leadApi = {
     if (params?.status) query.append('status', params.status);
     return fetchApi<PaginatedList<Lead>>(`/sales/leads?${query}`);
   },
+  getById: (id: number) => fetchApi<Lead>(`/sales/leads/${id}`),
   create: (data: CreateLeadRequest) =>
     fetchApi<number>('/sales/leads', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: number, data: UpdateLeadRequest) =>

@@ -1,0 +1,709 @@
+import { useState, useEffect } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { DateInput } from "@/components/ui/date-input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Loader2, Ship, Plane, Truck, Package, Container } from "lucide-react";
+import {
+  Lead,
+  CreateLeadRequest,
+  UpdateLeadRequest,
+  FreightMode,
+  UnitOfMeasurement,
+  ShippingType,
+  CreateLeadDetailRequest,
+  LeadDetailItem,
+} from "@/services/api";
+import { useCreateLead, useUpdateLead, useLead } from "@/hooks/useSales";
+import { useCustomers } from "@/hooks/useCustomers";
+import {
+  useAllCountries,
+  useAllPorts,
+  useAllIncoTerms,
+  useAllContainerTypes,
+  useAllPackageTypes,
+} from "@/hooks/useSettings";
+import { EquipmentGrid } from "./EquipmentGrid";
+import { BoxPalletsGrid } from "./BoxPalletsGrid";
+
+const PRODUCT_TYPES = [
+  "AGRICULTURE & FOOD",
+  "CHEMICALS",
+  "ELECTRONICS",
+  "MACHINERY",
+  "TEXTILES",
+  "AUTOMOTIVE",
+  "PHARMACEUTICALS",
+];
+
+interface LeadFormModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  leadId: number | null;
+}
+
+interface FormData {
+  customerId?: number;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  freightMode: FreightMode;
+  unitOfMeasurement: UnitOfMeasurement;
+  shippingType: ShippingType;
+  equipments: LeadDetailItem[];
+  boxPallets: LeadDetailItem[];
+  pickupCountryId?: number;
+  loadingPortId?: number;
+  pickupAddress: string;
+  deliveryCountryId?: number;
+  destinationPortId?: number;
+  deliveryAddress: string;
+  goodsReadyDate: string;
+  customerReferenceNo: string;
+  hsCode: string;
+  productType: string;
+  productDescription: string;
+  incoTermId?: number;
+}
+
+const initialFormData: FormData = {
+  fullName: "",
+  email: "",
+  phoneNumber: "",
+  freightMode: "SeaFreight",
+  unitOfMeasurement: "KG",
+  shippingType: "FTL",
+  equipments: [],
+  boxPallets: [],
+  pickupCountryId: undefined,
+  loadingPortId: undefined,
+  pickupAddress: "",
+  deliveryCountryId: undefined,
+  destinationPortId: undefined,
+  deliveryAddress: "",
+  goodsReadyDate: "",
+  customerReferenceNo: "",
+  hsCode: "",
+  productType: "",
+  productDescription: "",
+  incoTermId: undefined,
+};
+
+export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps) {
+  const [formData, setFormData] = useState<FormData>(initialFormData);
+  const createLead = useCreateLead();
+  const updateLead = useUpdateLead();
+
+  // Fetch the full lead data when editing (includes details)
+  const { data: lead, isLoading: isLeadLoading } = useLead(leadId || 0);
+
+  // Load data from backend
+  const { data: customers } = useCustomers({ pageSize: 1000 });
+  const { data: countries } = useAllCountries();
+  const { data: ports } = useAllPorts();
+  const { data: incoTerms } = useAllIncoTerms();
+  const { data: containerTypes } = useAllContainerTypes();
+  const { data: packageTypes } = useAllPackageTypes();
+
+  const isEditing = !!leadId;
+  const isSaving = createLead.isPending || updateLead.isPending;
+
+  // Filter ports by selected country
+  const pickupPorts = ports?.filter(
+    (p) => !formData.pickupCountryId ||
+    countries?.find(c => c.id === formData.pickupCountryId)?.name === p.country
+  ) || [];
+
+  const deliveryPorts = ports?.filter(
+    (p) => !formData.deliveryCountryId ||
+    countries?.find(c => c.id === formData.deliveryCountryId)?.name === p.country
+  ) || [];
+
+  useEffect(() => {
+    if (!open) {
+      // Reset form when modal closes
+      setFormData(initialFormData);
+      return;
+    }
+
+    if (leadId && lead) {
+      // Separate lead details into equipments and boxPallets
+      const equipments: LeadDetailItem[] = [];
+      const boxPallets: LeadDetailItem[] = [];
+
+      lead.details?.forEach((detail) => {
+        if (detail.detailType === "Equipment") {
+          equipments.push(detail);
+        } else if (detail.detailType === "BoxPallet") {
+          boxPallets.push(detail);
+        }
+      });
+
+      // Determine shipping type based on details
+      let shippingType: ShippingType = lead.shippingType || "FTL";
+      if (!lead.shippingType) {
+        // Infer from details if not set
+        if (equipments.length > 0) {
+          shippingType = "FTL";
+        } else if (boxPallets.length > 0) {
+          shippingType = "LTL";
+        }
+      }
+
+      setFormData({
+        customerId: lead.customerId,
+        fullName: lead.fullName || "",
+        email: lead.email || "",
+        phoneNumber: lead.phoneNumber || "",
+        freightMode: lead.freightMode || "SeaFreight",
+        unitOfMeasurement: lead.unitOfMeasurement || "KG",
+        shippingType,
+        equipments,
+        boxPallets,
+        pickupCountryId: lead.pickupCountryId,
+        loadingPortId: lead.loadingPortId,
+        pickupAddress: lead.pickupAddress || "",
+        deliveryCountryId: lead.deliveryCountryId,
+        destinationPortId: lead.destinationPortId,
+        deliveryAddress: lead.deliveryAddress || "",
+        goodsReadyDate: lead.goodsReadyDate || "",
+        customerReferenceNo: lead.customerReferenceNo || "",
+        hsCode: lead.hsCode || "",
+        productType: lead.productType || "",
+        productDescription: lead.productDescription || "",
+        incoTermId: lead.incoTermId,
+      });
+    } else if (!leadId) {
+      // Creating new lead
+      setFormData(initialFormData);
+    }
+  }, [leadId, lead, open]);
+
+  const updateField = <K extends keyof FormData>(field: K, value: FormData[K]) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // Handle customer selection - auto-populate email and phone
+  const handleCustomerChange = (customerId: string) => {
+    const customer = customers?.items.find((c) => c.id === parseInt(customerId));
+    if (customer) {
+      setFormData((prev) => ({
+        ...prev,
+        customerId: customer.id,
+        fullName: customer.name,
+        email: customer.email || "",
+        phoneNumber: customer.phone || "",
+      }));
+    }
+  };
+
+  const handleSubmit = async () => {
+    // Convert equipments and boxPallets to details array
+    const details: CreateLeadDetailRequest[] = [];
+
+    if (formData.shippingType === "FTL") {
+      formData.equipments.forEach((eq) => {
+        details.push({
+          detailType: "Equipment",
+          quantity: eq.quantity,
+          containerTypeId: eq.containerTypeId,
+          subCategory: eq.subCategory,
+          weight: eq.weight,
+        });
+      });
+    } else {
+      formData.boxPallets.forEach((bp) => {
+        details.push({
+          detailType: "BoxPallet",
+          quantity: bp.quantity,
+          packageTypeId: bp.packageTypeId,
+          length: bp.length,
+          width: bp.width,
+          height: bp.height,
+          measurementType: bp.measurementType,
+          volume: bp.volume,
+          weight: bp.weight,
+        });
+      });
+    }
+
+    const request: CreateLeadRequest = {
+      customerId: formData.customerId,
+      fullName: formData.fullName,
+      email: formData.email,
+      phoneNumber: formData.phoneNumber,
+      freightMode: formData.freightMode,
+      unitOfMeasurement: formData.unitOfMeasurement,
+      shippingType: formData.shippingType,
+      details: details.length > 0 ? details : undefined,
+      pickupCountryId: formData.pickupCountryId,
+      loadingPortId: formData.loadingPortId,
+      pickupAddress: formData.pickupAddress || undefined,
+      deliveryCountryId: formData.deliveryCountryId,
+      destinationPortId: formData.destinationPortId,
+      deliveryAddress: formData.deliveryAddress || undefined,
+      goodsReadyDate: formData.goodsReadyDate || undefined,
+      customerReferenceNo: formData.customerReferenceNo || undefined,
+      hsCode: formData.hsCode || undefined,
+      productType: formData.productType || undefined,
+      productDescription: formData.productDescription || undefined,
+      incoTermId: formData.incoTermId,
+    };
+
+    try {
+      if (isEditing && leadId && lead) {
+        const updateRequest: UpdateLeadRequest = {
+          ...request,
+          leadStatus: lead.leadStatus,
+        };
+        await updateLead.mutateAsync({ id: leadId, data: updateRequest });
+      } else {
+        await createLead.mutateAsync(request);
+      }
+      onOpenChange(false);
+    } catch {
+      // Error handling is done in the hook
+    }
+  };
+
+  const isFormValid = () => {
+    return (
+      formData.fullName &&
+      formData.email &&
+      formData.phoneNumber
+    );
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-5xl max-h-[90vh] p-0">
+        <DialogHeader className="px-6 pt-6 pb-0">
+          <DialogTitle className="text-xl">
+            {isEditing ? "Edit Lead" : "Generate Lead"}
+          </DialogTitle>
+        </DialogHeader>
+
+        <ScrollArea className="max-h-[calc(90vh-140px)] px-6">
+          {isEditing && isLeadLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+              <span className="ml-2 text-muted-foreground">Loading lead data...</span>
+            </div>
+          ) : (
+          <div className="space-y-6 py-4">
+            {/* Section 1: Contact Information */}
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg text-green-600">
+                  Contact Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="customerSelect">Customer Name *</Label>
+                    <Select
+                      value={formData.customerId?.toString() || ""}
+                      onValueChange={handleCustomerChange}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select customer" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {customers?.items.map((customer) => (
+                          <SelectItem key={customer.id} value={customer.id.toString()}>
+                            {customer.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email Address *</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => updateField("email", e.target.value)}
+                      placeholder="Enter email address"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phoneNumber">Phone Number *</Label>
+                    <Input
+                      id="phoneNumber"
+                      value={formData.phoneNumber}
+                      onChange={(e) => updateField("phoneNumber", e.target.value)}
+                      placeholder="Enter phone number"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Mode of Freight *</Label>
+                  <ToggleGroup
+                    type="single"
+                    value={formData.freightMode}
+                    onValueChange={(value) => {
+                      if (value) updateField("freightMode", value as FreightMode);
+                    }}
+                    className="justify-start"
+                  >
+                    <ToggleGroupItem
+                      value="SeaFreight"
+                      className="data-[state=on]:bg-green-600 data-[state=on]:text-white px-6"
+                    >
+                      <Ship className="h-4 w-4 mr-2" />
+                      Sea Freight
+                    </ToggleGroupItem>
+                    <ToggleGroupItem
+                      value="AirFreight"
+                      className="data-[state=on]:bg-green-600 data-[state=on]:text-white px-6"
+                    >
+                      <Plane className="h-4 w-4 mr-2" />
+                      Air Freight
+                    </ToggleGroupItem>
+                    <ToggleGroupItem
+                      value="LandFreight"
+                      className="data-[state=on]:bg-green-600 data-[state=on]:text-white px-6"
+                    >
+                      <Truck className="h-4 w-4 mr-2" />
+                      Land Freight
+                    </ToggleGroupItem>
+                  </ToggleGroup>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Section 2: What are you shipping? */}
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg text-green-600">
+                  What are you shipping?
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="unitOfMeasurement">Unit of Measurement</Label>
+                    <Select
+                      value={formData.unitOfMeasurement}
+                      onValueChange={(value) =>
+                        updateField("unitOfMeasurement", value as UnitOfMeasurement)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="KG">KG</SelectItem>
+                        <SelectItem value="LB">LB</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Shipping Type</Label>
+                    <ToggleGroup
+                      type="single"
+                      value={formData.shippingType}
+                      onValueChange={(value) => {
+                        if (value) updateField("shippingType", value as ShippingType);
+                      }}
+                      className="justify-start"
+                    >
+                      <ToggleGroupItem
+                        value="FTL"
+                        className="data-[state=on]:bg-green-600 data-[state=on]:text-white px-6"
+                      >
+                        <Container className="h-4 w-4 mr-2" />
+                        Equipment (FTL)
+                      </ToggleGroupItem>
+                      <ToggleGroupItem
+                        value="LTL"
+                        className="data-[state=on]:bg-green-600 data-[state=on]:text-white px-6"
+                      >
+                        <Package className="h-4 w-4 mr-2" />
+                        Box/Pallets (LTL)
+                      </ToggleGroupItem>
+                    </ToggleGroup>
+                  </div>
+                </div>
+
+                {formData.shippingType === "FTL" ? (
+                  <EquipmentGrid
+                    equipments={formData.equipments}
+                    onChange={(equipments) => updateField("equipments", equipments)}
+                    containerTypes={containerTypes || []}
+                  />
+                ) : (
+                  <BoxPalletsGrid
+                    boxPallets={formData.boxPallets}
+                    onChange={(boxPallets) => updateField("boxPallets", boxPallets)}
+                    packageTypes={packageTypes || []}
+                  />
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Section 3: Pickup & Drop-Off Information */}
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg text-green-600">
+                  Pickup & Drop-Off Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-2 gap-6">
+                  {/* Pickup */}
+                  <div className="space-y-4">
+                    <h4 className="font-medium text-sm text-muted-foreground">
+                      Pickup goods from:
+                    </h4>
+                    <div className="space-y-2">
+                      <Label htmlFor="pickupCountry">Country *</Label>
+                      <Select
+                        value={formData.pickupCountryId?.toString() || ""}
+                        onValueChange={(value) => {
+                          updateField("pickupCountryId", parseInt(value));
+                          updateField("loadingPortId", undefined);
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select country" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {countries?.map((country) => (
+                            <SelectItem key={country.id} value={country.id.toString()}>
+                              {country.name} ({country.code})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="loadingPort">Loading Port *</Label>
+                      <Select
+                        value={formData.loadingPortId?.toString() || ""}
+                        onValueChange={(value) => updateField("loadingPortId", parseInt(value))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select loading port" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {pickupPorts.map((port) => (
+                            <SelectItem key={port.id} value={port.id.toString()}>
+                              {port.name} ({port.country})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="pickupAddress">Pickup Address</Label>
+                      <Textarea
+                        id="pickupAddress"
+                        value={formData.pickupAddress}
+                        onChange={(e) => updateField("pickupAddress", e.target.value)}
+                        placeholder="Enter pickup address"
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Delivery */}
+                  <div className="space-y-4">
+                    <h4 className="font-medium text-sm text-muted-foreground">
+                      Deliver goods to:
+                    </h4>
+                    <div className="space-y-2">
+                      <Label htmlFor="deliveryCountry">Country *</Label>
+                      <Select
+                        value={formData.deliveryCountryId?.toString() || ""}
+                        onValueChange={(value) => {
+                          updateField("deliveryCountryId", parseInt(value));
+                          updateField("destinationPortId", undefined);
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select country" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {countries?.map((country) => (
+                            <SelectItem key={country.id} value={country.id.toString()}>
+                              {country.name} ({country.code})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="destinationPort">Destination Port *</Label>
+                      <Select
+                        value={formData.destinationPortId?.toString() || ""}
+                        onValueChange={(value) =>
+                          updateField("destinationPortId", parseInt(value))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select destination port" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {deliveryPorts.map((port) => (
+                            <SelectItem key={port.id} value={port.id.toString()}>
+                              {port.name} ({port.country})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="deliveryAddress">Delivery Address</Label>
+                      <Textarea
+                        id="deliveryAddress"
+                        value={formData.deliveryAddress}
+                        onChange={(e) => updateField("deliveryAddress", e.target.value)}
+                        placeholder="Enter delivery address"
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Shipment Details */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm text-muted-foreground">
+                    Shipment Details:
+                  </h4>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="goodsReadyDate">Goods ready date</Label>
+                      <DateInput
+                        value={formData.goodsReadyDate}
+                        onChange={(value) => updateField("goodsReadyDate", value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="customerReferenceNo">Customer reference No</Label>
+                      <Input
+                        id="customerReferenceNo"
+                        value={formData.customerReferenceNo}
+                        onChange={(e) =>
+                          updateField("customerReferenceNo", e.target.value)
+                        }
+                        placeholder="Optional"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="hsCode">HS Code</Label>
+                      <Input
+                        id="hsCode"
+                        value={formData.hsCode}
+                        onChange={(e) => updateField("hsCode", e.target.value)}
+                        placeholder="Enter HS code"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Section 4: Product Details */}
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg text-green-600">
+                  Product Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="productType">Product Type</Label>
+                    <Select
+                      value={formData.productType}
+                      onValueChange={(value) => updateField("productType", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select product type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PRODUCT_TYPES.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="productDescription">Product description</Label>
+                    <Input
+                      id="productDescription"
+                      value={formData.productDescription}
+                      onChange={(e) =>
+                        updateField("productDescription", e.target.value)
+                      }
+                      placeholder="Enter product description"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="incoTerms">Inco Terms</Label>
+                    <Select
+                      value={formData.incoTermId?.toString() || ""}
+                      onValueChange={(value) =>
+                        updateField("incoTermId", parseInt(value))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Inco Term" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {incoTerms?.map((term) => (
+                          <SelectItem key={term.id} value={term.id.toString()}>
+                            {term.code} - {term.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          )}
+        </ScrollArea>
+
+        <DialogFooter className="px-6 py-4 border-t">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={!isFormValid() || isSaving || (isEditing && isLeadLoading)}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {isEditing ? "Update" : "Save"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

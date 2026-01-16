@@ -365,3 +365,87 @@ export function useDeleteExpenseType() {
     },
   });
 }
+
+// Countries Hooks
+export function useAllCountries() {
+  return useQuery({
+    queryKey: ['countries', 'all'],
+    queryFn: async () => {
+      const response = await settingsApi.getAllCountries();
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+  });
+}
+
+// All Ports Hooks
+export function useAllPorts() {
+  return useQuery({
+    queryKey: ['ports', 'all'],
+    queryFn: async () => {
+      const response = await settingsApi.getAllPorts();
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+  });
+}
+
+// IncoTerms Hooks
+export function useAllIncoTerms() {
+  return useQuery({
+    queryKey: ['incoTerms', 'all'],
+    queryFn: async () => {
+      const response = await settingsApi.getAllIncoTerms();
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+  });
+}
+
+// Container Types Hooks
+export function useAllContainerTypes() {
+  return useQuery({
+    queryKey: ['containerTypes', 'all'],
+    queryFn: async () => {
+      const response = await settingsApi.getAllContainerTypes();
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+  });
+}
+
+// Package Types Hooks
+export function useAllPackageTypes() {
+  return useQuery({
+    queryKey: ['packageTypes', 'all'],
+    queryFn: async () => {
+      const response = await settingsApi.getAllPackageTypes();
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+  });
+}
+
+// Customer Category Types Hooks
+export function useAllCustomerCategoryTypes() {
+  return useQuery({
+    queryKey: ['customerCategoryTypes', 'all'],
+    queryFn: async () => {
+      const response = await settingsApi.getAllCustomerCategoryTypes();
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+  });
+}

@@ -150,18 +150,20 @@ export default function RateRequests() {
                   <TableHead className="text-white">Action</TableHead>
                   <TableHead className="text-white">Rate request No.</TableHead>
                   <TableHead className="text-white">Date</TableHead>
-                  <TableHead className="text-white">Mode</TableHead>
-                  <TableHead className="text-white">Incoterms</TableHead>
+                  <TableHead className="text-white">Customer Name</TableHead>
+                  <TableHead className="text-white">Freight Mode</TableHead>
+                  <TableHead className="text-white">Vendor Type</TableHead>
                   <TableHead className="text-white">Vendor Name</TableHead>
-                  <TableHead className="text-white">POL Country</TableHead>
-                  <TableHead className="text-white">POD Country</TableHead>
+                  <TableHead className="text-white">Vendor Email</TableHead>
+                  <TableHead className="text-white">Pickup Country</TableHead>
+                  <TableHead className="text-white">Delivery Country</TableHead>
                   <TableHead className="text-white">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {rateRequests.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                       No rate requests found
                     </TableCell>
                   </TableRow>
@@ -193,11 +195,13 @@ export default function RateRequests() {
                       </TableCell>
                       <TableCell className="font-medium">{request.rateRequestNo}</TableCell>
                       <TableCell>{formatDate(request.requestDate, "dd-MM-yyyy")}</TableCell>
-                      <TableCell>{request.mode}</TableCell>
-                      <TableCell>{request.incoterms}</TableCell>
+                      <TableCell className="text-green-600">{request.fullName || "-"}</TableCell>
+                      <TableCell>{request.freightMode || "-"}</TableCell>
+                      <TableCell>{request.vendorType || "-"}</TableCell>
                       <TableCell className="text-green-600">{request.vendorName}</TableCell>
-                      <TableCell className="text-green-600">{request.polCountry}</TableCell>
-                      <TableCell>{request.podCountry}</TableCell>
+                      <TableCell>{request.vendorEmail || "-"}</TableCell>
+                      <TableCell className="text-green-600">{request.pickupCountryName || request.polCountry || "-"}</TableCell>
+                      <TableCell>{request.deliveryCountryName || request.podCountry || "-"}</TableCell>
                       <TableCell>{getStatusBadge(request.requestStatus)}</TableCell>
                     </TableRow>
                   ))

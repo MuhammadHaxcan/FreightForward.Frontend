@@ -109,6 +109,13 @@ export interface DocumentType {
   sortOrder: number;
 }
 
+export interface Country {
+  id: number;
+  code: string;
+  name: string;
+  region?: string;
+}
+
 export interface CreateCurrencyTypeRequest {
   name: string;
   code: string;
@@ -259,6 +266,12 @@ export const settingsApi = {
   // Document Types
   getAllDocumentTypes: () =>
     fetchApi<DocumentType[]>('/settings/document-types/all'),
+
+  // Countries
+  getAllCountries: () =>
+    fetchApi<Country[]>('/settings/countries/all'),
+  getCountryById: (id: number) =>
+    fetchApi<Country>(`/settings/countries/${id}`),
 
   getExpenseTypesByDirection: (paymentDirection: 'Inwards' | 'Outwards') =>
     fetchApi<ExpenseType[]>(`/settings/expense-types/by-direction/${paymentDirection === 'Inwards' ? 0 : 1}`),
