@@ -153,3 +153,31 @@ export function useCustomerAccountReceivables(customerId: number, params?: { pag
     enabled: customerId > 0,
   });
 }
+
+// Get all creditors (customers with Creditors master type) for Company Name dropdown
+export function useAllCreditors() {
+  return useQuery({
+    queryKey: ['customers', 'creditors'],
+    queryFn: async () => {
+      const response = await customerApi.getAll({ pageSize: 1000, masterType: 'Creditors' });
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!.items;
+    },
+  });
+}
+
+// Get all customers (any type) for dropdowns
+export function useAllCustomers() {
+  return useQuery({
+    queryKey: ['customers', 'all'],
+    queryFn: async () => {
+      const response = await customerApi.getAll({ pageSize: 1000 });
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!.items;
+    },
+  });
+}

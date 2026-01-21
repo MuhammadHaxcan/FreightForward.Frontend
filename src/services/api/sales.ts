@@ -185,6 +185,10 @@ export interface CreateRateRequestRequest {
   vendorEmail?: string;
 }
 
+export interface UpdateRateRequestRequest {
+  status?: string;
+}
+
 export interface Quotation {
   id: number;
   quotationNo: string;
@@ -200,17 +204,39 @@ export interface Quotation {
   quotationStatus: QuotationStatus;
   status?: string;
   createdAt: string;
+
+  // New fields
+  contactPersonId?: number;
+  contactPersonName?: string;
+  customerRefCode?: string;
+  quotationBookingNo?: string;
+  loadingPortId?: number;
+  loadingPortName?: string;
+  destinationPortId?: number;
+  destinationPortName?: string;
+  pickupAddress?: string;
+  deliveryAddress?: string;
+  incoTermId?: number;
+  incoTermCode?: string;
+  remarks?: string;
+  cfs?: string;
+  documentRequired?: string;
+  notes?: string;
+  notesForBooking?: string;
 }
 
 export interface QuotationDetail extends Quotation {
   rateRequestId?: number;
   cargoCalculationMode?: string;
   charges: QuotationCharge[];
+  cargoDetails: QuotationCargoDetail[];
 }
 
 export interface QuotationCharge {
   id: number;
   chargeType?: string;
+  chargeItemId?: number;
+  costingUnitId?: number;
   bases?: string;
   currency: Currency;
   rate: number;
@@ -219,18 +245,74 @@ export interface QuotationCharge {
   amount: number;
 }
 
+export interface QuotationCargoDetail {
+  id: number;
+  calculationMode: string;
+  quantity: number;
+  packageTypeId?: number;
+  packageTypeName?: string;
+  loadType?: string;
+  length?: number;
+  width?: number;
+  height?: number;
+  volumeUnit?: string;
+  cbm?: number;
+  weight?: number;
+  weightUnit?: string;
+  totalCbm?: number;
+  totalWeight?: number;
+  cargoDescription?: string;
+}
+
+export interface CreateQuotationCargoDetailRequest {
+  calculationMode: string;
+  quantity: number;
+  packageTypeId?: number;
+  loadType?: string;
+  length?: number;
+  width?: number;
+  height?: number;
+  volumeUnit?: string;
+  cbm?: number;
+  weight?: number;
+  weightUnit?: string;
+  totalCbm?: number;
+  totalWeight?: number;
+  cargoDescription?: string;
+}
+
 export interface CreateQuotationRequest {
+  quotationDate: string;
   rateRequestId?: number;
   customerId?: number;
   customerName: string;
-  incoterms: Incoterms;
-  mode: ShippingMode;
+  incoterms?: Incoterms;
+  mode?: ShippingMode;
   pol?: string;
   pod?: string;
   quoteExpiryDate?: string;
   cargoCalculationMode?: string;
+  status?: string;
+
+  // New fields
+  contactPersonId?: number;
+  customerRefCode?: string;
+  quotationBookingNo?: string;
+  loadingPortId?: number;
+  destinationPortId?: number;
+  pickupAddress?: string;
+  deliveryAddress?: string;
+  incoTermId?: number;
+  remarks?: string;
+  cfs?: string;
+  documentRequired?: string;
+  notes?: string;
+  notesForBooking?: string;
+
   charges?: {
     chargeType?: string;
+    chargeItemId?: number;
+    costingUnitId?: number;
     bases?: string;
     currency: Currency;
     rate: number;
@@ -238,6 +320,56 @@ export interface CreateQuotationRequest {
     quantity: number;
     amount: number;
   }[];
+  cargoDetails?: CreateQuotationCargoDetailRequest[];
+}
+
+export interface UpdateQuotationRequest extends CreateQuotationRequest {}
+
+// RateRequest for conversion to Quotation
+export interface RateRequestForConversion {
+  id: number;
+  rateRequestNo: string;
+  rateRequestDate: string;
+  leadId?: number;
+  leadNo?: string;
+
+  // Customer/Contact info
+  customerId?: number;
+  customerName?: string;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+
+  // Shipping info
+  freightMode: string;
+  unitOfMeasurement: string;
+  shippingType: string;
+  shipmentDirection?: string;
+  shipmentMode?: string;
+
+  // Location info
+  pickupCountryId?: number;
+  pickupCountryName?: string;
+  loadingPortId?: number;
+  loadingPortName?: string;
+  pickupAddress?: string;
+  deliveryCountryId?: number;
+  deliveryCountryName?: string;
+  destinationPortId?: number;
+  destinationPortName?: string;
+  deliveryAddress?: string;
+
+  // Additional info
+  goodsReadyDate?: string;
+  customerReferenceNo?: string;
+  hsCode?: string;
+  productType?: string;
+  productDescription?: string;
+  incoTermId?: number;
+  incoTermCode?: string;
+
+  // Lead details for cargo
+  leadDetails: LeadDetailItem[];
 }
 
 // Sales APIs
@@ -276,8 +408,12 @@ export const rateRequestApi = {
     if (params?.status) query.append('status', params.status);
     return fetchApi<PaginatedList<RateRequest>>(`/sales/rate-requests?${query}`);
   },
+  getById: (id: number) => fetchApi<RateRequest>(`/sales/rate-requests/${id}`),
+  getForConversion: (id: number) => fetchApi<RateRequestForConversion>(`/sales/rate-requests/${id}/for-conversion`),
   create: (data: CreateRateRequestRequest) =>
     fetchApi<number>('/sales/rate-requests', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: UpdateRateRequestRequest) =>
+    fetchApi<void>(`/sales/rate-requests/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
 };
 
 export const quotationApi = {
@@ -297,4 +433,6 @@ export const quotationApi = {
   getById: (id: number) => fetchApi<QuotationDetail>(`/sales/quotations/${id}`),
   create: (data: CreateQuotationRequest) =>
     fetchApi<number>('/sales/quotations', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: UpdateQuotationRequest) =>
+    fetchApi<void>(`/sales/quotations/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
 };

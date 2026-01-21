@@ -449,3 +449,31 @@ export function useAllCustomerCategoryTypes() {
     },
   });
 }
+
+// All Currency Types Hooks
+export function useAllCurrencyTypes() {
+  return useQuery({
+    queryKey: ['currencyTypes', 'all'],
+    queryFn: async () => {
+      const response = await settingsApi.getCurrencyTypes({ pageSize: 1000 });
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!.items;
+    },
+  });
+}
+
+// All Charge Items Hooks
+export function useAllChargeItems() {
+  return useQuery({
+    queryKey: ['chargeItems', 'all'],
+    queryFn: async () => {
+      const response = await settingsApi.getChargeItems({ pageSize: 1000 });
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!.items;
+    },
+  });
+}

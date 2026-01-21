@@ -25,13 +25,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Edit, Plus, FileText, Loader2 } from "lucide-react";
+import { Edit, Plus, FileText, Loader2, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import { useRateRequests, useCreateRateRequest } from "@/hooks/useSales";
+import { useRateRequests, useCreateRateRequest, useUpdateRateRequest } from "@/hooks/useSales";
 import { RateRequest } from "@/services/api";
 
 type ModalMode = "add" | "edit";
@@ -45,6 +55,9 @@ export default function RateRequests() {
   const [modalMode, setModalMode] = useState<ModalMode>("add");
   const [selectedRequest, setSelectedRequest] = useState<RateRequest | null>(null);
   const [selectAllVendorEmail, setSelectAllVendorEmail] = useState(false);
+  const [selectedRateRequestId, setSelectedRateRequestId] = useState<number | null>(null);
+  const [showReceivedConfirm, setShowReceivedConfirm] = useState(false);
+  const [rateRequestToMarkReceived, setRateRequestToMarkReceived] = useState<RateRequest | null>(null);
 
   const { data, isLoading, error } = useRateRequests({
     pageNumber: currentPage,
@@ -53,6 +66,7 @@ export default function RateRequests() {
   });
 
   const createMutation = useCreateRateRequest();
+  const updateMutation = useUpdateRateRequest();
 
   const rateRequests = data?.items || [];
   const totalCount = data?.totalCount || 0;
@@ -74,13 +88,38 @@ export default function RateRequests() {
   // formatDate imported from utils
 
   const handleConvertToQuotation = (request: RateRequest) => {
-    navigate("/sales/quotations", { state: { rateRequest: request } });
+    navigate("/sales/quotations", { state: { rateRequestId: request.id } });
   };
+
+  const handleConvertSelectedToQuotation = () => {
+    if (selectedRateRequestId) {
+      navigate("/sales/quotations", { state: { rateRequestId: selectedRateRequestId } });
+    }
+  };
+
+  const selectedRateRequest = selectedRateRequestId
+    ? rateRequests.find(r => r.id === selectedRateRequestId)
+    : null;
 
   const openModal = (mode: ModalMode, request?: RateRequest) => {
     setModalMode(mode);
     setSelectedRequest(request || null);
     setIsModalOpen(true);
+  };
+
+  const handleMarkAsReceived = async () => {
+    if (!rateRequestToMarkReceived) return;
+    try {
+      await updateMutation.mutateAsync({
+        id: rateRequestToMarkReceived.id,
+        data: { status: 'Received' }
+      });
+      setSelectedRateRequestId(rateRequestToMarkReceived.id); // Auto-select the row
+      setShowReceivedConfirm(false);
+      setRateRequestToMarkReceived(null);
+    } catch (error) {
+      // Error handled by mutation
+    }
   };
 
   const getModalTitle = () => {
@@ -92,13 +131,23 @@ export default function RateRequests() {
       <div className="p-6 space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-semibold text-foreground">Rate Request</h1>
-          <Button
-            onClick={() => openModal("add")}
-            className="bg-green-600 hover:bg-green-700 text-white"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Send Rate Request
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleConvertSelectedToQuotation}
+              disabled={!selectedRateRequestId || selectedRateRequest?.requestStatus !== "Received"}
+              className="bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-50"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Convert to Quotation
+            </Button>
+            <Button
+              onClick={() => openModal("add")}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Send Rate Request
+            </Button>
+          </div>
         </div>
 
         <div className="bg-card rounded-lg border border-border">
@@ -147,6 +196,7 @@ export default function RateRequests() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-[#2c3e50]">
+                  <TableHead className="text-white w-12">Select</TableHead>
                   <TableHead className="text-white">Action</TableHead>
                   <TableHead className="text-white">Rate request No.</TableHead>
                   <TableHead className="text-white">Date</TableHead>
@@ -163,13 +213,25 @@ export default function RateRequests() {
               <TableBody>
                 {rateRequests.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
                       No rate requests found
                     </TableCell>
                   </TableRow>
                 ) : (
                   rateRequests.map((request) => (
-                    <TableRow key={request.id} className="hover:bg-muted/50">
+                    <TableRow
+                      key={request.id}
+                      className={`hover:bg-muted/50 ${selectedRateRequestId === request.id ? 'bg-green-50' : ''}`}
+                    >
+                      <TableCell>
+                        <input
+                          type="radio"
+                          name="rateRequestSelection"
+                          checked={selectedRateRequestId === request.id}
+                          onChange={() => setSelectedRateRequestId(request.id)}
+                          className="h-4 w-4 text-green-600 cursor-pointer"
+                        />
+                      </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
                           <Button
@@ -180,7 +242,21 @@ export default function RateRequests() {
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          {request.status === "Received" && (
+                          {request.requestStatus !== "Received" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 bg-blue-500 hover:bg-blue-600 text-white rounded"
+                              onClick={() => {
+                                setRateRequestToMarkReceived(request);
+                                setShowReceivedConfirm(true);
+                              }}
+                              title="Mark as Received"
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {request.requestStatus === "Received" && (
                             <Button
                               variant="ghost"
                               size="icon"
@@ -519,6 +595,30 @@ export default function RateRequests() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Mark as Received Confirmation Modal */}
+      <AlertDialog open={showReceivedConfirm} onOpenChange={setShowReceivedConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark Rate Request as Received?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to mark rate request "{rateRequestToMarkReceived?.rateRequestNo}" as received?
+              This will enable the option to convert it to a quotation.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={updateMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleMarkAsReceived}
+              disabled={updateMutation.isPending}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {updateMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Yes, Mark as Received
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }

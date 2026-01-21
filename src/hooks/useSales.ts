@@ -6,7 +6,9 @@ import {
   CreateLeadRequest,
   UpdateLeadRequest,
   CreateRateRequestRequest,
+  UpdateRateRequestRequest,
   CreateQuotationRequest,
+  UpdateQuotationRequest,
   LeadStatus,
   RateRequestStatus,
   QuotationStatus,
@@ -129,6 +131,27 @@ export function useCreateRateRequest() {
   });
 }
 
+export function useUpdateRateRequest() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: UpdateRateRequestRequest }) => {
+      const response = await rateRequestApi.update(id, data);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rateRequests'] });
+      toast.success('Rate request updated successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update rate request');
+    },
+  });
+}
+
 // Quotations
 export function useQuotations(params?: {
   pageNumber?: number;
@@ -181,5 +204,41 @@ export function useCreateQuotation() {
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to create quotation');
     },
+  });
+}
+
+export function useUpdateQuotation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: UpdateQuotationRequest }) => {
+      const response = await quotationApi.update(id, data);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quotations'] });
+      toast.success('Quotation updated successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update quotation');
+    },
+  });
+}
+
+// Rate Request for Conversion
+export function useRateRequestForConversion(id: number) {
+  return useQuery({
+    queryKey: ['rateRequests', id, 'forConversion'],
+    queryFn: async () => {
+      const response = await rateRequestApi.getForConversion(id);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+    enabled: id > 0,
   });
 }
