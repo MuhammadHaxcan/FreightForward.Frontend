@@ -18,28 +18,46 @@ import {
 import { DateInput } from "@/components/ui/date-input";
 import { format } from "date-fns";
 import { useExpenseTypesByDirection } from "@/hooks/useSettings";
+import { Expense as ApiExpense, Bank } from "@/services/api";
+import { Loader2 } from "lucide-react";
 
-interface Expense {
-  id: string;
-  date: string;
-  paymentType: string;
-  paymentMode: string;
-  category: string;
-  bank: string;
-  description: string;
-  receipt: string;
-  currency: string;
-  amount: number;
-  chequeNumber?: string;
-  chequeDate?: string;
-}
+// Map PaymentMode enum values to display labels
+const paymentModeLabels: Record<string, string> = {
+  "Cash": "CASH",
+  "Cheque": "CHEQUE",
+  "BankWire": "BANK WIRE",
+  "BankTransfer": "BANK TRANSFER",
+  "Card": "CARD",
+};
+
+// Map display labels back to enum values
+const paymentModeToEnum: Record<string, string> = {
+  "CASH": "Cash",
+  "CHEQUE": "Cheque",
+  "BANK WIRE": "BankWire",
+  "BANK TRANSFER": "BankTransfer",
+  "CARD": "Card",
+};
 
 interface ExpenseModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (expense: Omit<Expense, "id">) => void;
-  expense: Expense | null;
-  banks: string[];
+  onSubmit: (expense: {
+    date: string;
+    paymentType: string;
+    paymentMode: string;
+    category: string;
+    bankId?: number;
+    description: string;
+    receipt: string;
+    currency: string;
+    amount: number;
+    chequeNumber?: string;
+    chequeDate?: string;
+  }) => void;
+  expense: ApiExpense | null;
+  banks: Bank[];
+  isSubmitting?: boolean;
 }
 
 const paymentTypes = ["Inwards", "Outwards"] as const;
@@ -52,13 +70,14 @@ export function ExpenseModal({
   onSubmit,
   expense,
   banks,
+  isSubmitting = false,
 }: ExpenseModalProps) {
   const [formData, setFormData] = useState({
     date: format(new Date(), "yyyy-MM-dd"),
     paymentType: "" as "" | "Inwards" | "Outwards",
     paymentMode: "",
     category: "",
-    bank: "",
+    bankId: undefined as number | undefined,
     description: "",
     receipt: "---",
     currency: "AED",
@@ -77,14 +96,16 @@ export function ExpenseModal({
 
   useEffect(() => {
     if (expense) {
+      // Find bankId from bank name if not available
+      const bankId = expense.bankId || banks.find(b => b.bankName === expense.bankName)?.id;
       setFormData({
-        date: expense.date,
+        date: expense.expenseDate,
         paymentType: expense.paymentType as "" | "Inwards" | "Outwards",
-        paymentMode: expense.paymentMode,
+        paymentMode: paymentModeLabels[expense.paymentMode] || expense.paymentMode,
         category: expense.category,
-        bank: expense.bank,
-        description: expense.description,
-        receipt: expense.receipt,
+        bankId: bankId,
+        description: expense.description || "",
+        receipt: expense.receiptRef || "---",
         currency: expense.currency,
         amount: expense.amount,
         chequeNumber: expense.chequeNumber || "",
@@ -96,7 +117,7 @@ export function ExpenseModal({
         paymentType: "",
         paymentMode: "",
         category: "",
-        bank: "",
+        bankId: undefined,
         description: "",
         receipt: "---",
         currency: "AED",
@@ -105,7 +126,7 @@ export function ExpenseModal({
         chequeDate: "",
       });
     }
-  }, [expense, isOpen]);
+  }, [expense, isOpen, banks]);
 
   const isChequeSelected = formData.paymentMode === "CHEQUE";
 
@@ -114,10 +135,32 @@ export function ExpenseModal({
     setFormData({ ...formData, paymentType: value, category: "" });
   };
 
+  const handleBankChange = (value: string) => {
+    const bankId = value ? parseInt(value, 10) : undefined;
+    setFormData({ ...formData, bankId });
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    onSubmit({
+      date: formData.date,
+      paymentType: formData.paymentType,
+      paymentMode: formData.paymentMode,
+      category: formData.category,
+      bankId: formData.bankId,
+      description: formData.description,
+      receipt: formData.receipt,
+      currency: formData.currency,
+      amount: formData.amount,
+      chequeNumber: formData.chequeNumber || undefined,
+      chequeDate: formData.chequeDate || undefined,
+    });
   };
+
+  // Get selected bank name for display
+  const selectedBankName = formData.bankId
+    ? banks.find(b => b.id === formData.bankId)?.bankName
+    : "";
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -234,15 +277,17 @@ export function ExpenseModal({
             <div>
               <label className="text-sm font-medium mb-1 block">Bank</label>
               <Select
-                value={formData.bank}
-                onValueChange={(value) => setFormData({ ...formData, bank: value })}
+                value={formData.bankId?.toString() || ""}
+                onValueChange={handleBankChange}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select Bank" />
+                  <SelectValue placeholder="Select Bank">
+                    {selectedBankName || "Select Bank"}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {banks.map((bank) => (
-                    <SelectItem key={bank} value={bank}>{bank}</SelectItem>
+                    <SelectItem key={bank.id} value={bank.id.toString()}>{bank.bankName}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -278,7 +323,8 @@ export function ExpenseModal({
           )}
 
           <div className="flex justify-end gap-2 pt-4">
-            <Button type="submit" className="bg-primary hover:bg-primary/90">
+            <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Submit
             </Button>
             <Button type="button" variant="ghost" onClick={onClose}>

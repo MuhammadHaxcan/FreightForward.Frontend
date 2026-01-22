@@ -92,9 +92,14 @@ export default function InvoiceView() {
     return `${currency} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  // Calculate totals
-  const subTotal = invoice.subTotal || invoice.items?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
-  const totalTax = invoice.totalTax || invoice.items?.reduce((sum, item) => sum + (item.taxAmount || 0), 0) || 0;
+  // Deduplicate items by id to handle any existing duplicate records in database
+  const uniqueItems = (invoice.items || []).filter((item, index, self) =>
+    index === self.findIndex(i => i.id === item.id)
+  );
+
+  // Calculate totals using unique items
+  const subTotal = invoice.subTotal || uniqueItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+  const totalTax = invoice.totalTax || uniqueItems.reduce((sum, item) => sum + (item.taxAmount || 0), 0);
   const total = invoice.total || subTotal + totalTax;
 
   return (
@@ -160,8 +165,8 @@ export default function InvoiceView() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(invoice.items || []).map((item, index) => (
-                  <TableRow key={item.id || index}>
+                {uniqueItems.map((item) => (
+                  <TableRow key={item.id}>
                     <TableCell className="text-blue-600">{item.chargeDetails}</TableCell>
                     <TableCell className="text-center">{(item.quantity ?? 0).toFixed(0)}</TableCell>
                     <TableCell className="text-center">{item.currency}</TableCell>
@@ -171,7 +176,7 @@ export default function InvoiceView() {
                     <TableCell className="text-right">{(item.amount ?? 0).toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
-                {invoice.items?.length === 0 && (
+                {uniqueItems.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
                       No charges found

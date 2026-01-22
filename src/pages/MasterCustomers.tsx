@@ -51,7 +51,7 @@ const MasterCustomers = () => {
     if (customer.masterType === "Debtors") {
       navigate(`/master-customers/${customer.id}/edit`);
     } else if (customer.masterType === "Creditors") {
-      navigate(`/master-customers/${customer.id}/creditor/edit`);
+      navigate(`/master-customers/${customer.id}/edit`);
     } else if (customer.masterType === "Neutral") {
       navigate(`/master-customers/${customer.id}/neutral/edit`);
     } else {
@@ -65,7 +65,7 @@ const MasterCustomers = () => {
     if (customer.masterType === "Debtors") {
       navigate(`/master-customers/${customer.id}/edit?mode=view`);
     } else if (customer.masterType === "Creditors") {
-      navigate(`/master-customers/${customer.id}/creditor/edit?mode=view`);
+      navigate(`/master-customers/${customer.id}/edit?mode=view`);
     } else if (customer.masterType === "Neutral") {
       navigate(`/master-customers/${customer.id}/neutral/edit?mode=view`);
     }

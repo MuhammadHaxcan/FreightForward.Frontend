@@ -9,6 +9,7 @@ import { shipmentApi as _shipmentApi, fileApi as _fileApi } from './shipment';
 import { settingsApi as _settingsApi } from './settings';
 import { invoiceApi as _invoiceApi, receiptApi as _receiptApi } from './invoice';
 import { costSheetApi as _costSheetApi } from './costSheet';
+import { expenseApi as _expenseApi } from './expense';
 
 // Base types and utilities
 export { fetchApi, type PaginatedList, type ApiResponse, type MasterType, type Currency, type PaymentStatus } from './base';
@@ -21,23 +22,27 @@ export { companyApi, type Company, type CreateCompanyRequest, type UpdateCompany
 
 // Customer
 export {
-  customerApi,
-  type CustomerCategory,
-  type CustomerCategoryInfo,
-  type Customer,
-  type CustomerDetail,
-  type CustomerContact,
-  type CustomerAccountDetail,
-  type Invoice,
-  type Receipt,
-  type CreditNote,
-  type CreditNoteDetail,
-  type AccountReceivable,
-  type CreateCustomerRequest,
-  type NextCustomerCodes,
-  type UpdateCustomerRequest,
-  type CreateCustomerContactRequest,
-  type CreateCreditNoteRequest,
+    customerApi,
+    type CustomerCategory,
+    type CustomerCategoryInfo,
+    type Customer,
+    type CustomerDetail,
+    type CustomerContact,
+    type CustomerAccountDetail,
+    type InvoiceReceipt,
+    type Invoice,
+    type Receipt,
+    type CreditNote,
+    type CreditNoteDetail,
+    type AccountReceivable,
+    type AccountPayable,
+    type StatementEntry,
+    type CustomerStatement,
+    type CreateCustomerRequest,
+    type NextCustomerCodes,
+    type UpdateCustomerRequest,
+    type CreateCustomerContactRequest,
+    type CreateCreditNoteRequest,
 } from './customer';
 
 // Sales
@@ -167,6 +172,15 @@ export {
   type CostSheetPurchaseInvoiceDto,
 } from './costSheet';
 
+// Expense
+export {
+  expenseApi,
+  type ExpensePaymentType,
+  type Expense,
+  type CreateExpenseRequest,
+  type UpdateExpenseRequest,
+} from './expense';
+
 // Export combined API object for convenience
 export const api = {
   banks: _bankApi,
@@ -180,6 +194,7 @@ export const api = {
   receipts: _receiptApi,
   settings: _settingsApi,
   costSheet: _costSheetApi,
+  expenses: _expenseApi,
 };
 
 export default api;

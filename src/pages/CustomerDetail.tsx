@@ -12,7 +12,9 @@ import { ArrowLeft, Plus, ChevronDown, Check, CalendarIcon, Pencil, Trash2 } fro
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { cn, formatDate } from "@/lib/utils";
-import { customerApi, settingsApi, CustomerCategoryType, Currency, Invoice as ApiInvoice, AccountReceivable as ApiAccountReceivable, PaymentStatus } from "@/services/api";
+import { customerApi, settingsApi, CustomerCategoryType, Currency, Invoice as ApiInvoice, AccountReceivable as ApiAccountReceivable, AccountPayable as ApiAccountPayable, PaymentStatus, Receipt as ApiReceipt, CustomerStatement } from "@/services/api";
+import { getPaymentVouchers, PaymentVoucher } from "@/services/api/payment";
+import { invoiceApi, AccountPurchaseInvoice } from "@/services/api/invoice";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
@@ -31,17 +33,9 @@ interface Contact {
   enableRateRequest: boolean;
 }
 
-interface Receipt {
-  id: number;
-  date: string;
-  receiptNo: string;
-  type: string;
-  amount: string;
-  narration: string;
-}
-
 // Invoice interface is imported from API as ApiInvoice
 // AccountReceivable interface is imported from API as ApiAccountReceivable
+// Receipt interface is imported from API as ApiReceipt
 
 interface CreditNote {
   id: number;
@@ -52,31 +46,42 @@ interface CreditNote {
   status: string;
 }
 
-interface StatementEntry {
-  date: string;
-  invoiceNo: string;
-  description: string;
-  jobNo: string;
-  blAwbNo: string;
-  debit: string;
-  credit: string;
-  balance: string;
-  remarks: string;
-}
+// StatementEntry imported from API as part of CustomerStatement
 
 const countries = ["United Arab Emirates", "Singapore", "Pakistan", "Taiwan", "China", "Ethiopia", "India", "USA"];
 const currencies: Currency[] = ["AED", "USD", "SGD", "PKR", "CNY", "EUR"];
 
-const tabs = [
+// Base tabs for all customer types
+const baseTabs = [
   { id: "profile", label: "Profile" },
   { id: "contacts", label: "Contacts" },
   { id: "account-details", label: "Account Details" },
+];
+
+// Tabs specific to Debtors
+const debtorTabs = [
   { id: "receipt", label: "Receipt" },
   { id: "invoices", label: "Invoices" },
   { id: "account-receivable", label: "Account Receivable" },
   { id: "credit-notes", label: "Credit Notes" },
   { id: "statement-account", label: "Statement Account" },
 ];
+
+// Tabs specific to Creditors
+const creditorTabs = [
+  { id: "payment-vouchers", label: "Payment Vouchers" },
+  { id: "purchase-invoices", label: "Purchase Invoices" },
+  { id: "account-payable", label: "Account Payable" },
+];
+
+// Function to get tabs based on master type
+const getTabsForMasterType = (masterType: string) => {
+  if (masterType === "Creditors") {
+    return [...baseTabs, ...creditorTabs];
+  }
+  // Debtors and Neutral get debtor tabs
+  return [...baseTabs, ...debtorTabs];
+};
 
 const CustomerDetail = () => {
   const { id } = useParams();
@@ -110,10 +115,54 @@ const CustomerDetail = () => {
   const [arTotalCount, setArTotalCount] = useState(0);
   const [arTotalPages, setArTotalPages] = useState(0);
 
+  // Account Payables state (for Creditors)
+  const [accountPayables, setAccountPayables] = useState<ApiAccountPayable[]>([]);
+  const [apLoading, setApLoading] = useState(false);
+  const [apPageNumber, setApPageNumber] = useState(1);
+  const [apPageSize, setApPageSize] = useState(10);
+  const [apTotalCount, setApTotalCount] = useState(0);
+  const [apTotalPages, setApTotalPages] = useState(0);
+
+  // Payment Vouchers state (for Creditors)
+  const [paymentVouchers, setPaymentVouchers] = useState<PaymentVoucher[]>([]);
+  const [pvLoading, setPvLoading] = useState(false);
+  const [pvPageNumber, setPvPageNumber] = useState(1);
+  const [pvPageSize, setPvPageSize] = useState(10);
+  const [pvTotalCount, setPvTotalCount] = useState(0);
+  const [pvTotalPages, setPvTotalPages] = useState(0);
+
+  // Purchase Invoices state (for Creditors)
+  const [purchaseInvoices, setPurchaseInvoices] = useState<AccountPurchaseInvoice[]>([]);
+  const [piLoading, setPiLoading] = useState(false);
+  const [piPageNumber, setPiPageNumber] = useState(1);
+  const [piPageSize, setPiPageSize] = useState(10);
+  const [piTotalCount, setPiTotalCount] = useState(0);
+  const [piTotalPages, setPiTotalPages] = useState(0);
+
+  // Receipts state
+  const [receipts, setReceipts] = useState<ApiReceipt[]>([]);
+  const [receiptsLoading, setReceiptsLoading] = useState(false);
+  const [receiptsPageNumber, setReceiptsPageNumber] = useState(1);
+  const [receiptsPageSize, setReceiptsPageSize] = useState(10);
+  const [receiptsTotalCount, setReceiptsTotalCount] = useState(0);
+  const [receiptsTotalPages, setReceiptsTotalPages] = useState(0);
+
+  // Statement of Account state
+  const [statementData, setStatementData] = useState<CustomerStatement | null>(null);
+  const [statementLoading, setStatementLoading] = useState(false);
+  const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
+    from: new Date(2020, 9, 2),
+    to: new Date()
+  });
+
+  // Contacts list
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [contactForm, setContactForm] = useState<Partial<Contact>>({});
+
   // Profile form state
   const [profileData, setProfileData] = useState({
     code: "",
-    masterType: "Debtors" as const,
+    masterType: "Debtors" as "Debtors" | "Creditors" | "Neutral",
     categoryIds: [] as number[],
     name: "",
     city: "",
@@ -147,7 +196,7 @@ const CustomerDetail = () => {
             const customer = customerResponse.data;
             setProfileData({
               code: customer.code,
-              masterType: "Debtors",
+              masterType: customer.masterType as "Debtors" | "Creditors" | "Neutral",
               categoryIds: customer.categories?.map(c => c.id) || [],
               name: customer.name,
               city: customer.city || "",
@@ -260,6 +309,155 @@ const CustomerDetail = () => {
       fetchAccountReceivables();
     }
   }, [activeTab, id, arPageNumber, arPageSize]);
+
+  // Fetch receipts when tab is active
+  const fetchReceipts = async () => {
+    if (!id) return;
+    setReceiptsLoading(true);
+    try {
+      const response = await customerApi.getReceipts(parseInt(id), {
+        pageNumber: receiptsPageNumber,
+        pageSize: receiptsPageSize
+      });
+      if (response.data) {
+        setReceipts(response.data.items);
+        setReceiptsTotalCount(response.data.totalCount);
+        setReceiptsTotalPages(response.data.totalPages);
+      }
+    } catch (error) {
+      console.error("Error fetching receipts:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load receipts",
+        variant: "destructive",
+      });
+    } finally {
+      setReceiptsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'receipt' && id) {
+      fetchReceipts();
+    }
+  }, [activeTab, id, receiptsPageNumber, receiptsPageSize]);
+
+  // Fetch account payables when tab is active (for Creditors)
+  const fetchAccountPayables = async () => {
+    if (!id) return;
+    setApLoading(true);
+    try {
+      const response = await customerApi.getAccountPayables(parseInt(id), {
+        pageNumber: apPageNumber,
+        pageSize: apPageSize
+      });
+      if (response.data) {
+        setAccountPayables(response.data.items);
+        setApTotalCount(response.data.totalCount);
+        setApTotalPages(response.data.totalPages);
+      }
+    } catch (error) {
+      console.error("Error fetching account payables:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load account payables",
+        variant: "destructive",
+      });
+    } finally {
+      setApLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'account-payable' && id) {
+      fetchAccountPayables();
+    }
+  }, [activeTab, id, apPageNumber, apPageSize]);
+
+  // Fetch payment vouchers when tab is active (for Creditors)
+  const fetchPaymentVouchers = async () => {
+    if (!id) return;
+    setPvLoading(true);
+    try {
+      const response = await getPaymentVouchers({
+        vendorId: parseInt(id),
+        pageNumber: pvPageNumber,
+        pageSize: pvPageSize
+      });
+      if (response.data) {
+        setPaymentVouchers(response.data.items);
+        setPvTotalCount(response.data.totalCount);
+        setPvTotalPages(response.data.totalPages);
+      }
+    } catch (error) {
+      console.error("Error fetching payment vouchers:", error);
+    } finally {
+      setPvLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "payment-vouchers" && id && profileData.masterType === "Creditors") {
+      fetchPaymentVouchers();
+    }
+  }, [activeTab, id, pvPageNumber, pvPageSize, profileData.masterType]);
+
+  // Fetch purchase invoices when tab is active (for Creditors)
+  const fetchPurchaseInvoices = async () => {
+    if (!id) return;
+    setPiLoading(true);
+    try {
+      const response = await invoiceApi.getAllPurchaseInvoices({
+        vendorId: parseInt(id),
+        pageNumber: piPageNumber,
+        pageSize: piPageSize
+      });
+      if (response.data) {
+        setPurchaseInvoices(response.data.items);
+        setPiTotalCount(response.data.totalCount);
+        setPiTotalPages(response.data.totalPages);
+      }
+    } catch (error) {
+      console.error("Error fetching purchase invoices:", error);
+    } finally {
+      setPiLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "purchase-invoices" && id && profileData.masterType === "Creditors") {
+      fetchPurchaseInvoices();
+    }
+  }, [activeTab, id, piPageNumber, piPageSize, profileData.masterType]);
+
+  // Fetch statement when tab is active
+  const fetchStatement = async () => {
+    if (!id) return;
+    setStatementLoading(true);
+    try {
+      const fromDateStr = dateRange.from.toISOString().split('T')[0];
+      const toDateStr = dateRange.to.toISOString().split('T')[0];
+      const response = await customerApi.getStatement(parseInt(id), fromDateStr, toDateStr);
+      if (response.data) {
+        setStatementData(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching statement:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load statement",
+        variant: "destructive",
+      });
+    } finally {
+      setStatementLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'statement-account' && id) {
+      fetchStatement();
+    }
+  }, [activeTab, id, dateRange]);
 
   // Helper function to get payment status display and styling
   const getPaymentStatusDisplay = (status: PaymentStatus) => {
@@ -379,28 +577,8 @@ const CustomerDetail = () => {
     bcc: "",
   });
 
-  // Contacts list
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [contactForm, setContactForm] = useState<Partial<Contact>>({});
-
-  // Receipts
-  const [receipts] = useState<Receipt[]>([
-    { id: 1, date: "27-11-2025", receiptNo: "RVAE25114", type: "Bank", amount: "AED 2,313.60", narration: "AMOUNT ONLINE RECEIVED FOR AED 2,320/- IN EIB FROM AL ALAMAA FOR INV# INV251762." }
-  ]);
-
   // Credit Notes
   const [creditNotes] = useState<CreditNote[]>([]);
-
-  // Statement of Account
-  const [statementEntries] = useState<StatementEntry[]>([
-    { date: "19-11-2025", invoiceNo: "INVAE251762", description: "", jobNo: "25UAE1582", blAwbNo: "LLL1BL25A1361SDXB", debit: "2,313.60", credit: "0.00", balance: "0.00", remarks: "" },
-    { date: "27-11-2025", invoiceNo: "", description: "AMOUNT ONLINE RECEIVED FOR AED 2,320/- IN EIB FROM AL ALAMAA FOR INV# INV251762.", jobNo: "", blAwbNo: "", debit: "0.00", credit: "2,313.60", balance: "0.00", remarks: "AMOUNT ONLINE RECEIVED FOR AED 2,320/- IN EIB FROM AL ALAMAA FOR INV# INV251762." }
-  ]);
-
-  const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
-    from: new Date(2020, 9, 2),
-    to: new Date(2025, 11, 25)
-  });
 
   // Opening Balance form
   const [openingBalanceForm, setOpeningBalanceForm] = useState({
@@ -488,10 +666,11 @@ const CustomerDetail = () => {
         </div>
         <div className="space-y-2">
           <Label className="text-sm">Master Type</Label>
-          <Select value={profileData.masterType} onValueChange={v => setProfileData({...profileData, masterType: v as 'Debtors'})} disabled={isViewMode}>
+          <Select value={profileData.masterType} onValueChange={v => setProfileData({...profileData, masterType: v as "Debtors" | "Creditors" | "Neutral"})} disabled={isViewMode}>
             <SelectTrigger className="bg-muted/50"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="Debtors">Debtors</SelectItem>
+              <SelectItem value="Creditors">Creditors</SelectItem>
               <SelectItem value="Neutral">Neutral</SelectItem>
             </SelectContent>
           </Select>
@@ -751,59 +930,116 @@ const CustomerDetail = () => {
     </div>
   );
 
-  const renderReceiptTab = () => (
-    <div className="space-y-4">
-      <h2 className="text-xl font-semibold text-primary">Receipt Voucher</h2>
-      
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Show:</span>
-          <Select defaultValue="10">
-            <SelectTrigger className="w-[70px] h-8"><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="10">10</SelectItem></SelectContent>
-          </Select>
-          <span className="text-sm text-muted-foreground">entries</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Search:</span>
-          <Input className="w-[200px] h-8" />
-        </div>
-      </div>
+  const renderReceiptTab = () => {
+    const startEntry = receiptsTotalCount > 0 ? (receiptsPageNumber - 1) * receiptsPageSize + 1 : 0;
+    const endEntry = Math.min(receiptsPageNumber * receiptsPageSize, receiptsTotalCount);
 
-      <div className="bg-card rounded-lg border border-border overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="bg-table-header text-table-header-foreground">
-              <th className="px-4 py-3 text-left text-sm font-semibold">Date</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Receipt No</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Type</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Amount</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Narration</th>
-            </tr>
-          </thead>
-          <tbody>
-            {receipts.map((r, i) => (
-              <tr key={r.id} className={`border-b border-border ${i % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
-                <td className="px-4 py-3 text-sm">{r.date}</td>
-                <td className="px-4 py-3 text-sm text-primary">{r.receiptNo}</td>
-                <td className="px-4 py-3 text-sm">{r.type}</td>
-                <td className="px-4 py-3 text-sm">{r.amount}</td>
-                <td className="px-4 py-3 text-sm">{r.narration}</td>
+    return (
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-primary">Receipt Voucher</h2>
+
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Show:</span>
+            <Select value={receiptsPageSize.toString()} onValueChange={(v) => { setReceiptsPageSize(parseInt(v)); setReceiptsPageNumber(1); }}>
+              <SelectTrigger className="w-[70px] h-8"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-muted-foreground">entries</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Search:</span>
+            <Input className="w-[200px] h-8" />
+          </div>
+        </div>
+
+        <div className="bg-card rounded-lg border border-border overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-table-header text-table-header-foreground">
+                <th className="px-4 py-3 text-left text-sm font-semibold">Date</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Receipt No</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Type</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Amount</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Narration</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">Showing 1 to 1 of 1 entries</p>
-        <div className="flex items-center gap-1">
-          <Button variant="outline" size="sm">Previous</Button>
-          <Button className="btn-success" size="sm">1</Button>
-          <Button variant="outline" size="sm">Next</Button>
+            </thead>
+            <tbody>
+              {receiptsLoading ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">Loading...</td>
+                </tr>
+              ) : receipts.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">No receipts found</td>
+                </tr>
+              ) : (
+                receipts.map((r, i) => (
+                  <tr key={r.id} className={`border-b border-border ${i % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
+                    <td className="px-4 py-3 text-sm">{formatDate(r.receiptDate)}</td>
+                    <td className="px-4 py-3 text-sm text-primary">{r.receiptNo}</td>
+                    <td className="px-4 py-3 text-sm">{r.type || "Bank"}</td>
+                    <td className="px-4 py-3 text-sm">{r.currency} {r.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td className="px-4 py-3 text-sm">{r.narration || "-"}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Showing {startEntry} to {endEntry} of {receiptsTotalCount} entries
+          </p>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setReceiptsPageNumber(p => Math.max(1, p - 1))}
+              disabled={receiptsPageNumber === 1}
+            >
+              Previous
+            </Button>
+            {Array.from({ length: Math.min(5, receiptsTotalPages) }, (_, i) => {
+              let pageNum: number;
+              if (receiptsTotalPages <= 5) {
+                pageNum = i + 1;
+              } else if (receiptsPageNumber <= 3) {
+                pageNum = i + 1;
+              } else if (receiptsPageNumber >= receiptsTotalPages - 2) {
+                pageNum = receiptsTotalPages - 4 + i;
+              } else {
+                pageNum = receiptsPageNumber - 2 + i;
+              }
+              return (
+                <Button
+                  key={pageNum}
+                  variant={receiptsPageNumber === pageNum ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setReceiptsPageNumber(pageNum)}
+                  className={receiptsPageNumber === pageNum ? "btn-success" : ""}
+                >
+                  {pageNum}
+                </Button>
+              );
+            })}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setReceiptsPageNumber(p => Math.min(receiptsTotalPages, p + 1))}
+              disabled={receiptsPageNumber === receiptsTotalPages || receiptsTotalPages === 0}
+            >
+              Next
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderInvoicesTab = () => {
     const startEntry = invoicesTotalCount > 0 ? (invoicesPageNumber - 1) * invoicesPageSize + 1 : 0;
@@ -848,31 +1084,62 @@ const CustomerDetail = () => {
                 <th className="px-4 py-3 text-left text-sm font-semibold">Job No.</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold">HBL No.</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold">Amount</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Paid</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Balance</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold">Payment Status</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Status</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Receipts</th>
               </tr>
             </thead>
             <tbody>
               {invoicesLoading ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">Loading...</td>
+                  <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">Loading...</td>
                 </tr>
               ) : invoices.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">No invoices found</td>
+                  <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">No invoices found</td>
                 </tr>
               ) : (
-                invoices.map((inv, i) => (
-                  <tr key={inv.id} className={`border-b border-border ${i % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
-                    <td className="px-4 py-3 text-sm">{formatDate(inv.invoiceDate)}</td>
-                    <td className="px-4 py-3 text-sm text-primary">{inv.invoiceNo}</td>
-                    <td className="px-4 py-3 text-sm">{inv.jobNo || "-"}</td>
-                    <td className="px-4 py-3 text-sm">{inv.hblNo || "-"}</td>
-                    <td className="px-4 py-3 text-sm">{inv.currency} {inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    <td className="px-4 py-3 text-sm">{inv.paymentStatus}</td>
-                    <td className="px-4 py-3 text-sm">{inv.status || "Active"}</td>
-                  </tr>
-                ))
+                invoices.map((inv, i) => {
+                  const statusDisplay = getPaymentStatusDisplay(inv.paymentStatus);
+                  const hasBalance = (inv.balanceAmount ?? 0) > 0;
+                  const balanceColorClass = hasBalance
+                    ? "bg-green-100 text-green-800 font-medium px-2 py-1 rounded"
+                    : "text-muted-foreground";
+                  return (
+                    <tr key={inv.id} className={`border-b border-border ${i % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
+                      <td className="px-4 py-3 text-sm">{formatDate(inv.invoiceDate)}</td>
+                      <td className="px-4 py-3 text-sm text-primary">{inv.invoiceNo}</td>
+                      <td className="px-4 py-3 text-sm">{inv.jobNo || "-"}</td>
+                      <td className="px-4 py-3 text-sm">{inv.hblNo || "-"}</td>
+                      <td className="px-4 py-3 text-sm">{inv.currency} {inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className="px-4 py-3 text-sm">{inv.currency} {(inv.paidAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className={balanceColorClass}>
+                          {inv.currency} {(inv.balanceAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${statusDisplay.className}`}>
+                          {statusDisplay.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {inv.receipts && inv.receipts.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {inv.receipts.map((r) => (
+                              <span key={r.receiptId} className="text-primary text-xs underline cursor-pointer" title={`${r.currency} ${r.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })} on ${formatDate(r.receiptDate)}`}>
+                                {r.receiptNo}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -981,14 +1248,22 @@ const CustomerDetail = () => {
               ) : (
                 accountReceivables.map((ar, i) => {
                   const statusDisplay = getPaymentStatusDisplay(ar.paymentStatus);
+                  const hasBalance = ar.balance > 0;
+                  const balanceColorClass = hasBalance
+                    ? "bg-green-100 text-green-800 font-medium px-2 py-1 rounded"
+                    : "text-muted-foreground";
                   return (
                     <tr key={ar.id} className={`border-b border-border ${i % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
                       <td className="px-4 py-3 text-sm">{formatDate(ar.invoiceDate)}</td>
                       <td className="px-4 py-3 text-sm text-primary">{ar.invoiceNo}</td>
                       <td className="px-4 py-3 text-sm">{ar.customerRef || "-"}</td>
                       <td className="px-4 py-3 text-sm">{ar.jobHblNo || "-"}</td>
-                      <td className="px-4 py-3 text-sm">{ar.debit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                      <td className="px-4 py-3 text-sm">{ar.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className="px-4 py-3 text-sm">{ar.currency} {ar.debit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className={balanceColorClass}>
+                          {ar.currency} {ar.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 text-sm">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${statusDisplay.className}`}>
                           {statusDisplay.label}
@@ -1057,6 +1332,144 @@ const CustomerDetail = () => {
     );
   };
 
+  const renderAccountPayableTab = () => {
+    const startEntry = apTotalCount > 0 ? (apPageNumber - 1) * apPageSize + 1 : 0;
+    const endEntry = Math.min(apPageNumber * apPageSize, apTotalCount);
+
+    return (
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-primary">Account Payable (Unpaid Purchase Invoices)</h2>
+
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Show:</span>
+            <Select value={apPageSize.toString()} onValueChange={(v) => { setApPageSize(parseInt(v)); setApPageNumber(1); }}>
+              <SelectTrigger className="w-[70px] h-8"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="text-sm text-muted-foreground">entries</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Search:</span>
+            <Input className="w-[200px] h-8" />
+          </div>
+        </div>
+
+        <div className="bg-card rounded-lg border border-border overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-table-header text-table-header-foreground">
+                <th className="px-4 py-3 text-left text-sm font-semibold">Invoice Date</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Purchase Invoice No.</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Vendor Invoice No.</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Job/HBL No.</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Credit</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Balance</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Payment Status</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Status</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Aging</th>
+              </tr>
+            </thead>
+            <tbody>
+              {apLoading ? (
+                <tr>
+                  <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">Loading...</td>
+                </tr>
+              ) : accountPayables.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">No unpaid purchase invoices found</td>
+                </tr>
+              ) : (
+                accountPayables.map((ap, i) => {
+                  const statusDisplay = getPaymentStatusDisplay(ap.paymentStatus);
+                  const hasBalance = ap.balance > 0;
+                  const balanceColorClass = hasBalance
+                    ? "bg-orange-100 text-orange-800 font-medium px-2 py-1 rounded"
+                    : "text-muted-foreground";
+                  return (
+                    <tr key={ap.id} className={`border-b border-border ${i % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
+                      <td className="px-4 py-3 text-sm">{formatDate(ap.invoiceDate)}</td>
+                      <td className="px-4 py-3 text-sm text-primary">{ap.purchaseInvoiceNo}</td>
+                      <td className="px-4 py-3 text-sm">{ap.vendorInvoiceNo || "-"}</td>
+                      <td className="px-4 py-3 text-sm">{ap.jobHblNo || "-"}</td>
+                      <td className="px-4 py-3 text-sm">{ap.currency} {ap.credit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className={balanceColorClass}>
+                          {ap.currency} {ap.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${statusDisplay.className}`}>
+                          {statusDisplay.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm">{ap.status || "Active"}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="bg-primary text-primary-foreground px-2 py-1 rounded text-xs">
+                          {ap.agingDays} Days
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Showing {startEntry} to {endEntry} of {apTotalCount} entries
+          </p>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setApPageNumber(p => Math.max(1, p - 1))}
+              disabled={apPageNumber === 1}
+            >
+              Previous
+            </Button>
+            {Array.from({ length: Math.min(5, apTotalPages) }, (_, i) => {
+              let pageNum: number;
+              if (apTotalPages <= 5) {
+                pageNum = i + 1;
+              } else if (apPageNumber <= 3) {
+                pageNum = i + 1;
+              } else if (apPageNumber >= apTotalPages - 2) {
+                pageNum = apTotalPages - 4 + i;
+              } else {
+                pageNum = apPageNumber - 2 + i;
+              }
+              return (
+                <Button
+                  key={pageNum}
+                  variant={apPageNumber === pageNum ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setApPageNumber(pageNum)}
+                  className={apPageNumber === pageNum ? "btn-success" : ""}
+                >
+                  {pageNum}
+                </Button>
+              );
+            })}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setApPageNumber(p => Math.min(apTotalPages, p + 1))}
+              disabled={apPageNumber === apTotalPages || apTotalPages === 0}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderCreditNotesTab = () => (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -1112,59 +1525,228 @@ const CustomerDetail = () => {
     </div>
   );
 
-  const renderStatementAccountTab = () => (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-primary">Statement of Account</h2>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm">{format(dateRange.from, "MMMM d, yyyy")} - {format(dateRange.to, "MMMM d, yyyy")}</span>
+  const renderStatementAccountTab = () => {
+    const formatAmount = (amount: number) => amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-primary">Statement of Account</h2>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm">{format(dateRange.from, "MMMM d, yyyy")} - {format(dateRange.to, "MMMM d, yyyy")}</span>
+            </div>
+            <Button className="btn-success">PRINT</Button>
           </div>
-          <Button className="btn-success">PRINT</Button>
+        </div>
+
+        <div className="bg-card rounded-lg border border-border overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-table-header text-table-header-foreground">
+                <th className="px-4 py-3 text-left text-sm font-semibold">Date</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Invoice No.</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Receipt No.</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Description</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Job No.</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">BL/AWB No.</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Debit</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Credit</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Balance</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Remarks</th>
+              </tr>
+            </thead>
+            <tbody>
+              {statementLoading ? (
+                <tr>
+                  <td colSpan={10} className="px-4 py-8 text-center text-muted-foreground">Loading...</td>
+                </tr>
+              ) : !statementData || statementData.entries.length === 0 ? (
+                <tr>
+                  <td colSpan={10} className="px-4 py-8 text-center text-muted-foreground">No statement entries found</td>
+                </tr>
+              ) : (
+                <>
+                  {statementData.entries.map((entry, i) => (
+                    <tr key={i} className={`border-b border-border ${i % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
+                      <td className="px-4 py-3 text-sm">{formatDate(entry.date)}</td>
+                      <td className="px-4 py-3 text-sm text-primary">{entry.invoiceNo || "-"}</td>
+                      <td className="px-4 py-3 text-sm text-primary">{entry.receiptNo || "-"}</td>
+                      <td className="px-4 py-3 text-sm text-amber-600 max-w-[200px] truncate" title={entry.description}>{entry.description || "-"}</td>
+                      <td className="px-4 py-3 text-sm">{entry.jobNo || "-"}</td>
+                      <td className="px-4 py-3 text-sm">{entry.blAwbNo || "-"}</td>
+                      <td className="px-4 py-3 text-sm">{entry.debit > 0 ? formatAmount(entry.debit) : "-"}</td>
+                      <td className="px-4 py-3 text-sm">{entry.credit > 0 ? formatAmount(entry.credit) : "-"}</td>
+                      <td className="px-4 py-3 text-sm">{formatAmount(entry.balance)}</td>
+                      <td className="px-4 py-3 text-sm max-w-[150px] truncate" title={entry.remarks}>{entry.remarks || "-"}</td>
+                    </tr>
+                  ))}
+                  <tr className="bg-muted/50 font-medium">
+                    <td colSpan={3} className="px-4 py-3 text-sm">Net Outstanding Receivable</td>
+                    <td colSpan={3} className="px-4 py-3 text-sm text-primary">
+                      {statementData.currency} {formatAmount(statementData.netOutstandingReceivable)}
+                    </td>
+                    <td className="px-4 py-3 text-sm">{statementData.currency} {formatAmount(statementData.totalDebit)}</td>
+                    <td className="px-4 py-3 text-sm">{statementData.currency} {formatAmount(statementData.totalCredit)}</td>
+                    <td className="px-4 py-3 text-sm">{statementData.currency} {formatAmount(statementData.netOutstandingReceivable)}</td>
+                    <td></td>
+                  </tr>
+                </>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  const renderPaymentVouchersTab = () => (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <Input placeholder="Search payment vouchers..." className="w-1/3" />
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">Entries:</span>
+          <Select value={pvPageSize.toString()} onValueChange={(v) => { setPvPageSize(parseInt(v)); setPvPageNumber(1); }}>
+            <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="25">25</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
-      <div className="bg-card rounded-lg border border-border overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="bg-table-header text-table-header-foreground">
-              <th className="px-4 py-3 text-left text-sm font-semibold">Date</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Invoice No.</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Description</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Job No.</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">BL/AWB No.</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Debit</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Credit</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Balance</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Remarks</th>
+      <div className="border rounded-lg overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-4 py-3 text-left font-medium">Date</th>
+              <th className="px-4 py-3 text-left font-medium">Payment Voucher No.</th>
+              <th className="px-4 py-3 text-left font-medium">Type</th>
+              <th className="px-4 py-3 text-left font-medium">Purchases</th>
+              <th className="px-4 py-3 text-right font-medium">Amount</th>
+              <th className="px-4 py-3 text-left font-medium">Narration</th>
             </tr>
           </thead>
           <tbody>
-            {statementEntries.map((entry, i) => (
-              <tr key={i} className={`border-b border-border ${i % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
-                <td className="px-4 py-3 text-sm">{entry.date}</td>
-                <td className="px-4 py-3 text-sm text-primary">{entry.invoiceNo}</td>
-                <td className="px-4 py-3 text-sm text-amber-600">{entry.description}</td>
-                <td className="px-4 py-3 text-sm">{entry.jobNo}</td>
-                <td className="px-4 py-3 text-sm">{entry.blAwbNo}</td>
-                <td className="px-4 py-3 text-sm">{entry.debit}</td>
-                <td className="px-4 py-3 text-sm">{entry.credit}</td>
-                <td className="px-4 py-3 text-sm">{entry.balance}</td>
-                <td className="px-4 py-3 text-sm">{entry.remarks}</td>
-              </tr>
-            ))}
-            <tr className="bg-muted/50 font-medium">
-              <td colSpan={3} className="px-4 py-3 text-sm">Net Outstanding Receivable</td>
-              <td colSpan={2} className="px-4 py-3 text-sm text-primary">AED 0.00</td>
-              <td className="px-4 py-3 text-sm">AED 2,313.60</td>
-              <td className="px-4 py-3 text-sm">AED 2,313.60</td>
-              <td className="px-4 py-3 text-sm">AED 0.00</td>
-              <td></td>
-            </tr>
+            {pvLoading ? (
+              <tr><td colSpan={6} className="px-4 py-8 text-center">Loading...</td></tr>
+            ) : paymentVouchers.length === 0 ? (
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">No payment vouchers found</td></tr>
+            ) : (
+              paymentVouchers.map((pv) => (
+                <tr key={pv.id} className="border-t hover:bg-gray-50">
+                  <td className="px-4 py-3">{formatDate(pv.paymentDate)}</td>
+                  <td className="px-4 py-3 font-medium">{pv.paymentNo}</td>
+                  <td className="px-4 py-3">
+                    <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                      {pv.paymentMode}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="text-sm text-gray-600">{pv.purchaseInvoiceCount} invoice(s)</span>
+                  </td>
+                  <td className="px-4 py-3 text-right font-medium">
+                    {pv.currency} {pv.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </td>
+                  <td className="px-4 py-3 text-gray-600 max-w-[200px] truncate">{pv.narration || '-'}</td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      {pvTotalPages > 1 && (
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-gray-500">
+            Showing {((pvPageNumber - 1) * pvPageSize) + 1} to {Math.min(pvPageNumber * pvPageSize, pvTotalCount)} of {pvTotalCount}
+          </span>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={pvPageNumber === 1} onClick={() => setPvPageNumber(p => p - 1)}>Previous</Button>
+            <Button variant="outline" size="sm" disabled={pvPageNumber === pvTotalPages} onClick={() => setPvPageNumber(p => p + 1)}>Next</Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderPurchaseInvoicesTab = () => (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <Input placeholder="Search purchase invoices..." className="w-1/3" />
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">Entries:</span>
+          <Select value={piPageSize.toString()} onValueChange={(v) => { setPiPageSize(parseInt(v)); setPiPageNumber(1); }}>
+            <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="25">25</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="border rounded-lg overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-4 py-3 text-left font-medium">Date</th>
+              <th className="px-4 py-3 text-left font-medium">Purchase No.</th>
+              <th className="px-4 py-3 text-left font-medium">Vendor Inv. No.</th>
+              <th className="px-4 py-3 text-left font-medium">Job No.</th>
+              <th className="px-4 py-3 text-right font-medium">Amount</th>
+              <th className="px-4 py-3 text-left font-medium">Payment Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {piLoading ? (
+              <tr><td colSpan={6} className="px-4 py-8 text-center">Loading...</td></tr>
+            ) : purchaseInvoices.length === 0 ? (
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">No purchase invoices found</td></tr>
+            ) : (
+              purchaseInvoices.map((pi) => (
+                <tr key={pi.id} className="border-t hover:bg-gray-50">
+                  <td className="px-4 py-3">{formatDate(pi.purchaseDate)}</td>
+                  <td className="px-4 py-3 font-medium">{pi.purchaseNo}</td>
+                  <td className="px-4 py-3">{pi.vendorInvoiceNo || '-'}</td>
+                  <td className="px-4 py-3">{pi.jobNo || '-'}</td>
+                  <td className="px-4 py-3 text-right font-medium">
+                    {pi.currency} {pi.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={cn(
+                      "px-2 py-1 text-xs rounded-full",
+                      pi.paymentStatus === "Paid" ? "bg-green-100 text-green-800" :
+                      pi.paymentStatus === "PartiallyPaid" ? "bg-orange-100 text-orange-800" :
+                      "bg-yellow-100 text-yellow-800"
+                    )}>
+                      {pi.paymentStatus === "PartiallyPaid" ? "Partial" : pi.paymentStatus}
+                    </span>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      {piTotalPages > 1 && (
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-gray-500">
+            Showing {((piPageNumber - 1) * piPageSize) + 1} to {Math.min(piPageNumber * piPageSize, piTotalCount)} of {piTotalCount}
+          </span>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" disabled={piPageNumber === 1} onClick={() => setPiPageNumber(p => p - 1)}>Previous</Button>
+            <Button variant="outline" size="sm" disabled={piPageNumber === piTotalPages} onClick={() => setPiPageNumber(p => p + 1)}>Next</Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -1176,6 +1758,9 @@ const CustomerDetail = () => {
       case "receipt": return renderReceiptTab();
       case "invoices": return renderInvoicesTab();
       case "account-receivable": return renderAccountReceivableTab();
+      case "payment-vouchers": return renderPaymentVouchersTab();
+      case "purchase-invoices": return renderPurchaseInvoicesTab();
+      case "account-payable": return renderAccountPayableTab();
       case "credit-notes": return renderCreditNotesTab();
       case "statement-account": return renderStatementAccountTab();
       default: return renderProfileTab();
@@ -1200,9 +1785,9 @@ const CustomerDetail = () => {
           </div>
         </div>
 
-        {/* Horizontal Tabs */}
+        {/* Horizontal Tabs - Dynamic based on customer type */}
         <div className="bg-card border border-border rounded-lg p-1 flex flex-wrap gap-1">
-          {tabs.map(tab => (
+          {getTabsForMasterType(profileData.masterType).map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}

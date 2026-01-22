@@ -543,10 +543,12 @@ const ShipmentDetail = () => {
       return;
     }
 
-    // Check if customer is already added (prevent duplicates)
-    const existingParty = parties.find(p => p.customerId === selectedCustomer.id);
+    // Check if customer is already added with the SAME party type
+    const existingParty = parties.find(
+      p => p.customerId === selectedCustomer.id && p.partyType === selectedPartyType
+    );
     if (existingParty) {
-      toast.error(`${selectedCustomer.name} is already added as ${partyTypeLabels[existingParty.partyType]}`);
+      toast.error(`${selectedCustomer.name} is already added as ${partyTypeLabels[selectedPartyType]}`);
       return;
     }
 

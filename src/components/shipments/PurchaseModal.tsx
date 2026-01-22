@@ -46,12 +46,23 @@ const currencyMap: Record<string, Currency> = {
   default: "AED",
 };
 
+// Helper function to deduplicate parties by customerId
+const deduplicateByCustomerId = (partyList: ShipmentParty[]): ShipmentParty[] => {
+  const seen = new Set<number>();
+  return partyList.filter(p => {
+    if (p.customerId === undefined) return true;
+    if (seen.has(p.customerId)) return false;
+    seen.add(p.customerId);
+    return true;
+  });
+};
+
 export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, chargesDetails, parties, onSave }: PurchaseModalProps) {
   const createPurchaseInvoiceMutation = useCreatePurchaseInvoice();
 
-  // Filter parties to only show Creditors
+  // Filter parties to only show Creditors and deduplicate by customerId
   const creditorParties = useMemo(() =>
-    parties.filter(p => p.masterType === 'Creditors'),
+    deduplicateByCustomerId(parties.filter(p => p.masterType === 'Creditors')),
     [parties]
   );
 
@@ -156,9 +167,12 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
       return;
     }
 
-    // Map selected charges to purchase invoice items
+    // Map selected charges to purchase invoice items and deduplicate by id
     const items: CreatePurchaseInvoiceItemRequest[] = filteredCharges
       .filter(c => formData.selectedCharges.includes(c.id))
+      .filter((charge, index, self) =>
+        index === self.findIndex(c => c.id === charge.id)
+      )
       .map(charge => ({
         shipmentCostingId: charge.id,
         chargeDetails: charge.description || '',

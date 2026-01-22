@@ -547,10 +547,12 @@ const AddShipment = () => {
       toast.error("Please save the shipment first");
       return;
     }
-    // Check if customer is already added
-    const existingParty = parties.find(p => p.customerId === selectedCustomer.id);
+    // Check if customer is already added with the SAME party type
+    const existingParty = parties.find(
+      p => p.customerId === selectedCustomer.id && p.partyType === selectedPartyType
+    );
     if (existingParty) {
-      toast.error(`${selectedCustomer.name} is already added as ${partyTypeLabels[existingParty.partyType]}`);
+      toast.error(`${selectedCustomer.name} is already added as ${partyTypeLabels[selectedPartyType]}`);
       return;
     }
 
@@ -657,16 +659,16 @@ const AddShipment = () => {
           saleExRate: parseFloat(cost.saleExRate) || 1,
           saleFCY: parseFloat(cost.saleFCY) || 0,
           saleLCY: parseFloat(cost.saleLCY) || 0,
-          saleTaxPercentage: 0,
-          saleTaxAmount: 0,
+          saleTaxPercentage: parseFloat(cost.saleTaxPercentage) || 0,
+          saleTaxAmount: parseFloat(cost.saleTaxAmount) || 0,
           costQty: parseFloat(cost.costQty) || 0,
           costUnit: parseFloat(cost.costUnit) || 0,
           costCurrency: (cost.costCurrency as Currency) || 'AED',
           costExRate: parseFloat(cost.costExRate) || 1,
           costFCY: parseFloat(cost.costFCY) || 0,
           costLCY: parseFloat(cost.costLCY) || 0,
-          costTaxPercentage: 0,
-          costTaxAmount: 0,
+          costTaxPercentage: parseFloat(cost.costTaxPercentage) || 0,
+          costTaxAmount: parseFloat(cost.costTaxAmount) || 0,
           unitName: cost.unitName,
           gp: parseFloat(cost.gp) || 0,
           billToCustomerId: cost.billToCustomerId || undefined,
@@ -688,16 +690,16 @@ const AddShipment = () => {
           saleExRate: parseFloat(cost.saleExRate) || 1,
           saleFCY: parseFloat(cost.saleFCY) || 0,
           saleLCY: parseFloat(cost.saleLCY) || 0,
-          saleTaxPercentage: 0,
-          saleTaxAmount: 0,
+          saleTaxPercentage: parseFloat(cost.saleTaxPercentage) || 0,
+          saleTaxAmount: parseFloat(cost.saleTaxAmount) || 0,
           costQty: parseFloat(cost.costQty) || 0,
           costUnit: parseFloat(cost.costUnit) || 0,
           costCurrency: (cost.costCurrency as Currency) || 'AED',
           costExRate: parseFloat(cost.costExRate) || 1,
           costFCY: parseFloat(cost.costFCY) || 0,
           costLCY: parseFloat(cost.costLCY) || 0,
-          costTaxPercentage: 0,
-          costTaxAmount: 0,
+          costTaxPercentage: parseFloat(cost.costTaxPercentage) || 0,
+          costTaxAmount: parseFloat(cost.costTaxAmount) || 0,
           unitName: cost.unitName,
           gp: parseFloat(cost.gp) || 0,
           billToCustomerId: cost.billToCustomerId || undefined,

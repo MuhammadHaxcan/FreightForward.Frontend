@@ -10,7 +10,6 @@ import ShipmentDetail from "./pages/ShipmentDetail";
 import AddShipment from "./pages/AddShipment";
 import MasterCustomers from "./pages/MasterCustomers";
 import CustomerDetail from "./pages/CustomerDetail";
-import CreditorDetail from "./pages/CreditorDetail";
 import NeutralDetail from "./pages/NeutralDetail";
 import AllUsers from "./pages/AllUsers";
 import PermissionRoles from "./pages/PermissionRoles";
@@ -49,7 +48,6 @@ const App = () => (
           <Route path="/shipments/:id/edit" element={<ShipmentDetail />} />
           <Route path="/master-customers" element={<MasterCustomers />} />
           <Route path="/master-customers/:id/edit" element={<CustomerDetail />} />
-          <Route path="/master-customers/:id/creditor/edit" element={<CreditorDetail />} />
           <Route path="/master-customers/:id/neutral/edit" element={<NeutralDetail />} />
           <Route path="/sales/leads" element={<Leads />} />
           <Route path="/sales/rate-requests" element={<RateRequests />} />

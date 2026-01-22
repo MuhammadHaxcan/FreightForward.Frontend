@@ -67,6 +67,14 @@ export interface CustomerAccountDetail {
   bcc?: string;
 }
 
+export interface InvoiceReceipt {
+  receiptId: number;
+  receiptNo: string;
+  receiptDate: string;
+  amount: number;
+  currency: Currency;
+}
+
 export interface Invoice {
   id: number;
   invoiceDate: string;
@@ -77,6 +85,9 @@ export interface Invoice {
   currency: Currency;
   paymentStatus: PaymentStatus;
   status?: string;
+  paidAmount: number;
+  balanceAmount: number;
+  receipts?: InvoiceReceipt[];
 }
 
 export interface Receipt {
@@ -117,11 +128,49 @@ export interface AccountReceivable {
   invoiceNo: string;
   customerRef?: string;
   jobHblNo?: string;
+  currency: Currency;
   debit: number;
   balance: number;
   paymentStatus: PaymentStatus;
   agingDays: number;
   status?: string;
+}
+
+export interface AccountPayable {
+  id: number;
+  invoiceDate: string;
+  purchaseInvoiceNo: string;
+  vendorInvoiceNo?: string;
+  vendorRef?: string;
+  jobHblNo?: string;
+  currency: Currency;
+  credit: number;
+  balance: number;
+  paymentStatus: PaymentStatus;
+  agingDays: number;
+  status?: string;
+}
+
+// Statement of Account types
+export interface StatementEntry {
+  date: string;
+  invoiceNo: string;
+  receiptNo: string;
+  description: string;
+  jobNo: string;
+  blAwbNo: string;
+  debit: number;
+  credit: number;
+  balance: number;
+  remarks: string;
+}
+
+export interface CustomerStatement {
+  entries: StatementEntry[];
+  currency: string;
+  totalDebit: number;
+  totalCredit: number;
+  netOutstandingReceivable: number;
 }
 
 export interface CreateCustomerRequest {
@@ -270,4 +319,23 @@ export const customerApi = {
       `/customers/${customerId}/account-receivables?${query}`
     );
   },
+
+  // Account Payables (for Creditors/Vendors)
+  getAccountPayables: (
+    customerId: number,
+    params?: { pageNumber?: number; pageSize?: number }
+  ) => {
+    const query = new URLSearchParams();
+    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    return fetchApi<PaginatedList<AccountPayable>>(
+      `/customers/${customerId}/account-payables?${query}`
+    );
+  },
+
+  // Statement of Account
+  getStatement: (customerId: number, fromDate: string, toDate: string) =>
+    fetchApi<CustomerStatement>(
+      `/customers/${customerId}/statement?fromDate=${fromDate}&toDate=${toDate}`
+    ),
 };

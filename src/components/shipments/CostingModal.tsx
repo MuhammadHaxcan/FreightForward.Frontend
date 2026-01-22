@@ -59,14 +59,26 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
   });
   const costingUnits = useMemo(() => costingUnitsResponse?.data || [], [costingUnitsResponse?.data]);
 
-  // Filter parties by master type
+  // Helper to deduplicate parties by customerId
+  const deduplicateByCustomerId = (partyList: ShipmentParty[]): ShipmentParty[] => {
+    const seen = new Set<number>();
+    return partyList.filter(p => {
+      if (p.customerId === undefined) return true;
+      if (seen.has(p.customerId)) return false;
+      seen.add(p.customerId);
+      return true;
+    });
+  };
+
+  // Filter parties by master type and deduplicate by customerId
+  // (same customer may appear with different party types)
   const creditorParties = useMemo(() =>
-    parties.filter(p => p.masterType === 'Creditors'),
+    deduplicateByCustomerId(parties.filter(p => p.masterType === 'Creditors')),
     [parties]
   );
 
   const debtorParties = useMemo(() =>
-    parties.filter(p => p.masterType === 'Debtors'),
+    deduplicateByCustomerId(parties.filter(p => p.masterType === 'Debtors')),
     [parties]
   );
 
@@ -129,7 +141,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
         costVendorCustomerId: costing.vendorCustomerId?.toString() || "",
         costReferenceNo: costing.costReferenceNo || "",
         costDate: costing.costDate?.split('T')[0] || getTodayDateOnly(),
-        costTax: "0%",
+        costTax: costing.costTaxPercentage ? `${costing.costTaxPercentage}%` : "0%",
         saleCurrency: costing.saleCurrency || LOCAL_CURRENCY,
         saleExRate: costing.saleExRate?.toString() || "1.000",
         saleNoOfUnit: costing.saleQty?.toString() || "",
@@ -140,7 +152,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
         saleBillToName: costing.billToName || "",
         saleBillToCustomerId: costing.billToCustomerId?.toString() || "",
         saleGP: costing.gp?.toString() || "0.00",
-        saleTax: "0%",
+        saleTax: costing.saleTaxPercentage ? `${costing.saleTaxPercentage}%` : "0%",
       });
     } else if (open && !costing) {
       setFormData(getDefaultFormData());
@@ -312,6 +324,12 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
       ? parseInt(formData.saleBillToCustomerId)
       : (formData.saleBillTo ? parseInt(formData.saleBillTo) : undefined);
 
+    // Parse tax percentages and calculate tax amounts
+    const costTaxPercentage = parseFloat(formData.costTax.replace('%', '')) || 0;
+    const saleTaxPercentage = parseFloat(formData.saleTax.replace('%', '')) || 0;
+    const costLCYValue = parseFloat(formData.costLCYAmount) || 0;
+    const saleLCYValue = parseFloat(formData.saleLCYAmount) || 0;
+
     onSave({
       id: costing?.id || Date.now(),
       description: formData.charge, // The charge name (used as description in backend)
@@ -324,12 +342,16 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
       saleExRate: formData.saleExRate,
       saleFCY: formData.saleFCYAmount,
       saleLCY: formData.saleLCYAmount,
+      saleTaxPercentage: saleTaxPercentage.toString(),
+      saleTaxAmount: ((saleLCYValue * saleTaxPercentage) / 100).toFixed(2),
       costQty: formData.costNoOfUnit || "0.000",
       costUnit: formData.costPerUnit || "0.00",
       costCurrency: formData.costCurrency,
       costExRate: formData.costExRate,
       costFCY: formData.costFCYAmount,
       costLCY: formData.costLCYAmount,
+      costTaxPercentage: costTaxPercentage.toString(),
+      costTaxAmount: ((costLCYValue * costTaxPercentage) / 100).toFixed(2),
       unitId: formData.unitId,
       unitName: formData.unit,
       gp: formData.saleGP,
