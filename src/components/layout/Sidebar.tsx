@@ -66,6 +66,7 @@ const sidebarItems: SidebarItem[] = [
       { title: "Payment Vouchers", path: "/accounts/payment-vouchers" },
       { title: "Daily Expenses", path: "/accounts/daily-expenses" },
       { title: "Cost Sheet", path: "/accounts/cost-sheet" },
+      { title: "VAT Report", path: "/accounts/vat-report" },
     ]
   },
   {

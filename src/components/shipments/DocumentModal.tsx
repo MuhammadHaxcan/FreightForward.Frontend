@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -44,24 +44,7 @@ export function DocumentModal({ open, onOpenChange, onSave }: DocumentModalProps
     originalFileName: "",
   });
 
-  // Load document types when modal opens
-  useEffect(() => {
-    if (open) {
-      loadDocumentTypes();
-      // Reset form when opening
-      setFormData({
-        documentTypeId: null,
-        documentNo: "",
-        docDate: getTodayDateOnly(),
-        remarks: "",
-        file: null,
-        uploadedFileName: "",
-        originalFileName: "",
-      });
-    }
-  }, [open]);
-
-  const loadDocumentTypes = async () => {
+  const loadDocumentTypes = useCallback(async () => {
     try {
       const response = await settingsApi.getAllDocumentTypes();
       if (response.data) {
@@ -77,7 +60,24 @@ export function DocumentModal({ open, onOpenChange, onSave }: DocumentModalProps
         variant: "destructive",
       });
     }
-  };
+  }, [toast]);
+
+  // Load document types when modal opens
+  useEffect(() => {
+    if (open) {
+      loadDocumentTypes();
+      // Reset form when opening
+      setFormData({
+        documentTypeId: null,
+        documentNo: "",
+        docDate: getTodayDateOnly(),
+        remarks: "",
+        file: null,
+        uploadedFileName: "",
+        originalFileName: "",
+      });
+    }
+  }, [open, loadDocumentTypes]);
 
   const handleInputChange = (field: string, value: string | number | null) => {
     setFormData(prev => ({ ...prev, [field]: value }));

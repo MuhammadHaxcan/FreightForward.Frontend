@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { formatDate } from "@/lib/utils";
-import { ArrowLeft, Printer, Download } from "lucide-react";
+import { ArrowLeft, Printer, Download, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -110,11 +110,15 @@ export default function PurchaseInvoiceView() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
+          <Button className="bg-amber-500 hover:bg-amber-600 text-white" onClick={() => navigate(`/accounts/purchase-invoices/${id}/edit`)}>
+            <Edit className="h-4 w-4 mr-2" />
+            Edit
+          </Button>
           <Button className="bg-green-500 hover:bg-green-600 text-white" onClick={handlePrint}>
             <Printer className="h-4 w-4 mr-2" />
             Print
           </Button>
-          <Button className="bg-amber-500 hover:bg-amber-600 text-white" onClick={handleDownload}>
+          <Button className="bg-blue-500 hover:bg-blue-600 text-white" onClick={handleDownload}>
             <Download className="h-4 w-4 mr-2" />
             Download
           </Button>
@@ -161,11 +165,11 @@ export default function PurchaseInvoiceView() {
                 {(invoice.items || []).map((item, index) => (
                   <TableRow key={item.id || index}>
                     <TableCell className="text-blue-600">{item.chargeDetails}</TableCell>
-                    <TableCell className="text-center">{(item.quantity ?? 0).toFixed(0)}</TableCell>
-                    <TableCell className="text-center">{item.currency}</TableCell>
+                    <TableCell className="text-center">{(item.noOfUnit ?? 0).toFixed(0)}</TableCell>
+                    <TableCell className="text-center">{item.currencyCode || "AED"}</TableCell>
                     <TableCell className="text-right">{(item.costPerUnit ?? 0).toFixed(2)}</TableCell>
                     <TableCell className="text-right">{(item.exRate ?? 1).toFixed(2)}</TableCell>
-                    <TableCell className="text-right">{(item.quantity ?? 0).toFixed(3)}</TableCell>
+                    <TableCell className="text-right">{(item.noOfUnit ?? 0).toFixed(3)}</TableCell>
                     <TableCell className="text-right">{(item.localAmount ?? 0).toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
@@ -186,27 +190,27 @@ export default function PurchaseInvoiceView() {
               <div className="bg-amber-50 dark:bg-amber-900/20 p-2 mb-2">
                 <div className="flex justify-between">
                   <span>Sub Total</span>
-                  <span className="font-semibold">{formatCurrency(subTotal, invoice.currency)}</span>
+                  <span className="font-semibold">{formatCurrency(subTotal, invoice.currencyCode || "AED")}</span>
                 </div>
               </div>
               <div className="space-y-2 px-2">
                 <div className="flex justify-between">
                   <span>Discount (0%)</span>
-                  <span>{formatCurrency(0, invoice.currency)}</span>
+                  <span>{formatCurrency(0, invoice.currencyCode || "AED")}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>VAT (0%)</span>
-                  <span>{formatCurrency(totalTax, invoice.currency)}</span>
+                  <span>{formatCurrency(totalTax, invoice.currencyCode || "AED")}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Adjustment</span>
-                  <span>{formatCurrency(0, invoice.currency)}</span>
+                  <span>{formatCurrency(0, invoice.currencyCode || "AED")}</span>
                 </div>
               </div>
               <div className="bg-amber-50 dark:bg-amber-900/20 p-2 mt-2">
                 <div className="flex justify-between font-bold">
                   <span>Total</span>
-                  <span>{formatCurrency(total, invoice.currency)}</span>
+                  <span>{formatCurrency(total, invoice.currencyCode || "AED")}</span>
                 </div>
               </div>
             </div>

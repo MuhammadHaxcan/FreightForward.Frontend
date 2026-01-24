@@ -1,4 +1,4 @@
-import { fetchApi, PaginatedList, MasterType, Currency, PaymentStatus } from './base';
+import { fetchApi, PaginatedList, MasterType, PaymentStatus } from './base';
 import { Incoterms } from './sales';
 
 // Shipment Types
@@ -125,7 +125,8 @@ export interface ShipmentCosting {
   remarks?: string;
   saleQty: number;
   saleUnit: number;
-  saleCurrency: Currency;
+  saleCurrencyId?: number;
+  saleCurrencyCode?: string;
   saleExRate: number;
   saleFCY: number;
   saleLCY: number;
@@ -133,7 +134,8 @@ export interface ShipmentCosting {
   saleTaxAmount: number;
   costQty: number;
   costUnit: number;
-  costCurrency: Currency;
+  costCurrencyId?: number;
+  costCurrencyCode?: string;
   costExRate: number;
   costFCY: number;
   costLCY: number;
@@ -152,6 +154,7 @@ export interface ShipmentCosting {
   voucherStatus?: string;
   saleInvoiced: boolean;
   purchaseInvoiced: boolean;
+  ppcc?: string;
 }
 
 export interface ShipmentCargo {
@@ -306,7 +309,7 @@ export interface AddShipmentCostingRequest {
   remarks?: string;
   saleQty: number;
   saleUnit: number;
-  saleCurrency: Currency;
+  saleCurrencyId?: number;
   saleExRate: number;
   saleFCY: number;
   saleLCY: number;
@@ -314,7 +317,7 @@ export interface AddShipmentCostingRequest {
   saleTaxAmount: number;
   costQty: number;
   costUnit: number;
-  costCurrency: Currency;
+  costCurrencyId?: number;
   costExRate: number;
   costFCY: number;
   costLCY: number;
@@ -329,6 +332,7 @@ export interface AddShipmentCostingRequest {
   vendorName?: string;
   costReferenceNo?: string;
   costDate?: string;
+  ppcc?: string;
 }
 
 export interface UpdateShipmentCostingRequest {
@@ -338,7 +342,7 @@ export interface UpdateShipmentCostingRequest {
   remarks?: string;
   saleQty: number;
   saleUnit: number;
-  saleCurrency: Currency;
+  saleCurrencyId?: number;
   saleExRate: number;
   saleFCY: number;
   saleLCY: number;
@@ -346,7 +350,7 @@ export interface UpdateShipmentCostingRequest {
   saleTaxAmount: number;
   costQty: number;
   costUnit: number;
-  costCurrency: Currency;
+  costCurrencyId?: number;
   costExRate: number;
   costFCY: number;
   costLCY: number;
@@ -361,6 +365,7 @@ export interface UpdateShipmentCostingRequest {
   vendorName?: string;
   costReferenceNo?: string;
   costDate?: string;
+  ppcc?: string;
 }
 
 // Shipment Invoice Types
@@ -370,7 +375,8 @@ export interface ShipmentInvoiceDto {
   partyName?: string;
   amount: number;
   totalTax: number;
-  currency: Currency;
+  currencyId?: number;
+  currencyCode?: string;
   paymentStatus: PaymentStatus;
   invoiceDate: string;
 }
@@ -381,7 +387,8 @@ export interface ShipmentPurchaseInvoiceDto {
   partyName?: string;
   amount: number;
   totalTax: number;
-  currency: Currency;
+  currencyId?: number;
+  currencyCode?: string;
   paymentStatus: PaymentStatus;
   invoiceDate: string;
 }

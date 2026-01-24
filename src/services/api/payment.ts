@@ -1,4 +1,4 @@
-import { Currency, PaymentMode, PaginatedList, ApiResponse, fetchApi } from './index';
+import { PaymentMode, PaginatedList, ApiResponse, fetchApi } from './index';
 
 export interface PaymentVoucher {
   id: number;
@@ -7,7 +7,8 @@ export interface PaymentVoucher {
   vendorId: number;
   vendorName?: string;
   paymentMode: PaymentMode;
-  currency: Currency;
+  currencyId?: number;
+  currencyCode?: string;
   amount: number;
   narration?: string;
   bankId?: number;
@@ -35,7 +36,8 @@ export interface PaymentVoucherPurchaseInvoice {
   purchaseDate?: string;
   jobNo?: string;
   vesselVoyageBound?: string;
-  currency: Currency;
+  currencyId?: number;
+  currencyCode?: string;
   amount: number;
   invoiceAmount: number;
   totalPaid: number;
@@ -48,7 +50,8 @@ export interface UnpaidPurchaseInvoice {
   purchaseDate: string;
   jobNo?: string;
   vendorInvoiceNo?: string;
-  currency: Currency;
+  currencyId?: number;
+  currencyCode?: string;
   totalAmount: number;
   paidAmount: number;
   pendingAmount: number;
@@ -68,7 +71,7 @@ export interface CreatePaymentVoucherRequest {
   paymentDate: string;
   vendorId: number;
   paymentMode: PaymentMode;
-  currency: Currency;
+  currencyId: number;
   amount: number;
   narration?: string;
   bankId?: number;
@@ -81,7 +84,7 @@ export interface CreatePaymentVoucherRequest {
 export interface CreatePaymentVoucherPurchaseInvoiceRequest {
   purchaseInvoiceId: number;
   amount: number;
-  currency: Currency;
+  currencyId: number;
 }
 
 // Payment Voucher API functions

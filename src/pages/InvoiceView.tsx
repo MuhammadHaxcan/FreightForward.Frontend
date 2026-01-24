@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { formatDate } from "@/lib/utils";
-import { ArrowLeft, Printer, Download } from "lucide-react";
+import { ArrowLeft, Mail, Pencil, FileText, Download, File } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -39,15 +39,20 @@ export default function InvoiceView() {
     fetchInvoice();
   }, [id]);
 
-  const handlePrint = () => {
+  const handleTaxInvoice = () => {
     if (!id) return;
-    window.open(`${API_BASE_URL}/invoices/${id}/pdf`, '_blank');
+    window.open(`${API_BASE_URL}/invoices/${id}/pdf?type=tax`, '_blank');
+  };
+
+  const handleNonTaxInvoice = () => {
+    if (!id) return;
+    window.open(`${API_BASE_URL}/invoices/${id}/pdf?type=nontax`, '_blank');
   };
 
   const handleDownload = async () => {
     if (!id) return;
     try {
-      const response = await fetch(`${API_BASE_URL}/invoices/${id}/pdf`);
+      const response = await fetch(`${API_BASE_URL}/invoices/${id}/pdf?type=tax`);
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
@@ -62,6 +67,11 @@ export default function InvoiceView() {
     } catch (error) {
       console.error("Error downloading PDF:", error);
     }
+  };
+
+  const handleSendEmail = () => {
+    if (!invoice?.customerEmail) return;
+    window.location.href = `mailto:${invoice.customerEmail}?subject=Invoice ${invoice.invoiceNo}`;
   };
 
   if (loading) {
@@ -115,13 +125,25 @@ export default function InvoiceView() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          <Button className="bg-green-500 hover:bg-green-600 text-white" onClick={handlePrint}>
-            <Printer className="h-4 w-4 mr-2" />
-            Print
+          <Button className="bg-teal-500 hover:bg-teal-600 text-white" onClick={handleSendEmail}>
+            <Mail className="h-4 w-4 mr-2" />
+            Send Email
+          </Button>
+          <Button className="bg-green-500 hover:bg-green-600 text-white" onClick={() => navigate(`/accounts/invoices/${id}/edit`)}>
+            <Pencil className="h-4 w-4 mr-2" />
+            Edit
+          </Button>
+          <Button className="bg-lime-500 hover:bg-lime-600 text-white" onClick={handleTaxInvoice}>
+            <FileText className="h-4 w-4 mr-2" />
+            Tax Invoice
           </Button>
           <Button className="bg-amber-500 hover:bg-amber-600 text-white" onClick={handleDownload}>
             <Download className="h-4 w-4 mr-2" />
             Download
+          </Button>
+          <Button className="bg-orange-500 hover:bg-orange-600 text-white" onClick={handleNonTaxInvoice}>
+            <File className="h-4 w-4 mr-2" />
+            Non-Tax Invoice
           </Button>
         </div>
 
@@ -141,6 +163,9 @@ export default function InvoiceView() {
             <div className="text-right">
               <h1 className="text-4xl font-light text-muted-foreground mb-4">Sales Invoice</h1>
               <div className="space-y-1 text-sm">
+                {invoice.jobNumber && (
+                  <p>Job No : <span className="font-bold">{invoice.jobNumber}</span></p>
+                )}
                 <p className="font-bold">{invoice.invoiceNo}</p>
                 <p>Date : {formatDate(invoice.invoiceDate)}</p>
                 {invoice.dueDate && (
@@ -156,11 +181,13 @@ export default function InvoiceView() {
               <TableHeader>
                 <TableRow className="bg-gray-800">
                   <TableHead className="text-white font-semibold">Charges Details</TableHead>
-                  <TableHead className="text-white font-semibold text-center">Total CBM</TableHead>
+                  <TableHead className="text-white font-semibold text-center">Basis</TableHead>
                   <TableHead className="text-white font-semibold text-center">Currency</TableHead>
                   <TableHead className="text-white font-semibold text-right">Rate</TableHead>
-                  <TableHead className="text-white font-semibold text-right">ROE</TableHead>
                   <TableHead className="text-white font-semibold text-right">Quantity</TableHead>
+                  <TableHead className="text-white font-semibold text-right">ROE</TableHead>
+                  <TableHead className="text-white font-semibold text-right">Tax%</TableHead>
+                  <TableHead className="text-white font-semibold text-right">Tax Amt</TableHead>
                   <TableHead className="text-white font-semibold text-right">Amount</TableHead>
                 </TableRow>
               </TableHeader>
@@ -168,17 +195,19 @@ export default function InvoiceView() {
                 {uniqueItems.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell className="text-blue-600">{item.chargeDetails}</TableCell>
-                    <TableCell className="text-center">{(item.quantity ?? 0).toFixed(0)}</TableCell>
-                    <TableCell className="text-center">{item.currency}</TableCell>
+                    <TableCell className="text-center">{item.basis || '-'}</TableCell>
+                    <TableCell className="text-center">{item.currencyCode || ''}</TableCell>
                     <TableCell className="text-right">{(item.rate ?? 0).toFixed(2)}</TableCell>
-                    <TableCell className="text-right">{(item.roe ?? 1).toFixed(2)}</TableCell>
-                    <TableCell className="text-right">{(item.quantity ?? 0).toFixed(3)}</TableCell>
+                    <TableCell className="text-right">{(item.quantity ?? 0).toFixed(2)}</TableCell>
+                    <TableCell className="text-right">{(item.roe ?? 1).toFixed(4)}</TableCell>
+                    <TableCell className="text-right">{(item.taxPercentage ?? 0).toFixed(2)}</TableCell>
+                    <TableCell className="text-right">{(item.taxAmount ?? 0).toFixed(2)}</TableCell>
                     <TableCell className="text-right">{(item.amount ?? 0).toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
                 {uniqueItems.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-4 text-muted-foreground">
                       No charges found
                     </TableCell>
                   </TableRow>
@@ -187,33 +216,33 @@ export default function InvoiceView() {
             </Table>
           </div>
 
+          {/* Remarks Section */}
+          {invoice.remarks && (
+            <div className="mb-4 p-3 bg-muted/50 rounded-lg">
+              <p className="text-sm font-semibold mb-1">Remarks:</p>
+              <p className="text-sm text-muted-foreground">{invoice.remarks}</p>
+            </div>
+          )}
+
           {/* Totals Section */}
           <div className="flex justify-end">
             <div className="w-80">
               <div className="bg-amber-50 dark:bg-amber-900/20 p-2 mb-2">
                 <div className="flex justify-between">
                   <span>Sub Total</span>
-                  <span className="font-semibold">{formatCurrency(subTotal, invoice.currency)}</span>
+                  <span className="font-semibold">{formatCurrency(subTotal, invoice.currencyCode || '')}</span>
                 </div>
               </div>
-              <div className="space-y-2 px-2">
+              <div className="px-2 py-1">
                 <div className="flex justify-between">
-                  <span>Discount (0%)</span>
-                  <span>{formatCurrency(0, invoice.currency)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>VAT (0%)</span>
-                  <span>{formatCurrency(totalTax, invoice.currency)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Adjustment</span>
-                  <span>{formatCurrency(0, invoice.currency)}</span>
+                  <span>Total Tax</span>
+                  <span>{formatCurrency(totalTax, invoice.currencyCode || '')}</span>
                 </div>
               </div>
               <div className="bg-amber-50 dark:bg-amber-900/20 p-2 mt-2">
                 <div className="flex justify-between font-bold">
                   <span>Total</span>
-                  <span>{formatCurrency(total, invoice.currency)}</span>
+                  <span>{formatCurrency(total, invoice.currencyCode || '')}</span>
                 </div>
               </div>
             </div>

@@ -211,7 +211,7 @@ export default function RecordReceiptModal({
           totalAmount: invoice.totalAmount,
           pendingAmount: invoice.pendingAmount,
           payingAmount: invoice.pendingAmount, // Default to full pending amount
-          currency: invoice.currency,
+          currency: invoice.currencyCode || "AED",
         },
       ]);
     } else {
@@ -273,7 +273,7 @@ export default function RecordReceiptModal({
         invoices: selectedInvoices.map(inv => ({
           invoiceId: inv.invoiceId,
           amount: inv.payingAmount,
-          currency: inv.currency,
+          currency: inv.currencyCode || "AED",
         })),
       };
 
@@ -353,7 +353,7 @@ export default function RecordReceiptModal({
                     .filter(inv => !selectedInvoices.some(si => si.invoiceId === inv.id))
                     .map((invoice) => (
                       <SelectItem key={invoice.id} value={invoice.id.toString()}>
-                        {invoice.invoiceNo} - Pending: {invoice.currency} {invoice.pendingAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        {invoice.invoiceNo} - Pending: {invoice.currencyCode || "AED"} {invoice.pendingAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </SelectItem>
                     ))}
                 </SelectContent>
@@ -516,10 +516,10 @@ export default function RecordReceiptModal({
                   <TableRow key={inv.invoiceId}>
                     <TableCell>{inv.invoiceNo}</TableCell>
                     <TableCell>
-                      {inv.currency} {inv.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {inv.currency || "AED"} {inv.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell>
-                      {inv.currency} {inv.pendingAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {inv.currency || "AED"} {inv.pendingAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell>
                       <Input

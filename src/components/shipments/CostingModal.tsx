@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -18,16 +18,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ShipmentParty, CurrencyType, CostingUnit, settingsApi } from "@/services/api";
+import { ShipmentParty, ShipmentCosting, settingsApi } from "@/services/api";
 import { useCurrencyTypes } from "@/hooks/useSettings";
 import { useQuery } from "@tanstack/react-query";
+
+// Extend ShipmentCosting with UI-specific fields for the modal
+// The modal transforms between API format (currencyId) and display format (currency code)
+type CostingModalData = Partial<ShipmentCosting> & {
+  chargeDescription?: string;
+  ppcc?: string;
+  saleCurrency?: string;  // Currency code for display
+  costCurrency?: string;  // Currency code for display
+};
 
 interface CostingModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   parties: ShipmentParty[];
-  costing?: any;
-  onSave: (costing: any) => void;
+  costing?: CostingModalData;
+  onSave: (costing: CostingModalData) => void;
 }
 
 const ppccOptions = ["Prepaid", "Postpaid"];
@@ -90,24 +99,26 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
     unit: "",
     remarks: "",
     costCurrency: LOCAL_CURRENCY,
+    costCurrencyId: undefined as number | undefined,
     costExRate: "1.000",
     costNoOfUnit: "",
     costPerUnit: "",
     costLCYAmount: "0.00",
     costFCYAmount: "0.00",
-    costVendor: "",
+    costVendor: "_none",
     costVendorName: "",
     costVendorCustomerId: "",
     costReferenceNo: "",
     costDate: getTodayDateOnly(),
     costTax: "0%",
     saleCurrency: LOCAL_CURRENCY,
+    saleCurrencyId: undefined as number | undefined,
     saleExRate: "1.000",
     saleNoOfUnit: "",
     salePerUnit: "",
     saleLCYAmount: "0.00",
     saleFCYAmount: "0.00",
-    saleBillTo: "",
+    saleBillTo: "_none",
     saleBillToName: "",
     saleBillToCustomerId: "",
     saleGP: "0.00",
@@ -115,14 +126,51 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
   });
 
   const [formData, setFormData] = useState(getDefaultFormData());
+  const formInitializedRef = useRef(false);
 
-  // Populate form when editing
+  // Reset ref when modal closes
   useEffect(() => {
-    if (open && costing) {
+    if (!open) {
+      formInitializedRef.current = false;
+    }
+  }, [open]);
+
+  // Set default currency IDs when currencyTypes load for new entries
+  useEffect(() => {
+    if (open && !costing && currencyTypes.length > 0 && !formData.saleCurrencyId) {
+      const defaultCurrency = currencyTypes.find(c => c.code === LOCAL_CURRENCY);
+      if (defaultCurrency) {
+        setFormData(prev => ({
+          ...prev,
+          saleCurrencyId: defaultCurrency.id,
+          costCurrencyId: defaultCurrency.id
+        }));
+      }
+    }
+  }, [open, costing, currencyTypes]);
+
+  // Set default unit to "BL" when costingUnits load for new entries
+  useEffect(() => {
+    if (open && !costing && costingUnits.length > 0 && !formData.unitId) {
+      const blUnit = costingUnits.find(u => u.code === "BL");
+      if (blUnit) {
+        setFormData(prev => ({
+          ...prev,
+          unitId: blUnit.id,
+          unit: blUnit.code
+        }));
+      }
+    }
+  }, [open, costing, costingUnits]);
+
+  // Populate form when editing (only on first open, not on subsequent dependency changes)
+  useEffect(() => {
+    if (open && costing && !formInitializedRef.current) {
+      formInitializedRef.current = true;
       // Find the party that matches the vendorCustomerId or billToCustomerId
       const vendorParty = creditorParties.find(p => p.customerId === costing.vendorCustomerId);
       const billToParty = debtorParties.find(p => p.customerId === costing.billToCustomerId);
-      
+
       setFormData({
         charge: costing.description || "",
         description: costing.chargeDescription || costing.description || "", // Use chargeDescription if available, fallback to description
@@ -130,34 +178,56 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
         unitId: costing.unitId || undefined,
         unit: costing.unitName || "",
         remarks: costing.remarks || "",
-        costCurrency: costing.costCurrency || LOCAL_CURRENCY,
+        costCurrency: costing.costCurrency || costing.costCurrencyCode || LOCAL_CURRENCY,
+        costCurrencyId: costing.costCurrencyId || undefined,
         costExRate: costing.costExRate?.toString() || "1.000",
         costNoOfUnit: costing.costQty?.toString() || "",
         costPerUnit: costing.costUnit?.toString() || "",
         costLCYAmount: costing.costLCY?.toString() || "0.00",
         costFCYAmount: costing.costFCY?.toString() || "0.00",
-        costVendor: vendorParty?.id?.toString() || "",
+        costVendor: vendorParty?.id?.toString() || "_none",
         costVendorName: costing.vendorName || "",
         costVendorCustomerId: costing.vendorCustomerId?.toString() || "",
         costReferenceNo: costing.costReferenceNo || "",
         costDate: costing.costDate?.split('T')[0] || getTodayDateOnly(),
         costTax: costing.costTaxPercentage ? `${costing.costTaxPercentage}%` : "0%",
-        saleCurrency: costing.saleCurrency || LOCAL_CURRENCY,
+        saleCurrency: costing.saleCurrency || costing.saleCurrencyCode || LOCAL_CURRENCY,
+        saleCurrencyId: costing.saleCurrencyId || undefined,
         saleExRate: costing.saleExRate?.toString() || "1.000",
         saleNoOfUnit: costing.saleQty?.toString() || "",
         salePerUnit: costing.saleUnit?.toString() || "",
         saleLCYAmount: costing.saleLCY?.toString() || "0.00",
         saleFCYAmount: costing.saleFCY?.toString() || "0.00",
-        saleBillTo: billToParty?.id?.toString() || "",
+        saleBillTo: billToParty?.id?.toString() || "_none",
         saleBillToName: costing.billToName || "",
         saleBillToCustomerId: costing.billToCustomerId?.toString() || "",
         saleGP: costing.gp?.toString() || "0.00",
         saleTax: costing.saleTaxPercentage ? `${costing.saleTaxPercentage}%` : "0%",
       });
-    } else if (open && !costing) {
+    } else if (open && !costing && !formInitializedRef.current) {
+      formInitializedRef.current = true;
       setFormData(getDefaultFormData());
     }
   }, [open, costing, creditorParties, debtorParties]);
+
+  // Resolve missing currency IDs when editing existing records
+  useEffect(() => {
+    if (open && costing && currencyTypes.length > 0) {
+      setFormData(prev => {
+        let updated = false;
+        const updates = { ...prev };
+        if (!prev.costCurrencyId && prev.costCurrency) {
+          const curr = currencyTypes.find(c => c.code === prev.costCurrency);
+          if (curr) { updates.costCurrencyId = curr.id; updated = true; }
+        }
+        if (!prev.saleCurrencyId && prev.saleCurrency) {
+          const curr = currencyTypes.find(c => c.code === prev.saleCurrency);
+          if (curr) { updates.saleCurrencyId = curr.id; updated = true; }
+        }
+        return updated ? updates : prev;
+      });
+    }
+  }, [open, costing, currencyTypes]);
 
   // Get ROE (Rate of Exchange) for a currency code
   const getROE = (currencyCode: string): number => {
@@ -212,10 +282,12 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
   const handleCostCurrencyChange = (currency: string) => {
     const roe = getROE(currency);
     const amounts = calculateCostAmounts(currency, formData.costNoOfUnit, formData.costPerUnit, roe.toFixed(3));
+    const currencyObj = currencyTypes.find(c => c.code === currency);
 
     setFormData(prev => ({
       ...prev,
       costCurrency: currency,
+      costCurrencyId: currencyObj?.id,
       costExRate: roe.toFixed(3),
       costFCYAmount: amounts.fcy,
       costLCYAmount: amounts.lcy,
@@ -227,10 +299,12 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
   const handleSaleCurrencyChange = (currency: string) => {
     const roe = getROE(currency);
     const amounts = calculateSaleAmounts(currency, formData.saleNoOfUnit, formData.salePerUnit, roe.toFixed(3));
+    const currencyObj = currencyTypes.find(c => c.code === currency);
 
     setFormData(prev => ({
       ...prev,
       saleCurrency: currency,
+      saleCurrencyId: currencyObj?.id,
       saleExRate: roe.toFixed(3),
       saleFCYAmount: amounts.fcy,
       saleLCYAmount: amounts.lcy,
@@ -292,6 +366,15 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
 
   // Handle vendor selection (Creditors)
   const handleVendorSelect = (partyId: string) => {
+    if (partyId === "_none") {
+      setFormData(prev => ({
+        ...prev,
+        costVendor: "_none",
+        costVendorName: "",
+        costVendorCustomerId: ""
+      }));
+      return;
+    }
     const party = creditorParties.find(p => p.id.toString() === partyId);
     setFormData(prev => ({
       ...prev,
@@ -304,6 +387,15 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
 
   // Handle bill-to selection (Debtors)
   const handleBillToSelect = (partyId: string) => {
+    if (partyId === "_none") {
+      setFormData(prev => ({
+        ...prev,
+        saleBillTo: "_none",
+        saleBillToName: "",
+        saleBillToCustomerId: ""
+      }));
+      return;
+    }
     const party = debtorParties.find(p => p.id.toString() === partyId);
     setFormData(prev => ({
       ...prev,
@@ -316,13 +408,13 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
 
   const handleSave = () => {
     // Get the actual customer IDs - prefer the stored customer ID, fallback to party ID
-    const vendorCustomerId = formData.costVendorCustomerId 
-      ? parseInt(formData.costVendorCustomerId) 
-      : (formData.costVendor ? parseInt(formData.costVendor) : undefined);
-    
-    const billToCustomerId = formData.saleBillToCustomerId
-      ? parseInt(formData.saleBillToCustomerId)
-      : (formData.saleBillTo ? parseInt(formData.saleBillTo) : undefined);
+    const vendorCustomerId = formData.costVendor === "_none" || !formData.costVendorCustomerId
+      ? (formData.costVendor && formData.costVendor !== "_none" ? parseInt(formData.costVendor) : undefined)
+      : parseInt(formData.costVendorCustomerId);
+
+    const billToCustomerId = formData.saleBillTo === "_none" || !formData.saleBillToCustomerId
+      ? (formData.saleBillTo && formData.saleBillTo !== "_none" ? parseInt(formData.saleBillTo) : undefined)
+      : parseInt(formData.saleBillToCustomerId);
 
     // Parse tax percentages and calculate tax amounts
     const costTaxPercentage = parseFloat(formData.costTax.replace('%', '')) || 0;
@@ -339,6 +431,8 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
       saleQty: formData.saleNoOfUnit || "0.000",
       saleUnit: formData.salePerUnit || "0.00",
       saleCurrency: formData.saleCurrency,
+      saleCurrencyId: formData.saleCurrencyId,
+      saleCurrencyCode: formData.saleCurrency,
       saleExRate: formData.saleExRate,
       saleFCY: formData.saleFCYAmount,
       saleLCY: formData.saleLCYAmount,
@@ -347,6 +441,8 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
       costQty: formData.costNoOfUnit || "0.000",
       costUnit: formData.costPerUnit || "0.00",
       costCurrency: formData.costCurrency,
+      costCurrencyId: formData.costCurrencyId,
+      costCurrencyCode: formData.costCurrency,
       costExRate: formData.costExRate,
       costFCY: formData.costFCYAmount,
       costLCY: formData.costLCYAmount,
@@ -550,15 +646,12 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
                       <SelectValue placeholder="Select vendor" />
                     </SelectTrigger>
                     <SelectContent className="bg-popover border border-border">
-                      {creditorParties.length === 0 ? (
-                        <SelectItem value="_none" disabled>No creditors in parties</SelectItem>
-                      ) : (
-                        creditorParties.map(party => (
-                          <SelectItem key={party.id} value={party.id.toString()}>
-                            {party.customerName}
-                          </SelectItem>
-                        ))
-                      )}
+                      <SelectItem value="_none">Select Creditor</SelectItem>
+                      {creditorParties.map(party => (
+                        <SelectItem key={party.id} value={party.id.toString()}>
+                          {party.customerName}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -670,15 +763,12 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
                       <SelectValue placeholder="Select debtor" />
                     </SelectTrigger>
                     <SelectContent className="bg-popover border border-border">
-                      {debtorParties.length === 0 ? (
-                        <SelectItem value="_none" disabled>No debtors in parties</SelectItem>
-                      ) : (
-                        debtorParties.map(party => (
-                          <SelectItem key={party.id} value={party.id.toString()}>
-                            {party.customerName}
-                          </SelectItem>
-                        ))
-                      )}
+                      <SelectItem value="_none">Select Debitor</SelectItem>
+                      {debtorParties.map(party => (
+                        <SelectItem key={party.id} value={party.id.toString()}>
+                          {party.customerName}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

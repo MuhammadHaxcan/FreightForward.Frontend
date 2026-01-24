@@ -1,4 +1,4 @@
-import { fetchApi, PaginatedList, Currency } from './base';
+import { fetchApi, PaginatedList } from './base';
 
 // Sales Types
 export type ShippingMode = 'FCLSeaFreight' | 'LCLSeaFreight' | 'AirFreight';
@@ -238,7 +238,8 @@ export interface QuotationCharge {
   chargeItemId?: number;
   costingUnitId?: number;
   bases?: string;
-  currency: Currency;
+  currencyId?: number;
+  currencyCode?: string;
   rate: number;
   roe: number;
   quantity: number;
@@ -314,7 +315,7 @@ export interface CreateQuotationRequest {
     chargeItemId?: number;
     costingUnitId?: number;
     bases?: string;
-    currency: Currency;
+    currencyId: number;
     rate: number;
     roe: number;
     quantity: number;
@@ -323,7 +324,7 @@ export interface CreateQuotationRequest {
   cargoDetails?: CreateQuotationCargoDetailRequest[];
 }
 
-export interface UpdateQuotationRequest extends CreateQuotationRequest {}
+export type UpdateQuotationRequest = CreateQuotationRequest;
 
 // RateRequest for conversion to Quotation
 export interface RateRequestForConversion {

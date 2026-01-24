@@ -1,4 +1,4 @@
-import { fetchApi, Currency } from './base';
+import { fetchApi } from './base';
 
 // Cost Sheet Summary DTO (for list)
 export interface CostSheetSummaryDto {
@@ -37,13 +37,15 @@ export interface CostSheetCostingDto {
   description?: string;
   saleQty: number;
   saleUnit: number;
-  saleCurrency: Currency;
+  saleCurrencyId?: number;
+  saleCurrencyCode?: string;
   saleExRate: number;
   saleFCY: number;
   saleLCY: number;
   costQty: number;
   costUnit: number;
-  costCurrency: Currency;
+  costCurrencyId?: number;
+  costCurrencyCode?: string;
   costExRate: number;
   costFCY: number;
   costLCY: number;

@@ -27,24 +27,31 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Search, Loader2 } from "lucide-react";
-import { ShipmentParty, Currency, CreatePurchaseInvoiceItemRequest, invoiceApi } from "@/services/api";
+import { ShipmentParty, ShipmentCosting, CreatePurchaseInvoiceItemRequest, invoiceApi, customerApi, settingsApi, CurrencyType } from "@/services/api";
 import { useCreatePurchaseInvoice } from "@/hooks/useInvoices";
+
+// Result type for the onSave callback
+interface PurchaseSaveResult {
+  purchaseId: string;
+  companyName: string;
+  customerId: string;
+  invoiceDate: string;
+  invoiceNo: string;
+  vDate: string;
+  currencyId: number;
+  remarks: string;
+  charges: number[];
+}
 
 interface PurchaseModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   shipmentId: number | null;
   jobNumber?: string;
-  chargesDetails: any[];
+  chargesDetails: ShipmentCosting[];
   parties: ShipmentParty[];
-  onSave: (purchase: any) => void;
+  onSave: (purchase: PurchaseSaveResult) => void;
 }
-
-// Map customer IDs to their currencies (this would ideally come from the customer data)
-// For now we'll use a default, but the parties prop should include customer currency info
-const currencyMap: Record<string, Currency> = {
-  default: "AED",
-};
 
 // Helper function to deduplicate parties by customerId
 const deduplicateByCustomerId = (partyList: ShipmentParty[]): ShipmentParty[] => {
@@ -66,6 +73,8 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
     [parties]
   );
 
+  const [currencies, setCurrencies] = useState<CurrencyType[]>([]);
+
   const [formData, setFormData] = useState({
     purchaseId: "",
     companyName: "",
@@ -73,17 +82,35 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
     invoiceDate: getTodayDateOnly(),
     invoiceNo: "",
     vDate: getTodayDateOnly(),
-    baseCurrency: "AED" as Currency,
+    currencyId: 1, // Default to AED (ID 1)
+    currencyCode: "AED",
     remarks: "",
     selectedCharges: [] as number[],
   });
 
-  // Fetch next purchase number when modal opens
+  // Reset form and fetch next purchase number when modal opens
   useEffect(() => {
     if (open) {
+      setFormData({
+        purchaseId: "",
+        companyName: "",
+        customerId: "",
+        invoiceDate: getTodayDateOnly(),
+        invoiceNo: "",
+        vDate: getTodayDateOnly(),
+        currencyId: 1,
+        currencyCode: "AED",
+        remarks: "",
+        selectedCharges: [],
+      });
       invoiceApi.getNextPurchaseNumber().then(response => {
         if (response.data) {
           setFormData(prev => ({ ...prev, purchaseId: response.data as string }));
+        }
+      });
+      settingsApi.getAllCurrencyTypes().then(response => {
+        if (response.data) {
+          setCurrencies(response.data);
         }
       });
     }
@@ -109,17 +136,23 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
   useEffect(() => {
     if (formData.customerId) {
       const selectedParty = creditorParties.find(p => p.id.toString() === formData.customerId);
-      if (selectedParty) {
-        // In a real implementation, you would fetch the customer's baseCurrency
-        // For now, we'll use AED as default
-        setFormData(prev => ({
-          ...prev,
-          companyName: selectedParty.customerName,
-          baseCurrency: currencyMap[selectedParty.customerId?.toString() || ''] || "AED"
-        }));
+      if (selectedParty?.customerId) {
+        setFormData(prev => ({ ...prev, companyName: selectedParty.customerName }));
+        // Fetch customer's default currency and resolve currency code
+        customerApi.getById(selectedParty.customerId).then(customerResponse => {
+          if (customerResponse.data) {
+            const custCurrencyId = customerResponse.data.currencyId || 1;
+            const currency = currencies.find(c => c.id === custCurrencyId);
+            setFormData(prev => ({
+              ...prev,
+              currencyId: custCurrencyId,
+              currencyCode: currency?.code || "AED",
+            }));
+          }
+        });
       }
     }
-  }, [formData.customerId, creditorParties]);
+  }, [formData.customerId, creditorParties, currencies]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -176,15 +209,15 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
       .map(charge => ({
         shipmentCostingId: charge.id,
         chargeDetails: charge.description || '',
-        noOfUnit: parseInt(charge.costQty) || 1,
+        noOfUnit: charge.costQty || 1,
         ppcc: charge.ppcc || 'PP',
-        costPerUnit: parseFloat(charge.costUnit) || 0,
-        currency: (charge.costCurrency as Currency) || 'AED',
-        fcyAmount: parseFloat(charge.costFCY) || 0,
-        exRate: parseFloat(charge.costExRate) || 1,
-        localAmount: parseFloat(charge.costLCY) || 0,
-        taxPercentage: parseFloat(charge.costTaxPercentage) || 0,
-        taxAmount: parseFloat(charge.costTaxAmount) || 0,
+        costPerUnit: charge.costUnit || 0,
+        currencyId: charge.costCurrencyId || 1, // Default to AED (ID 1)
+        fcyAmount: charge.costFCY || 0,
+        exRate: charge.costExRate || 1,
+        localAmount: charge.costLCY || 0,
+        taxPercentage: charge.costTaxPercentage || 0,
+        taxAmount: charge.costTaxAmount || 0,
       }));
 
     try {
@@ -195,7 +228,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
         vendorInvoiceNo: formData.invoiceNo || undefined,
         vendorInvoiceDate: formData.vDate || undefined,
         jobNo: jobNumber || undefined,
-        currency: formData.baseCurrency,
+        currencyId: formData.currencyId,
         remarks: formData.remarks || undefined,
         items,
       });
@@ -207,7 +240,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
         invoiceDate: formData.invoiceDate,
         invoiceNo: formData.invoiceNo,
         vDate: formData.vDate,
-        baseCurrency: formData.baseCurrency,
+        currencyId: formData.currencyId,
         remarks: formData.remarks,
         charges: formData.selectedCharges,
       });
@@ -320,7 +353,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
             <div>
               <Label className="text-xs font-medium">* Base Currency</Label>
               <Input
-                value={formData.baseCurrency}
+                value={formData.currencyCode}
                 className="bg-muted h-9"
                 readOnly
               />
@@ -396,7 +429,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
                       <TableCell className="text-xs py-2">{charge.costQty}</TableCell>
                       <TableCell className="text-xs py-2">{charge.ppcc || "Postpaid"}</TableCell>
                       <TableCell className="text-xs py-2">{charge.costUnit}</TableCell>
-                      <TableCell className="text-xs py-2">{charge.costCurrency}</TableCell>
+                      <TableCell className="text-xs py-2">{currencies.find(c => c.id === charge.costCurrencyId)?.code || charge.costCurrencyCode || ""}</TableCell>
                       <TableCell className="text-xs py-2">{charge.costFCY}</TableCell>
                       <TableCell className="text-xs py-2">{charge.costExRate}</TableCell>
                       <TableCell className="text-xs py-2">{charge.costLCY}</TableCell>

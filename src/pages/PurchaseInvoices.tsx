@@ -133,11 +133,11 @@ export default function PurchaseInvoices() {
               <TableRow className="bg-primary">
                 <TableHead className="text-primary-foreground font-semibold">Purchase Inv #</TableHead>
                 <TableHead className="text-primary-foreground font-semibold">Job #</TableHead>
-                <TableHead className="text-primary-foreground font-semibold">Invoice Date</TableHead>
+                <TableHead className="text-primary-foreground font-semibold">Vendor Invoice Date</TableHead>
                 <TableHead className="text-primary-foreground font-semibold">Vendor Invoice No</TableHead>
                 <TableHead className="text-primary-foreground font-semibold">Vendor Name</TableHead>
                 <TableHead className="text-primary-foreground font-semibold">Amount</TableHead>
-                <TableHead className="text-primary-foreground font-semibold">Created</TableHead>
+                <TableHead className="text-primary-foreground font-semibold">Added</TableHead>
                 <TableHead className="text-primary-foreground font-semibold">Action</TableHead>
               </TableRow>
             </TableHeader>
@@ -167,8 +167,8 @@ export default function PurchaseInvoices() {
                     </TableCell>
                     <TableCell>{invoice.jobNo || "-"}</TableCell>
                     <TableCell>
-                      {invoice.purchaseDate
-                        ? formatDate(invoice.purchaseDate)
+                      {invoice.vendorInvoiceDate
+                        ? formatDate(invoice.vendorInvoiceDate)
                         : "-"}
                     </TableCell>
                     <TableCell>{invoice.vendorInvoiceNo || "-"}</TableCell>
@@ -177,8 +177,8 @@ export default function PurchaseInvoices() {
                         {invoice.vendorName || "-"}
                       </span>
                     </TableCell>
-                    <TableCell>{formatCurrency(invoice.amount, invoice.currency)}</TableCell>
-                    <TableCell>{formatDate(invoice.createdAt)}</TableCell>
+                    <TableCell>{formatCurrency(invoice.amount, invoice.currencyCode || "AED")}</TableCell>
+                    <TableCell>{invoice.createdBy || "-"}</TableCell>
                     <TableCell>
                       <Button
                         size="sm"

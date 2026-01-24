@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -28,13 +28,7 @@ export function ReceiptDetailsModal({ open, onOpenChange, receiptId }: ReceiptDe
   const [loading, setLoading] = useState(false);
   const [receipt, setReceipt] = useState<ReceiptDetail | null>(null);
 
-  useEffect(() => {
-    if (open && receiptId) {
-      fetchReceiptDetails();
-    }
-  }, [open, receiptId]);
-
-  const fetchReceiptDetails = async () => {
+  const fetchReceiptDetails = useCallback(async () => {
     if (!receiptId) return;
     setLoading(true);
     try {
@@ -47,7 +41,13 @@ export function ReceiptDetailsModal({ open, onOpenChange, receiptId }: ReceiptDe
     } finally {
       setLoading(false);
     }
-  };
+  }, [receiptId]);
+
+  useEffect(() => {
+    if (open && receiptId) {
+      fetchReceiptDetails();
+    }
+  }, [open, receiptId, fetchReceiptDetails]);
 
   const formatCurrency = (amount: number, currency: string) => {
     return `${currency} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -88,16 +88,16 @@ export function ReceiptDetailsModal({ open, onOpenChange, receiptId }: ReceiptDe
                           </span>
                         </TableCell>
                         <TableCell>
-                          {formatCurrency(invoice.invoiceAmount, invoice.currency)}
+                          {formatCurrency(invoice.invoiceAmount, invoice.currencyCode || "AED")}
                         </TableCell>
                         <TableCell className="bg-green-100 dark:bg-green-900/30">
-                          {formatCurrency(invoice.amount, invoice.currency)}
+                          {formatCurrency(invoice.amount, invoice.currencyCode || "AED")}
                         </TableCell>
                         <TableCell>
-                          {formatCurrency(invoice.totalReceived, invoice.currency)}
+                          {formatCurrency(invoice.totalReceived, invoice.currencyCode || "AED")}
                         </TableCell>
                         <TableCell>
-                          {formatCurrency(invoice.balance, invoice.currency)}
+                          {formatCurrency(invoice.balance, invoice.currencyCode || "AED")}
                         </TableCell>
                         <TableCell>
                           {formatDate(receipt.receiptDate)}

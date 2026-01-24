@@ -1,4 +1,5 @@
-import { fetchApi, PaginatedList, MasterType, Currency, PaymentStatus } from './base';
+import { fetchApi, PaginatedList, MasterType, PaymentStatus } from './base';
+import type { CurrencyType } from './settings';
 
 // Customer Types
 export type CustomerCategory = 'Shipper' | 'Consignee' | 'BookingParty' | 'Agents' | 'Forwarder' | 'Customer' | 'DeliveryAgent' | 'OriginAgent' | 'NotifyParty' | 'CoLoader';
@@ -20,7 +21,8 @@ export interface Customer {
   email?: string;
   country?: string;
   city?: string;
-  baseCurrency: Currency;
+  currencyId?: number;
+  currencyCode?: string;
   taxNo?: string;
   status?: string;
   createdAt: string;
@@ -32,7 +34,7 @@ export interface CustomerDetail extends Customer {
   taxPercentage?: number;
   carrierCode?: string;
   contacts: CustomerContact[];
-  accountDetails: CustomerAccountDetail[];
+  accountDetail?: CustomerAccountDetail;
 }
 
 export interface CustomerContact {
@@ -52,19 +54,14 @@ export interface CustomerContact {
 
 export interface CustomerAccountDetail {
   id: number;
-  acName?: string;
-  bankAcNo?: string;
-  currency: Currency;
-  type?: string;
-  notes?: string;
+  taxIdType?: string;
+  taxId?: string;
+  bankName?: string;
+  accountName?: string;
+  accountNumber?: string;
   swiftCode?: string;
-  acType?: string;
-  approvedCreditDays?: number;
-  alertCreditDays?: number;
-  approvedCreditAmount?: number;
-  alertCreditAmount?: number;
-  cc?: string;
-  bcc?: string;
+  creditLimit?: number;
+  creditDays?: number;
 }
 
 export interface InvoiceReceipt {
@@ -72,7 +69,8 @@ export interface InvoiceReceipt {
   receiptNo: string;
   receiptDate: string;
   amount: number;
-  currency: Currency;
+  currencyId?: number;
+  currencyCode?: string;
 }
 
 export interface Invoice {
@@ -82,7 +80,8 @@ export interface Invoice {
   jobNo?: string;
   hblNo?: string;
   amount: number;
-  currency: Currency;
+  currencyId?: number;
+  currencyCode?: string;
   paymentStatus: PaymentStatus;
   status?: string;
   paidAmount: number;
@@ -96,7 +95,8 @@ export interface Receipt {
   receiptNo: string;
   type?: string;
   amount: number;
-  currency: Currency;
+  currencyId?: number;
+  currencyCode?: string;
   narration?: string;
 }
 
@@ -115,7 +115,8 @@ export interface CreditNoteDetail {
   id: number;
   chargeDetails?: string;
   bases?: string;
-  currency: Currency;
+  currencyId?: number;
+  currencyCode?: string;
   rate: number;
   roe: number;
   quantity: number;
@@ -128,7 +129,8 @@ export interface AccountReceivable {
   invoiceNo: string;
   customerRef?: string;
   jobHblNo?: string;
-  currency: Currency;
+  currencyId?: number;
+  currencyCode?: string;
   debit: number;
   balance: number;
   paymentStatus: PaymentStatus;
@@ -143,7 +145,8 @@ export interface AccountPayable {
   vendorInvoiceNo?: string;
   vendorRef?: string;
   jobHblNo?: string;
-  currency: Currency;
+  currencyId?: number;
+  currencyCode?: string;
   credit: number;
   balance: number;
   paymentStatus: PaymentStatus;
@@ -183,7 +186,7 @@ export interface CreateCustomerRequest {
   country?: string;
   city?: string;
   address?: string;
-  baseCurrency?: Currency;
+  currencyId?: number;
   taxNo?: string;
   taxPercentage?: number;
   carrierCode?: string;
@@ -206,7 +209,7 @@ export interface UpdateCustomerRequest {
   country?: string;
   city?: string;
   address?: string;
-  baseCurrency?: Currency;
+  currencyId?: number;
   taxNo?: string;
   taxPercentage?: number;
   carrierCode?: string;
@@ -238,7 +241,7 @@ export interface CreateCreditNoteRequest {
   details?: {
     chargeDetails?: string;
     bases?: string;
-    currency: Currency;
+    currencyId?: number;
     rate: number;
     roe: number;
     quantity: number;

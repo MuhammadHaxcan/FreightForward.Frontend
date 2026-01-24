@@ -19,7 +19,6 @@ export interface ApiResponse<T> {
 
 // Enums and Common Types
 export type MasterType = 'Debtors' | 'Creditors' | 'Neutral';
-export type Currency = 'USD' | 'EUR' | 'GBP' | 'AED' | 'PKR' | 'INR' | 'CNY' | 'SGD';
 export type PaymentStatus = 'Pending' | 'Paid' | 'PartiallyPaid' | 'Overdue' | 'Closed';
 
 // Generic fetch wrapper

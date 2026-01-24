@@ -30,7 +30,7 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
     country: "",
     email: "",
     city: "",
-    baseCurrency: "",
+    currencyId: "",
     taxNo: "",
   });
 
@@ -90,7 +90,7 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
         country: customer.country || "",
         email: customer.email || "",
         city: customer.city || "",
-        baseCurrency: customer.baseCurrency || "",
+        currencyId: customer.currencyId?.toString() || "",
         taxNo: customer.taxNo || "",
       });
     } else if (mode === "add") {
@@ -104,7 +104,7 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
         country: "",
         email: "",
         city: "",
-        baseCurrency: "",
+        currencyId: "",
         taxNo: "",
       });
       refetchNextCodes();
@@ -129,7 +129,7 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
       email: formData.email || undefined,
       country: formData.country || undefined,
       city: formData.city || undefined,
-      baseCurrency: formData.baseCurrency ? formData.baseCurrency as 'USD' | 'EUR' | 'GBP' | 'AED' | 'PKR' | 'INR' | 'CNY' | 'SGD' : undefined,
+      currencyId: formData.currencyId ? parseInt(formData.currencyId) : undefined,
       taxNo: formData.taxNo || undefined,
     };
 
@@ -350,19 +350,19 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="baseCurrency" className="text-sm">
+              <Label htmlFor="currencyId" className="text-sm">
                 *Base Currency
               </Label>
               <Select
-                value={formData.baseCurrency}
-                onValueChange={(value) => setFormData({ ...formData, baseCurrency: value })}
+                value={formData.currencyId}
+                onValueChange={(value) => setFormData({ ...formData, currencyId: value })}
               >
                 <SelectTrigger className="bg-muted/50">
                   <SelectValue placeholder="Select" />
                 </SelectTrigger>
                 <SelectContent>
                   {currencies.map((currency) => (
-                    <SelectItem key={currency.id} value={currency.code}>
+                    <SelectItem key={currency.id} value={currency.id.toString()}>
                       {currency.code} - {currency.name}
                     </SelectItem>
                   ))}

@@ -30,6 +30,7 @@ import PaymentVouchers from "./pages/PaymentVouchers";
 import PaymentView from "./pages/PaymentView";
 import CostSheet from "./pages/CostSheet";
 import CostSheetDetail from "./pages/CostSheetDetail";
+import VatReport from "./pages/VatReport";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -65,6 +66,7 @@ const App = () => (
           <Route path="/accounts/payment-vouchers/:id" element={<PaymentView />} />
           <Route path="/accounts/cost-sheet" element={<CostSheet />} />
           <Route path="/accounts/cost-sheet/:id" element={<CostSheetDetail />} />
+          <Route path="/accounts/vat-report" element={<VatReport />} />
           <Route path="/users" element={<Dashboard />} />
           <Route path="/users/all" element={<AllUsers />} />
           <Route path="/users/roles" element={<PermissionRoles />} />

@@ -1,4 +1,4 @@
-import { fetchApi, PaginatedList, Currency, PaymentStatus } from './base';
+import { fetchApi, PaginatedList, PaymentStatus } from './base';
 
 // Payment Mode enum
 export type PaymentMode = 'Cash' | 'Cheque' | 'BankWire' | 'BankTransfer' | 'Card';
@@ -10,7 +10,7 @@ export interface CreateInvoiceItemRequest {
   noOfUnit: number;
   ppcc?: string;
   salePerUnit: number;
-  currency: Currency;
+  currencyId: number;
   fcyAmount: number;
   exRate: number;
   localAmount: number;
@@ -22,7 +22,8 @@ export interface CreateInvoiceRequest {
   shipmentId: number;
   customerId: number;
   invoiceDate: string;
-  baseCurrency: Currency;
+  currencyId: number;
+  baseCurrencyId?: number;
   remarks?: string;
   items: CreateInvoiceItemRequest[];
 }
@@ -33,7 +34,7 @@ export interface CreatePurchaseInvoiceItemRequest {
   noOfUnit: number;
   ppcc?: string;
   costPerUnit: number;
-  currency: Currency;
+  currencyId: number;
   fcyAmount: number;
   exRate: number;
   localAmount: number;
@@ -48,7 +49,7 @@ export interface CreatePurchaseInvoiceRequest {
   vendorInvoiceNo?: string;
   vendorInvoiceDate?: string;
   jobNo?: string;
-  currency: Currency;
+  currencyId: number;
   remarks?: string;
   items: CreatePurchaseInvoiceItemRequest[];
 }
@@ -62,7 +63,8 @@ export interface AccountInvoice {
   customerName: string;
   customerId: number;
   amount: number;
-  currency: Currency;
+  currencyId?: number;
+  currencyCode?: string;
   dueDate?: string;
   agingDays?: number;
   addedBy?: string;
@@ -77,7 +79,8 @@ export interface UnpaidInvoice {
   invoiceDate: string;
   jobNo?: string;
   hblNo?: string;
-  currency: Currency;
+  currencyId?: number;
+  currencyCode?: string;
   totalAmount: number;
   paidAmount: number;
   pendingAmount: number;
@@ -105,7 +108,8 @@ export interface AccountInvoiceDetail {
   customerAddress?: string;
   customerPhone?: string;
   customerEmail?: string;
-  currency: Currency;
+  currencyId?: number;
+  currencyCode?: string;
   subTotal: number;
   totalTax: number;
   total: number;
@@ -118,7 +122,8 @@ export interface AccountInvoiceItem {
   id: number;
   chargeDetails: string;
   basis?: string;
-  currency: Currency;
+  currencyId?: number;
+  currencyCode?: string;
   rate: number;
   quantity: number;
   roe: number;
@@ -134,15 +139,18 @@ export interface AccountPurchaseInvoice {
   purchaseDate: string;
   jobNo?: string;
   vendorInvoiceNo?: string;
+  vendorInvoiceDate?: string;
   vendorName?: string;
   vendorId: number;
   amount: number;
-  currency: Currency;
+  currencyId?: number;
+  currencyCode?: string;
   totalFCY: number;
   totalLCY: number;
   paymentStatus: PaymentStatus;
   remarks?: string;
   status?: string;
+  createdBy?: string;
   createdAt: string;
 }
 
@@ -156,8 +164,9 @@ export interface AccountPurchaseInvoiceItem {
   ppcc?: string;
   chargeItemId?: number;
   costingUnitId?: number;
-  currency: Currency;
-  quantity: number;
+  currencyId?: number;
+  currencyCode?: string;
+  noOfUnit: number;
   costPerUnit: number;
   fcyAmount: number;
   exRate: number;
@@ -165,6 +174,36 @@ export interface AccountPurchaseInvoiceItem {
   taxPercentage: number;
   taxAmount: number;
   shipmentCostingId?: number;
+}
+
+// VAT Report Types
+export interface VatReportItem {
+  id: number;
+  jobNo?: string;
+  hblNo?: string;
+  invoiceNo: string;
+  invoiceDate: string;
+  customerName?: string;
+  currencyCode?: string;
+  amount: number;
+  nonTaxableSale: number;
+  taxableSale: number;
+  taxAmount: number;
+  totalInvoice: number;
+  remarks?: string;
+}
+
+export interface VatReportTotals {
+  totalAmount: number;
+  totalNonTaxableSale: number;
+  totalTaxableSale: number;
+  totalTaxAmount: number;
+  totalInvoiceAmount: number;
+}
+
+export interface VatReportResult {
+  items: PaginatedList<VatReportItem>;
+  totals: VatReportTotals;
 }
 
 // Invoice API
@@ -239,6 +278,20 @@ export const invoiceApi = {
     return fetchApi<PaginatedList<AccountPurchaseInvoice>>(`/invoices/purchases?${query}`);
   },
   getPurchaseInvoiceById: (id: number) => fetchApi<AccountPurchaseInvoiceDetail>(`/invoices/purchases/${id}`),
+  getVatReport: (params?: {
+    pageNumber?: number; pageSize?: number;
+    customerId?: number; fromDate?: string; toDate?: string;
+    searchTerm?: string;
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.customerId) query.append('customerId', params.customerId.toString());
+    if (params?.fromDate) query.append('fromDate', params.fromDate);
+    if (params?.toDate) query.append('toDate', params.toDate);
+    if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
+    return fetchApi<VatReportResult>(`/invoices/vat-report?${query}`);
+  },
 };
 
 // Receipt Types
@@ -249,7 +302,8 @@ export interface Receipt {
   customerId: number;
   customerName?: string;
   paymentMode: PaymentMode;
-  currency: Currency;
+  currencyId?: number;
+  currencyCode?: string;
   amount: number;
   narration?: string;
   bankId?: number;
@@ -269,7 +323,8 @@ export interface ReceiptInvoice {
   invoiceDate?: string;
   jobNo?: string;
   hblNo?: string;
-  currency: Currency;
+  currencyId?: number;
+  currencyCode?: string;
   amount: number; // Amount allocated in this receipt
   invoiceAmount: number; // Total invoice amount
   totalReceived: number; // Total received across all receipts
@@ -287,14 +342,14 @@ export interface ReceiptDetail extends Receipt {
 export interface CreateReceiptInvoiceRequest {
   invoiceId: number;
   amount: number;
-  currency: Currency;
+  currencyId: number;
 }
 
 export interface CreateReceiptRequest {
   receiptDate: string;
   customerId: number;
   paymentMode: PaymentMode;
-  currency: Currency;
+  currencyId: number;
   amount: number;
   narration?: string;
   bankId?: number;

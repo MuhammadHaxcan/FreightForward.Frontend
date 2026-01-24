@@ -12,7 +12,7 @@ import { ArrowLeft, Plus, ChevronDown, Check, CalendarIcon, Pencil, Trash2 } fro
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { cn, formatDate } from "@/lib/utils";
-import { customerApi, settingsApi, CustomerCategoryType, Currency, Invoice as ApiInvoice, AccountReceivable as ApiAccountReceivable, AccountPayable as ApiAccountPayable, PaymentStatus, Receipt as ApiReceipt, CustomerStatement } from "@/services/api";
+import { customerApi, settingsApi, CustomerCategoryType, CurrencyType, Invoice as ApiInvoice, AccountReceivable as ApiAccountReceivable, AccountPayable as ApiAccountPayable, PaymentStatus, Receipt as ApiReceipt, CustomerStatement } from "@/services/api";
 import { getPaymentVouchers, PaymentVoucher } from "@/services/api/payment";
 import { invoiceApi, AccountPurchaseInvoice } from "@/services/api/invoice";
 import { useToast } from "@/hooks/use-toast";
@@ -49,7 +49,6 @@ interface CreditNote {
 // StatementEntry imported from API as part of CustomerStatement
 
 const countries = ["United Arab Emirates", "Singapore", "Pakistan", "Taiwan", "China", "Ethiopia", "India", "USA"];
-const currencies: Currency[] = ["AED", "USD", "SGD", "PKR", "CNY", "EUR"];
 
 // Base tabs for all customer types
 const baseTabs = [
@@ -98,6 +97,7 @@ const CustomerDetail = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [categoryTypes, setCategoryTypes] = useState<CustomerCategoryType[]>([]);
+  const [currencyTypes, setCurrencyTypes] = useState<CurrencyType[]>([]);
 
   // Invoices state (declared early to avoid reference errors)
   const [invoices, setInvoices] = useState<ApiInvoice[]>([]);
@@ -175,7 +175,7 @@ const CustomerDetail = () => {
     address: "",
     status: "Active",
     carrierCode: "",
-    baseCurrency: "AED" as Currency,
+    currencyId: "",
   });
 
   // Load category types and customer data
@@ -187,6 +187,12 @@ const CustomerDetail = () => {
         const categoryResponse = await settingsApi.getAllCustomerCategoryTypes();
         if (categoryResponse.data) {
           setCategoryTypes(categoryResponse.data);
+        }
+
+        // Load currency types
+        const currencyResponse = await settingsApi.getAllCurrencyTypes();
+        if (currencyResponse.data) {
+          setCurrencyTypes(currencyResponse.data);
         }
 
         // Load customer data if editing
@@ -209,8 +215,15 @@ const CustomerDetail = () => {
               address: customer.address || "",
               status: customer.status || "Active",
               carrierCode: customer.carrierCode || "",
-              baseCurrency: customer.baseCurrency || "AED",
+              currencyId: customer.currencyId?.toString() || "",
             });
+            // Load account details currency from customer's base currency
+            if (customer.currencyId && currencyResponse.data) {
+              const currency = currencyResponse.data.find(c => c.id === customer.currencyId);
+              if (currency) {
+                setAccountDetails(prev => ({ ...prev, currency: currency.code }));
+              }
+            }
             // Load contacts
             if (customer.contacts) {
               setContacts(customer.contacts.map(c => ({
@@ -490,6 +503,10 @@ const CustomerDetail = () => {
 
     setSaving(true);
     try {
+      // Look up currencyId from the account details currency code
+      const selectedCurrency = currencyTypes.find(c => c.code === accountDetails.currency);
+      const currencyId = selectedCurrency?.id;
+
       if (isEditMode && id) {
         // Update existing customer
         const updateData = {
@@ -503,7 +520,7 @@ const CustomerDetail = () => {
           country: profileData.country || undefined,
           city: profileData.city || undefined,
           address: profileData.address || undefined,
-          baseCurrency: profileData.baseCurrency,
+          currencyId: currencyId || undefined,
           taxNo: profileData.ntnVatTaxNo || undefined,
           taxPercentage: profileData.taxPercentage ? parseFloat(profileData.taxPercentage) : undefined,
           carrierCode: profileData.carrierCode || undefined,
@@ -531,7 +548,7 @@ const CustomerDetail = () => {
           country: profileData.country || undefined,
           city: profileData.city || undefined,
           address: profileData.address || undefined,
-          baseCurrency: profileData.baseCurrency,
+          currencyId: currencyId || undefined,
           taxNo: profileData.ntnVatTaxNo || undefined,
           taxPercentage: profileData.taxPercentage ? parseFloat(profileData.taxPercentage) : undefined,
           carrierCode: profileData.carrierCode || undefined,
@@ -870,7 +887,7 @@ const CustomerDetail = () => {
           <Select value={accountDetails.currency} onValueChange={v => setAccountDetails({...accountDetails, currency: v})} disabled={isViewMode}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              {currencies.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              {currencyTypes.map(c => <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -1903,7 +1920,7 @@ const CustomerDetail = () => {
               <Select value={openingBalanceForm.currency} onValueChange={v => setOpeningBalanceForm({...openingBalanceForm, currency: v})}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {currencies.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  {currencyTypes.map(c => <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -2057,7 +2074,7 @@ const CustomerDetail = () => {
                           <SelectValue placeholder="Select" />
                         </SelectTrigger>
                         <SelectContent>
-                          {currencies.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                          {currencyTypes.map(c => <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </td>

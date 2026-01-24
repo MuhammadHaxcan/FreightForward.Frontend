@@ -1,6 +1,12 @@
 import { useState, useMemo } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { formatDate } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -47,12 +53,14 @@ const paymentModeValues: Record<string, string> = {
 
 export default function DailyExpenses() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [startDate, setStartDate] = useState("2025-01-01");
-  const [endDate, setEndDate] = useState("2025-12-31");
+  const currentYear = new Date().getFullYear();
+  const [startDate, setStartDate] = useState(`${currentYear}-01-01`);
+  const [endDate, setEndDate] = useState(`${currentYear}-12-31`);
   const [selectedBank, setSelectedBank] = useState("all");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<ApiExpense | null>(null);
+  const [viewingExpense, setViewingExpense] = useState<ApiExpense | null>(null);
   const [showPrintView, setShowPrintView] = useState(false);
 
   // Fetch expenses from API
@@ -110,7 +118,7 @@ export default function DailyExpenses() {
     bank: e.bankName || "---",
     description: e.description || "",
     receipt: e.receiptRef || "---",
-    currency: e.currency,
+    currency: e.currencyCode || "",
     amount: e.amount,
     chequeNumber: e.chequeNumber,
     chequeDate: e.chequeDate,
@@ -124,7 +132,8 @@ export default function DailyExpenses() {
     bankId?: number;
     description: string;
     receipt: string;
-    currency: string;
+    currencyId?: number;
+    expenseTypeId?: number;
     amount: number;
     chequeNumber?: string;
     chequeDate?: string;
@@ -139,7 +148,8 @@ export default function DailyExpenses() {
       receiptRef: expenseData.receipt !== "---" ? expenseData.receipt : undefined,
       chequeNumber: expenseData.chequeNumber,
       chequeDate: expenseData.chequeDate,
-      currency: expenseData.currency,
+      currencyId: expenseData.currencyId,
+      expenseTypeId: expenseData.expenseTypeId,
       amount: expenseData.amount,
     };
     createExpense.mutate(request, {
@@ -155,7 +165,8 @@ export default function DailyExpenses() {
     bankId?: number;
     description: string;
     receipt: string;
-    currency: string;
+    currencyId?: number;
+    expenseTypeId?: number;
     amount: number;
     chequeNumber?: string;
     chequeDate?: string;
@@ -171,7 +182,8 @@ export default function DailyExpenses() {
         receiptRef: expenseData.receipt !== "---" ? expenseData.receipt : undefined,
         chequeNumber: expenseData.chequeNumber,
         chequeDate: expenseData.chequeDate,
-        currency: expenseData.currency,
+        currencyId: expenseData.currencyId,
+        expenseTypeId: expenseData.expenseTypeId,
         amount: expenseData.amount,
       };
       updateExpense.mutate({ id: editingExpense.id, data: request }, {
@@ -320,10 +332,15 @@ export default function DailyExpenses() {
                       <TableCell>{expense.bankName || "---"}</TableCell>
                       <TableCell className="max-w-md">{expense.description}</TableCell>
                       <TableCell>{expense.receiptRef || "---"}</TableCell>
-                      <TableCell className="text-right whitespace-nowrap">{formatAmount(expense.currency, expense.amount)}</TableCell>
+                      <TableCell className="text-right whitespace-nowrap">{formatAmount(expense.currencyCode || "", expense.amount)}</TableCell>
                       <TableCell>
                         <div className="flex items-center justify-center gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:text-primary/80">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-primary hover:text-primary/80"
+                            onClick={() => setViewingExpense(expense)}
+                          >
                             <Eye className="h-4 w-4" />
                           </Button>
                           <Button
@@ -374,6 +391,39 @@ export default function DailyExpenses() {
         banks={banks}
         isSubmitting={createExpense.isPending || updateExpense.isPending}
       />
+
+      <Dialog open={!!viewingExpense} onOpenChange={() => setViewingExpense(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Expense Details</DialogTitle>
+          </DialogHeader>
+          {viewingExpense && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div><span className="font-medium text-muted-foreground">Date:</span> <span>{formatDate(viewingExpense.expenseDate)}</span></div>
+                <div><span className="font-medium text-muted-foreground">Payment Type:</span> <span>{viewingExpense.paymentType}</span></div>
+                <div><span className="font-medium text-muted-foreground">Payment Mode:</span> <span>{paymentModeLabels[viewingExpense.paymentMode] || viewingExpense.paymentMode}</span></div>
+                <div><span className="font-medium text-muted-foreground">Category:</span> <span>{viewingExpense.category}</span></div>
+                <div><span className="font-medium text-muted-foreground">Bank:</span> <span>{viewingExpense.bankName || "---"}</span></div>
+                <div><span className="font-medium text-muted-foreground">Amount:</span> <span>{formatAmount(viewingExpense.currencyCode || "", viewingExpense.amount)}</span></div>
+                <div><span className="font-medium text-muted-foreground">Receipt Ref:</span> <span>{viewingExpense.receiptRef || "---"}</span></div>
+                {viewingExpense.chequeNumber && (
+                  <>
+                    <div><span className="font-medium text-muted-foreground">Cheque No:</span> <span>{viewingExpense.chequeNumber}</span></div>
+                    <div><span className="font-medium text-muted-foreground">Cheque Date:</span> <span>{viewingExpense.chequeDate ? formatDate(viewingExpense.chequeDate) : "---"}</span></div>
+                  </>
+                )}
+              </div>
+              {viewingExpense.description && (
+                <div className="text-sm">
+                  <span className="font-medium text-muted-foreground">Description:</span>
+                  <p className="mt-1">{viewingExpense.description}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }

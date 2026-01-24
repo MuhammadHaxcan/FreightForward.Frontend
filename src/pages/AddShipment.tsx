@@ -59,8 +59,10 @@ import {
   UpdateShipmentContainerRequest,
   AddShipmentCostingRequest,
   UpdateShipmentCostingRequest,
-  Currency,
   ShipmentInvoicesResult,
+  ShipmentContainer,
+  ShipmentCosting,
+  ShipmentDocument,
 } from "@/services/api";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -347,9 +349,9 @@ const AddShipment = () => {
   const [parties, setParties] = useState<LocalParty[]>([]);
   const [selectedPartyType, setSelectedPartyType] = useState<PartyType>('Shipper');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
-  const [containers, setContainers] = useState<any[]>([]);
-  const [costing, setCosting] = useState<any[]>([]);
-  const [documents, setDocuments] = useState<any[]>([]);
+  const [containers, setContainers] = useState<Array<Partial<ShipmentContainer> & { sNo?: number | string }>>([]);
+  const [costing, setCosting] = useState<Array<Partial<ShipmentCosting>>>([]);
+  const [documents, setDocuments] = useState<Array<Partial<ShipmentDocument>>>([]);
   const [shipmentStatus, setShipmentStatus] = useState({ date: getTodayDateOnly(), remarks: "" });
 
   // Fetch customer category types
@@ -518,8 +520,8 @@ const AddShipment = () => {
   const [documentModalOpen, setDocumentModalOpen] = useState(false);
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
-  const [editingContainer, setEditingContainer] = useState<any>(null);
-  const [editingCosting, setEditingCosting] = useState<any>(null);
+  const [editingContainer, setEditingContainer] = useState<(Partial<ShipmentContainer> & { sNo?: number | string }) | null>(null);
+  const [editingCosting, setEditingCosting] = useState<Partial<ShipmentCosting> | null>(null);
 
   // Delete confirmation modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -582,7 +584,7 @@ const AddShipment = () => {
     setDeleteModalOpen(true);
   };
 
-  const handleSaveContainer = async (container: any) => {
+  const handleSaveContainer = async (container: Partial<ShipmentContainer> & { sNo?: number | string }) => {
     if (!savedShipmentId) {
       toast.error("Please save the shipment first");
       return;
@@ -628,7 +630,7 @@ const AddShipment = () => {
     }
   };
 
-  const handleEditContainer = (container: any) => {
+  const handleEditContainer = (container: Partial<ShipmentContainer> & { sNo?: number | string }) => {
     setEditingContainer(container);
     setContainerModalOpen(true);
   };
@@ -639,7 +641,7 @@ const AddShipment = () => {
     setDeleteModalOpen(true);
   };
 
-  const handleSaveCosting = async (cost: any) => {
+  const handleSaveCosting = async (cost: Partial<ShipmentCosting>) => {
     if (!savedShipmentId) {
       toast.error("Please save the shipment first");
       return;
@@ -655,7 +657,7 @@ const AddShipment = () => {
           remarks: cost.remarks || undefined,
           saleQty: parseFloat(cost.saleQty) || 0,
           saleUnit: parseFloat(cost.saleUnit) || 0,
-          saleCurrency: (cost.saleCurrency as Currency) || 'AED',
+          saleCurrencyId: cost.saleCurrencyId,
           saleExRate: parseFloat(cost.saleExRate) || 1,
           saleFCY: parseFloat(cost.saleFCY) || 0,
           saleLCY: parseFloat(cost.saleLCY) || 0,
@@ -663,18 +665,18 @@ const AddShipment = () => {
           saleTaxAmount: parseFloat(cost.saleTaxAmount) || 0,
           costQty: parseFloat(cost.costQty) || 0,
           costUnit: parseFloat(cost.costUnit) || 0,
-          costCurrency: (cost.costCurrency as Currency) || 'AED',
+          costCurrencyId: cost.costCurrencyId,
           costExRate: parseFloat(cost.costExRate) || 1,
           costFCY: parseFloat(cost.costFCY) || 0,
           costLCY: parseFloat(cost.costLCY) || 0,
           costTaxPercentage: parseFloat(cost.costTaxPercentage) || 0,
           costTaxAmount: parseFloat(cost.costTaxAmount) || 0,
-          unitName: cost.unitName,
+          unitId: cost.unitId,
           gp: parseFloat(cost.gp) || 0,
           billToCustomerId: cost.billToCustomerId || undefined,
-          billToName: cost.billToName || undefined,
           vendorCustomerId: cost.vendorCustomerId || undefined,
-          vendorName: cost.vendorName || undefined,
+          costReferenceNo: cost.costReferenceNo || undefined,
+          costDate: cost.costDate || undefined,
         };
 
         await updateCostingMutation.mutateAsync({ shipmentId: savedShipmentId, costingId: editingCosting.id, data: costingData });
@@ -686,7 +688,7 @@ const AddShipment = () => {
           remarks: cost.remarks || undefined,
           saleQty: parseFloat(cost.saleQty) || 0,
           saleUnit: parseFloat(cost.saleUnit) || 0,
-          saleCurrency: (cost.saleCurrency as Currency) || 'AED',
+          saleCurrencyId: cost.saleCurrencyId,
           saleExRate: parseFloat(cost.saleExRate) || 1,
           saleFCY: parseFloat(cost.saleFCY) || 0,
           saleLCY: parseFloat(cost.saleLCY) || 0,
@@ -694,18 +696,18 @@ const AddShipment = () => {
           saleTaxAmount: parseFloat(cost.saleTaxAmount) || 0,
           costQty: parseFloat(cost.costQty) || 0,
           costUnit: parseFloat(cost.costUnit) || 0,
-          costCurrency: (cost.costCurrency as Currency) || 'AED',
+          costCurrencyId: cost.costCurrencyId,
           costExRate: parseFloat(cost.costExRate) || 1,
           costFCY: parseFloat(cost.costFCY) || 0,
           costLCY: parseFloat(cost.costLCY) || 0,
           costTaxPercentage: parseFloat(cost.costTaxPercentage) || 0,
           costTaxAmount: parseFloat(cost.costTaxAmount) || 0,
-          unitName: cost.unitName,
+          unitId: cost.unitId,
           gp: parseFloat(cost.gp) || 0,
           billToCustomerId: cost.billToCustomerId || undefined,
-          billToName: cost.billToName || undefined,
           vendorCustomerId: cost.vendorCustomerId || undefined,
-          vendorName: cost.vendorName || undefined,
+          costReferenceNo: cost.costReferenceNo || undefined,
+          costDate: cost.costDate || undefined,
         };
 
         await addCostingMutation.mutateAsync({ shipmentId: savedShipmentId, data: costingData });
@@ -717,7 +719,7 @@ const AddShipment = () => {
     }
   };
 
-  const handleEditCosting = (cost: any) => {
+  const handleEditCosting = (cost: Partial<ShipmentCosting>) => {
     setEditingCosting(cost);
     setCostingModalOpen(true);
   };
@@ -728,7 +730,7 @@ const AddShipment = () => {
     setDeleteModalOpen(true);
   };
 
-  const handleSaveDocument = (doc: any) => {
+  const handleSaveDocument = (doc: Partial<ShipmentDocument>) => {
     setDocuments(prev => [...prev, doc]);
     toast.success("Document added");
   };
@@ -750,9 +752,10 @@ const AddShipment = () => {
             try {
               await deletePartyMutation.mutateAsync({ partyId: deleteModalConfig.id, shipmentId: savedShipmentId });
               refetchShipment();
-            } catch (error: any) {
+            } catch (error: unknown) {
               // Show warning modal for party deletion errors (e.g., costings assigned)
-              setWarningMessage(error.message || 'Failed to delete party');
+              const message = error instanceof Error ? error.message : 'Failed to delete party';
+              setWarningMessage(message);
               setWarningModalOpen(true);
               setDeleteModalOpen(false);
               setDeleteModalConfig(null);
@@ -1673,23 +1676,24 @@ const AddShipment = () => {
                 </div>
               )}
 
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-table-header">
                     <TableHead className="text-table-header-foreground">S.No</TableHead>
                     <TableHead className="text-table-header-foreground">Description</TableHead>
-                    <TableHead className="text-emerald-400">Sale Qty</TableHead>
-                    <TableHead className="text-emerald-400">Sale Unit</TableHead>
-                    <TableHead className="text-emerald-400">Currency</TableHead>
-                    <TableHead className="text-emerald-400">Ex.Rate</TableHead>
-                    <TableHead className="text-emerald-400">FCY Amount</TableHead>
-                    <TableHead className="text-emerald-400">LCY Amount</TableHead>
-                    <TableHead className="text-orange-400">Cost Qty</TableHead>
-                    <TableHead className="text-orange-400">Cost/Unit</TableHead>
-                    <TableHead className="text-orange-400">Currency</TableHead>
-                    <TableHead className="text-orange-400">Ex.Rate</TableHead>
-                    <TableHead className="text-orange-400">FCY</TableHead>
-                    <TableHead className="text-orange-400">LCY</TableHead>
+                    <TableHead className="text-table-header-foreground">Sale Qty</TableHead>
+                    <TableHead className="text-table-header-foreground">Sale Unit</TableHead>
+                    <TableHead className="text-table-header-foreground">Currency</TableHead>
+                    <TableHead className="text-table-header-foreground">Ex.Rate</TableHead>
+                    <TableHead className="text-table-header-foreground">FCY Amount</TableHead>
+                    <TableHead className="text-table-header-foreground">LCY Amount</TableHead>
+                    <TableHead className="text-table-header-foreground">Cost Qty</TableHead>
+                    <TableHead className="text-table-header-foreground">Cost/Unit</TableHead>
+                    <TableHead className="text-table-header-foreground">Currency</TableHead>
+                    <TableHead className="text-table-header-foreground">Ex.Rate</TableHead>
+                    <TableHead className="text-table-header-foreground">FCY</TableHead>
+                    <TableHead className="text-table-header-foreground">LCY</TableHead>
                     <TableHead className="text-table-header-foreground">Unit</TableHead>
                     <TableHead className="text-table-header-foreground">GP</TableHead>
                     <TableHead className="text-table-header-foreground">Action</TableHead>
@@ -1740,35 +1744,24 @@ const AddShipment = () => {
                   )}
                 </TableBody>
               </Table>
-
-              {/* Legend for color coding */}
-              {costing.length > 0 && (
-                <div className="flex gap-4 text-xs">
-                  <div className="flex items-center gap-1">
-                    <div className="w-4 h-4 rounded bg-emerald-100 dark:bg-emerald-900/30 border border-emerald-300"></div>
-                    <span>Sale Invoiced (Sale columns)</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-4 h-4 rounded bg-orange-100 dark:bg-orange-900/30 border border-orange-300"></div>
-                    <span>Purchase Invoiced (Cost columns)</span>
-                  </div>
-                </div>
-              )}
+              </div>
 
               {/* Summary */}
-              <div className="flex justify-end">
+              <div className="flex justify-center">
                 <div className="grid grid-cols-3 gap-8 bg-secondary/30 p-4 rounded-lg">
-                  <div>
+                  <div className="text-center">
                     <Label className="text-sm font-semibold">Total Sale</Label>
-                    <div className="text-emerald-600 font-semibold">| AED {totalSale.toFixed(2)}</div>
+                    <div className="text-emerald-600 font-semibold">[ AED {totalSale.toFixed(2)} ]</div>
                   </div>
-                  <div>
+                  <div className="text-center">
                     <Label className="text-sm font-semibold">Total Cost</Label>
-                    <div className="text-foreground font-semibold">AED {totalCost.toFixed(2)}</div>
+                    <div className="text-foreground font-semibold">[ AED {totalCost.toFixed(2)} ]</div>
                   </div>
-                  <div>
+                  <div className="text-center">
                     <Label className="text-sm font-semibold">Profit</Label>
-                    <div className="text-foreground font-semibold">AED {(totalSale - totalCost).toFixed(2)}</div>
+                    <div className={`font-semibold ${(totalSale - totalCost) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      [ AED {(totalSale - totalCost).toFixed(2)} ]
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1784,10 +1777,10 @@ const AddShipment = () => {
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-table-header">
-                            <TableHead className="text-table-header-foreground text-xs">Invoice No</TableHead>
-                            <TableHead className="text-table-header-foreground text-xs">Party</TableHead>
-                            <TableHead className="text-table-header-foreground text-xs text-right">Amount</TableHead>
-                            <TableHead className="text-table-header-foreground text-xs text-right">Tax</TableHead>
+                            <TableHead className="text-table-header-foreground text-xs">Bill To</TableHead>
+                            <TableHead className="text-table-header-foreground text-xs">P.Sale</TableHead>
+                            <TableHead className="text-table-header-foreground text-xs">Voucher Number</TableHead>
+                            <TableHead className="text-table-header-foreground text-xs">Status</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1798,10 +1791,10 @@ const AddShipment = () => {
                           ) : (
                             shipmentInvoices.customerInvoices.map((inv, index) => (
                               <TableRow key={inv.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
-                                <TableCell className="text-xs">{inv.invoiceNo}</TableCell>
                                 <TableCell className="text-xs">{inv.partyName || "-"}</TableCell>
-                                <TableCell className="text-xs text-right">{inv.amount.toFixed(2)}</TableCell>
-                                <TableCell className="text-xs text-right">{inv.totalTax.toFixed(2)}</TableCell>
+                                <TableCell className="text-xs">{inv.currencyCode} {inv.amount.toFixed(2)}</TableCell>
+                                <TableCell className="text-xs">{inv.invoiceNo}</TableCell>
+                                <TableCell className="text-xs">{inv.paymentStatus}</TableCell>
                               </TableRow>
                             ))
                           )}
@@ -1815,10 +1808,10 @@ const AddShipment = () => {
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-table-header">
-                            <TableHead className="text-table-header-foreground text-xs">Purchase No</TableHead>
-                            <TableHead className="text-table-header-foreground text-xs">Party</TableHead>
-                            <TableHead className="text-table-header-foreground text-xs text-right">Amount</TableHead>
-                            <TableHead className="text-table-header-foreground text-xs text-right">Tax</TableHead>
+                            <TableHead className="text-table-header-foreground text-xs">Vendor</TableHead>
+                            <TableHead className="text-table-header-foreground text-xs">P.Cost</TableHead>
+                            <TableHead className="text-table-header-foreground text-xs">Voucher Number</TableHead>
+                            <TableHead className="text-table-header-foreground text-xs">Status</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1829,10 +1822,10 @@ const AddShipment = () => {
                           ) : (
                             shipmentInvoices.vendorInvoices.map((inv, index) => (
                               <TableRow key={inv.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
-                                <TableCell className="text-xs">{inv.purchaseNo}</TableCell>
                                 <TableCell className="text-xs">{inv.partyName || "-"}</TableCell>
-                                <TableCell className="text-xs text-right">{inv.amount.toFixed(2)}</TableCell>
-                                <TableCell className="text-xs text-right">{inv.totalTax.toFixed(2)}</TableCell>
+                                <TableCell className="text-xs">{inv.currencyCode} {inv.amount.toFixed(2)}</TableCell>
+                                <TableCell className="text-xs">{inv.purchaseNo}</TableCell>
+                                <TableCell className="text-xs">{inv.paymentStatus}</TableCell>
                               </TableRow>
                             ))
                           )}
@@ -1841,15 +1834,22 @@ const AddShipment = () => {
                     </div>
                   </div>
 
-                  {/* GP Calculation */}
+                  {/* Summary */}
                   <div className="flex justify-center">
-                    <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4 text-center">
-                      <Label className="text-sm font-semibold">Gross Profit (GP)</Label>
-                      <div className={`text-xl font-bold ${(totalSale - totalCost) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                        AED {(totalSale - totalCost).toFixed(2)}
+                    <div className="grid grid-cols-3 gap-8 bg-secondary/30 p-4 rounded-lg">
+                      <div className="text-center">
+                        <Label className="text-sm font-semibold">Total Sale</Label>
+                        <div className="text-emerald-600 font-semibold">[ AED {totalSale.toFixed(2)} ]</div>
                       </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        Sale ({totalSale.toFixed(2)}) - Cost ({totalCost.toFixed(2)})
+                      <div className="text-center">
+                        <Label className="text-sm font-semibold">Total Cost</Label>
+                        <div className="text-foreground font-semibold">[ AED {totalCost.toFixed(2)} ]</div>
+                      </div>
+                      <div className="text-center">
+                        <Label className="text-sm font-semibold">Profit</Label>
+                        <div className={`font-semibold ${(totalSale - totalCost) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                          [ AED {(totalSale - totalCost).toFixed(2)} ]
+                        </div>
                       </div>
                     </div>
                   </div>

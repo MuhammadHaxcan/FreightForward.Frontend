@@ -414,7 +414,7 @@ export default function Quotations() {
     }
   };
 
-  const updateCargoRow = (id: number, field: keyof CargoRow, value: any) => {
+  const updateCargoRow = (id: number, field: keyof CargoRow, value: CargoRow[keyof CargoRow]) => {
     setCargoRows(
       cargoRows.map((row) => (row.id === id ? { ...row, [field]: value } : row))
     );

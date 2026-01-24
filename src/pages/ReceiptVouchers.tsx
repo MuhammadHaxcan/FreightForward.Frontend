@@ -235,7 +235,7 @@ export default function ReceiptVouchers() {
                     <TableCell className="max-w-xs truncate" title={receipt.narration || ""}>
                       {receipt.narration || "-"}
                     </TableCell>
-                    <TableCell>{formatCurrency(receipt.amount, receipt.currency)}</TableCell>
+                    <TableCell>{formatCurrency(receipt.amount, receipt.currencyCode || "AED")}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <Button

@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/select";
 import { DateInput } from "@/components/ui/date-input";
 import { format } from "date-fns";
-import { useExpenseTypesByDirection } from "@/hooks/useSettings";
+import { useExpenseTypesByDirection, useAllCurrencyTypes } from "@/hooks/useSettings";
 import { Expense as ApiExpense, Bank } from "@/services/api";
 import { Loader2 } from "lucide-react";
 
@@ -50,7 +50,8 @@ interface ExpenseModalProps {
     bankId?: number;
     description: string;
     receipt: string;
-    currency: string;
+    currencyId?: number;
+    expenseTypeId?: number;
     amount: number;
     chequeNumber?: string;
     chequeDate?: string;
@@ -60,9 +61,16 @@ interface ExpenseModalProps {
   isSubmitting?: boolean;
 }
 
+const paymentModeConfig: Record<string, { requiresBank: boolean; requiresChequeDetails: boolean }> = {
+  "CASH": { requiresBank: false, requiresChequeDetails: false },
+  "CHEQUE": { requiresBank: true, requiresChequeDetails: true },
+  "BANK WIRE": { requiresBank: true, requiresChequeDetails: false },
+  "BANK TRANSFER": { requiresBank: true, requiresChequeDetails: false },
+  "CARD": { requiresBank: true, requiresChequeDetails: false },
+};
+
 const paymentTypes = ["Inwards", "Outwards"] as const;
 const paymentModes = ["CASH", "CHEQUE", "BANK WIRE", "BANK TRANSFER", "CARD"];
-const currencies = ["AED", "USD", "EUR", "GBP", "SAR"];
 
 export function ExpenseModal({
   isOpen,
@@ -80,7 +88,7 @@ export function ExpenseModal({
     bankId: undefined as number | undefined,
     description: "",
     receipt: "---",
-    currency: "AED",
+    currencyCode: "AED",
     amount: 0,
     chequeNumber: "",
     chequeDate: "",
@@ -91,8 +99,14 @@ export function ExpenseModal({
     formData.paymentType || null
   );
 
+  // Fetch currency types from database
+  const { data: currencyTypesData, isLoading: isLoadingCurrencies } = useAllCurrencyTypes();
+
   // Map expense types to category names
   const categories = expenseTypesData?.map((et) => et.name) || [];
+
+  // Map currency types to currency codes
+  const currencies = currencyTypesData?.map((ct) => ct.code) || [];
 
   useEffect(() => {
     if (expense) {
@@ -106,7 +120,7 @@ export function ExpenseModal({
         bankId: bankId,
         description: expense.description || "",
         receipt: expense.receiptRef || "---",
-        currency: expense.currency,
+        currencyCode: expense.currencyCode || "AED",
         amount: expense.amount,
         chequeNumber: expense.chequeNumber || "",
         chequeDate: expense.chequeDate || "",
@@ -120,7 +134,7 @@ export function ExpenseModal({
         bankId: undefined,
         description: "",
         receipt: "---",
-        currency: "AED",
+        currencyCode: "AED",
         amount: 0,
         chequeNumber: "",
         chequeDate: "",
@@ -128,7 +142,8 @@ export function ExpenseModal({
     }
   }, [expense, isOpen, banks]);
 
-  const isChequeSelected = formData.paymentMode === "CHEQUE";
+  const requiresBank = paymentModeConfig[formData.paymentMode]?.requiresBank ?? false;
+  const requiresChequeDetails = paymentModeConfig[formData.paymentMode]?.requiresChequeDetails ?? false;
 
   const handlePaymentTypeChange = (value: "Inwards" | "Outwards") => {
     // Clear category when payment type changes since categories are different per type
@@ -142,6 +157,8 @@ export function ExpenseModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const currencyId = currencyTypesData?.find(ct => ct.code === formData.currencyCode)?.id;
+    const expenseTypeId = expenseTypesData?.find(et => et.name === formData.category)?.id;
     onSubmit({
       date: formData.date,
       paymentType: formData.paymentType,
@@ -150,7 +167,8 @@ export function ExpenseModal({
       bankId: formData.bankId,
       description: formData.description,
       receipt: formData.receipt,
-      currency: formData.currency,
+      currencyId,
+      expenseTypeId,
       amount: formData.amount,
       chequeNumber: formData.chequeNumber || undefined,
       chequeDate: formData.chequeDate || undefined,
@@ -229,16 +247,21 @@ export function ExpenseModal({
             <div>
               <label className="text-sm font-medium mb-1 block">Currency</label>
               <Select
-                value={formData.currency}
-                onValueChange={(value) => setFormData({ ...formData, currency: value })}
+                value={formData.currencyCode}
+                onValueChange={(value) => setFormData({ ...formData, currencyCode: value })}
+                disabled={isLoadingCurrencies}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select Currency" />
+                  <SelectValue placeholder={isLoadingCurrencies ? "Loading..." : "Select Currency"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {currencies.map((cur) => (
-                    <SelectItem key={cur} value={cur}>{cur}</SelectItem>
-                  ))}
+                  {currencies.length === 0 && !isLoadingCurrencies ? (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">No currencies found</div>
+                  ) : (
+                    currencies.map((cur) => (
+                      <SelectItem key={cur} value={cur}>{cur}</SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -262,7 +285,16 @@ export function ExpenseModal({
               <label className="text-sm font-medium mb-1 block">Payment Mode</label>
               <Select
                 value={formData.paymentMode}
-                onValueChange={(value) => setFormData({ ...formData, paymentMode: value, chequeNumber: "", chequeDate: "" })}
+                onValueChange={(value) => {
+                  const config = paymentModeConfig[value];
+                  setFormData({
+                    ...formData,
+                    paymentMode: value,
+                    bankId: config?.requiresBank ? formData.bankId : undefined,
+                    chequeNumber: config?.requiresChequeDetails ? formData.chequeNumber : "",
+                    chequeDate: config?.requiresChequeDetails ? formData.chequeDate : "",
+                  });
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select Payment Type" />
@@ -279,8 +311,9 @@ export function ExpenseModal({
               <Select
                 value={formData.bankId?.toString() || ""}
                 onValueChange={handleBankChange}
+                disabled={!requiresBank}
               >
-                <SelectTrigger>
+                <SelectTrigger className={!requiresBank ? "bg-muted" : ""}>
                   <SelectValue placeholder="Select Bank">
                     {selectedBankName || "Select Bank"}
                   </SelectValue>
@@ -302,7 +335,7 @@ export function ExpenseModal({
           </div>
 
           {/* Cheque-specific fields - only shown when CHEQUE is selected */}
-          {isChequeSelected && (
+          {requiresChequeDetails && (
             <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg border">
               <div>
                 <label className="text-sm font-medium mb-1 block">Cheque Number</label>

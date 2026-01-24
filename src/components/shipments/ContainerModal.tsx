@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -19,13 +19,19 @@ import {
   SelectLabel,
 } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
-import { settingsApi, PackageType, ContainerType } from "@/services/api";
+import { settingsApi, PackageType, ContainerType, ShipmentContainer } from "@/services/api";
+
+// Extend ShipmentContainer with UI-specific fields
+type ContainerModalData = Partial<ShipmentContainer> & {
+  sNo?: number | string;
+  container?: string; // Alternative field name for containerNumber
+};
 
 interface ContainerModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  container?: any;
-  onSave: (container: any) => void;
+  container?: ContainerModalData;
+  onSave: (container: ContainerModalData) => void;
   nextSNo: number;
 }
 
@@ -74,7 +80,7 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
     return grouped;
   }, [packageTypes]);
 
-  const getInitialFormData = () => ({
+  const getInitialFormData = useCallback(() => ({
     sNo: container?.sNo || nextSNo,
     containerTypeId: container?.containerTypeId?.toString() || "",
     containerNo: container?.containerNumber || container?.container || "",
@@ -85,7 +91,7 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
     weightUnit: "Kgs",
     volume: container?.volume?.toString() || "",
     description: container?.description || "",
-  });
+  }), [container, nextSNo]);
 
   const [formData, setFormData] = useState(getInitialFormData);
 
@@ -94,7 +100,7 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
     if (open) {
       setFormData(getInitialFormData());
     }
-  }, [open, container, nextSNo]);
+  }, [open, getInitialFormData]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));

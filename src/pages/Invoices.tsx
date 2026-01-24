@@ -252,7 +252,7 @@ export default function Invoices() {
                   </TableCell>
                   <TableCell>{invoice.jobNumber || "-"}</TableCell>
                   <TableCell className="text-blue-600">{invoice.customerName}</TableCell>
-                  <TableCell>{formatCurrency(invoice.amount, invoice.currency)}</TableCell>
+                  <TableCell>{formatCurrency(invoice.amount, invoice.currencyCode || '')}</TableCell>
                   <TableCell>{formatDate(invoice.dueDate)}</TableCell>
                   <TableCell className="font-semibold">{getAgingDisplay(invoice.agingDays)}</TableCell>
                   <TableCell className="text-blue-600">{invoice.addedBy || "-"}</TableCell>

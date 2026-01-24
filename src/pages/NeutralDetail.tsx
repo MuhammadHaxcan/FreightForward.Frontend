@@ -11,7 +11,7 @@ import { ArrowLeft, Plus, ChevronDown, Check, Pencil, Trash2 } from "lucide-reac
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { customerApi, settingsApi, CustomerCategoryType, Currency } from "@/services/api";
+import { customerApi, settingsApi, CustomerCategoryType, CurrencyType } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
 
 interface Contact {
@@ -30,7 +30,6 @@ interface Contact {
 }
 
 const countries = ["United Arab Emirates", "Singapore", "Pakistan", "Taiwan", "China", "Ethiopia", "India", "USA", "Qatar"];
-const currencies: Currency[] = ["AED", "USD", "SGD", "PKR", "CNY", "EUR"];
 
 const tabs = [
   { id: "profile", label: "Profile" },
@@ -51,6 +50,7 @@ const NeutralDetail = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [categoryTypes, setCategoryTypes] = useState<CustomerCategoryType[]>([]);
+  const [currencyTypes, setCurrencyTypes] = useState<CurrencyType[]>([]);
 
   // Profile form state
   const [profileData, setProfileData] = useState({
@@ -68,7 +68,7 @@ const NeutralDetail = () => {
     address: "",
     status: "Active",
     carrierCode: "",
-    baseCurrency: "AED" as Currency,
+    baseCurrency: "AED",
   });
 
   // Load category types and customer data
@@ -80,6 +80,12 @@ const NeutralDetail = () => {
         const categoryResponse = await settingsApi.getAllCustomerCategoryTypes();
         if (categoryResponse.data) {
           setCategoryTypes(categoryResponse.data);
+        }
+
+        // Load currency types
+        const currencyResponse = await settingsApi.getAllCurrencyTypes();
+        if (currencyResponse.data) {
+          setCurrencyTypes(currencyResponse.data);
         }
 
         // Load customer data if editing
@@ -472,7 +478,7 @@ const NeutralDetail = () => {
           <Select value={accountDetails.currency} onValueChange={v => setAccountDetails({...accountDetails, currency: v})} disabled={isViewMode}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              {currencies.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              {currencyTypes.map(c => <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>

@@ -168,7 +168,7 @@ export default function ReceiptView() {
                     {formatDate(receipt.chequeDate) || "---"}
                   </TableCell>
                   <TableCell>{receipt.bankName || "-"}</TableCell>
-                  <TableCell>{receipt.currency}</TableCell>
+                  <TableCell>{receipt.currencyCode || "AED"}</TableCell>
                   <TableCell className="text-right">{receipt.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
                 </TableRow>
               </TableBody>
@@ -200,7 +200,7 @@ export default function ReceiptView() {
                         <TableCell>{inv.invoiceNo || "-"}</TableCell>
                         <TableCell>{inv.jobNo || "-"}</TableCell>
                         <TableCell>{inv.hblNo || "-"}</TableCell>
-                        <TableCell>{inv.currency}</TableCell>
+                        <TableCell>{inv.currencyCode || "AED"}</TableCell>
                         <TableCell className="text-right">
                           {inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </TableCell>

@@ -12,7 +12,7 @@ import { costSheetApi as _costSheetApi } from './costSheet';
 import { expenseApi as _expenseApi } from './expense';
 
 // Base types and utilities
-export { fetchApi, type PaginatedList, type ApiResponse, type MasterType, type Currency, type PaymentStatus } from './base';
+export { fetchApi, type PaginatedList, type ApiResponse, type MasterType, type PaymentStatus } from './base';
 
 // Bank
 export { bankApi, type Bank, type CreateBankRequest, type UpdateBankRequest } from './bank';
@@ -112,6 +112,7 @@ export {
 export {
   settingsApi,
   type PaymentType,
+  type TransportMode,
   type CurrencyType,
   type Port,
   type ChargeItem,
@@ -120,7 +121,6 @@ export {
   type CustomerCategoryType,
   type PackageType,
   type NetworkPartner,
-  type TransportMode,
   type BLType,
   type CostingUnit,
   type ContainerType,
@@ -157,7 +157,9 @@ export {
   type CreateReceiptInvoiceRequest,
   type CreateReceiptRequest,
   type UnpaidInvoice,
-  type PaymentType,
+  type VatReportItem,
+  type VatReportTotals,
+  type VatReportResult,
 } from './invoice';
 
 // Cost Sheet

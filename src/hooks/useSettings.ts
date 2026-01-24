@@ -455,11 +455,11 @@ export function useAllCurrencyTypes() {
   return useQuery({
     queryKey: ['currencyTypes', 'all'],
     queryFn: async () => {
-      const response = await settingsApi.getCurrencyTypes({ pageSize: 1000 });
+      const response = await settingsApi.getAllCurrencyTypes();
       if (response.error) {
         throw new Error(response.error);
       }
-      return response.data!.items;
+      return response.data!;
     },
   });
 }

@@ -1,6 +1,6 @@
 import { fetchApi, PaginatedList } from './base';
 
-export type ExpenseExpensePaymentType = 'Inwards' | 'Outwards';
+export type ExpensePaymentType = 'Inwards' | 'Outwards';
 
 export interface Expense {
   id: number;
@@ -8,13 +8,15 @@ export interface Expense {
   paymentType: ExpensePaymentType;
   paymentMode: string;
   category: string;
+  expenseTypeId?: number;
   bankId?: number;
   bankName?: string;
   description?: string;
   receiptRef?: string;
   chequeNumber?: string;
   chequeDate?: string;
-  currency: string;
+  currencyId?: number;
+  currencyCode?: string;
   amount: number;
 }
 
@@ -23,16 +25,17 @@ export interface CreateExpenseRequest {
   paymentType: ExpensePaymentType;
   paymentMode: string;
   category: string;
+  expenseTypeId?: number;
   bankId?: number;
   description?: string;
   receiptRef?: string;
   chequeNumber?: string;
   chequeDate?: string;
-  currency: string;
+  currencyId?: number;
   amount: number;
 }
 
-export interface UpdateExpenseRequest extends CreateExpenseRequest {}
+export type UpdateExpenseRequest = CreateExpenseRequest;
 
 export const expenseApi = {
   getExpenses: (params?: { pageNumber?: number; pageSize?: number; searchTerm?: string }) => {

@@ -3,6 +3,9 @@ import { fetchApi, PaginatedList } from './base';
 // Settings Types
 export type PaymentType = 'Inwards' | 'Outwards';
 
+// Transport mode is now an enum in the backend, use string type for frontend
+export type TransportMode = 'Air' | 'SeaFCL' | 'SeaLCL' | 'BreakBulk' | 'RoRo';
+
 export interface CurrencyType {
   id: number;
   name: string;
@@ -60,14 +63,6 @@ export interface PackageType {
 }
 
 export interface NetworkPartner {
-  id: number;
-  code: string;
-  name: string;
-  description?: string;
-  sortOrder: number;
-}
-
-export interface TransportMode {
   id: number;
   code: string;
   name: string;
@@ -170,6 +165,9 @@ export const settingsApi = {
   },
   getAllCurrencyTypes: () =>
     fetchApi<CurrencyType[]>('/settings/currency-types/all'),
+  // Alias for backward compatibility
+  getAllCurrencies: () =>
+    fetchApi<CurrencyType[]>('/settings/currency-types/all'),
   createCurrencyType: (data: CreateCurrencyTypeRequest) =>
     fetchApi<number>('/settings/currency-types', { method: 'POST', body: JSON.stringify(data) }),
   updateCurrencyType: (id: number, data: UpdateCurrencyTypeRequest) =>
@@ -238,10 +236,6 @@ export const settingsApi = {
     fetchApi<NetworkPartner[]>('/settings/network-partners/all'),
   getNetworkPartnerById: (id: number) =>
     fetchApi<NetworkPartner>(`/settings/network-partners/${id}`),
-
-  // Transport Modes
-  getAllTransportModes: () =>
-    fetchApi<TransportMode[]>('/settings/transport-modes/all'),
 
   // BL Types
   getAllBLTypes: () =>
