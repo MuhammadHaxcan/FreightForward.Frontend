@@ -45,8 +45,9 @@ import {
   useAllPackageTypes,
   useAllCurrencyTypes,
   useAllChargeItems,
+  useAllContainerTypes,
 } from "@/hooks/useSettings";
-import { Quotation, CreateQuotationRequest, Currency } from "@/services/api";
+import { Quotation, CreateQuotationRequest } from "@/services/api";
 
 interface CargoRow {
   id: number;
@@ -72,6 +73,7 @@ interface ChargeRow {
   chargeItemId?: number;
   bases: string;
   currency: string;
+  currencyId?: number;
   rate: string;
   roe: string;
   quantity: string;
@@ -163,6 +165,7 @@ export default function Quotations() {
   const { data: packageTypes } = useAllPackageTypes();
   const { data: currencyTypes } = useAllCurrencyTypes();
   const { data: chargeItems } = useAllChargeItems();
+  const { data: containerTypes } = useAllContainerTypes();
 
   // Mutations
   const createMutation = useCreateQuotation();
@@ -336,7 +339,8 @@ export default function Quotations() {
             chargeType: ch.chargeType || "",
             chargeItemId: ch.chargeItemId,
             bases: ch.bases || "",
-            currency: ch.currency?.toString() || "",
+            currency: ch.currencyCode || "",
+            currencyId: ch.currencyId,
             rate: ch.rate?.toString() || "",
             roe: ch.roe?.toString() || "",
             quantity: ch.quantity?.toString() || "",
@@ -433,17 +437,18 @@ export default function Quotations() {
     }
   };
 
-  const updateChargeRow = (id: number, field: keyof ChargeRow, value: string) => {
+  const updateChargeRow = (id: number, field: keyof ChargeRow, value: string | number | undefined) => {
     setChargeRows(
       chargeRows.map((row) => {
         if (row.id === id) {
           const updated = { ...row, [field]: value };
 
-          // Auto-fill ROE when currency changes
+          // Auto-fill ROE and currencyId when currency code changes
           if (field === "currency" && currencyTypes) {
             const selectedCurrency = currencyTypes.find((ct) => ct.code === value);
             if (selectedCurrency) {
               updated.roe = selectedCurrency.roe.toString();
+              updated.currencyId = selectedCurrency.id;
             }
           }
 
@@ -488,7 +493,7 @@ export default function Quotations() {
           chargeType: row.chargeType,
           chargeItemId: row.chargeItemId,
           bases: row.bases,
-          currency: (row.currency as Currency) || "AED",
+          currencyId: row.currencyId || 0,
           rate: parseFloat(row.rate) || 0,
           roe: parseFloat(row.roe) || 1,
           quantity: parseFloat(row.quantity) || 0,
@@ -1259,9 +1264,9 @@ export default function Quotations() {
                           <SelectValue placeholder="Select" />
                         </SelectTrigger>
                         <SelectContent>
-                          {packageTypes?.map((pt) => (
-                            <SelectItem key={pt.id} value={pt.name}>
-                              {pt.name}
+                          {containerTypes?.map((ct) => (
+                            <SelectItem key={ct.id} value={ct.name}>
+                              {ct.name}
                             </SelectItem>
                           ))}
                         </SelectContent>

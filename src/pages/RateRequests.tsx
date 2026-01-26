@@ -41,7 +41,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Edit, Plus, FileText, Loader2, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import { useRateRequests, useCreateRateRequest, useUpdateRateRequest } from "@/hooks/useSales";
+import { useRateRequests, useCreateRateRequest, useUpdateRateRequest, useLead } from "@/hooks/useSales";
+import { EquipmentGridReadOnly } from "@/components/leads/EquipmentGridReadOnly";
+import { BoxPalletsGridReadOnly } from "@/components/leads/BoxPalletsGridReadOnly";
+import { useAllCountries, useAllPorts, useAllIncoTerms, useAllCustomerCategoryTypes } from "@/hooks/useSettings";
+import { useAllCreditors } from "@/hooks/useCustomers";
 import { RateRequest } from "@/services/api";
 
 type ModalMode = "add" | "edit";
@@ -67,6 +71,16 @@ export default function RateRequests() {
 
   const createMutation = useCreateRateRequest();
   const updateMutation = useUpdateRateRequest();
+
+  // Load reference data for dropdowns
+  const { data: countries } = useAllCountries();
+  const { data: ports } = useAllPorts();
+  const { data: incoTerms } = useAllIncoTerms();
+  const { data: categoryTypes } = useAllCustomerCategoryTypes();
+  const { data: vendors } = useAllCreditors();
+
+  // Fetch lead data when editing (includes lead details)
+  const { data: leadData, isLoading: isLeadLoading } = useLead(selectedRequest?.leadId || 0);
 
   const rateRequests = data?.items || [];
   const totalCount = data?.totalCount || 0;
@@ -392,16 +406,16 @@ export default function RateRequests() {
                 </div>
                 <div>
                   <Label>Incoterm</Label>
-                  <Select defaultValue={selectedRequest?.incoterms === "EXW" ? "exw" : "fob"}>
+                  <Select defaultValue={selectedRequest?.incoTermId?.toString() || ""}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="exw">EXW-EX WORKS</SelectItem>
-                      <SelectItem value="fob">FOB-FREE ON BOARD</SelectItem>
-                      <SelectItem value="cfr">CFR-COST AND FREIGHT</SelectItem>
-                      <SelectItem value="fca">FCA-FREE CARRIER</SelectItem>
-                      <SelectItem value="ddu">DDU-DELIVERED DUTY UNPAID</SelectItem>
+                      {incoTerms?.map((term) => (
+                        <SelectItem key={term.id} value={term.id.toString()}>
+                          {term.code}-{term.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -411,44 +425,44 @@ export default function RateRequests() {
             {/* Package Details */}
             <div className="border border-border rounded-lg p-4">
               <h3 className="text-green-600 font-semibold mb-4">Package Details</h3>
-              <div className="grid grid-cols-5 gap-4">
-                <div>
-                  <Label className="text-red-500">* Quantity</Label>
-                  <Input type="number" placeholder="1" defaultValue="1" />
+
+              {isLeadLoading && selectedRequest?.leadId ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-green-600" />
+                  <span className="ml-2 text-muted-foreground">Loading package details...</span>
                 </div>
-                <div>
-                  <Label>Package Type</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="roll">ROLL</SelectItem>
-                      <SelectItem value="sacks">SACKS</SelectItem>
-                      <SelectItem value="set">SET</SelectItem>
-                      <SelectItem value="skids">SKIDS</SelectItem>
-                      <SelectItem value="units">UNITS</SelectItem>
-                      <SelectItem value="wooden-box">WOODEN BOX</SelectItem>
-                      <SelectItem value="bales">BALES</SelectItem>
-                      <SelectItem value="pallets">PALLETS</SelectItem>
-                      <SelectItem value="cartons">CARTONS</SelectItem>
-                      <SelectItem value="boxes">BOXES</SelectItem>
-                    </SelectContent>
-                  </Select>
+              ) : leadData?.details && leadData.details.length > 0 ? (
+                <div className="space-y-4">
+                  {/* Show Equipment grid if there are equipment items */}
+                  {leadData.details.some(d => d.detailType === "Equipment") && (
+                    <EquipmentGridReadOnly
+                      equipments={leadData.details.filter(d => d.detailType === "Equipment")}
+                    />
+                  )}
+
+                  {/* Show BoxPallets grid if there are box/pallet items */}
+                  {leadData.details.some(d => d.detailType === "BoxPallet") && (
+                    <BoxPalletsGridReadOnly
+                      boxPallets={leadData.details.filter(d => d.detailType === "BoxPallet")}
+                    />
+                  )}
+
+                  {/* Commodity field */}
+                  <div className="mt-4">
+                    <Label>Commodity</Label>
+                    <Textarea
+                      defaultValue={selectedRequest?.productDescription || ""}
+                      placeholder="Enter commodity description"
+                      className="min-h-[40px]"
+                      readOnly
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label className="text-red-500">* Weight</Label>
-                  <Input type="number" placeholder="10000.00" />
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No package details available for this rate request.
                 </div>
-                <div>
-                  <Label className="text-red-500">* Volume</Label>
-                  <Input type="number" placeholder="25" />
-                </div>
-                <div>
-                  <Label>Commodity</Label>
-                  <Textarea placeholder="sugar paste" className="min-h-[40px]" />
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Vendor Details */}
@@ -457,30 +471,31 @@ export default function RateRequests() {
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label>Vendors</Label>
-                  <Select defaultValue={selectedRequest ? "vendor1" : undefined}>
+                  <Select defaultValue={selectedRequest?.vendorId?.toString() || ""}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="vendor1">CARGO SERVICES BARCELONA S.A.U.</SelectItem>
-                      <SelectItem value="vendor2">MACNELS SHIPPING LLC</SelectItem>
-                      <SelectItem value="vendor3">DNATA CARGO</SelectItem>
-                      <SelectItem value="vendor4">RONSPED WORLDWIDE SRL</SelectItem>
-                      <SelectItem value="vendor5">KESIF NAK. VE GUMR.TIC.LTD.STI.</SelectItem>
+                      {vendors?.map((vendor) => (
+                        <SelectItem key={vendor.id} value={vendor.id.toString()}>
+                          {vendor.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label>Vendor Type</Label>
-                  <Select defaultValue="overseas">
+                  <Select defaultValue={selectedRequest?.vendorType || ""}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="overseas">Overseas Agents</SelectItem>
-                      <SelectItem value="local">Local Agents</SelectItem>
-                      <SelectItem value="carrier">Carrier</SelectItem>
-                      <SelectItem value="freight-forwarder">Freight Forwarder</SelectItem>
+                      {categoryTypes?.map((type) => (
+                        <SelectItem key={type.id} value={type.name}>
+                          {type.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -498,7 +513,7 @@ export default function RateRequests() {
                       </label>
                     </div>
                   </div>
-                  <Input placeholder="vendor@email.com" />
+                  <Input defaultValue={selectedRequest?.vendorEmail || ""} placeholder="vendor@email.com" />
                 </div>
               </div>
             </div>
@@ -509,58 +524,61 @@ export default function RateRequests() {
               <div className="grid grid-cols-4 gap-4 mb-4">
                 <div>
                   <Label className="text-red-500">* Arriving Country</Label>
-                  <Select defaultValue={selectedRequest?.podCountry === "Saudi Arabia" ? "sa" : "uae"}>
+                  <Select defaultValue={selectedRequest?.deliveryCountryId?.toString() || ""}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="uae">United Arab Emirates</SelectItem>
-                      <SelectItem value="sa">Saudi Arabia</SelectItem>
-                      <SelectItem value="uk">United Kingdom</SelectItem>
-                      <SelectItem value="au">Australia</SelectItem>
+                      {countries?.map((country) => (
+                        <SelectItem key={country.id} value={country.id.toString()}>
+                          {country.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label className="text-red-500">* Arrival Port</Label>
-                  <Select>
+                  <Select defaultValue={selectedRequest?.destinationPortId?.toString() || ""}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="jeddah">Jeddah</SelectItem>
-                      <SelectItem value="jebel-ali">Jebel Ali</SelectItem>
-                      <SelectItem value="dubai">Dubai</SelectItem>
-                      <SelectItem value="dammam">Dammam</SelectItem>
+                      {ports?.map((port) => (
+                        <SelectItem key={port.id} value={port.id.toString()}>
+                          {port.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label className="text-red-500">* Departure Country</Label>
-                  <Select defaultValue={selectedRequest?.polCountry === "Spain" ? "spain" : "italy"}>
+                  <Select defaultValue={selectedRequest?.pickupCountryId?.toString() || ""}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="spain">Spain</SelectItem>
-                      <SelectItem value="italy">Italy</SelectItem>
-                      <SelectItem value="germany">Germany</SelectItem>
-                      <SelectItem value="turkey">Turkey</SelectItem>
-                      <SelectItem value="uae">United Arab Emirates</SelectItem>
+                      {countries?.map((country) => (
+                        <SelectItem key={country.id} value={country.id.toString()}>
+                          {country.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label>Departure Port</Label>
-                  <Select>
+                  <Select defaultValue={selectedRequest?.loadingPortId?.toString() || ""}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="barcelona">Barcelona</SelectItem>
-                      <SelectItem value="valencia">Valencia</SelectItem>
-                      <SelectItem value="genoa">Genoa</SelectItem>
-                      <SelectItem value="istanbul">Istanbul</SelectItem>
+                      {ports?.map((port) => (
+                        <SelectItem key={port.id} value={port.id.toString()}>
+                          {port.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -568,11 +586,11 @@ export default function RateRequests() {
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label className="text-red-500">* Pickup Address</Label>
-                  <Textarea placeholder="KELLMY" />
+                  <Textarea defaultValue={selectedRequest?.pickupAddress || ""} placeholder="Enter pickup address" />
                 </div>
                 <div>
                   <Label className="text-red-500">* Delivery Address</Label>
-                  <Textarea placeholder="JEDDAH" />
+                  <Textarea defaultValue={selectedRequest?.deliveryAddress || ""} placeholder="Enter delivery address" />
                 </div>
                 <div>
                   <Label>Remarks Notes</Label>

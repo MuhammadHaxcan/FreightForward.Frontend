@@ -43,9 +43,9 @@ export function SendRateRequestModal({
   const { data: categoryTypes, isLoading: loadingCategoryTypes } =
     useAllCustomerCategoryTypes();
 
-  // Load customers (Debtors) for Vendor Name dropdown
+  // Load customers (Creditors) for Vendor Name dropdown
   const { data: customersData, isLoading: loadingCustomers } = useCustomers({
-    masterType: "Debtors",
+    masterType: "Creditors",
     pageSize: 1000,
   });
 
