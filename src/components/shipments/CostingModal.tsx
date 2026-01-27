@@ -137,27 +137,33 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
 
   // Set default currency IDs when currencyTypes load for new entries
   useEffect(() => {
-    if (open && !costing && currencyTypes.length > 0 && !formData.saleCurrencyId) {
+    if (open && !costing && currencyTypes.length > 0) {
       const defaultCurrency = currencyTypes.find(c => c.code === LOCAL_CURRENCY);
       if (defaultCurrency) {
-        setFormData(prev => ({
-          ...prev,
-          saleCurrencyId: defaultCurrency.id,
-          costCurrencyId: defaultCurrency.id
-        }));
+        // Use callback form to avoid stale closure and only update if IDs are not set
+        setFormData(prev => {
+          if (!prev.saleCurrencyId || !prev.costCurrencyId) {
+            return {
+              ...prev,
+              saleCurrencyId: prev.saleCurrencyId || defaultCurrency.id,
+              costCurrencyId: prev.costCurrencyId || defaultCurrency.id
+            };
+          }
+          return prev;
+        });
       }
     }
   }, [open, costing, currencyTypes]);
 
-  // Set default unit to "BL" when costingUnits load for new entries
+  // Set default unit to first unit when costingUnits load for new entries
   useEffect(() => {
     if (open && !costing && costingUnits.length > 0 && !formData.unitId) {
-      const blUnit = costingUnits.find(u => u.code === "BL");
-      if (blUnit) {
+      const firstUnit = costingUnits[0];
+      if (firstUnit) {
         setFormData(prev => ({
           ...prev,
-          unitId: blUnit.id,
-          unit: blUnit.code
+          unitId: firstUnit.id,
+          unit: firstUnit.code
         }));
       }
     }
@@ -206,9 +212,23 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
       });
     } else if (open && !costing && !formInitializedRef.current) {
       formInitializedRef.current = true;
-      setFormData(getDefaultFormData());
+      // Set default form data with currency IDs and unit if available
+      const defaultFormData = getDefaultFormData();
+      if (currencyTypes.length > 0) {
+        const defaultCurrency = currencyTypes.find(c => c.code === LOCAL_CURRENCY);
+        if (defaultCurrency) {
+          defaultFormData.saleCurrencyId = defaultCurrency.id;
+          defaultFormData.costCurrencyId = defaultCurrency.id;
+        }
+      }
+      if (costingUnits.length > 0) {
+        const firstUnit = costingUnits[0];
+        defaultFormData.unitId = firstUnit.id;
+        defaultFormData.unit = firstUnit.code;
+      }
+      setFormData(defaultFormData);
     }
-  }, [open, costing, creditorParties, debtorParties]);
+  }, [open, costing, creditorParties, debtorParties, currencyTypes, costingUnits]);
 
   // Resolve missing currency IDs when editing existing records
   useEffect(() => {

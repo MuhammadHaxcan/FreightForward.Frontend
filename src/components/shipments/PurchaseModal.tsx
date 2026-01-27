@@ -226,7 +226,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
         vendorId: selectedParty.customerId,
         purchaseDate: formData.invoiceDate,
         vendorInvoiceNo: formData.invoiceNo || undefined,
-        vendorInvoiceDate: formData.vDate || undefined,
+        vendorInvoiceDate: formData.vDate && formData.vDate.trim() !== '' ? formData.vDate : undefined,
         jobNo: jobNumber || undefined,
         currencyId: formData.currencyId,
         remarks: formData.remarks || undefined,
@@ -343,7 +343,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
               />
             </div>
             <div>
-              <Label className="text-xs font-medium">* V.Date</Label>
+              <Label className="text-xs font-medium">* Vendor Invoice Date</Label>
               <DateInput
                 value={formData.vDate}
                 onChange={(v) => handleInputChange("vDate", v)}

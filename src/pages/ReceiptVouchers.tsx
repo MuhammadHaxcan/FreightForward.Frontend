@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { formatDate } from "@/lib/utils";
-import { Eye, Plus, Trash2, Download, Printer } from "lucide-react";
+import { Eye, Plus, Trash2, Download, Printer, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,6 +23,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { receiptApi, ReceiptVoucher as Receipt } from "@/services/api";
 import { API_BASE_URL } from "@/services/api/base";
 import RecordReceiptModal from "@/components/receipts/RecordReceiptModal";
+import UpdateReceiptModal from "@/components/receipts/UpdateReceiptModal";
 import { ReceiptDetailsModal } from "@/components/receipts/ReceiptDetailsModal";
 import { toast } from "sonner";
 
@@ -36,8 +37,10 @@ export default function ReceiptVouchers() {
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedReceiptId, setSelectedReceiptId] = useState<number | null>(null);
+  const [editReceiptId, setEditReceiptId] = useState<number | null>(null);
 
   // Fetch receipts
   const fetchReceipts = async () => {
@@ -76,6 +79,11 @@ export default function ReceiptVouchers() {
   const handleViewInvoiceDetails = (receiptId: number) => {
     setSelectedReceiptId(receiptId);
     setIsDetailsModalOpen(true);
+  };
+
+  const handleEdit = (receiptId: number) => {
+    setEditReceiptId(receiptId);
+    setIsUpdateModalOpen(true);
   };
 
   const handlePrint = (id: number) => {
@@ -248,6 +256,14 @@ export default function ReceiptVouchers() {
                         </Button>
                         <Button
                           size="sm"
+                          className="bg-amber-500 hover:bg-amber-600 text-white h-8 w-8 p-0"
+                          title="Edit"
+                          onClick={() => handleEdit(receipt.id)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
                           className="bg-red-500 hover:bg-red-600 text-white h-8 w-8 p-0"
                           title="Delete"
                           onClick={() => handleDelete(receipt.id)}
@@ -356,6 +372,18 @@ export default function ReceiptVouchers() {
         open={isDetailsModalOpen}
         onOpenChange={setIsDetailsModalOpen}
         receiptId={selectedReceiptId}
+      />
+
+      {/* Update Receipt Modal */}
+      <UpdateReceiptModal
+        open={isUpdateModalOpen}
+        onOpenChange={setIsUpdateModalOpen}
+        receiptId={editReceiptId}
+        onSuccess={() => {
+          setIsUpdateModalOpen(false);
+          setEditReceiptId(null);
+          fetchReceipts();
+        }}
       />
     </MainLayout>
   );

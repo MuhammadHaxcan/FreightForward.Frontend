@@ -156,6 +156,7 @@ export {
   type ReceiptDetail,
   type CreateReceiptInvoiceRequest,
   type CreateReceiptRequest,
+  type UpdateReceiptRequest,
   type UnpaidInvoice,
   type VatReportItem,
   type VatReportTotals,

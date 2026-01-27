@@ -41,12 +41,12 @@ export default function InvoiceView() {
 
   const handleTaxInvoice = () => {
     if (!id) return;
-    window.open(`${API_BASE_URL}/invoices/${id}/pdf?type=tax`, '_blank');
+    window.open(`/accounts/invoices/${id}/print?type=tax`, '_blank');
   };
 
   const handleNonTaxInvoice = () => {
     if (!id) return;
-    window.open(`${API_BASE_URL}/invoices/${id}/pdf?type=nontax`, '_blank');
+    window.open(`/accounts/invoices/${id}/print?type=nontax`, '_blank');
   };
 
   const handleDownload = async () => {

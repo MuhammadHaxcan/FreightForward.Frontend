@@ -325,10 +325,7 @@ export default function VatReport() {
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="text-center text-sm text-muted-foreground pt-4">
-          Copyright &copy; TransParent {new Date().getFullYear()}
-        </div>
+
       </div>
     </MainLayout>
   );

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -88,7 +88,32 @@ export function Sidebar() {
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const location = useLocation();
 
+  // Auto-expand parent menu based on current path on mount and path change
+  useEffect(() => {
+    const currentPath = location.pathname;
+    const parentToExpand = sidebarItems.find(item =>
+      item.subMenuItems?.some(sub =>
+        currentPath === sub.path || currentPath.startsWith(sub.path + "/")
+      )
+    );
+
+    if (parentToExpand && !expandedMenus.includes(parentToExpand.title)) {
+      setExpandedMenus(prev => [...prev, parentToExpand.title]);
+    }
+  }, [location.pathname]);
+
   const toggleSubmenu = (title: string) => {
+    // If sidebar is collapsed, expand it and open the dropdown
+    if (collapsed) {
+      setCollapsed(false);
+      // Ensure the menu is expanded
+      if (!expandedMenus.includes(title)) {
+        setExpandedMenus(prev => [...prev, title]);
+      }
+      return;
+    }
+
+    // Normal toggle behavior when sidebar is expanded
     setExpandedMenus(prev =>
       prev.includes(title)
         ? prev.filter(t => t !== title)
@@ -97,10 +122,27 @@ export function Sidebar() {
   };
 
   const isMenuActive = (item: SidebarItem) => {
+    const currentPath = location.pathname;
     if (item.subMenuItems) {
-      return item.subMenuItems.some(sub => location.pathname === sub.path);
+      return item.subMenuItems.some(sub =>
+        currentPath === sub.path || currentPath.startsWith(sub.path + "/")
+      );
     }
-    return location.pathname === item.path;
+    return currentPath === item.path || currentPath.startsWith(item.path + "/");
+  };
+
+  const isSubItemActive = (subPath: string, siblings: SubMenuItem[]) => {
+    const currentPath = location.pathname;
+
+    // Exact match always wins
+    if (currentPath === subPath) return true;
+
+    // Check if current path exactly matches any sibling - if so, don't use startsWith
+    const matchesSibling = siblings.some(s => currentPath === s.path);
+    if (matchesSibling) return false;
+
+    // No sibling exact match - check if this is a parent of current path (e.g., /invoices/123)
+    return currentPath.startsWith(subPath + "/");
   };
 
   return (
@@ -167,15 +209,13 @@ export function Sidebar() {
                     </button>
                     {!collapsed && isExpanded && (
                       <ul className="ml-6 mt-1 space-y-1">
-                        {item.subMenuItems.map((subItem) => {
-                          const isSubActive = location.pathname === subItem.path;
-                          return (
+                        {item.subMenuItems.map((subItem) => (
                             <li key={subItem.path}>
                               <NavLink
                                 to={subItem.path}
                                 className={cn(
                                   "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-all duration-200",
-                                  isSubActive
+                                  isSubItemActive(subItem.path, item.subMenuItems)
                                     ? "bg-sidebar-primary text-sidebar-primary-foreground"
                                     : "text-sidebar-foreground hover:bg-sidebar-accent"
                                 )}
@@ -183,8 +223,7 @@ export function Sidebar() {
                                 {subItem.title}
                               </NavLink>
                             </li>
-                          );
-                        })}
+                          ))}
                       </ul>
                     )}
                   </>

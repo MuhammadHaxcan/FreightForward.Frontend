@@ -6,7 +6,6 @@ export interface Company {
   name: string;
   email?: string;
   website?: string;
-  addedBy?: string;
   companyType?: string;
   legalTradingName?: string;
   registrationNumber?: string;
@@ -20,19 +19,19 @@ export interface Company {
   country?: string;
   logoPath?: string;
   sealPath?: string;
-  status?: string;
+  bankId?: number;
+  bankName?: string;
   createdAt: string;
 }
 
 export interface CreateCompanyRequest {
   name: string;
-  email?: string;
-  website?: string;
-  addedBy?: string;
   companyType?: string;
   legalTradingName?: string;
   registrationNumber?: string;
   contactNumber?: string;
+  email?: string;
+  website?: string;
   vatId?: string;
   addressLine1?: string;
   addressLine2?: string;
@@ -40,11 +39,13 @@ export interface CreateCompanyRequest {
   stateProvince?: string;
   zipCode?: string;
   country?: string;
+  logoPath?: string;
+  sealPath?: string;
+  bankId?: number;
 }
 
 export interface UpdateCompanyRequest extends CreateCompanyRequest {
   id: number;
-  status?: string;
 }
 
 // Company API

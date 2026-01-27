@@ -56,6 +56,7 @@ interface SelectedInvoice {
   pendingAmount: number;
   payingAmount: number;
   currency: Currency;
+  currencyId?: number;
 }
 
 export default function RecordReceiptModal({
@@ -212,6 +213,7 @@ export default function RecordReceiptModal({
           pendingAmount: invoice.pendingAmount,
           payingAmount: invoice.pendingAmount, // Default to full pending amount
           currency: invoice.currencyCode || "AED",
+          currencyId: invoice.currencyId,
         },
       ]);
     } else {
@@ -259,11 +261,21 @@ export default function RecordReceiptModal({
 
     setLoading(true);
     try {
+      // Look up the currencyId from the currency code
+      const currencyType = currencies.find(c => c.code === currency);
+      const currencyId = currencyType?.id;
+
+      if (!currencyId) {
+        toast.error("Invalid currency selected");
+        setLoading(false);
+        return;
+      }
+
       const request: CreateReceiptRequest = {
         receiptDate: receiptDate,
         customerId: customerId,
         paymentMode: paymentMode,
-        currency: currency,
+        currencyId: currencyId,
         amount: totalAmount,
         narration: remarks || undefined,
         bankId: requiresBank ? (bankId || undefined) : undefined,
@@ -273,7 +285,7 @@ export default function RecordReceiptModal({
         invoices: selectedInvoices.map(inv => ({
           invoiceId: inv.invoiceId,
           amount: inv.payingAmount,
-          currency: inv.currencyCode || "AED",
+          currencyId: inv.currencyId || currencyId,
         })),
       };
 

@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Edit, Trash2, Plus, Loader2 } from "lucide-react";
+import { Edit, Trash2, Plus, Loader2, Upload } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -36,12 +36,6 @@ import {
   useDeleteExpenseType,
 } from "@/hooks/useSettings";
 import {
-  useCompanies,
-  useCreateCompany,
-  useUpdateCompany,
-  useDeleteCompany,
-} from "@/hooks/useCompanies";
-import {
   useBanks,
   useCreateBank,
   useUpdateBank,
@@ -55,7 +49,11 @@ import {
   PaymentType,
   Company,
   Bank,
+  companyApi,
+  bankApi,
+  fileApi,
 } from "@/services/api";
+import { toast } from "sonner";
 
 const Settings = () => {
   // Pagination state
@@ -63,7 +61,6 @@ const Settings = () => {
   const [portPage, setPortPage] = useState(1);
   const [chargePage, setChargePage] = useState(1);
   const [expensePage, setExpensePage] = useState(1);
-  const [companyPage, setCompanyPage] = useState(1);
   const [bankPage, setBankPage] = useState(1);
 
   // Search state
@@ -71,7 +68,6 @@ const Settings = () => {
   const [portSearch, setPortSearch] = useState("");
   const [chargeSearch, setChargeSearch] = useState("");
   const [expenseSearch, setExpenseSearch] = useState("");
-  const [companySearch, setCompanySearch] = useState("");
   const [bankSearch, setBankSearch] = useState("");
 
   // Modal states
@@ -79,14 +75,12 @@ const Settings = () => {
   const [addPortModalOpen, setAddPortModalOpen] = useState(false);
   const [addChargeModalOpen, setAddChargeModalOpen] = useState(false);
   const [addExpenseModalOpen, setAddExpenseModalOpen] = useState(false);
-  const [addCompanyModalOpen, setAddCompanyModalOpen] = useState(false);
   const [addBankModalOpen, setAddBankModalOpen] = useState(false);
 
   const [editCurrencyModalOpen, setEditCurrencyModalOpen] = useState(false);
   const [editPortModalOpen, setEditPortModalOpen] = useState(false);
   const [editChargeModalOpen, setEditChargeModalOpen] = useState(false);
   const [editExpenseModalOpen, setEditExpenseModalOpen] = useState(false);
-  const [editCompanyModalOpen, setEditCompanyModalOpen] = useState(false);
   const [editBankModalOpen, setEditBankModalOpen] = useState(false);
 
   // Edit form states
@@ -94,8 +88,32 @@ const Settings = () => {
   const [editPort, setEditPort] = useState<Port | null>(null);
   const [editCharge, setEditCharge] = useState<ChargeItem | null>(null);
   const [editExpense, setEditExpense] = useState<ExpenseType | null>(null);
-  const [editCompany, setEditCompany] = useState<Company | null>(null);
   const [editBank, setEditBank] = useState<Bank | null>(null);
+
+  // Company profile state
+  const [companyId, setCompanyId] = useState<number | null>(null);
+  const [companyLoading, setCompanyLoading] = useState(true);
+  const [companySaving, setCompanySaving] = useState(false);
+  const [allBanks, setAllBanks] = useState<Bank[]>([]);
+  const [companyProfile, setCompanyProfile] = useState({
+    name: "",
+    companyType: "",
+    legalTradingName: "",
+    registrationNumber: "",
+    contactNumber: "",
+    email: "",
+    website: "",
+    vatId: "",
+    addressLine1: "",
+    addressLine2: "",
+    city: "",
+    stateProvince: "",
+    zipCode: "",
+    country: "",
+    logoPath: "",
+    sealPath: "",
+    bankId: null as number | null,
+  });
 
   // Form states
   const [currencyForm, setCurrencyForm] = useState({
@@ -119,14 +137,6 @@ const Settings = () => {
   const [expenseForm, setExpenseForm] = useState({
     paymentDirection: "Outwards" as PaymentType,
     name: "",
-  });
-
-  const [companyForm, setCompanyForm] = useState({
-    name: "",
-    email: "",
-    contactNumber: "",
-    addressLine1: "",
-    city: "",
   });
 
   const [bankForm, setBankForm] = useState({
@@ -163,12 +173,6 @@ const Settings = () => {
     searchTerm: expenseSearch || undefined,
   });
 
-  const { data: companyData, isLoading: companyLoading } = useCompanies({
-    pageNumber: companyPage,
-    pageSize: 10,
-    searchTerm: companySearch || undefined,
-  });
-
   const { data: bankData, isLoading: bankLoading } = useBanks({
     pageNumber: bankPage,
     pageSize: 10,
@@ -191,10 +195,6 @@ const Settings = () => {
   const createExpenseMutation = useCreateExpenseType();
   const updateExpenseMutation = useUpdateExpenseType();
   const deleteExpenseMutation = useDeleteExpenseType();
-
-  const createCompanyMutation = useCreateCompany();
-  const updateCompanyMutation = useUpdateCompany();
-  const deleteCompanyMutation = useDeleteCompany();
 
   const createBankMutation = useCreateBank();
   const updateBankMutation = useUpdateBank();
@@ -363,51 +363,6 @@ const Settings = () => {
     deleteExpenseMutation.mutate(id);
   };
 
-  const handleAddCompany = () => {
-    createCompanyMutation.mutate(
-      {
-        name: companyForm.name,
-        email: companyForm.email || undefined,
-        contactNumber: companyForm.contactNumber || undefined,
-        addressLine1: companyForm.addressLine1 || undefined,
-        city: companyForm.city || undefined,
-      },
-      {
-        onSuccess: () => {
-          setAddCompanyModalOpen(false);
-          resetCompanyForm();
-        },
-      }
-    );
-  };
-
-  const handleUpdateCompany = () => {
-    if (!editCompany) return;
-    updateCompanyMutation.mutate(
-      {
-        id: editCompany.id,
-        data: {
-          id: editCompany.id,
-          name: editCompany.name,
-          email: editCompany.email || undefined,
-          contactNumber: editCompany.contactNumber || undefined,
-          addressLine1: editCompany.addressLine1 || undefined,
-          city: editCompany.city || undefined,
-        },
-      },
-      {
-        onSuccess: () => {
-          setEditCompanyModalOpen(false);
-          setEditCompany(null);
-        },
-      }
-    );
-  };
-
-  const handleDeleteCompany = (id: number) => {
-    deleteCompanyMutation.mutate(id);
-  };
-
   const handleAddBank = () => {
     createBankMutation.mutate(
       {
@@ -478,10 +433,6 @@ const Settings = () => {
     setExpenseForm({ paymentDirection: "Outwards", name: "" });
   };
 
-  const resetCompanyForm = () => {
-    setCompanyForm({ name: "", email: "", contactNumber: "", addressLine1: "", city: "" });
-  };
-
   const resetBankForm = () => {
     setBankForm({ bankName: "", acHolder: "", acNumber: "", ibanNumber: "", swiftCode: "", branch: "" });
   };
@@ -508,6 +459,103 @@ const Settings = () => {
     "South Korea",
     "Australia",
   ];
+
+  // Load company profile and all banks on mount
+  useEffect(() => {
+    const loadCompanyData = async () => {
+      setCompanyLoading(true);
+      try {
+        const [companyRes, bankRes] = await Promise.all([
+          companyApi.getAll({ pageNumber: 1, pageSize: 1 }),
+          bankApi.getAll({ pageNumber: 1, pageSize: 100 }),
+        ]);
+        if (bankRes.data) {
+          setAllBanks(bankRes.data.items);
+        }
+        if (companyRes.data && companyRes.data.items.length > 0) {
+          const c = companyRes.data.items[0];
+          setCompanyId(c.id);
+          setCompanyProfile({
+            name: c.name || "",
+            companyType: c.companyType || "",
+            legalTradingName: c.legalTradingName || "",
+            registrationNumber: c.registrationNumber || "",
+            contactNumber: c.contactNumber || "",
+            email: c.email || "",
+            website: c.website || "",
+            vatId: c.vatId || "",
+            addressLine1: c.addressLine1 || "",
+            addressLine2: c.addressLine2 || "",
+            city: c.city || "",
+            stateProvince: c.stateProvince || "",
+            zipCode: c.zipCode || "",
+            country: c.country || "",
+            logoPath: c.logoPath || "",
+            sealPath: c.sealPath || "",
+            bankId: c.bankId ?? null,
+          });
+        }
+      } catch (err) {
+        console.error("Failed to load company data", err);
+      } finally {
+        setCompanyLoading(false);
+      }
+    };
+    loadCompanyData();
+  }, []);
+
+  const handleFileUpload = async (file: File, field: "logoPath" | "sealPath") => {
+    try {
+      const result = await fileApi.upload(file);
+      setCompanyProfile(prev => ({ ...prev, [field]: result.fileName }));
+      toast.success(`${field === "logoPath" ? "Logo" : "Seal"} uploaded successfully`);
+    } catch (err) {
+      toast.error(`Failed to upload ${field === "logoPath" ? "logo" : "seal"}`);
+    }
+  };
+
+  const handleSaveCompany = async () => {
+    if (!companyProfile.name.trim()) {
+      toast.error("Company name is required");
+      return;
+    }
+    setCompanySaving(true);
+    try {
+      const payload = {
+        name: companyProfile.name,
+        companyType: companyProfile.companyType || undefined,
+        legalTradingName: companyProfile.legalTradingName || undefined,
+        registrationNumber: companyProfile.registrationNumber || undefined,
+        contactNumber: companyProfile.contactNumber || undefined,
+        email: companyProfile.email || undefined,
+        website: companyProfile.website || undefined,
+        vatId: companyProfile.vatId || undefined,
+        addressLine1: companyProfile.addressLine1 || undefined,
+        addressLine2: companyProfile.addressLine2 || undefined,
+        city: companyProfile.city || undefined,
+        stateProvince: companyProfile.stateProvince || undefined,
+        zipCode: companyProfile.zipCode || undefined,
+        country: companyProfile.country || undefined,
+        logoPath: companyProfile.logoPath || undefined,
+        sealPath: companyProfile.sealPath || undefined,
+        bankId: companyProfile.bankId ?? undefined,
+      };
+      if (companyId) {
+        const res = await companyApi.update(companyId, { ...payload, id: companyId });
+        if (res.error) throw new Error(res.error);
+        toast.success("Company updated successfully");
+      } else {
+        const res = await companyApi.create(payload);
+        if (res.error) throw new Error(res.error);
+        setCompanyId(res.data!);
+        toast.success("Company created successfully");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save company");
+    } finally {
+      setCompanySaving(false);
+    }
+  };
 
   return (
     <MainLayout>
@@ -992,107 +1040,225 @@ const Settings = () => {
           <TabsContent value="companies">
             <div className="bg-card rounded-lg border border-border">
               <div className="flex items-center justify-between p-4 border-b border-border">
-                <h2 className="text-lg font-semibold text-primary">List All Companies</h2>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Search:</span>
-                    <Input
-                      placeholder=""
-                      value={companySearch}
-                      onChange={(e) => setCompanySearch(e.target.value)}
-                      className="h-9 w-48"
-                    />
-                  </div>
-                  <Button className="btn-success gap-2" onClick={() => setAddCompanyModalOpen(true)}>
-                    <Plus size={16} />
-                    Add New
-                  </Button>
+                <h2 className="text-lg font-semibold text-primary">Company Profile</h2>
+              </div>
+              {companyLoading ? (
+                <div className="flex justify-center items-center p-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
-              </div>
-              <div className="overflow-x-auto">
-                {companyLoading ? (
-                  <div className="flex justify-center items-center p-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  </div>
-                ) : (
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-table-header text-table-header-foreground">
-                        <th className="px-4 py-3 text-left text-sm font-semibold">Action</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold">Name</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold">Email</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold">Contact</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold">City</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {companyData?.items.map((company, index) => (
-                        <tr
-                          key={company.id}
-                          className={`border-b border-border hover:bg-table-row-hover transition-colors ${
-                            index % 2 === 0 ? "bg-card" : "bg-secondary/30"
-                          }`}
-                        >
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => {
-                                  setEditCompany({ ...company });
-                                  setEditCompanyModalOpen(true);
-                                }}
-                                className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
-                              >
-                                <Edit size={14} />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteCompany(company.id)}
-                                className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
-                              >
-                                <Trash2 size={14} />
-                              </button>
+              ) : (
+                <div className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Left Column */}
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">Company Name *</label>
+                        <Input
+                          placeholder="Enter Company Name"
+                          value={companyProfile.name}
+                          onChange={(e) => setCompanyProfile({ ...companyProfile, name: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">Company Type</label>
+                        <Input
+                          placeholder="Enter Company Type"
+                          value={companyProfile.companyType}
+                          onChange={(e) => setCompanyProfile({ ...companyProfile, companyType: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">Registration Number</label>
+                        <Input
+                          placeholder="Enter Registration Number"
+                          value={companyProfile.registrationNumber}
+                          onChange={(e) => setCompanyProfile({ ...companyProfile, registrationNumber: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">Email</label>
+                        <Input
+                          placeholder="Enter Email"
+                          type="email"
+                          value={companyProfile.email}
+                          onChange={(e) => setCompanyProfile({ ...companyProfile, email: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">Company Logo</label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            value={companyProfile.logoPath}
+                            readOnly
+                            placeholder="No file selected"
+                            className="flex-1"
+                          />
+                          <label className="cursor-pointer">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleFileUpload(file, "logoPath");
+                              }}
+                            />
+                            <div className="flex items-center gap-1 px-3 py-2 bg-primary text-primary-foreground rounded text-sm hover:bg-primary/90">
+                              <Upload size={14} />
+                              Upload
                             </div>
-                          </td>
-                          <td className="px-4 py-3 text-sm text-primary font-medium">{company.name}</td>
-                          <td className="px-4 py-3 text-sm text-foreground">{company.email || "-"}</td>
-                          <td className="px-4 py-3 text-sm text-foreground">{company.contactNumber || "-"}</td>
-                          <td className="px-4 py-3 text-sm text-foreground">{company.city || "-"}</td>
-                        </tr>
-                      ))}
-                      {companyData?.items.length === 0 && (
-                        <tr>
-                          <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
-                            No companies found
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-              {companyData && (
-                <div className="flex items-center justify-between p-4">
-                  <p className="text-sm text-muted-foreground">
-                    Showing {((companyPage - 1) * 10) + 1} to {Math.min(companyPage * 10, companyData.totalCount)} of {companyData.totalCount} entries
-                  </p>
-                  <div className="flex items-center gap-1">
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Middle Column */}
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">Legal/Trading Name</label>
+                        <Input
+                          placeholder="Enter Legal/Trading Name"
+                          value={companyProfile.legalTradingName}
+                          onChange={(e) => setCompanyProfile({ ...companyProfile, legalTradingName: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">Contact Number</label>
+                        <Input
+                          placeholder="Enter Contact Number"
+                          value={companyProfile.contactNumber}
+                          onChange={(e) => setCompanyProfile({ ...companyProfile, contactNumber: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">Website</label>
+                        <Input
+                          placeholder="Enter Website"
+                          value={companyProfile.website}
+                          onChange={(e) => setCompanyProfile({ ...companyProfile, website: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">Company Seal</label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            value={companyProfile.sealPath}
+                            readOnly
+                            placeholder="No file selected"
+                            className="flex-1"
+                          />
+                          <label className="cursor-pointer">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleFileUpload(file, "sealPath");
+                              }}
+                            />
+                            <div className="flex items-center gap-1 px-3 py-2 bg-primary text-primary-foreground rounded text-sm hover:bg-primary/90">
+                              <Upload size={14} />
+                              Upload
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right Column */}
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">VAT ID / TRN</label>
+                        <Input
+                          placeholder="Enter VAT ID / TRN"
+                          value={companyProfile.vatId}
+                          onChange={(e) => setCompanyProfile({ ...companyProfile, vatId: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">Address Line 1</label>
+                        <Input
+                          placeholder="Enter Address Line 1"
+                          value={companyProfile.addressLine1}
+                          onChange={(e) => setCompanyProfile({ ...companyProfile, addressLine1: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">Address Line 2</label>
+                        <Input
+                          placeholder="Enter Address Line 2"
+                          value={companyProfile.addressLine2}
+                          onChange={(e) => setCompanyProfile({ ...companyProfile, addressLine2: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">City</label>
+                        <Input
+                          placeholder="Enter City"
+                          value={companyProfile.city}
+                          onChange={(e) => setCompanyProfile({ ...companyProfile, city: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">State / Province</label>
+                        <Input
+                          placeholder="Enter State / Province"
+                          value={companyProfile.stateProvince}
+                          onChange={(e) => setCompanyProfile({ ...companyProfile, stateProvince: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">Zip Code</label>
+                        <Input
+                          placeholder="Enter Zip Code"
+                          value={companyProfile.zipCode}
+                          onChange={(e) => setCompanyProfile({ ...companyProfile, zipCode: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">Country</label>
+                        <Select
+                          value={companyProfile.country}
+                          onValueChange={(val) => setCompanyProfile({ ...companyProfile, country: val })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select Country" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {countries.map((c) => (
+                              <SelectItem key={c} value={c}>{c}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">Bank</label>
+                        <Select
+                          value={companyProfile.bankId?.toString() ?? ""}
+                          onValueChange={(val) => setCompanyProfile({ ...companyProfile, bankId: val ? parseInt(val) : null })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select Bank" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {allBanks.map((b) => (
+                              <SelectItem key={b.id} value={b.id.toString()}>{b.bankName}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-6">
                     <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 px-3"
-                      disabled={!companyData.hasPreviousPage}
-                      onClick={() => setCompanyPage(p => p - 1)}
+                      className="btn-success"
+                      onClick={handleSaveCompany}
+                      disabled={companySaving}
                     >
-                      Previous
-                    </Button>
-                    <Button size="sm" className="h-8 w-8 bg-primary text-primary-foreground">{companyPage}</Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 px-3"
-                      disabled={!companyData.hasNextPage}
-                      onClick={() => setCompanyPage(p => p + 1)}
-                    >
-                      Next
+                      {companySaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      {companyId ? "Update" : "Save"}
                     </Button>
                   </div>
                 </div>
@@ -1544,113 +1710,6 @@ const Settings = () => {
                   disabled={updateExpenseMutation.isPending}
                 >
                   {updateExpenseMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Update
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Company Modal */}
-      <Dialog open={addCompanyModalOpen} onOpenChange={(open) => { setAddCompanyModalOpen(open); if (!open) resetCompanyForm(); }}>
-        <DialogContent className="sm:max-w-md bg-card">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold"><span className="font-bold">Add New</span> Company</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Company Name *</label>
-              <Input
-                placeholder="Enter Company Name"
-                value={companyForm.name}
-                onChange={(e) => setCompanyForm({ ...companyForm, name: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Email</label>
-              <Input
-                placeholder="Enter Email"
-                type="email"
-                value={companyForm.email}
-                onChange={(e) => setCompanyForm({ ...companyForm, email: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Contact Number</label>
-              <Input
-                placeholder="Enter Contact Number"
-                value={companyForm.contactNumber}
-                onChange={(e) => setCompanyForm({ ...companyForm, contactNumber: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Address</label>
-              <Input
-                placeholder="Enter Address"
-                value={companyForm.addressLine1}
-                onChange={(e) => setCompanyForm({ ...companyForm, addressLine1: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">City</label>
-              <Input
-                placeholder="Enter City"
-                value={companyForm.city}
-                onChange={(e) => setCompanyForm({ ...companyForm, city: e.target.value })}
-              />
-            </div>
-            <div className="flex justify-end gap-3 pt-4">
-              <Button variant="outline" onClick={() => setAddCompanyModalOpen(false)}>Cancel</Button>
-              <Button
-                className="btn-success"
-                onClick={handleAddCompany}
-                disabled={createCompanyMutation.isPending}
-              >
-                {createCompanyMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Company Modal */}
-      <Dialog open={editCompanyModalOpen} onOpenChange={setEditCompanyModalOpen}>
-        <DialogContent className="sm:max-w-md bg-card">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold">Edit Company</DialogTitle>
-          </DialogHeader>
-          {editCompany && (
-            <div className="space-y-4 py-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Company Name *</label>
-                <Input value={editCompany.name} onChange={(e) => setEditCompany({ ...editCompany, name: e.target.value })} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Email</label>
-                <Input value={editCompany.email || ""} onChange={(e) => setEditCompany({ ...editCompany, email: e.target.value })} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Contact Number</label>
-                <Input value={editCompany.contactNumber || ""} onChange={(e) => setEditCompany({ ...editCompany, contactNumber: e.target.value })} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Address</label>
-                <Input value={editCompany.addressLine1 || ""} onChange={(e) => setEditCompany({ ...editCompany, addressLine1: e.target.value })} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">City</label>
-                <Input value={editCompany.city || ""} onChange={(e) => setEditCompany({ ...editCompany, city: e.target.value })} />
-              </div>
-              <div className="flex justify-end gap-3 pt-4">
-                <Button variant="outline" onClick={() => setEditCompanyModalOpen(false)}>Close</Button>
-                <Button
-                  className="btn-success"
-                  onClick={handleUpdateCompany}
-                  disabled={updateCompanyMutation.isPending}
-                >
-                  {updateCompanyMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Update
                 </Button>
               </div>

@@ -359,6 +359,21 @@ export interface CreateReceiptRequest {
   invoices: CreateReceiptInvoiceRequest[];
 }
 
+export interface UpdateReceiptRequest {
+  customerId: number;
+  invoiceId?: number;
+  paymentMode: PaymentMode;
+  receiptDate: string;
+  narration?: string;
+  remarks?: string;
+  currencyId?: number;
+  bankId?: number;
+  chequeNo?: string;
+  chequeDate?: string;
+  chequeBank?: string;
+  amount: number;
+}
+
 // Receipt API
 export const receiptApi = {
   getAll: (params?: {
@@ -395,6 +410,8 @@ export const receiptApi = {
   getPaymentTypes: () => fetchApi<PaymentType[]>('/invoices/receipts/payment-types'),
   create: (data: CreateReceiptRequest) =>
     fetchApi<number>('/invoices/receipts', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: UpdateReceiptRequest) =>
+    fetchApi<void>(`/invoices/receipts/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: number) =>
     fetchApi<void>(`/invoices/receipts/${id}`, { method: 'DELETE' }),
 };

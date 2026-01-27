@@ -22,8 +22,10 @@ import QuotationView from "./pages/QuotationView";
 import DailyExpenses from "./pages/DailyExpenses";
 import Invoices from "./pages/Invoices";
 import InvoiceView from "./pages/InvoiceView";
+import InvoicePrintView from "./pages/InvoicePrintView";
 import PurchaseInvoices from "./pages/PurchaseInvoices";
 import PurchaseInvoiceView from "./pages/PurchaseInvoiceView";
+import PurchaseInvoicePrintView from "./pages/PurchaseInvoicePrintView";
 import ReceiptVouchers from "./pages/ReceiptVouchers";
 import ReceiptView from "./pages/ReceiptView";
 import PaymentVouchers from "./pages/PaymentVouchers";
@@ -57,8 +59,10 @@ const App = () => (
           <Route path="/accounts" element={<Invoices />} />
           <Route path="/accounts/invoices" element={<Invoices />} />
           <Route path="/accounts/invoices/:id" element={<InvoiceView />} />
+          <Route path="/accounts/invoices/:id/print" element={<InvoicePrintView />} />
           <Route path="/accounts/purchase-invoices" element={<PurchaseInvoices />} />
           <Route path="/accounts/purchase-invoices/:id" element={<PurchaseInvoiceView />} />
+          <Route path="/accounts/purchase-invoices/:id/print" element={<PurchaseInvoicePrintView />} />
           <Route path="/accounts/daily-expenses" element={<DailyExpenses />} />
           <Route path="/accounts/receipt-vouchers" element={<ReceiptVouchers />} />
           <Route path="/accounts/receipt-vouchers/:id" element={<ReceiptView />} />

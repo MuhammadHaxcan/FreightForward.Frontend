@@ -41,7 +41,7 @@ export default function PurchaseInvoiceView() {
 
   const handlePrint = () => {
     if (!id) return;
-    window.open(`${API_BASE_URL}/invoices/purchases/${id}/pdf`, '_blank');
+    window.open(`/accounts/purchase-invoices/${id}/print`, '_blank');
   };
 
   const handleDownload = async () => {
