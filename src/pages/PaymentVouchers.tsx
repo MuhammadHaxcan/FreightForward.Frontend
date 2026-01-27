@@ -41,7 +41,7 @@ import {
 import RecordPaymentModal from "@/components/payments/RecordPaymentModal";
 import PaymentDetailsModal from "@/components/payments/PaymentDetailsModal";
 import { usePaymentVouchers, useDeletePaymentVoucher } from "@/hooks/usePaymentVouchers";
-import { getPaymentVoucherPdfUrl, type PaymentVoucher } from "@/services/api/payment";
+import { type PaymentVoucher } from "@/services/api/payment";
 import { formatDate } from "@/lib/utils";
 
 export default function PaymentVouchers() {
@@ -75,8 +75,8 @@ export default function PaymentVouchers() {
     }
   };
 
-  const handleDownloadPdf = (id: number) => {
-    window.open(getPaymentVoucherPdfUrl(id), "_blank");
+  const handlePrintPdf = (id: number) => {
+    window.open(`/accounts/payment-vouchers/${id}/print`, "_blank");
   };
 
   const handleViewDetails = (paymentId: number) => {
@@ -177,7 +177,7 @@ export default function PaymentVouchers() {
                   <TableCell>{payment.vendorName}</TableCell>
                   <TableCell>{payment.narration || "-"}</TableCell>
                   <TableCell className="text-right font-medium">
-                    {payment.currency} {payment.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    {payment.currencyCode} {payment.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-center gap-1">
@@ -206,8 +206,8 @@ export default function PaymentVouchers() {
                         variant="ghost"
                         size="sm"
                         className="h-8 w-8 p-0 bg-orange-500 hover:bg-orange-600 text-white"
-                        onClick={() => handleDownloadPdf(payment.id)}
-                        title="Download PDF"
+                        onClick={() => handlePrintPdf(payment.id)}
+                        title="Print PDF"
                       >
                         <Download className="h-4 w-4" />
                       </Button>

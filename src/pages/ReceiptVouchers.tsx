@@ -87,7 +87,7 @@ export default function ReceiptVouchers() {
   };
 
   const handlePrint = (id: number) => {
-    window.open(`${API_BASE_URL}/invoices/receipts/${id}/pdf`, '_blank');
+    window.open(`/accounts/receipt-vouchers/${id}/print`, '_blank');
   };
 
   const handleDownload = async (id: number, receiptNo: string) => {

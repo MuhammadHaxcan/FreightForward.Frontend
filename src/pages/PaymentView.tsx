@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Download, Printer } from "lucide-react";
+import { ArrowLeft, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MainLayout } from "@/components/layout/MainLayout";
 import {
@@ -11,7 +11,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { usePaymentVoucher } from "@/hooks/usePaymentVouchers";
-import { getPaymentVoucherPdfUrl } from "@/services/api/payment";
 import { formatDate } from "@/lib/utils";
 
 export default function PaymentView() {
@@ -21,14 +20,10 @@ export default function PaymentView() {
 
   const { data: payment, isLoading } = usePaymentVoucher(paymentId);
 
-  const handleDownloadPdf = () => {
+  const handlePrintPdf = () => {
     if (paymentId) {
-      window.open(getPaymentVoucherPdfUrl(paymentId), "_blank");
+      window.open(`/accounts/payment-vouchers/${paymentId}/print`, "_blank");
     }
-  };
-
-  const handlePrint = () => {
-    window.print();
   };
 
   if (isLoading) {
@@ -72,16 +67,12 @@ export default function PaymentView() {
           <h1 className="text-2xl font-bold">Payment Voucher - {payment.paymentNo}</h1>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handlePrint}>
-            <Printer className="h-4 w-4 mr-2" />
-            Print
-          </Button>
           <Button
             className="bg-green-500 hover:bg-green-600 text-white"
-            onClick={handleDownloadPdf}
+            onClick={handlePrintPdf}
           >
-            <Download className="h-4 w-4 mr-2" />
-            Download PDF
+            <Printer className="h-4 w-4 mr-2" />
+            Print
           </Button>
         </div>
       </div>
@@ -143,7 +134,7 @@ export default function PaymentView() {
                   {payment.chequeDate ? formatDate(payment.chequeDate, "dd-MM-yyyy") : "-"}
                 </TableCell>
                 <TableCell>{payment.bankName || "-"}</TableCell>
-                <TableCell>{payment.currency}</TableCell>
+                <TableCell>{payment.currencyCode || "-"}</TableCell>
                 <TableCell className="text-right font-medium">
                   {payment.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </TableCell>
@@ -172,7 +163,7 @@ export default function PaymentView() {
                     <TableCell>{payment.narration || "-"}</TableCell>
                     <TableCell>{inv.purchaseNo}</TableCell>
                     <TableCell>{inv.vesselVoyageBound || "-"}</TableCell>
-                    <TableCell>{inv.currency}</TableCell>
+                    <TableCell>{inv.currencyCode || "-"}</TableCell>
                     <TableCell className="text-right">
                       {inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </TableCell>

@@ -1,16 +1,13 @@
 import { useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { API_BASE_URL } from "@/services/api/base";
 
-export default function InvoicePrintView() {
+export default function ReceiptPrintView() {
   const { id } = useParams<{ id: string }>();
-  const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  const type = searchParams.get("type") || "tax";
-
-  const pdfUrl = `${API_BASE_URL}/invoices/${id}/pdf?type=${type}&inline=true`;
+  const pdfUrl = `${API_BASE_URL}/invoices/receipts/${id}/pdf?inline=true`;
 
   const handleLoad = () => {
     setIsLoading(false);
@@ -27,7 +24,7 @@ export default function InvoicePrintView() {
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading Invoice...</p>
+            <p className="text-gray-600">Loading Receipt Voucher...</p>
           </div>
         </div>
       )}
@@ -47,7 +44,7 @@ export default function InvoicePrintView() {
       <iframe
         src={pdfUrl}
         className="w-full h-full border-0"
-        title="Invoice"
+        title="Receipt Voucher"
         onLoad={handleLoad}
         onError={handleError}
       />

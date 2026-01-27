@@ -26,10 +26,13 @@ import InvoicePrintView from "./pages/InvoicePrintView";
 import PurchaseInvoices from "./pages/PurchaseInvoices";
 import PurchaseInvoiceView from "./pages/PurchaseInvoiceView";
 import PurchaseInvoicePrintView from "./pages/PurchaseInvoicePrintView";
+import StatementPrintView from "./pages/StatementPrintView";
 import ReceiptVouchers from "./pages/ReceiptVouchers";
 import ReceiptView from "./pages/ReceiptView";
+import ReceiptPrintView from "./pages/ReceiptPrintView";
 import PaymentVouchers from "./pages/PaymentVouchers";
 import PaymentView from "./pages/PaymentView";
+import PaymentVoucherPrintView from "./pages/PaymentVoucherPrintView";
 import CostSheet from "./pages/CostSheet";
 import CostSheetDetail from "./pages/CostSheetDetail";
 import VatReport from "./pages/VatReport";
@@ -52,6 +55,7 @@ const App = () => (
           <Route path="/master-customers" element={<MasterCustomers />} />
           <Route path="/master-customers/:id/edit" element={<CustomerDetail />} />
           <Route path="/master-customers/:id/neutral/edit" element={<NeutralDetail />} />
+          <Route path="/master-customers/:id/statement/print" element={<StatementPrintView />} />
           <Route path="/sales/leads" element={<Leads />} />
           <Route path="/sales/rate-requests" element={<RateRequests />} />
           <Route path="/sales/quotations" element={<Quotations />} />
@@ -66,8 +70,10 @@ const App = () => (
           <Route path="/accounts/daily-expenses" element={<DailyExpenses />} />
           <Route path="/accounts/receipt-vouchers" element={<ReceiptVouchers />} />
           <Route path="/accounts/receipt-vouchers/:id" element={<ReceiptView />} />
+          <Route path="/accounts/receipt-vouchers/:id/print" element={<ReceiptPrintView />} />
           <Route path="/accounts/payment-vouchers" element={<PaymentVouchers />} />
           <Route path="/accounts/payment-vouchers/:id" element={<PaymentView />} />
+          <Route path="/accounts/payment-vouchers/:id/print" element={<PaymentVoucherPrintView />} />
           <Route path="/accounts/cost-sheet" element={<CostSheet />} />
           <Route path="/accounts/cost-sheet/:id" element={<CostSheetDetail />} />
           <Route path="/accounts/vat-report" element={<VatReport />} />

@@ -41,7 +41,7 @@ export default function ReceiptView() {
 
   const handlePrint = () => {
     if (!id) return;
-    window.open(`${API_BASE_URL}/invoices/receipts/${id}/pdf`, '_blank');
+    window.open(`/accounts/receipt-vouchers/${id}/print`, '_blank');
   };
 
   const handleDownload = async () => {
@@ -106,24 +106,29 @@ export default function ReceiptView() {
   return (
     <MainLayout>
       <div className="p-6 space-y-6">
-        {/* Action Buttons */}
-        <div className="flex justify-end gap-2 print:hidden">
-          <Button
-            variant="default"
-            className="bg-gray-800 hover:bg-gray-900 text-white"
-            onClick={() => navigate("/accounts/receipt-vouchers")}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          <Button className="bg-green-500 hover:bg-green-600 text-white" onClick={handlePrint}>
-            <Printer className="h-4 w-4 mr-2" />
-            Print
-          </Button>
-          <Button className="bg-amber-500 hover:bg-amber-600 text-white" onClick={handleDownload}>
-            <Download className="h-4 w-4 mr-2" />
-            Download
-          </Button>
+        {/* Header */}
+        <div className="flex justify-between items-center print:hidden">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/accounts/receipt-vouchers")}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+            <h1 className="text-2xl font-bold">Receipt Voucher - {receipt.receiptNo}</h1>
+          </div>
+          <div className="flex gap-2">
+            <Button className="bg-green-500 hover:bg-green-600 text-white" onClick={handlePrint}>
+              <Printer className="h-4 w-4 mr-2" />
+              Print
+            </Button>
+            <Button className="bg-amber-500 hover:bg-amber-600 text-white" onClick={handleDownload}>
+              <Download className="h-4 w-4 mr-2" />
+              Download
+            </Button>
+          </div>
         </div>
 
         {/* Receipt Content */}
@@ -156,7 +161,7 @@ export default function ReceiptView() {
                   <TableHead className="text-white font-semibold">Cheque No</TableHead>
                   <TableHead className="text-white font-semibold">Date</TableHead>
                   <TableHead className="text-white font-semibold">Bank Name</TableHead>
-                  <TableHead className="text-white font-semibold">Curr</TableHead>
+                  <TableHead className="text-white font-semibold">Currency</TableHead>
                   <TableHead className="text-white font-semibold text-right">Amount</TableHead>
                 </TableRow>
               </TableHeader>
@@ -187,7 +192,7 @@ export default function ReceiptView() {
                       <TableHead className="text-white font-semibold">Invoice No</TableHead>
                       <TableHead className="text-white font-semibold">Job No</TableHead>
                       <TableHead className="text-white font-semibold">BL No</TableHead>
-                      <TableHead className="text-white font-semibold">Curr</TableHead>
+                      <TableHead className="text-white font-semibold">Currency</TableHead>
                       <TableHead className="text-white font-semibold text-right">Amount</TableHead>
                     </TableRow>
                   </TableHeader>

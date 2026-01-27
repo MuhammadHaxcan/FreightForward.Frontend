@@ -696,16 +696,16 @@ const CustomerDetail = () => {
           <Label className="text-sm">Category</Label>
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full justify-between bg-muted/50 font-normal h-10" disabled={isViewMode}>
-                <div className="flex flex-wrap gap-1 flex-1">
+              <Button variant="outline" className="w-full justify-between bg-muted/50 font-normal min-h-10 h-auto py-2" disabled={isViewMode}>
+                <div className="flex flex-wrap gap-1 flex-1 max-h-[72px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                   {profileData.categoryIds.map(catId => {
                     const cat = categoryTypes.find(c => c.id === catId);
                     return cat ? (
-                      <span key={catId} className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary text-primary-foreground rounded-md">× {cat.name}</span>
+                      <span key={catId} className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary text-primary-foreground rounded-md whitespace-nowrap">× {cat.name}</span>
                     ) : null;
                   })}
                 </div>
-                <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                <ChevronDown className="h-4 w-4 shrink-0 opacity-50 ml-2" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[200px] p-0" align="start">
@@ -1542,6 +1542,13 @@ const CustomerDetail = () => {
     </div>
   );
 
+  const handlePrintStatement = () => {
+    if (!id) return;
+    const fromDateStr = dateRange.from.toISOString().split('T')[0];
+    const toDateStr = dateRange.to.toISOString().split('T')[0];
+    window.open(`/master-customers/${id}/statement/print?fromDate=${fromDateStr}&toDate=${toDateStr}`, '_blank');
+  };
+
   const renderStatementAccountTab = () => {
     const formatAmount = (amount: number) => amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -1554,7 +1561,7 @@ const CustomerDetail = () => {
               <CalendarIcon className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm">{format(dateRange.from, "MMMM d, yyyy")} - {format(dateRange.to, "MMMM d, yyyy")}</span>
             </div>
-            <Button className="btn-success">PRINT</Button>
+            <Button className="btn-success" onClick={handlePrintStatement}>PRINT</Button>
           </div>
         </div>
 

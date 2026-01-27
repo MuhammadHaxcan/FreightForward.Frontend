@@ -4,7 +4,6 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -33,7 +32,6 @@ import {
   type Customer,
   type Bank,
   type PaymentMode,
-  type Currency,
   type CurrencyType,
 } from "@/services/api";
 import {
@@ -59,7 +57,8 @@ interface SelectedInvoice {
   totalAmount: number;
   pendingAmount: number;
   payingAmount: number;
-  currency: Currency;
+  currencyId: number;
+  currencyCode: string;
 }
 
 export default function RecordPaymentModal({
@@ -80,7 +79,7 @@ export default function RecordPaymentModal({
   const [selectedInvoices, setSelectedInvoices] = useState<SelectedInvoice[]>([]);
   const [paymentMode, setPaymentMode] = useState<PaymentMode>("Cash");
   const [paymentDate, setPaymentDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [currency, setCurrency] = useState<Currency>("USD");
+  const [currencyId, setCurrencyId] = useState<number | null>(null);
   const [bankId, setBankId] = useState<number | null>(null);
   const [chequeNo, setChequeNo] = useState("");
   const [chequeDate, setChequeDate] = useState("");
@@ -108,10 +107,10 @@ export default function RecordPaymentModal({
   useEffect(() => {
     if (vendorId) {
       fetchUnpaidInvoices(vendorId);
-      // Set currency to vendor's base currency
+      // Set currency to vendor's currency
       const selectedVendor = vendors.find(v => v.id === vendorId);
-      if (selectedVendor?.baseCurrency) {
-        setCurrency(selectedVendor.baseCurrency);
+      if (selectedVendor?.currencyId) {
+        setCurrencyId(selectedVendor.currencyId);
       }
     } else {
       setUnpaidInvoices([]);
@@ -197,7 +196,7 @@ export default function RecordPaymentModal({
     setSelectedInvoices([]);
     setPaymentMode("Cash");
     setPaymentDate(format(new Date(), "yyyy-MM-dd"));
-    setCurrency("USD");
+    setCurrencyId(null);
     setBankId(null);
     setChequeNo("");
     setChequeDate("");
@@ -215,7 +214,8 @@ export default function RecordPaymentModal({
           totalAmount: invoice.totalAmount,
           pendingAmount: invoice.pendingAmount,
           payingAmount: invoice.pendingAmount, // Default to full pending amount
-          currency: invoice.currency,
+          currencyId: invoice.currencyId || 0,
+          currencyCode: invoice.currencyCode || "",
         },
       ]);
     } else {
@@ -267,17 +267,17 @@ export default function RecordPaymentModal({
         paymentDate: paymentDate,
         vendorId: vendorId,
         paymentMode: paymentMode,
-        currency: currency,
+        currencyId: currencyId || 0,
         amount: totalAmount,
         narration: narration || undefined,
-        bankId: requiresBank ? (bankId || undefined) : undefined,
-        chequeNo: requiresChequeDetails ? (chequeNo || undefined) : undefined,
-        chequeDate: requiresChequeDetails ? (chequeDate || undefined) : undefined,
-        chequeBank: requiresChequeDetails ? (chequeBank || undefined) : undefined,
+        bankId: bankId || undefined,
+        chequeNo: chequeNo || undefined,
+        chequeDate: chequeDate || undefined,
+        chequeBank: chequeBank || undefined,
         purchaseInvoices: selectedInvoices.map(inv => ({
           purchaseInvoiceId: inv.purchaseInvoiceId,
           amount: inv.payingAmount,
-          currency: inv.currency,
+          currencyId: inv.currencyId,
         })),
       };
 
@@ -360,7 +360,7 @@ export default function RecordPaymentModal({
                     .filter(inv => !selectedInvoices.some(si => si.purchaseInvoiceId === inv.id))
                     .map((invoice) => (
                       <SelectItem key={invoice.id} value={invoice.id.toString()}>
-                        {invoice.purchaseNo} - Pending: {invoice.currency} {invoice.pendingAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        {invoice.purchaseNo} - Pending: {invoice.currencyCode} {invoice.pendingAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </SelectItem>
                     ))}
                 </SelectContent>
@@ -459,13 +459,13 @@ export default function RecordPaymentModal({
           {/* Currency - Locked to vendor's base currency */}
           <div className="space-y-2">
             <Label>Currency</Label>
-            <Select value={currency} onValueChange={(v) => setCurrency(v as Currency)} disabled={!!vendorId}>
+            <Select value={currencyId?.toString() || ""} onValueChange={(v) => setCurrencyId(parseInt(v))} disabled={!!vendorId}>
               <SelectTrigger className={vendorId ? "bg-muted" : ""}>
                 <SelectValue placeholder="Select Currency" />
               </SelectTrigger>
               <SelectContent>
                 {currencies.map((curr) => (
-                  <SelectItem key={curr.id} value={curr.code}>
+                  <SelectItem key={curr.id} value={curr.id.toString()}>
                     {curr.code}
                   </SelectItem>
                 ))}
@@ -522,10 +522,10 @@ export default function RecordPaymentModal({
                   <TableRow key={inv.purchaseInvoiceId}>
                     <TableCell>{inv.purchaseNo}</TableCell>
                     <TableCell>
-                      {inv.currency} {inv.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {inv.currencyCode} {inv.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell>
-                      {inv.currency} {inv.pendingAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {inv.currencyCode} {inv.pendingAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell>
                       <Input
@@ -544,7 +544,7 @@ export default function RecordPaymentModal({
                     Total:
                   </TableCell>
                   <TableCell className="font-semibold">
-                    {currency} {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    {currencies.find(c => c.id === currencyId)?.code || ""} {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </TableCell>
                 </TableRow>
               </TableBody>
