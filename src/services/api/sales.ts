@@ -373,6 +373,42 @@ export interface RateRequestForConversion {
   leadDetails: LeadDetailItem[];
 }
 
+// Quotation for Shipment conversion
+export interface QuotationForShipment {
+  id: number;
+  quotationNo: string;
+  quotationBookingNo?: string;
+
+  // Customer/Party Info
+  customerId?: number;
+  customerName: string;
+  contactPersonId?: number;
+  contactPersonName?: string;
+
+  // Shipping Info
+  mode?: string;  // FCLSeaFreight, LCLSeaFreight, AirFreight
+  incoTermCode?: string;
+
+  // Ports
+  loadingPortId?: number;
+  loadingPortName?: string;
+  destinationPortId?: number;
+  destinationPortName?: string;
+
+  // Addresses
+  pickupAddress?: string;
+  deliveryAddress?: string;
+
+  // Notes
+  notes?: string;
+  notesForBooking?: string;
+  remarks?: string;
+
+  // Collections
+  charges: QuotationCharge[];
+  cargoDetails: QuotationCargoDetail[];
+}
+
 // Sales APIs
 export const leadApi = {
   getAll: (params?: {
@@ -432,6 +468,7 @@ export const quotationApi = {
     return fetchApi<PaginatedList<Quotation>>(`/sales/quotations?${query}`);
   },
   getById: (id: number) => fetchApi<QuotationDetail>(`/sales/quotations/${id}`),
+  getForShipment: (id: number) => fetchApi<QuotationForShipment>(`/sales/quotations/${id}/for-shipment`),
   create: (data: CreateQuotationRequest) =>
     fetchApi<number>('/sales/quotations', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: number, data: UpdateQuotationRequest) =>

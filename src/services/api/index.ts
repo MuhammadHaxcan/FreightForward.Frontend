@@ -69,6 +69,8 @@ export {
   type Quotation,
   type QuotationDetail,
   type QuotationCharge,
+  type QuotationCargoDetail,
+  type QuotationForShipment,
   type CreateQuotationRequest,
 } from './sales';
 

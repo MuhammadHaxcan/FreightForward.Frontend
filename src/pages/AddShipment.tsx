@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { getTodayDateOnly } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -78,6 +78,7 @@ import {
   useUpdateShipmentCosting,
   useDeleteShipmentCosting,
 } from "@/hooks/useShipments";
+import { useQuotationForShipment } from "@/hooks/useSales";
 
 // Map PartyType to category code for finding category ID
 const partyTypeToCategoryCode: Record<PartyType, string> = {
@@ -265,12 +266,22 @@ const mapIncoterms = (code: string): Incoterms | undefined => {
 
 const AddShipment = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState("shipment-info");
 
   // Track if shipment has been saved (null = new shipment, number = saved shipment ID)
   const [savedShipmentId, setSavedShipmentId] = useState<number | null>(null);
   const [savedJobNumber, setSavedJobNumber] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
+
+  // Get quotationId from location state (when converting from approved booking)
+  const quotationIdFromState = (location.state as { quotationId?: number })?.quotationId;
+  const [conversionQuotationId, setConversionQuotationId] = useState<number | null>(
+    quotationIdFromState || null
+  );
+
+  // Fetch quotation data for conversion
+  const { data: quotationForShipment } = useQuotationForShipment(conversionQuotationId || 0);
 
   // API hooks for mutations
   const createShipmentMutation = useCreateShipment();
@@ -513,6 +524,140 @@ const AddShipment = () => {
       }
     }
   }, [savedShipmentData]);
+
+  // Pre-fill form data when converting from quotation
+  useEffect(() => {
+    if (conversionQuotationId && quotationForShipment && incoTerms.length > 0) {
+      // Map quotation mode to shipment mode
+      let shipmentMode = "Air Freight";
+      const quotationMode = quotationForShipment.mode;
+      if (quotationMode === "FCLSeaFreight") {
+        shipmentMode = "Sea Freight FCL";
+      } else if (quotationMode === "LCLSeaFreight") {
+        shipmentMode = "Sea Freight LCL";
+      } else if (quotationMode === "AirFreight") {
+        shipmentMode = "Air Freight";
+      }
+
+      // Map incoterm code
+      const incoTermCode = quotationForShipment.incoTermCode || "";
+
+      setFormData(prev => ({
+        ...prev,
+        direction: "Import", // Default to Import as per plan
+        mode: shipmentMode,
+        incoterms: incoTermCode,
+        portOfLoadingId: quotationForShipment.loadingPortId,
+        portOfLoading: quotationForShipment.loadingPortName || "",
+        portOfDischargeId: quotationForShipment.destinationPortId,
+        portOfDischarge: quotationForShipment.destinationPortName || "",
+        placeOfReceipt: quotationForShipment.pickupAddress || "",
+        placeOfDelivery: quotationForShipment.deliveryAddress || "",
+        notes: quotationForShipment.notes || "",
+        internalNotes: quotationForShipment.notesForBooking || "",
+      }));
+
+      // Clear location state to prevent re-triggering
+      window.history.replaceState({}, document.title);
+    }
+  }, [conversionQuotationId, quotationForShipment, incoTerms]);
+
+  // Auto-add parties, costings, and cargo after shipment is saved (when converting from quotation)
+  useEffect(() => {
+    const addConversionData = async () => {
+      if (!savedShipmentId || !conversionQuotationId || !quotationForShipment) return;
+
+      try {
+        // Add customer as Shipper party
+        if (quotationForShipment.customerId) {
+          const partyData: AddShipmentPartyRequest = {
+            shipmentId: savedShipmentId,
+            masterType: 'Debtors',
+            partyType: 'Shipper',
+            customerId: quotationForShipment.customerId,
+            customerName: quotationForShipment.customerName || '',
+            mobile: '',
+            phone: '',
+            email: '',
+          };
+          try {
+            await addPartyMutation.mutateAsync({ shipmentId: savedShipmentId, data: partyData });
+          } catch (error) {
+            // Ignore if party already exists
+          }
+        }
+
+        // Add costings from quotation charges
+        if (quotationForShipment.charges && quotationForShipment.charges.length > 0) {
+          for (const charge of quotationForShipment.charges) {
+            const costingData: AddShipmentCostingRequest = {
+              shipmentId: savedShipmentId,
+              description: charge.chargeType || '',
+              remarks: '',
+              saleQty: charge.quantity || 0,
+              saleUnit: charge.rate || 0,
+              saleCurrencyId: charge.currencyId,
+              saleExRate: charge.roe || 1,
+              saleFCY: charge.amount || 0,
+              saleLCY: (charge.amount || 0) * (charge.roe || 1),
+              saleTaxPercentage: 0,
+              saleTaxAmount: 0,
+              costQty: 0,
+              costUnit: 0,
+              costCurrencyId: undefined,
+              costExRate: 1,
+              costFCY: 0,
+              costLCY: 0,
+              costTaxPercentage: 0,
+              costTaxAmount: 0,
+              unitId: charge.costingUnitId,
+              gp: (charge.amount || 0) * (charge.roe || 1), // Sale LCY as GP (no cost yet)
+              billToCustomerId: quotationForShipment.customerId,
+              vendorCustomerId: undefined,
+            };
+            try {
+              await addCostingMutation.mutateAsync({ shipmentId: savedShipmentId, data: costingData });
+            } catch (error) {
+              // Continue with next costing
+            }
+          }
+        }
+
+        // Add cargo details from quotation
+        if (quotationForShipment.cargoDetails && quotationForShipment.cargoDetails.length > 0) {
+          for (const cargo of quotationForShipment.cargoDetails) {
+            const containerData: AddShipmentContainerRequest = {
+              shipmentId: savedShipmentId,
+              containerNumber: '',
+              containerTypeId: null,
+              sealNo: '',
+              noOfPcs: cargo.quantity || 0,
+              packageTypeId: cargo.packageTypeId || null,
+              grossWeight: cargo.totalWeight || cargo.weight || 0,
+              volume: cargo.totalCbm || cargo.cbm || 0,
+              description: cargo.cargoDescription || '',
+            };
+            try {
+              await addContainerMutation.mutateAsync({ shipmentId: savedShipmentId, data: containerData });
+            } catch (error) {
+              // Continue with next container/cargo
+            }
+          }
+        }
+
+        // Refetch shipment to get updated data
+        refetchShipment();
+
+        // Clear conversion quotation ID after successful conversion
+        setConversionQuotationId(null);
+        toast.success('Quotation data has been pre-filled to the shipment');
+      } catch (error) {
+        console.error('Error adding conversion data:', error);
+      }
+    };
+
+    addConversionData();
+  }, [savedShipmentId, conversionQuotationId, quotationForShipment]);
 
   // Modal states
   const [containerModalOpen, setContainerModalOpen] = useState(false);

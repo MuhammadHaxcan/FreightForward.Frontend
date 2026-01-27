@@ -264,3 +264,18 @@ export function useApproveQuotation() {
     },
   });
 }
+
+// Quotation for Shipment conversion
+export function useQuotationForShipment(id: number) {
+  return useQuery({
+    queryKey: ['quotations', id, 'forShipment'],
+    queryFn: async () => {
+      const response = await quotationApi.getForShipment(id);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+    enabled: id > 0,
+  });
+}

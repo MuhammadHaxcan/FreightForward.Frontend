@@ -39,7 +39,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Edit, Plus, Eye, Download, Trash2, Loader2, CheckCircle } from "lucide-react";
+import { Edit, Plus, Eye, Download, Trash2, Loader2, CheckCircle, Ship } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   useQuotations,
@@ -129,6 +129,8 @@ export default function Quotations() {
   const [editingQuotationId, setEditingQuotationId] = useState<number | null>(null);
   const [approveModalOpen, setApproveModalOpen] = useState(false);
   const [quotationToApprove, setQuotationToApprove] = useState<Quotation | null>(null);
+  const [convertModalOpen, setConvertModalOpen] = useState(false);
+  const [quotationToConvert, setQuotationToConvert] = useState<Quotation | null>(null);
 
   // Get rateRequestId from location state (when coming from Rate Requests)
   const rateRequestIdFromState = (location.state as { rateRequestId?: number })?.rateRequestId;
@@ -708,6 +710,20 @@ export default function Quotations() {
                                   }}
                                 >
                                   <CheckCircle className="h-4 w-4" />
+                                </Button>
+                              )}
+                              {quotation.quotationStatus === "Approved" && activeTab === "approved" && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 bg-teal-500 hover:bg-teal-600 text-white rounded"
+                                  onClick={() => {
+                                    setQuotationToConvert(quotation);
+                                    setConvertModalOpen(true);
+                                  }}
+                                  title="Convert to Shipment"
+                                >
+                                  <Ship className="h-4 w-4" />
                                 </Button>
                               )}
                               <Button
@@ -1552,6 +1568,51 @@ export default function Quotations() {
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : null}
               Yes, Approve
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Convert to Shipment Confirmation Modal */}
+      <AlertDialog open={convertModalOpen} onOpenChange={setConvertModalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Convert Booking to Shipment</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div>
+                Are you sure you want to convert this booking to shipment?
+                {quotationToConvert && (
+                  <div className="mt-4 space-y-2">
+                    <div className="font-medium text-foreground">
+                      Quotation No: {quotationToConvert.quotationNo}
+                    </div>
+                    <div className="font-medium text-foreground">
+                      Booking No: {quotationToConvert.quotationBookingNo || "-"}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setConvertModalOpen(false);
+                setQuotationToConvert(null);
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-teal-500 hover:bg-teal-600 text-white"
+              onClick={() => {
+                if (quotationToConvert) {
+                  setConvertModalOpen(false);
+                  navigate("/shipments/add", { state: { quotationId: quotationToConvert.id } });
+                }
+              }}
+            >
+              Yes, Convert
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
