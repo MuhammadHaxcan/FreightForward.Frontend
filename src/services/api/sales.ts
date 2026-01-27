@@ -315,7 +315,7 @@ export interface CreateQuotationRequest {
     chargeItemId?: number;
     costingUnitId?: number;
     bases?: string;
-    currencyId: number;
+    currencyId?: number;
     rate: number;
     roe: number;
     quantity: number;
@@ -436,4 +436,6 @@ export const quotationApi = {
     fetchApi<number>('/sales/quotations', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: number, data: UpdateQuotationRequest) =>
     fetchApi<void>(`/sales/quotations/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  approve: (id: number) =>
+    fetchApi<{ bookingNo: string }>(`/sales/quotations/${id}/approve`, { method: 'POST' }),
 };

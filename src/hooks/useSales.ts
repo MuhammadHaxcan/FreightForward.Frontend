@@ -242,3 +242,25 @@ export function useRateRequestForConversion(id: number) {
     enabled: id > 0,
   });
 }
+
+// Approve Quotation
+export function useApproveQuotation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const response = await quotationApi.approve(id);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['quotations'] });
+      toast.success(`Quotation approved! Booking No: ${data.bookingNo}`);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to approve quotation');
+    },
+  });
+}

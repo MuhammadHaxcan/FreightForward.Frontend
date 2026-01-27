@@ -26,10 +26,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Edit, Plus, Eye, Download, Trash2, Loader2 } from "lucide-react";
+import { Edit, Plus, Eye, Download, Trash2, Loader2, CheckCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   useQuotations,
@@ -37,6 +47,7 @@ import {
   useCreateQuotation,
   useUpdateQuotation,
   useRateRequestForConversion,
+  useApproveQuotation,
 } from "@/hooks/useSales";
 import { useAllCustomers, useAllCreditors, useCustomer } from "@/hooks/useCustomers";
 import {
@@ -116,6 +127,8 @@ export default function Quotations() {
   const [selectedQuotation, setSelectedQuotation] = useState<Quotation | null>(null);
   const [activeTab, setActiveTab] = useState("all");
   const [editingQuotationId, setEditingQuotationId] = useState<number | null>(null);
+  const [approveModalOpen, setApproveModalOpen] = useState(false);
+  const [quotationToApprove, setQuotationToApprove] = useState<Quotation | null>(null);
 
   // Get rateRequestId from location state (when coming from Rate Requests)
   const rateRequestIdFromState = (location.state as { rateRequestId?: number })?.rateRequestId;
@@ -170,6 +183,7 @@ export default function Quotations() {
   // Mutations
   const createMutation = useCreateQuotation();
   const updateMutation = useUpdateQuotation();
+  const approveMutation = useApproveQuotation();
 
   const quotations = data?.items || [];
   const totalCount = data?.totalCount || 0;
@@ -471,49 +485,49 @@ export default function Quotations() {
       quotationDate: formData.quotationDate,
       rateRequestId: conversionRateRequestId || undefined,
       customerId: formData.customerId,
-      customerName: formData.customerName,
+      customerName: formData.customerName || "",
       contactPersonId: formData.contactPersonId,
-      customerRefCode: formData.customerRefCode,
+      customerRefCode: formData.customerRefCode || undefined,
       loadingPortId: formData.loadingPortId,
       destinationPortId: formData.destinationPortId,
-      pickupAddress: formData.pickupAddress,
-      deliveryAddress: formData.deliveryAddress,
+      pickupAddress: formData.pickupAddress || undefined,
+      deliveryAddress: formData.deliveryAddress || undefined,
       incoTermId: formData.incoTermId,
-      quoteExpiryDate: formData.quoteExpiryDate,
+      quoteExpiryDate: formData.quoteExpiryDate || undefined,
       cargoCalculationMode: formData.cargoCalculationMode,
       status: formData.status,
-      remarks: formData.remarks,
-      cfs: formData.cfs,
-      documentRequired: formData.documentRequired,
-      notes: formData.notes,
-      notesForBooking: formData.notesForBooking,
+      remarks: formData.remarks || undefined,
+      cfs: formData.cfs || undefined,
+      documentRequired: formData.documentRequired || undefined,
+      notes: formData.notes || undefined,
+      notesForBooking: formData.notesForBooking || undefined,
       charges: chargeRows
         .filter((row) => row.chargeType || row.rate)
         .map((row) => ({
-          chargeType: row.chargeType,
+          chargeType: row.chargeType || undefined,
           chargeItemId: row.chargeItemId,
-          bases: row.bases,
-          currencyId: row.currencyId || 0,
+          bases: row.bases || undefined,
+          currencyId: row.currencyId,
           rate: parseFloat(row.rate) || 0,
           roe: parseFloat(row.roe) || 1,
           quantity: parseFloat(row.quantity) || 0,
           amount: parseFloat(row.amount) || 0,
         })),
       cargoDetails: cargoRows.map((row) => ({
-        calculationMode: row.calculationMode,
-        quantity: row.quantity,
+        calculationMode: row.calculationMode || "units",
+        quantity: row.quantity || 1,
         packageTypeId: row.packageTypeId,
-        loadType: row.loadType,
+        loadType: row.loadType || undefined,
         length: row.length,
         width: row.width,
         height: row.height,
-        volumeUnit: row.volumeUnit,
+        volumeUnit: row.volumeUnit || undefined,
         cbm: row.cbm,
         weight: row.weight,
-        weightUnit: row.weightUnit,
+        weightUnit: row.weightUnit || undefined,
         totalCbm: row.totalCbm,
         totalWeight: row.totalWeight,
-        cargoDescription: row.cargoDescription,
+        cargoDescription: row.cargoDescription || undefined,
       })),
     };
 
@@ -633,13 +647,14 @@ export default function Quotations() {
                       <TableHead className="text-white">POD</TableHead>
                       <TableHead className="text-white">Quote Expiry Date</TableHead>
                       <TableHead className="text-white">Status</TableHead>
+                      <TableHead className="text-white">Booking No</TableHead>
                       <TableHead className="text-white">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {quotations.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                           No quotations found
                         </TableCell>
                       </TableRow>
@@ -655,6 +670,7 @@ export default function Quotations() {
                           <TableCell className="text-green-600">{quotation.destinationPortName || quotation.pod}</TableCell>
                           <TableCell>{formatDate(quotation.quoteExpiryDate, "dd-MM-yyyy")}</TableCell>
                           <TableCell>{getStatusBadge(quotation.quotationStatus)}</TableCell>
+                          <TableCell className="text-purple-600 font-medium">{quotation.quotationBookingNo || "-"}</TableCell>
                           <TableCell>
                             <div className="flex gap-1">
                               <Button
@@ -681,6 +697,19 @@ export default function Quotations() {
                               >
                                 <Download className="h-4 w-4" />
                               </Button>
+                              {quotation.quotationStatus === "Pending" && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 bg-purple-500 hover:bg-purple-600 text-white rounded"
+                                  onClick={() => {
+                                    setQuotationToApprove(quotation);
+                                    setApproveModalOpen(true);
+                                  }}
+                                >
+                                  <CheckCircle className="h-4 w-4" />
+                                </Button>
+                              )}
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -1483,6 +1512,50 @@ export default function Quotations() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Approve Confirmation Modal */}
+      <AlertDialog open={approveModalOpen} onOpenChange={setApproveModalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Approve Quotation</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to approve this quotation?
+              {quotationToApprove && (
+                <span className="block mt-2 font-medium text-foreground">
+                  Quotation No: {quotationToApprove.quotationNo}
+                </span>
+              )}
+              This will generate a Booking Number and change the status to "Approved".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setApproveModalOpen(false);
+                setQuotationToApprove(null);
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-purple-500 hover:bg-purple-600 text-white"
+              onClick={async () => {
+                if (quotationToApprove) {
+                  await approveMutation.mutateAsync(quotationToApprove.id);
+                  setApproveModalOpen(false);
+                  setQuotationToApprove(null);
+                }
+              }}
+              disabled={approveMutation.isPending}
+            >
+              {approveMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              Yes, Approve
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }
