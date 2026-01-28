@@ -22,6 +22,7 @@ import {
 import { BankModal } from "./BankModal";
 import { useBanks, useDeleteBank } from "@/hooks/useBanks";
 import { Bank } from "@/services/api";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 
 export function BanksTable() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -68,10 +69,12 @@ export function BanksTable() {
           <h2 className="text-xl font-semibold text-foreground">
             <span className="font-bold">List All</span> Banks
           </h2>
-          <Button className="btn-success gap-2" onClick={() => setIsAddModalOpen(true)}>
-            <Plus size={16} />
-            Add New
-          </Button>
+          <PermissionGate permission="banks_add">
+            <Button className="btn-success gap-2" onClick={() => setIsAddModalOpen(true)}>
+              <Plus size={16} />
+              Add New
+            </Button>
+          </PermissionGate>
         </div>
 
         {/* Controls */}
@@ -174,18 +177,22 @@ export function BanksTable() {
                       </td>
                       <td className="px-3 py-2.5">
                         <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => handleEdit(bank)}
-                            className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
-                          >
-                            <Edit size={14} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(bank)}
-                            className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          <PermissionGate permission="banks_edit">
+                            <button
+                              onClick={() => handleEdit(bank)}
+                              className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                            >
+                              <Edit size={14} />
+                            </button>
+                          </PermissionGate>
+                          <PermissionGate permission="banks_delete">
+                            <button
+                              onClick={() => handleDelete(bank)}
+                              className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </PermissionGate>
                         </div>
                       </td>
                     </tr>

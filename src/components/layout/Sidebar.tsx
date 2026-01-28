@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -10,48 +10,52 @@ import {
   FileText,
   Settings,
   LogOut,
-  ChevronRight,
   ChevronLeft,
   ChevronDown,
   Menu,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { Badge } from "@/components/ui/badge";
 
 interface SubMenuItem {
   title: string;
   path: string;
+  permission?: string;
 }
 
 interface SidebarItem {
   title: string;
   icon: React.ElementType;
   path: string;
+  permission?: string;
   hasSubmenu?: boolean;
   subMenuItems?: SubMenuItem[];
 }
 
-const sidebarItems: SidebarItem[] = [
-  { title: "Dashboard", icon: LayoutDashboard, path: "/" },
-  { 
-    title: "Shipments", 
-    icon: Truck, 
-    path: "/shipments", 
+const allSidebarItems: SidebarItem[] = [
+  { title: "Dashboard", icon: LayoutDashboard, path: "/", permission: "dash_view" },
+  {
+    title: "Shipments",
+    icon: Truck,
+    path: "/shipments",
+    permission: "ship_view",
     hasSubmenu: true,
     subMenuItems: [
-      { title: "Shipments", path: "/shipments" },
-      { title: "Add New", path: "/shipments/add" },
+      { title: "Shipments", path: "/shipments", permission: "ship_view" },
+      { title: "Add New", path: "/shipments/add", permission: "ship_add" },
     ]
   },
-  { title: "Master Customers", icon: Users, path: "/master-customers" },
-  { 
-    title: "Sales", 
-    icon: TrendingUp, 
-    path: "/sales", 
+  { title: "Master Customers", icon: Users, path: "/master-customers", permission: "cust_view" },
+  {
+    title: "Sales",
+    icon: TrendingUp,
+    path: "/sales",
     hasSubmenu: true,
     subMenuItems: [
-      { title: "Leads", path: "/sales/leads" },
-      { title: "Rate Requests", path: "/sales/rate-requests" },
-      { title: "Quotations", path: "/sales/quotations" },
+      { title: "Leads", path: "/sales/leads", permission: "leads_view" },
+      { title: "Rate Requests", path: "/sales/rate-requests", permission: "ratereq_view" },
+      { title: "Quotations", path: "/sales/quotations", permission: "quot_view" },
     ]
   },
   {
@@ -60,13 +64,13 @@ const sidebarItems: SidebarItem[] = [
     path: "/accounts",
     hasSubmenu: true,
     subMenuItems: [
-      { title: "Invoices", path: "/accounts/invoices" },
-      { title: "Purchase Invoices", path: "/accounts/purchase-invoices" },
-      { title: "Receipt Vouchers", path: "/accounts/receipt-vouchers" },
-      { title: "Payment Vouchers", path: "/accounts/payment-vouchers" },
-      { title: "Daily Expenses", path: "/accounts/daily-expenses" },
-      { title: "Cost Sheet", path: "/accounts/cost-sheet" },
-      { title: "VAT Report", path: "/accounts/vat-report" },
+      { title: "Invoices", path: "/accounts/invoices", permission: "invoice_view" },
+      { title: "Purchase Invoices", path: "/accounts/purchase-invoices", permission: "invoice_view" },
+      { title: "Receipt Vouchers", path: "/accounts/receipt-vouchers", permission: "receipt_view" },
+      { title: "Payment Vouchers", path: "/accounts/payment-vouchers", permission: "paymentvoucher_view" },
+      { title: "Daily Expenses", path: "/accounts/daily-expenses", permission: "expense_view" },
+      { title: "Cost Sheet", path: "/accounts/cost-sheet", permission: "ship_view" },
+      { title: "VAT Report", path: "/accounts/vat-report", permission: "invoice_view" },
     ]
   },
   {
@@ -75,8 +79,8 @@ const sidebarItems: SidebarItem[] = [
     path: "/users",
     hasSubmenu: true,
     subMenuItems: [
-      { title: "All Users", path: "/users/all" },
-      { title: "Permission Roles", path: "/users/roles" },
+      { title: "All Users", path: "/users/all", permission: "user_view" },
+      { title: "Permission Roles", path: "/users/roles", permission: "role_view" },
     ]
   },
   { title: "General Document", icon: FileText, path: "/general-document" },
@@ -87,6 +91,33 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const location = useLocation();
+  const { user, logout, hasPermission } = useAuth();
+
+  // Filter sidebar items based on permissions
+  const sidebarItems = useMemo(() => {
+    return allSidebarItems.map(item => {
+      // Filter sub-items based on permissions
+      if (item.subMenuItems) {
+        const filteredSubItems = item.subMenuItems.filter(
+          subItem => !subItem.permission || hasPermission(subItem.permission)
+        );
+
+        // Only show parent if it has visible sub-items or no permission required
+        if (filteredSubItems.length === 0 && item.subMenuItems.length > 0) {
+          return null;
+        }
+
+        return { ...item, subMenuItems: filteredSubItems };
+      }
+
+      // Check permission for items without sub-menus
+      if (item.permission && !hasPermission(item.permission)) {
+        return null;
+      }
+
+      return item;
+    }).filter((item): item is SidebarItem => item !== null);
+  }, [hasPermission]);
 
   // Auto-expand parent menu based on current path on mount and path change
   useEffect(() => {
@@ -100,7 +131,7 @@ export function Sidebar() {
     if (parentToExpand && !expandedMenus.includes(parentToExpand.title)) {
       setExpandedMenus(prev => [...prev, parentToExpand.title]);
     }
-  }, [location.pathname]);
+  }, [location.pathname, sidebarItems]);
 
   const toggleSubmenu = (title: string) => {
     // If sidebar is collapsed, expand it and open the dropdown
@@ -145,6 +176,13 @@ export function Sidebar() {
     return currentPath.startsWith(subPath + "/");
   };
 
+  const handleLogout = async () => {
+    await logout();
+  };
+
+  // Get primary role for badge
+  const primaryRole = user?.roles?.[0] || 'User';
+
   return (
     <aside
       className={cn(
@@ -169,6 +207,25 @@ export function Sidebar() {
           {collapsed ? <Menu size={20} /> : <ChevronLeft size={20} />}
         </button>
       </div>
+
+      {/* User Info */}
+      {!collapsed && user && (
+        <div className="px-4 py-3 border-b border-sidebar-border">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-sidebar-primary text-sidebar-primary-foreground flex items-center justify-center text-sm font-medium">
+              {user.firstName?.[0]}{user.lastName?.[0]}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-sidebar-foreground truncate">
+                {user.fullName}
+              </p>
+              <Badge variant="secondary" className="text-xs mt-0.5">
+                {primaryRole}
+              </Badge>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="flex-1 py-4 overflow-y-auto">
@@ -215,7 +272,7 @@ export function Sidebar() {
                                 to={subItem.path}
                                 className={cn(
                                   "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-all duration-200",
-                                  isSubItemActive(subItem.path, item.subMenuItems)
+                                  isSubItemActive(subItem.path, item.subMenuItems!)
                                     ? "bg-sidebar-primary text-sidebar-primary-foreground"
                                     : "text-sidebar-foreground hover:bg-sidebar-accent"
                                 )}
@@ -243,9 +300,6 @@ export function Sidebar() {
                         {item.title}
                       </span>
                     )}
-                    {!collapsed && item.hasSubmenu && !hasSubItems && (
-                      <ChevronRight size={16} className="text-sidebar-muted" />
-                    )}
                   </NavLink>
                 )}
               </li>
@@ -257,6 +311,7 @@ export function Sidebar() {
       {/* Logout */}
       <div className="p-2 border-t border-sidebar-border">
         <button
+          onClick={handleLogout}
           className={cn(
             "flex items-center gap-3 px-3 py-2.5 rounded-md text-sidebar-foreground hover:bg-sidebar-accent transition-all duration-200 w-full"
           )}

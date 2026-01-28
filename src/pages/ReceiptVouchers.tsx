@@ -191,6 +191,7 @@ export default function ReceiptVouchers() {
               <TableRow className="bg-primary">
                 <TableHead className="text-primary-foreground font-semibold">Date</TableHead>
                 <TableHead className="text-primary-foreground font-semibold">Receipt Voucher No</TableHead>
+                <TableHead className="text-primary-foreground font-semibold">Job #</TableHead>
                 <TableHead className="text-primary-foreground font-semibold">Payment Type</TableHead>
                 <TableHead className="text-primary-foreground font-semibold">Invoice(s) Details</TableHead>
                 <TableHead className="text-primary-foreground font-semibold">Customer</TableHead>
@@ -202,13 +203,13 @@ export default function ReceiptVouchers() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
+                  <TableCell colSpan={9} className="text-center py-8">
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : receipts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
+                  <TableCell colSpan={9} className="text-center py-8">
                     No receipt vouchers found
                   </TableCell>
                 </TableRow>
@@ -225,6 +226,9 @@ export default function ReceiptVouchers() {
                       >
                         {receipt.receiptNo}
                       </span>
+                    </TableCell>
+                    <TableCell className="max-w-[150px] truncate" title={receipt.jobNumbers || ""}>
+                      {receipt.jobNumbers || "-"}
                     </TableCell>
                     <TableCell>{formatPaymentMode(receipt.paymentMode)}</TableCell>
                     <TableCell>

@@ -8,7 +8,9 @@ import {
   getPaymentVoucherPaymentTypes,
   createPaymentVoucher,
   deletePaymentVoucher,
+  updatePaymentVoucher,
   CreatePaymentVoucherRequest,
+  UpdatePaymentVoucherRequest,
 } from '@/services/api/payment';
 
 export function usePaymentVouchers(params: {
@@ -112,6 +114,26 @@ export function useDeletePaymentVoucher() {
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to delete payment voucher');
+    },
+  });
+}
+
+export function useUpdatePaymentVoucher() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, request }: { id: number; request: UpdatePaymentVoucherRequest }) => {
+      const response = await updatePaymentVoucher(id, request);
+      if (response.error) throw new Error(response.error);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['paymentVouchers'] });
+      queryClient.invalidateQueries({ queryKey: ['paymentVoucher'] });
+      toast.success('Payment voucher updated successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update payment voucher');
     },
   });
 }

@@ -13,13 +13,11 @@ import {
 } from "@/components/ui/table";
 import { ArrowLeft, Printer, Loader2 } from "lucide-react";
 import { costSheetApi } from "@/services/api";
-import { toast } from "sonner";
 
 export const CostSheetDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const shipmentId = parseInt(id || "0", 10);
-  const [isPrinting, setIsPrinting] = useState(false);
 
   // Fetch cost sheet detail
   const { data: response, isLoading } = useQuery({
@@ -30,29 +28,9 @@ export const CostSheetDetail = () => {
 
   const detail = response?.data;
 
-  // Handle print PDF
-  const handlePrint = async () => {
-    setIsPrinting(true);
-    try {
-      const response = await costSheetApi.getDetailPdf(shipmentId);
-      if (response.data) {
-        const url = window.URL.createObjectURL(response.data);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `CostSheet-${detail?.jobNumber || shipmentId}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-        toast.success("PDF downloaded successfully");
-      } else if (response.error) {
-        toast.error(response.error);
-      }
-    } catch (error) {
-      toast.error("Failed to generate PDF");
-    } finally {
-      setIsPrinting(false);
-    }
+  // Handle print PDF - opens in new tab
+  const handlePrint = () => {
+    window.open(`/accounts/cost-sheet/${shipmentId}/print`, '_blank');
   };
 
   if (isLoading) {
@@ -90,20 +68,10 @@ export const CostSheetDetail = () => {
           </Button>
           <Button
             onClick={handlePrint}
-            disabled={isPrinting}
             className="bg-emerald-500 hover:bg-emerald-600 text-white"
           >
-            {isPrinting ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Printing...
-              </>
-            ) : (
-              <>
-                <Printer className="h-4 w-4 mr-2" />
-                Print
-              </>
-            )}
+            <Printer className="h-4 w-4 mr-2" />
+            Print
           </Button>
         </div>
 

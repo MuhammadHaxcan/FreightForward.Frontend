@@ -39,6 +39,7 @@ import { InvoiceModal } from "@/components/shipments/InvoiceModal";
 import { PurchaseModal } from "@/components/shipments/PurchaseModal";
 import { DocumentModal } from "@/components/shipments/DocumentModal";
 import { StatusLogModal } from "@/components/shipments/StatusLogModal";
+import { StatusTimeline } from "@/components/shipments/StatusTimeline";
 import { DeleteConfirmationModal } from "@/components/ui/delete-confirmation-modal";
 import { toast } from "sonner";
 import { getTodayDateOnly } from "@/lib/utils";
@@ -322,7 +323,6 @@ const ShipmentDetail = () => {
   const [documentModalOpen, setDocumentModalOpen] = useState(false);
   const [statusLogs, setStatusLogs] = useState<ShipmentStatusLog[]>([]);
   const [statusLogModalOpen, setStatusLogModalOpen] = useState(false);
-  const [shipmentStatus, setShipmentStatus] = useState({ date: getTodayDateOnly(), remarks: "" });
   const [isSaving, setIsSaving] = useState(false);
 
   // Modal states
@@ -878,36 +878,6 @@ const ShipmentDetail = () => {
     setDeleteModalOpen(true);
   };
 
-  // Handle add status log (inline button)
-  const handleAddStatusLog = async () => {
-    if (!shipmentId) {
-      toast.error("Please save the shipment first");
-      return;
-    }
-    if (!shipmentStatus.remarks?.trim()) {
-      toast.error("Please enter status remarks");
-      return;
-    }
-
-    try {
-      const statusLogData: AddShipmentStatusLogRequest = {
-        statusDate: shipmentStatus.date,
-        remarks: shipmentStatus.remarks,
-      };
-      const response = await shipmentApi.addStatusLog(shipmentId, statusLogData);
-      if (response.data) {
-        // Refetch shipment to get updated status logs
-        refetchShipment();
-        toast.success("Status log added successfully");
-        // Reset form
-        setShipmentStatus({ date: getTodayDateOnly(), remarks: "" });
-      }
-    } catch (error) {
-      console.error("Failed to add status log:", error);
-      toast.error("Failed to add status log");
-    }
-  };
-
   // Handle add status log from modal
   const handleAddStatusLogFromModal = async (statusLogData: AddShipmentStatusLogRequest) => {
     if (!shipmentId) {
@@ -934,9 +904,17 @@ const ShipmentDetail = () => {
     setDeleteModalConfig({
       type: 'statusLog',
       id: statusLog.id,
-      name: statusLog.remarks || `Status from ${statusLog.statusDate}`,
+      name: statusLog.eventDescription || statusLog.remarks || 'Status Event',
     });
     setDeleteModalOpen(true);
+  };
+
+  // Handle delete status log by ID (for StatusTimeline)
+  const handleDeleteStatusLogById = (statusLogId: number) => {
+    const statusLog = statusLogs.find(log => log.id === statusLogId);
+    if (statusLog) {
+      handleDeleteStatusLog(statusLog);
+    }
   };
 
   // Handle save shipment
@@ -2263,96 +2241,72 @@ const ShipmentDetail = () => {
           {/* Shipment Status Tab */}
           <TabsContent value="shipment-status" className="mt-0">
             <div className="bg-card border border-border rounded-lg p-6 space-y-6">
+              {/* Master Status Section */}
+              <div className="flex justify-between items-center border-b border-border pb-4">
+                <div className="flex items-center gap-4">
+                  <Label className="text-sm font-semibold">Master Status:</Label>
+                  <Select
+                    value={formData.jobStatus || 'Opened'}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, jobStatus: value as ShipmentStatus }))}
+                  >
+                    <SelectTrigger className="w-[180px] bg-background border-border">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Opened">
+                        <span className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                          Opened
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Closed">
+                        <span className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-gray-500" />
+                          Closed
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="Cancelled">
+                        <span className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-red-500" />
+                          Cancelled
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                  onClick={handleSaveShipment}
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Status"
+                  )}
+                </Button>
+              </div>
+
+              {/* Status History Header */}
               <div className="flex justify-between items-center">
-                <h3 className="text-emerald-600 font-semibold text-lg">Shipment Status</h3>
+                <h3 className="text-emerald-600 font-semibold text-lg">Status History / Tracking Events</h3>
                 <Button
                   className="bg-[#2c3e50] hover:bg-[#34495e] text-white"
                   onClick={() => setStatusLogModalOpen(true)}
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Create
+                  Add Event
                 </Button>
               </div>
 
-              <div className="grid grid-cols-3 gap-4 items-end">
-                <div>
-                  <Label className="text-sm font-semibold">Date</Label>
-                  <DateInput value={shipmentStatus.date} onChange={(v) => setShipmentStatus(prev => ({ ...prev, date: v }))} />
-                </div>
-                <div>
-                  <Label className="text-sm font-semibold">Text</Label>
-                  <Input value={shipmentStatus.remarks} onChange={(e) => setShipmentStatus(prev => ({ ...prev, remarks: e.target.value }))} placeholder="Remarks" />
-                </div>
-                <div>
-                  <Button
-                    className="bg-emerald-500 hover:bg-emerald-600 text-white"
-                    onClick={handleAddStatusLog}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Status
-                  </Button>
-                </div>
-              </div>
-
-              {/* Status Logs Grid */}
-              <div className="border border-border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader className="bg-[#2c3e50]">
-                    <TableRow>
-                      <TableHead className="text-white font-semibold w-16">S.No</TableHead>
-                      <TableHead className="text-white font-semibold">Date</TableHead>
-                      <TableHead className="text-white font-semibold">Remarks</TableHead>
-                      <TableHead className="text-white font-semibold w-24 text-center">Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {statusLogs.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                          No status logs available
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      statusLogs.map((log, index) => (
-                        <TableRow key={log.id}>
-                          <TableCell>{index + 1}</TableCell>
-                          <TableCell>{log.statusDate?.split('T')[0] || ''}</TableCell>
-                          <TableCell>{log.remarks || ''}</TableCell>
-                          <TableCell className="text-center">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                              onClick={() => handleDeleteStatusLog(log)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-
-              <div className="text-sm text-muted-foreground">
-                Showing {statusLogs.length > 0 ? 1 : 0} to {statusLogs.length} of {statusLogs.length} entries
-              </div>
-
-              <Button
-                className="bg-emerald-500 hover:bg-emerald-600 text-white"
-                onClick={handleSaveShipment}
-                disabled={isSaving}
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  "Save and Continue"
-                )}
-              </Button>
+              {/* Status Timeline */}
+              <StatusTimeline
+                statusLogs={statusLogs}
+                onDelete={handleDeleteStatusLogById}
+              />
             </div>
           </TabsContent>
         </Tabs>

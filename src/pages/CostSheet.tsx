@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/table";
 import { Eye, Printer, Loader2 } from "lucide-react";
 import { costSheetApi, CostSheetSummaryDto } from "@/services/api";
-import { toast } from "sonner";
 
 // Helper to get first day of current year
 const getFirstDayOfYear = () => {
@@ -45,7 +44,6 @@ export const CostSheet = () => {
   const navigate = useNavigate();
   const [fromDate, setFromDate] = useState(getFirstDayOfYear());
   const [toDate, setToDate] = useState(getTodayDate());
-  const [isPrinting, setIsPrinting] = useState(false);
 
   // Fetch cost sheet data
   const { data: costSheetResponse, isLoading } = useQuery({
@@ -56,29 +54,9 @@ export const CostSheet = () => {
 
   const costSheetData = costSheetResponse?.data || [];
 
-  // Handle print PDF
-  const handlePrint = async () => {
-    setIsPrinting(true);
-    try {
-      const response = await costSheetApi.getReportPdf(fromDate, toDate);
-      if (response.data) {
-        const url = window.URL.createObjectURL(response.data);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `CostSheet-${fromDate}-${toDate}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-        toast.success("PDF downloaded successfully");
-      } else if (response.error) {
-        toast.error(response.error);
-      }
-    } catch (error) {
-      toast.error("Failed to generate PDF");
-    } finally {
-      setIsPrinting(false);
-    }
+  // Handle print PDF - opens in new tab
+  const handlePrint = () => {
+    window.open(`/accounts/cost-sheet/print?fromDate=${fromDate}&toDate=${toDate}`, '_blank');
   };
 
   // Handle view detail
@@ -118,20 +96,11 @@ export const CostSheet = () => {
             <div className="flex gap-2">
               <Button
                 onClick={handlePrint}
-                disabled={isPrinting || isLoading || costSheetData.length === 0}
+                disabled={isLoading || costSheetData.length === 0}
                 className="bg-emerald-500 hover:bg-emerald-600 text-white"
               >
-                {isPrinting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Printing...
-                  </>
-                ) : (
-                  <>
-                    <Printer className="h-4 w-4 mr-2" />
-                    Print
-                  </>
-                )}
+                <Printer className="h-4 w-4 mr-2" />
+                Print
               </Button>
             </div>
           </div>

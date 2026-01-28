@@ -19,10 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Edit, Search, Calendar, CheckCircle, Loader2, Plus } from "lucide-react";
+import { Edit, Search, Calendar, CheckCircle, Loader2, Plus, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useShipments } from "@/hooks/useShipments";
 import { Shipment, ShipmentStatus } from "@/services/api";
+import { formatEventDateOnly } from "@/lib/status-event-utils";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 
 const Shipments = () => {
   const navigate = useNavigate();
@@ -141,13 +143,15 @@ const Shipments = () => {
               <CheckCircle size={16} className="text-emerald-500" />
               <span>- (Atleast One Invoice Generated)</span>
             </div>
-            <Button
-              className="bg-emerald-500 hover:bg-emerald-600 text-white gap-2"
-              onClick={handleAddNew}
-            >
-              <Plus size={16} />
-              Add Shipment
-            </Button>
+            <PermissionGate permission="ship_add">
+              <Button
+                className="bg-emerald-500 hover:bg-emerald-600 text-white gap-2"
+                onClick={handleAddNew}
+              >
+                <Plus size={16} />
+                Add Shipment
+              </Button>
+            </PermissionGate>
           </div>
         </div>
 
@@ -266,13 +270,14 @@ const Shipments = () => {
                   <TableHead className="text-table-header-foreground font-semibold">Departure/Arrival</TableHead>
                   <TableHead className="text-table-header-foreground font-semibold">Carrier</TableHead>
                   <TableHead className="text-table-header-foreground font-semibold">Vessel</TableHead>
+                  <TableHead className="text-table-header-foreground font-semibold">Latest Event</TableHead>
                   <TableHead className="text-table-header-foreground font-semibold">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={12} className="text-center py-8">
+                    <TableCell colSpan={13} className="text-center py-8">
                       <div className="flex items-center justify-center gap-2 text-muted-foreground">
                         <Loader2 className="h-5 w-5 animate-spin" />
                         Loading shipments...
@@ -281,13 +286,13 @@ const Shipments = () => {
                   </TableRow>
                 ) : isError ? (
                   <TableRow>
-                    <TableCell colSpan={12} className="text-center py-8 text-red-500">
+                    <TableCell colSpan={13} className="text-center py-8 text-red-500">
                       Error loading shipments: {error?.message || 'Unknown error'}
                     </TableCell>
                   </TableRow>
                 ) : shipments.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
                       No shipments found
                     </TableCell>
                   </TableRow>
@@ -298,14 +303,16 @@ const Shipments = () => {
                       className={`hover:bg-muted/50 ${index % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}
                     >
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600 text-white rounded"
-                          onClick={() => handleEdit(shipment)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
+                        <PermissionGate permission="ship_edit">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600 text-white rounded"
+                            onClick={() => handleEdit(shipment)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </PermissionGate>
                       </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
@@ -338,6 +345,28 @@ const Shipments = () => {
                       </TableCell>
                       <TableCell className="text-emerald-600">{shipment.carrier || "-"}</TableCell>
                       <TableCell>{shipment.vessel || "-"}</TableCell>
+                      <TableCell>
+                        {shipment.latestEvent ? (
+                          <div className="space-y-0.5 text-sm max-w-[200px]">
+                            <div className="font-medium text-foreground truncate" title={shipment.latestEvent.eventDescription}>
+                              {shipment.latestEvent.eventDescription}
+                            </div>
+                            {shipment.latestEvent.location && (
+                              <div className="flex items-center gap-1 text-muted-foreground text-xs">
+                                <MapPin className="h-3 w-3 flex-shrink-0" />
+                                <span className="truncate">{shipment.latestEvent.location}</span>
+                              </div>
+                            )}
+                            {shipment.latestEvent.eventDateTime && (
+                              <div className="text-xs text-muted-foreground">
+                                {formatEventDateOnly(shipment.latestEvent.eventDateTime)}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
                       <TableCell>{getStatusBadge(shipment.jobStatus)}</TableCell>
                     </TableRow>
                   ))

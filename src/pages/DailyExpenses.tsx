@@ -24,10 +24,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Printer, Search, Eye, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Plus, Printer, Search, Eye, Pencil, Trash2, Loader2, Edit } from "lucide-react";
 import { DateInput } from "@/components/ui/date-input";
 import { ExpenseModal } from "@/components/expenses/ExpenseModal";
-import { ExpensePrintView } from "@/components/expenses/ExpensePrintView";
 import { useAllExpenseTypes } from "@/hooks/useSettings";
 import { useBanks } from "@/hooks/useBanks";
 import { useExpenses, useCreateExpense, useUpdateExpense, useDeleteExpense } from "@/hooks/useExpenses";
@@ -61,10 +60,11 @@ export default function DailyExpenses() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<ApiExpense | null>(null);
   const [viewingExpense, setViewingExpense] = useState<ApiExpense | null>(null);
-  const [showPrintView, setShowPrintView] = useState(false);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Fetch expenses from API
-  const { data: expensesData, isLoading } = useExpenses({ pageSize: 100 });
+  const { data: expensesData, isLoading } = useExpenses({ pageNumber, pageSize });
   const createExpense = useCreateExpense();
   const updateExpense = useUpdateExpense();
   const deleteExpense = useDeleteExpense();
@@ -107,22 +107,6 @@ export default function DailyExpenses() {
     const matchesDateRange = expenseDate >= new Date(startDate) && expenseDate <= new Date(endDate);
     return matchesSearch && matchesBank && matchesCategory && matchesDateRange;
   });
-
-  // Map expenses for print view (convert to expected format)
-  const printExpenses = filteredExpenses.map((e) => ({
-    id: e.id.toString(),
-    date: e.expenseDate,
-    paymentType: e.paymentType,
-    paymentMode: paymentModeLabels[e.paymentMode] || e.paymentMode,
-    category: e.category,
-    bank: e.bankName || "---",
-    description: e.description || "",
-    receipt: e.receiptRef || "---",
-    currency: e.currencyCode || "",
-    amount: e.amount,
-    chequeNumber: e.chequeNumber,
-    chequeDate: e.chequeDate,
-  }));
 
   const handleAddExpense = (expenseData: {
     date: string;
@@ -209,24 +193,13 @@ export default function DailyExpenses() {
     setIsModalOpen(true);
   };
 
-  if (showPrintView) {
-    return (
-      <ExpensePrintView
-        expenses={printExpenses}
-        startDate={startDate}
-        endDate={endDate}
-        onClose={() => setShowPrintView(false)}
-      />
-    );
-  }
-
   return (
     <MainLayout>
       <div className="p-6 space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-foreground">All Expenses</h1>
-          <Button onClick={openAddModal} className="bg-primary hover:bg-primary/90">
+          <Button onClick={openAddModal} className="bg-green-500 hover:bg-green-600 text-white">
             <Plus className="h-4 w-4 mr-2" />
             Add New
           </Button>
@@ -276,7 +249,15 @@ export default function DailyExpenses() {
                 <Search className="h-4 w-4 mr-2" />
                 Search
               </Button>
-              <Button onClick={() => setShowPrintView(true)} variant="outline">
+              <Button
+                onClick={() => {
+                  const params = new URLSearchParams({ startDate, endDate });
+                  if (selectedBank !== "all") params.append("bank", selectedBank);
+                  if (selectedCategory !== "all") params.append("category", selectedCategory);
+                  window.open(`/accounts/expenses/print?${params.toString()}`, '_blank');
+                }}
+                variant="outline"
+              >
                 <Printer className="h-4 w-4 mr-2" />
                 Print
               </Button>
@@ -286,11 +267,32 @@ export default function DailyExpenses() {
 
         {/* Search and Table */}
         <div className="bg-card rounded-lg border">
-          <div className="p-4 flex justify-end">
+          <div className="p-4 flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Show</span>
+              <Select
+                value={pageSize.toString()}
+                onValueChange={(v) => {
+                  setPageSize(parseInt(v));
+                  setPageNumber(1);
+                }}
+              >
+                <SelectTrigger className="w-20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+              <span className="text-sm text-muted-foreground">entries</span>
+            </div>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Search:</span>
               <Input
-                placeholder=""
+                placeholder="Search..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-48"
@@ -305,15 +307,15 @@ export default function DailyExpenses() {
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="font-semibold">Date</TableHead>
-                  <TableHead className="font-semibold">Payment Type/Mode</TableHead>
-                  <TableHead className="font-semibold">Category</TableHead>
-                  <TableHead className="font-semibold">Bank</TableHead>
-                  <TableHead className="font-semibold">Description</TableHead>
-                  <TableHead className="font-semibold">Receipt</TableHead>
-                  <TableHead className="font-semibold text-right">Payment</TableHead>
-                  <TableHead className="font-semibold text-center">Action</TableHead>
+                <TableRow className="bg-primary">
+                  <TableHead className="text-primary-foreground font-semibold">Date</TableHead>
+                  <TableHead className="text-primary-foreground font-semibold">Payment Type/Mode</TableHead>
+                  <TableHead className="text-primary-foreground font-semibold">Category</TableHead>
+                  <TableHead className="text-primary-foreground font-semibold">Bank</TableHead>
+                  <TableHead className="text-primary-foreground font-semibold">Description</TableHead>
+                  <TableHead className="text-primary-foreground font-semibold">Receipt</TableHead>
+                  <TableHead className="text-primary-foreground font-semibold">Payment</TableHead>
+                  <TableHead className="text-primary-foreground font-semibold">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -334,27 +336,27 @@ export default function DailyExpenses() {
                       <TableCell>{expense.receiptRef || "---"}</TableCell>
                       <TableCell className="text-right whitespace-nowrap">{formatAmount(expense.currencyCode || "", expense.amount)}</TableCell>
                       <TableCell>
-                        <div className="flex items-center justify-center gap-1">
+                        <div className="flex items-center gap-1">
                           <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-primary hover:text-primary/80"
+                            size="sm"
+                            className="bg-yellow-500 hover:bg-yellow-600 text-white h-8 w-8 p-0"
+                            title="View"
                             onClick={() => setViewingExpense(expense)}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
                           <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-primary hover:text-primary/80"
+                            size="sm"
+                            className="bg-amber-500 hover:bg-amber-600 text-white h-8 w-8 p-0"
+                            title="Edit"
                             onClick={() => openEditModal(expense)}
                           >
-                            <Pencil className="h-4 w-4" />
+                            <Edit className="h-4 w-4" />
                           </Button>
                           <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive/80"
+                            size="sm"
+                            className="bg-red-500 hover:bg-red-600 text-white h-8 w-8 p-0"
+                            title="Delete"
                             onClick={() => handleDeleteExpense(expense.id)}
                             disabled={deleteExpense.isPending}
                           >
@@ -370,13 +372,67 @@ export default function DailyExpenses() {
           )}
 
           {/* Pagination */}
-          <div className="p-4 flex justify-end">
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" disabled>Previous</Button>
-              <Button variant="default" size="sm" className="bg-primary">1</Button>
-              <Button variant="outline" size="sm" disabled>Next</Button>
+          {expensesData && (
+            <div className="p-4 flex justify-between items-center">
+              <div className="text-sm text-muted-foreground">
+                Showing {expensesData.totalCount > 0 ? (pageNumber - 1) * pageSize + 1 : 0} to {Math.min(pageNumber * pageSize, expensesData.totalCount)} of {expensesData.totalCount} entries
+              </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPageNumber((p) => Math.max(1, p - 1))}
+                  disabled={pageNumber === 1}
+                >
+                  Previous
+                </Button>
+                {expensesData.totalPages > 0 && Array.from({ length: Math.min(7, expensesData.totalPages) }, (_, i) => {
+                  let pageNum: number;
+                  if (expensesData.totalPages <= 7) {
+                    pageNum = i + 1;
+                  } else if (pageNumber <= 4) {
+                    pageNum = i + 1;
+                  } else if (pageNumber >= expensesData.totalPages - 3) {
+                    pageNum = expensesData.totalPages - 6 + i;
+                  } else {
+                    pageNum = pageNumber - 3 + i;
+                  }
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={pageNumber === pageNum ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setPageNumber(pageNum)}
+                      className="w-8"
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+                {expensesData.totalPages > 7 && pageNumber < expensesData.totalPages - 3 && (
+                  <>
+                    <span className="px-2">...</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPageNumber(expensesData.totalPages)}
+                      className="w-8"
+                    >
+                      {expensesData.totalPages}
+                    </Button>
+                  </>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPageNumber((p) => Math.min(expensesData.totalPages, p + 1))}
+                  disabled={pageNumber === expensesData.totalPages || expensesData.totalPages === 0}
+                >
+                  Next
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 

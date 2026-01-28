@@ -1,300 +1,301 @@
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { rolesApi, permissionsApi } from "../services/api/auth";
+import { PermissionGate } from "../components/auth/PermissionGate";
+import type { Permission, RoleListItem, CreateRoleRequest, UpdateRoleRequest } from "../types/auth";
 
-interface Role {
-  id: number;
-  name: string;
-  menuPermission: string;
-  addedDate: string;
+interface PermissionGroupState {
+  [module: string]: {
+    expanded: boolean;
+    permissions: Permission[];
+  };
 }
-
-interface Permission {
-  id: string;
-  label: string;
-  action: string;
-  checked: boolean;
-}
-
-interface PermissionGroup {
-  id: string;
-  name: string;
-  expanded: boolean;
-  permissions: Permission[];
-}
-
-const mockRoles: Role[] = [
-  { id: 1, name: "Administrator", menuPermission: "All Menu Access", addedDate: "22-Apr-2018" },
-  { id: 2, name: "Employee", menuPermission: "Custom Menu Access", addedDate: "22-Apr-2018" },
-  { id: 3, name: "Manager", menuPermission: "Custom Menu Access", addedDate: "22-Apr-2018" },
-  { id: 4, name: "Junior Employee", menuPermission: "Custom Menu Access", addedDate: "22-Apr-2018" },
-  { id: 5, name: "President", menuPermission: "All Menu Access", addedDate: "22-Apr-2018" },
-  { id: 6, name: "CEOs", menuPermission: "Custom Menu Access", addedDate: "22-Apr-2018" },
-  { id: 7, name: "SALES", menuPermission: "All Menu Access", addedDate: "24-Jun-2018" },
-  { id: 8, name: "multi store employee", menuPermission: "Custom Menu Access", addedDate: "01-Oct-2020" },
-  { id: 9, name: "Employee qatar", menuPermission: "Custom Menu Access", addedDate: "28-Oct-2020" },
-  { id: 10, name: "back office", menuPermission: "All Menu Access", addedDate: "04-Nov-2021" },
-];
-
-const initialPermissionGroups: PermissionGroup[] = [
-  {
-    id: "dashboard",
-    name: "Dashboard",
-    expanded: false,
-    permissions: [
-      { id: "dash_view", label: "View Dashboard", action: "View", checked: false },
-      { id: "dash_all_count", label: "View All Count", action: "View", checked: false },
-    ],
-  },
-  {
-    id: "shipments",
-    name: "Shipments",
-    expanded: false,
-    permissions: [
-      { id: "ship_show_all", label: "Show All", action: "View", checked: false },
-      { id: "ship_add_new", label: "Add New", action: "Add", checked: false },
-      { id: "ship_edit", label: "Edit", action: "Edit", checked: false },
-      { id: "ship_view", label: "View", action: "View", checked: false },
-      { id: "ship_delete", label: "Delete", action: "Delete", checked: false },
-    ],
-  },
-  {
-    id: "master_customers",
-    name: "Master Customers",
-    expanded: false,
-    permissions: [
-      { id: "cust_show_all", label: "Show All", action: "View", checked: false },
-      { id: "cust_add", label: "Add", action: "Add", checked: false },
-      { id: "cust_edit", label: "Edit", action: "Edit", checked: false },
-      { id: "cust_view", label: "View", action: "View", checked: false },
-      { id: "cust_delete", label: "Delete", action: "Delete", checked: false },
-    ],
-  },
-  {
-    id: "sales_leads",
-    name: "Sales - Leads",
-    expanded: false,
-    permissions: [
-      { id: "leads_show_all", label: "Show All", action: "View", checked: false },
-      { id: "leads_add", label: "Add", action: "Add", checked: false },
-      { id: "leads_edit", label: "Edit", action: "Edit", checked: false },
-      { id: "leads_view", label: "View", action: "View", checked: false },
-      { id: "leads_delete", label: "Delete", action: "Delete", checked: false },
-    ],
-  },
-  {
-    id: "sales_rate_requests",
-    name: "Sales - Rate Requests",
-    expanded: false,
-    permissions: [
-      { id: "rate_show_all", label: "Show All", action: "View", checked: false },
-      { id: "rate_add", label: "Add", action: "Add", checked: false },
-      { id: "rate_edit", label: "Edit", action: "Edit", checked: false },
-      { id: "rate_view", label: "View", action: "View", checked: false },
-      { id: "rate_delete", label: "Delete", action: "Delete", checked: false },
-    ],
-  },
-  {
-    id: "sales_quotations",
-    name: "Sales - Quotations",
-    expanded: false,
-    permissions: [
-      { id: "quot_show_all", label: "Show All", action: "View", checked: false },
-      { id: "quot_add", label: "Add", action: "Add", checked: false },
-      { id: "quot_edit", label: "Edit", action: "Edit", checked: false },
-      { id: "quot_view", label: "View", action: "View", checked: false },
-      { id: "quot_download", label: "Download", action: "View", checked: false },
-      { id: "quot_delete", label: "Delete", action: "Delete", checked: false },
-    ],
-  },
-  {
-    id: "accounts_expenses",
-    name: "Accounts - Daily Expenses",
-    expanded: false,
-    permissions: [
-      { id: "expense_show_all", label: "Show All", action: "View", checked: false },
-      { id: "expense_add", label: "Add", action: "Add", checked: false },
-      { id: "expense_edit", label: "Edit", action: "Edit", checked: false },
-      { id: "expense_view", label: "View", action: "View", checked: false },
-      { id: "expense_delete", label: "Delete", action: "Delete", checked: false },
-    ],
-  },
-  {
-    id: "users",
-    name: "Users - All Users",
-    expanded: false,
-    permissions: [
-      { id: "user_show_all", label: "Show All", action: "View", checked: false },
-      { id: "user_add", label: "Add", action: "Add", checked: false },
-      { id: "user_edit", label: "Edit", action: "Edit", checked: false },
-      { id: "user_view", label: "View", action: "View", checked: false },
-      { id: "user_delete", label: "Delete", action: "Delete", checked: false },
-    ],
-  },
-  {
-    id: "users_roles",
-    name: "Users - Permission Roles",
-    expanded: false,
-    permissions: [
-      { id: "role_show_all", label: "Show All", action: "View", checked: false },
-      { id: "role_add", label: "Add", action: "Add", checked: false },
-      { id: "role_edit", label: "Edit", action: "Edit", checked: false },
-      { id: "role_view", label: "View", action: "View", checked: false },
-      { id: "role_delete", label: "Delete", action: "Delete", checked: false },
-    ],
-  },
-  {
-    id: "general_document",
-    name: "General Document",
-    expanded: false,
-    permissions: [
-      { id: "doc_show_all", label: "Show All", action: "View", checked: false },
-      { id: "doc_add", label: "Add", action: "Add", checked: false },
-      { id: "doc_edit", label: "Edit", action: "Edit", checked: false },
-      { id: "doc_view", label: "View", action: "View", checked: false },
-      { id: "doc_delete", label: "Delete", action: "Delete", checked: false },
-    ],
-  },
-  {
-    id: "settings_currency",
-    name: "Settings - Currency Type",
-    expanded: false,
-    permissions: [
-      { id: "settings_currency_view", label: "View", action: "View", checked: false },
-      { id: "settings_currency_add", label: "Add", action: "Add", checked: false },
-      { id: "settings_currency_edit", label: "Edit", action: "Edit", checked: false },
-      { id: "settings_currency_delete", label: "Delete", action: "Delete", checked: false },
-    ],
-  },
-  {
-    id: "settings_ports",
-    name: "Settings - Ports",
-    expanded: false,
-    permissions: [
-      { id: "settings_ports_view", label: "View", action: "View", checked: false },
-      { id: "settings_ports_add", label: "Add", action: "Add", checked: false },
-      { id: "settings_ports_edit", label: "Edit", action: "Edit", checked: false },
-      { id: "settings_ports_delete", label: "Delete", action: "Delete", checked: false },
-    ],
-  },
-  {
-    id: "settings_charges",
-    name: "Settings - Charges Items",
-    expanded: false,
-    permissions: [
-      { id: "settings_charges_view", label: "View", action: "View", checked: false },
-      { id: "settings_charges_add", label: "Add", action: "Add", checked: false },
-      { id: "settings_charges_edit", label: "Edit", action: "Edit", checked: false },
-      { id: "settings_charges_delete", label: "Delete", action: "Delete", checked: false },
-    ],
-  },
-  {
-    id: "settings_expense_items",
-    name: "Settings - Expense Items",
-    expanded: false,
-    permissions: [
-      { id: "settings_expense_items_view", label: "View", action: "View", checked: false },
-      { id: "settings_expense_items_add", label: "Add", action: "Add", checked: false },
-      { id: "settings_expense_items_edit", label: "Edit", action: "Edit", checked: false },
-      { id: "settings_expense_items_delete", label: "Delete", action: "Delete", checked: false },
-    ],
-  },
-  {
-    id: "settings_companies",
-    name: "Settings - Companies",
-    expanded: false,
-    permissions: [
-      { id: "settings_companies_view", label: "View", action: "View", checked: false },
-      { id: "settings_companies_add", label: "Add", action: "Add", checked: false },
-      { id: "settings_companies_edit", label: "Edit", action: "Edit", checked: false },
-      { id: "settings_companies_delete", label: "Delete", action: "Delete", checked: false },
-    ],
-  },
-  {
-    id: "settings_banks",
-    name: "Settings - Banks",
-    expanded: false,
-    permissions: [
-      { id: "settings_banks_view", label: "View", action: "View", checked: false },
-      { id: "settings_banks_add", label: "Add", action: "Add", checked: false },
-      { id: "settings_banks_edit", label: "Edit", action: "Edit", checked: false },
-      { id: "settings_banks_delete", label: "Delete", action: "Delete", checked: false },
-    ],
-  },
-];
 
 const PermissionRoles = () => {
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
+  const [currentPage, setCurrentPage] = useState(1);
   const [roleModalOpen, setRoleModalOpen] = useState(false);
+  const [editingRole, setEditingRole] = useState<RoleListItem | null>(null);
   const [roleName, setRoleName] = useState("");
-  const [selectAccess, setSelectAccess] = useState("");
-  const [permissionGroups, setPermissionGroups] = useState<PermissionGroup[]>(initialPermissionGroups);
+  const [roleDescription, setRoleDescription] = useState("");
+  const [selectedPermissionIds, setSelectedPermissionIds] = useState<Set<number>>(new Set());
+  const [permissionGroupState, setPermissionGroupState] = useState<PermissionGroupState>({});
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [roleToDelete, setRoleToDelete] = useState<RoleListItem | null>(null);
 
-  const filteredRoles = mockRoles.filter(
-    (role) =>
-      role.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      role.menuPermission.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Fetch roles
+  const { data: rolesData, isLoading: rolesLoading } = useQuery({
+    queryKey: ["roles", currentPage, entriesPerPage, searchTerm],
+    queryFn: async () => {
+      const result = await rolesApi.getAll({
+        pageNumber: currentPage,
+        pageSize: parseInt(entriesPerPage),
+        searchTerm: searchTerm || undefined,
+      });
+      if (result.error) throw new Error(result.error);
+      return result.data!;
+    },
+  });
 
-  const toggleGroup = (groupId: string) => {
-    setPermissionGroups(prev =>
-      prev.map(group =>
-        group.id === groupId ? { ...group, expanded: !group.expanded } : group
-      )
-    );
+  // Fetch permissions grouped
+  const { data: permissionGroups } = useQuery({
+    queryKey: ["permissions", "grouped"],
+    queryFn: async () => {
+      const result = await permissionsApi.getGrouped();
+      if (result.error) throw new Error(result.error);
+      return result.data!;
+    },
+  });
+
+  // Create role mutation
+  const createRoleMutation = useMutation({
+    mutationFn: async (data: CreateRoleRequest) => {
+      const result = await rolesApi.create(data);
+      if (result.error) throw new Error(result.error);
+      return result.data!;
+    },
+    onSuccess: () => {
+      toast.success("Role created successfully");
+      queryClient.invalidateQueries({ queryKey: ["roles"] });
+      closeModal();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to create role");
+    },
+  });
+
+  // Update role mutation
+  const updateRoleMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: UpdateRoleRequest }) => {
+      const result = await rolesApi.update(id, data);
+      if (result.error) throw new Error(result.error);
+      return result.data;
+    },
+    onSuccess: () => {
+      toast.success("Role updated successfully");
+      queryClient.invalidateQueries({ queryKey: ["roles"] });
+      closeModal();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to update role");
+    },
+  });
+
+  // Delete role mutation
+  const deleteRoleMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const result = await rolesApi.delete(id);
+      if (result.error) throw new Error(result.error);
+      return result.data;
+    },
+    onSuccess: () => {
+      toast.success("Role deleted successfully");
+      queryClient.invalidateQueries({ queryKey: ["roles"] });
+      setDeleteConfirmOpen(false);
+      setRoleToDelete(null);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to delete role");
+    },
+  });
+
+  // Initialize permission group state when permissions load
+  const initializePermissionGroupState = (groups: Record<string, Permission[]>) => {
+    const state: PermissionGroupState = {};
+    Object.entries(groups).forEach(([module, permissions]) => {
+      state[module] = {
+        expanded: false,
+        permissions,
+      };
+    });
+    return state;
   };
 
-  const togglePermission = (groupId: string, permissionId: string) => {
-    setPermissionGroups(prev =>
-      prev.map(group =>
-        group.id === groupId
-          ? {
-              ...group,
-              permissions: group.permissions.map(perm =>
-                perm.id === permissionId ? { ...perm, checked: !perm.checked } : perm
-              ),
-            }
-          : group
-      )
-    );
+  const toggleGroup = (module: string) => {
+    setPermissionGroupState((prev) => ({
+      ...prev,
+      [module]: {
+        ...prev[module],
+        expanded: !prev[module]?.expanded,
+      },
+    }));
   };
 
-  const toggleAllInGroup = (groupId: string) => {
-    setPermissionGroups(prev =>
-      prev.map(group => {
-        if (group.id === groupId) {
-          const allChecked = group.permissions.every(p => p.checked);
-          return {
-            ...group,
-            permissions: group.permissions.map(p => ({ ...p, checked: !allChecked }))
-          };
+  const togglePermission = (permissionId: number) => {
+    setSelectedPermissionIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(permissionId)) {
+        newSet.delete(permissionId);
+      } else {
+        newSet.add(permissionId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleAllInGroup = (module: string) => {
+    const groupPermissions = permissionGroups?.[module] || [];
+    const allSelected = groupPermissions.every((p) => selectedPermissionIds.has(p.id));
+
+    setSelectedPermissionIds((prev) => {
+      const newSet = new Set(prev);
+      groupPermissions.forEach((p) => {
+        if (allSelected) {
+          newSet.delete(p.id);
+        } else {
+          newSet.add(p.id);
         }
-        return group;
-      })
-    );
+      });
+      return newSet;
+    });
+  };
+
+  const closeModal = () => {
+    setRoleModalOpen(false);
+    setEditingRole(null);
+    setRoleName("");
+    setRoleDescription("");
+    setSelectedPermissionIds(new Set());
+    if (permissionGroups) {
+      setPermissionGroupState(initializePermissionGroupState(permissionGroups));
+    }
+  };
+
+  const openAddModal = () => {
+    setEditingRole(null);
+    setRoleName("");
+    setRoleDescription("");
+    setSelectedPermissionIds(new Set());
+    if (permissionGroups) {
+      setPermissionGroupState(initializePermissionGroupState(permissionGroups));
+    }
+    setRoleModalOpen(true);
+  };
+
+  const openEditModal = async (role: RoleListItem) => {
+    setEditingRole(role);
+    setRoleName(role.name);
+    setRoleDescription(role.description || "");
+
+    // Fetch full role details to get assigned permissions
+    const result = await rolesApi.getById(role.id);
+    if (result.error) {
+      toast.error("Failed to load role details");
+      return;
+    }
+
+    const fullRole = result.data!;
+    const permIds = new Set<number>(fullRole.permissions?.map((p) => p.id) || []);
+    setSelectedPermissionIds(permIds);
+
+    if (permissionGroups) {
+      setPermissionGroupState(initializePermissionGroupState(permissionGroups));
+    }
+    setRoleModalOpen(true);
   };
 
   const handleSaveRole = () => {
-    console.log("Saving role:", { roleName, selectAccess, permissionGroups });
-    setRoleModalOpen(false);
-    setRoleName("");
-    setSelectAccess("");
-    setPermissionGroups(initialPermissionGroups);
+    if (!roleName.trim()) {
+      toast.error("Role name is required");
+      return;
+    }
+
+    const permissionIds = Array.from(selectedPermissionIds);
+
+    if (editingRole) {
+      updateRoleMutation.mutate({
+        id: editingRole.id,
+        data: {
+          name: roleName.trim(),
+          description: roleDescription.trim() || undefined,
+          permissionIds,
+        },
+      });
+    } else {
+      createRoleMutation.mutate({
+        name: roleName.trim(),
+        description: roleDescription.trim() || undefined,
+        permissionIds,
+      });
+    }
   };
 
-  const resetAndOpenModal = () => {
-    setRoleName("");
-    setSelectAccess("");
-    setPermissionGroups(initialPermissionGroups);
-    setRoleModalOpen(true);
+  const handleDeleteClick = (role: RoleListItem) => {
+    setRoleToDelete(role);
+    setDeleteConfirmOpen(true);
   };
+
+  const confirmDelete = () => {
+    if (roleToDelete) {
+      deleteRoleMutation.mutate(roleToDelete.id);
+    }
+  };
+
+  const roles = rolesData?.items || [];
+  const totalCount = rolesData?.totalCount || 0;
+  const totalPages = rolesData?.totalPages || 1;
+
+  const isSaving = createRoleMutation.isPending || updateRoleMutation.isPending;
+
+  // Split permission groups into 3 columns
+  const groupEntries = Object.entries(permissionGroups || {});
+  const colSize = Math.ceil(groupEntries.length / 3);
+  const column1 = groupEntries.slice(0, colSize);
+  const column2 = groupEntries.slice(colSize, colSize * 2);
+  const column3 = groupEntries.slice(colSize * 2);
+
+  const renderPermissionColumn = (entries: [string, Permission[]][]) => (
+    <div className="space-y-3">
+      {entries.map(([module, permissions]) => {
+        const allSelected = permissions.every((p) => selectedPermissionIds.has(p.id));
+        const isExpanded = permissionGroupState[module]?.expanded || false;
+
+        return (
+          <div key={module} className="space-y-1">
+            <div
+              className="flex items-center gap-2 cursor-pointer hover:bg-secondary/50 p-1 rounded"
+              onClick={() => toggleGroup(module)}
+            >
+              <span className="text-muted-foreground text-sm w-4">{isExpanded ? "-" : "+"}</span>
+              <Checkbox
+                checked={allSelected}
+                onCheckedChange={() => toggleAllInGroup(module)}
+                onClick={(e) => e.stopPropagation()}
+              />
+              <span className="font-medium text-sm">{module}</span>
+            </div>
+            {isExpanded && (
+              <div className="ml-8 space-y-1">
+                {permissions.map((perm) => (
+                  <div key={perm.id} className="flex items-center gap-2">
+                    <Checkbox
+                      checked={selectedPermissionIds.has(perm.id)}
+                      onCheckedChange={() => togglePermission(perm.id)}
+                    />
+                    <span className="text-sm" title={perm.description || perm.code}>
+                      {perm.action}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
 
   return (
     <MainLayout>
@@ -304,7 +305,7 @@ const PermissionRoles = () => {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Show:</span>
-            <Select value={entriesPerPage} onValueChange={setEntriesPerPage}>
+            <Select value={entriesPerPage} onValueChange={(v) => { setEntriesPerPage(v); setCurrentPage(1); }}>
               <SelectTrigger className="w-[70px] h-8">
                 <SelectValue />
               </SelectTrigger>
@@ -322,14 +323,16 @@ const PermissionRoles = () => {
               <span className="text-sm text-muted-foreground">Search:</span>
               <Input
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                 className="w-[200px] h-8"
               />
             </div>
-            <Button className="btn-success gap-2" onClick={resetAndOpenModal}>
-              <Plus size={16} />
-              Set New Role
-            </Button>
+            <PermissionGate permission="role_add">
+              <Button className="btn-success gap-2" onClick={openAddModal}>
+                <Plus size={16} />
+                Set New Role
+              </Button>
+            </PermissionGate>
           </div>
         </div>
 
@@ -341,34 +344,67 @@ const PermissionRoles = () => {
                   <th className="px-4 py-3 text-left text-sm font-semibold">Action</th>
                   <th className="px-4 py-3 text-left text-sm font-semibold">Role ID</th>
                   <th className="px-4 py-3 text-left text-sm font-semibold">Role Name</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold">Menu Permission</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold">Added Date</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Description</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Permissions</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Users</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredRoles.map((role, index) => (
-                  <tr
-                    key={role.id}
-                    className={`border-b border-border hover:bg-table-row-hover transition-colors ${
-                      index % 2 === 0 ? "bg-card" : "bg-secondary/30"
-                    }`}
-                  >
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <button className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors">
-                          <Pencil size={14} />
-                        </button>
-                        <button className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors">
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
+                {rolesLoading ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-8 text-center">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                     </td>
-                    <td className="px-4 py-3 text-sm text-foreground">{role.id}</td>
-                    <td className="px-4 py-3 text-sm text-primary font-medium">{role.name}</td>
-                    <td className="px-4 py-3 text-sm text-primary">{role.menuPermission}</td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">{role.addedDate}</td>
                   </tr>
-                ))}
+                ) : roles.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                      No roles found
+                    </td>
+                  </tr>
+                ) : (
+                  roles.map((role, index) => (
+                    <tr
+                      key={role.id}
+                      className={`border-b border-border hover:bg-table-row-hover transition-colors ${
+                        index % 2 === 0 ? "bg-card" : "bg-secondary/30"
+                      }`}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <PermissionGate permission="role_edit">
+                            <button
+                              className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                              onClick={() => openEditModal(role)}
+                            >
+                              <Pencil size={14} />
+                            </button>
+                          </PermissionGate>
+                          <PermissionGate permission="role_delete">
+                            <button
+                              className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
+                              onClick={() => handleDeleteClick(role)}
+                              disabled={role.isSystemRole}
+                              title={role.isSystemRole ? "System roles cannot be deleted" : "Delete role"}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </PermissionGate>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-foreground">{role.id}</td>
+                      <td className="px-4 py-3 text-sm text-primary font-medium">
+                        {role.name}
+                        {role.isSystemRole && (
+                          <span className="ml-2 text-xs bg-secondary px-1.5 py-0.5 rounded">System</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground">{role.description || "-"}</td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground">{role.permissionCount}</td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground">{role.userCount}</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -376,28 +412,56 @@ const PermissionRoles = () => {
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-primary">
-            Showing 1 to {filteredRoles.length} of {filteredRoles.length} entries
+            Showing {roles.length > 0 ? ((currentPage - 1) * parseInt(entriesPerPage)) + 1 : 0} to{" "}
+            {Math.min(currentPage * parseInt(entriesPerPage), totalCount)} of {totalCount} entries
           </p>
           <div className="flex items-center gap-1">
-            <Button variant="outline" size="sm" disabled>Previous</Button>
-            <Button variant="default" size="sm" className="btn-success">1</Button>
-            <Button variant="outline" size="sm">Next</Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            >
+              Previous
+            </Button>
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              const pageNum = i + 1;
+              return (
+                <Button
+                  key={pageNum}
+                  variant={currentPage === pageNum ? "default" : "outline"}
+                  size="sm"
+                  className={currentPage === pageNum ? "btn-success" : ""}
+                  onClick={() => setCurrentPage(pageNum)}
+                >
+                  {pageNum}
+                </Button>
+              );
+            })}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            >
+              Next
+            </Button>
           </div>
         </div>
       </div>
 
-      {/* Set New Role Modal */}
-      <Dialog open={roleModalOpen} onOpenChange={setRoleModalOpen}>
+      {/* Add/Edit Role Modal */}
+      <Dialog open={roleModalOpen} onOpenChange={(open) => !open && closeModal()}>
         <DialogContent className="sm:max-w-[900px] max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Set New Role</DialogTitle>
+            <DialogTitle>{editingRole ? "Edit Role" : "Set New Role"}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             {/* Form Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Role Name</Label>
+                <Label>Role Name *</Label>
                 <Input
                   value={roleName}
                   onChange={(e) => setRoleName(e.target.value)}
@@ -405,16 +469,13 @@ const PermissionRoles = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Select Access</Label>
-                <Select value={selectAccess} onValueChange={setSelectAccess}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Access" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Menu Access</SelectItem>
-                    <SelectItem value="custom">Custom Menu Access</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label>Description</Label>
+                <Textarea
+                  value={roleDescription}
+                  onChange={(e) => setRoleDescription(e.target.value)}
+                  placeholder="Role description (optional)"
+                  rows={1}
+                />
               </div>
             </div>
 
@@ -422,111 +483,62 @@ const PermissionRoles = () => {
             <div>
               <h3 className="text-sm font-semibold text-foreground mb-3">Page Permissions</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Column 1 - Main Pages */}
-                <div className="space-y-3">
-                  {permissionGroups.slice(0, 6).map((group) => (
-                    <div key={group.id} className="space-y-1">
-                      <div
-                        className="flex items-center gap-2 cursor-pointer hover:bg-secondary/50 p-1 rounded"
-                        onClick={() => toggleGroup(group.id)}
-                      >
-                        <span className="text-muted-foreground text-sm w-4">{group.expanded ? "−" : "+"}</span>
-                        <Checkbox
-                          checked={group.permissions.every(p => p.checked)}
-                          onCheckedChange={() => toggleAllInGroup(group.id)}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                        <span className="font-medium text-sm">{group.name}</span>
-                      </div>
-                      {group.expanded && (
-                        <div className="ml-8 space-y-1">
-                          {group.permissions.map((perm) => (
-                            <div key={perm.id} className="flex items-center gap-2">
-                              <Checkbox
-                                checked={perm.checked}
-                                onCheckedChange={() => togglePermission(group.id, perm.id)}
-                              />
-                              <span className="text-sm">{perm.label}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                {/* Column 1 */}
+                {renderPermissionColumn(column1)}
 
-                {/* Column 2 - Users & Documents */}
-                <div className="space-y-3">
-                  {permissionGroups.slice(6, 11).map((group) => (
-                    <div key={group.id} className="space-y-1">
-                      <div
-                        className="flex items-center gap-2 cursor-pointer hover:bg-secondary/50 p-1 rounded"
-                        onClick={() => toggleGroup(group.id)}
-                      >
-                        <span className="text-muted-foreground text-sm w-4">{group.expanded ? "−" : "+"}</span>
-                        <Checkbox
-                          checked={group.permissions.every(p => p.checked)}
-                          onCheckedChange={() => toggleAllInGroup(group.id)}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                        <span className="font-medium text-sm">{group.name}</span>
-                      </div>
-                      {group.expanded && (
-                        <div className="ml-8 space-y-1">
-                          {group.permissions.map((perm) => (
-                            <div key={perm.id} className="flex items-center gap-2">
-                              <Checkbox
-                                checked={perm.checked}
-                                onCheckedChange={() => togglePermission(group.id, perm.id)}
-                              />
-                              <span className="text-sm">{perm.label}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                {/* Column 2 */}
+                {renderPermissionColumn(column2)}
 
-                {/* Column 3 - Settings */}
-                <div className="space-y-3">
-                  {permissionGroups.slice(11).map((group) => (
-                    <div key={group.id} className="space-y-1">
-                      <div
-                        className="flex items-center gap-2 cursor-pointer hover:bg-secondary/50 p-1 rounded"
-                        onClick={() => toggleGroup(group.id)}
-                      >
-                        <span className="text-muted-foreground text-sm w-4">{group.expanded ? "−" : "+"}</span>
-                        <Checkbox
-                          checked={group.permissions.every(p => p.checked)}
-                          onCheckedChange={() => toggleAllInGroup(group.id)}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                        <span className="font-medium text-sm">{group.name}</span>
-                      </div>
-                      {group.expanded && (
-                        <div className="ml-8 space-y-1">
-                          {group.permissions.map((perm) => (
-                            <div key={perm.id} className="flex items-center gap-2">
-                              <Checkbox
-                                checked={perm.checked}
-                                onCheckedChange={() => togglePermission(group.id, perm.id)}
-                              />
-                              <span className="text-sm">{perm.label}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                {/* Column 3 */}
+                {renderPermissionColumn(column3)}
               </div>
             </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-4 border-t border-border">
-            <Button variant="outline" onClick={() => setRoleModalOpen(false)}>Cancel</Button>
-            <Button className="btn-success" onClick={handleSaveRole}>Save</Button>
+            <Button variant="outline" onClick={closeModal} disabled={isSaving}>
+              Cancel
+            </Button>
+            <Button className="btn-success" onClick={handleSaveRole} disabled={isSaving}>
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {editingRole ? "Update" : "Save"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete the role "{roleToDelete?.name}"? This action cannot be undone.
+            </p>
+            {roleToDelete && roleToDelete.userCount > 0 && (
+              <p className="text-sm text-destructive mt-2">
+                Warning: This role is assigned to {roleToDelete.userCount} user(s).
+              </p>
+            )}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteConfirmOpen(false)}
+              disabled={deleteRoleMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={deleteRoleMutation.isPending}
+            >
+              {deleteRoleMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

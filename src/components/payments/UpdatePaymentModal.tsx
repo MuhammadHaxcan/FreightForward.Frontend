@@ -18,42 +18,41 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  receiptApi,
-  bankApi,
-  type Bank,
+  getPaymentVoucherById,
+  getPaymentVoucherPaymentTypes,
+  type PaymentVoucherDetail,
   type PaymentType,
-  type PaymentMode,
-  type ReceiptDetail,
-  type UpdateReceiptRequest,
-} from "@/services/api";
+  type UpdatePaymentVoucherRequest,
+} from "@/services/api/payment";
+import { bankApi, type Bank, type PaymentMode } from "@/services/api";
+import { useUpdatePaymentVoucher } from "@/hooks/usePaymentVouchers";
 import { toast } from "sonner";
 
-interface UpdateReceiptModalProps {
+interface UpdatePaymentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  receiptId: number | null;
+  paymentId: number | null;
   onSuccess: () => void;
 }
 
-export default function UpdateReceiptModal({
+export default function UpdatePaymentModal({
   open,
   onOpenChange,
-  receiptId,
+  paymentId,
   onSuccess,
-}: UpdateReceiptModalProps) {
+}: UpdatePaymentModalProps) {
   const [loading, setLoading] = useState(false);
   const [fetchingData, setFetchingData] = useState(false);
   const [banks, setBanks] = useState<Bank[]>([]);
   const [paymentTypes, setPaymentTypes] = useState<PaymentType[]>([]);
-  const [receipt, setReceipt] = useState<ReceiptDetail | null>(null);
+  const [payment, setPayment] = useState<PaymentVoucherDetail | null>(null);
 
   // Form state
-  const [customerId, setCustomerId] = useState<number | null>(null);
-  const [customerName, setCustomerName] = useState("");
-  const [invoiceNumbers, setInvoiceNumbers] = useState<string[]>([]);
+  const [vendorId, setVendorId] = useState<number | null>(null);
+  const [vendorName, setVendorName] = useState("");
   const [paymentMode, setPaymentMode] = useState<PaymentMode>("Cash");
-  const [receiptNo, setReceiptNo] = useState("");
-  const [receiptDate, setReceiptDate] = useState("");
+  const [paymentNo, setPaymentNo] = useState("");
+  const [paymentDate, setPaymentDate] = useState("");
   const [narration, setNarration] = useState("");
   const [remarks, setRemarks] = useState("");
   const [currencyId, setCurrencyId] = useState<number | null>(null);
@@ -63,6 +62,9 @@ export default function UpdateReceiptModal({
   const [chequeDate, setChequeDate] = useState("");
   const [chequeBank, setChequeBank] = useState("");
   const [amount, setAmount] = useState<number>(0);
+  const [purchaseInvoiceNumbers, setPurchaseInvoiceNumbers] = useState<string[]>([]);
+
+  const updatePaymentMutation = useUpdatePaymentVoucher();
 
   // Get current payment type config
   const currentPaymentType = paymentTypes.find(pt => pt.code === paymentMode);
@@ -71,17 +73,17 @@ export default function UpdateReceiptModal({
 
   // Fetch initial data
   useEffect(() => {
-    if (open && receiptId) {
+    if (open && paymentId) {
       fetchInitialData();
-      fetchReceiptDetails();
+      fetchPaymentDetails();
     }
-  }, [open, receiptId]);
+  }, [open, paymentId]);
 
   const fetchInitialData = async () => {
     try {
       const [banksRes, paymentTypesRes] = await Promise.all([
         bankApi.getAll(),
-        receiptApi.getPaymentTypes(),
+        getPaymentVoucherPaymentTypes(),
       ]);
 
       if (banksRes.data) setBanks(banksRes.data.items);
@@ -91,19 +93,19 @@ export default function UpdateReceiptModal({
     }
   };
 
-  const fetchReceiptDetails = async () => {
-    if (!receiptId) return;
+  const fetchPaymentDetails = async () => {
+    if (!paymentId) return;
     setFetchingData(true);
     try {
-      const response = await receiptApi.getById(receiptId);
+      const response = await getPaymentVoucherById(paymentId);
       if (response.data) {
         const data = response.data;
-        setReceipt(data);
-        setCustomerId(data.customerId);
-        setCustomerName(data.customerName || "");
+        setPayment(data);
+        setVendorId(data.vendorId);
+        setVendorName(data.vendorName || "");
         setPaymentMode(data.paymentMode);
-        setReceiptNo(data.receiptNo);
-        setReceiptDate(format(new Date(data.receiptDate), "yyyy-MM-dd"));
+        setPaymentNo(data.paymentNo);
+        setPaymentDate(format(new Date(data.paymentDate), "yyyy-MM-dd"));
         setNarration(data.narration || "");
         setRemarks(data.narration || "");
         setCurrencyId(data.currencyId || null);
@@ -114,26 +116,26 @@ export default function UpdateReceiptModal({
         setChequeBank(data.chequeBank || "");
         setAmount(data.amount);
 
-        // Set all invoice numbers for display
-        if (data.invoices && data.invoices.length > 0) {
-          setInvoiceNumbers(
-            data.invoices
-              .map(inv => inv.invoiceNo)
+        // Set purchase invoice numbers
+        if (data.purchaseInvoices && data.purchaseInvoices.length > 0) {
+          setPurchaseInvoiceNumbers(
+            data.purchaseInvoices
+              .map(pi => pi.purchaseNo)
               .filter((no): no is string => !!no)
           );
         }
       }
     } catch (error) {
-      console.error("Error fetching receipt details:", error);
-      toast.error("Failed to load receipt details");
+      console.error("Error fetching payment details:", error);
+      toast.error("Failed to load payment details");
     } finally {
       setFetchingData(false);
     }
   };
 
   const handleSubmit = async () => {
-    if (!receiptId || !customerId) {
-      toast.error("Invalid receipt data");
+    if (!paymentId || !vendorId) {
+      toast.error("Invalid payment data");
       return;
     }
 
@@ -149,10 +151,10 @@ export default function UpdateReceiptModal({
 
     setLoading(true);
     try {
-      const request: UpdateReceiptRequest = {
-        customerId: customerId,
+      const request: UpdatePaymentVoucherRequest = {
+        vendorId: vendorId,
         paymentMode: paymentMode,
-        receiptDate: receiptDate,
+        paymentDate: paymentDate,
         narration: narration || undefined,
         remarks: remarks || undefined,
         currencyId: currencyId || undefined,
@@ -163,12 +165,10 @@ export default function UpdateReceiptModal({
         amount: amount,
       };
 
-      await receiptApi.update(receiptId, request);
-      toast.success("Receipt updated successfully");
+      await updatePaymentMutation.mutateAsync({ id: paymentId, request });
       onSuccess();
     } catch (error) {
-      console.error("Error updating receipt:", error);
-      toast.error("Failed to update receipt");
+      console.error("Error updating payment:", error);
     } finally {
       setLoading(false);
     }
@@ -179,7 +179,7 @@ export default function UpdateReceiptModal({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle className="text-xl">Update Receipt</DialogTitle>
+            <DialogTitle className="text-xl">Update Payment Voucher</DialogTitle>
           </DialogHeader>
           <div className="flex items-center justify-center py-8">
             Loading...
@@ -193,31 +193,31 @@ export default function UpdateReceiptModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle className="text-xl">Update Receipt</DialogTitle>
+          <DialogTitle className="text-xl">Update Payment Voucher</DialogTitle>
         </DialogHeader>
 
         <div className="grid grid-cols-3 gap-4 py-4">
-          {/* Customer - Read Only */}
+          {/* Vendor - Read Only */}
           <div className="space-y-2">
-            <Label>Customer</Label>
-            <Input value={customerName} readOnly className="bg-muted" />
+            <Label>Vendor</Label>
+            <Input value={vendorName} readOnly className="bg-muted" />
           </div>
 
-          {/* Invoices - Read Only (as chips) */}
+          {/* Purchase Invoices - Read Only */}
           <div className="space-y-2">
-            <Label>Invoice(s)</Label>
+            <Label>Purchase Invoice(s)</Label>
             <div className="flex flex-wrap gap-1 min-h-[40px] p-2 border rounded-md bg-muted">
-              {invoiceNumbers.length > 0 ? (
-                invoiceNumbers.map((no, idx) => (
+              {purchaseInvoiceNumbers.length > 0 ? (
+                purchaseInvoiceNumbers.map((no, idx) => (
                   <span
                     key={idx}
-                    className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded"
+                    className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded"
                   >
                     {no}
                   </span>
                 ))
               ) : (
-                <span className="text-muted-foreground text-sm">No invoices</span>
+                <span className="text-muted-foreground text-sm">No purchases</span>
               )}
             </div>
           </div>
@@ -285,19 +285,19 @@ export default function UpdateReceiptModal({
             </>
           )}
 
-          {/* Receipt Number - Read Only */}
+          {/* Payment Number - Read Only */}
           <div className="space-y-2">
-            <Label>Receipt Number</Label>
-            <Input value={receiptNo} readOnly className="bg-muted" />
+            <Label>Payment Voucher No.</Label>
+            <Input value={paymentNo} readOnly className="bg-muted" />
           </div>
 
-          {/* Receipt Date */}
+          {/* Payment Date */}
           <div className="space-y-2">
-            <Label>Receipt Date</Label>
+            <Label>Payment Date</Label>
             <Input
               type="date"
-              value={receiptDate}
-              onChange={(e) => setReceiptDate(e.target.value)}
+              value={paymentDate}
+              onChange={(e) => setPaymentDate(e.target.value)}
             />
           </div>
 

@@ -313,6 +313,7 @@ export interface Receipt {
   chequeBank?: string;
   invoiceCount: number;
   invoiceNumbers?: string;
+  jobNumbers?: string;
   createdAt: string;
 }
 

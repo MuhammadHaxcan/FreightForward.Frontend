@@ -63,16 +63,16 @@ export default function PaymentDetailsModal({
                         {inv.purchaseNo}
                       </TableCell>
                       <TableCell>
-                        {inv.currency} {inv.invoiceAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        {inv.currencyCode || "AED"} {inv.invoiceAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell className="text-green-600 font-medium">
-                        {inv.currency} {inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        {inv.currencyCode || "AED"} {inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell>
-                        {inv.currency} {inv.totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        {inv.currencyCode || "AED"} {inv.totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell className={inv.balance > 0 ? "text-orange-500" : ""}>
-                        {inv.currency} {inv.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        {inv.currencyCode || "AED"} {inv.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell>
                         {inv.purchaseDate ? formatDate(inv.purchaseDate, "dd MMM yyyy") : "-"}
@@ -83,16 +83,16 @@ export default function PaymentDetailsModal({
                   <TableRow className="bg-orange-50 font-semibold">
                     <TableCell></TableCell>
                     <TableCell className="text-orange-500">
-                      {payment.currency} {payment.purchaseInvoices?.reduce((sum, inv) => sum + inv.invoiceAmount, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {payment.currencyCode || "AED"} {payment.purchaseInvoices?.reduce((sum, inv) => sum + inv.invoiceAmount, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell className="text-green-600">
-                      {payment.currency} {payment.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {payment.currencyCode || "AED"} {payment.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell className="text-orange-500">
-                      {payment.currency} {payment.purchaseInvoices?.reduce((sum, inv) => sum + inv.totalPaid, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {payment.currencyCode || "AED"} {payment.purchaseInvoices?.reduce((sum, inv) => sum + inv.totalPaid, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell className="text-orange-500">
-                      {payment.currency} {payment.purchaseInvoices?.reduce((sum, inv) => sum + inv.balance, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {payment.currencyCode || "AED"} {payment.purchaseInvoices?.reduce((sum, inv) => sum + inv.balance, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell></TableCell>
                   </TableRow>

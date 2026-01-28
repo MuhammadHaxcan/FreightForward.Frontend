@@ -25,6 +25,7 @@ import { toast } from "@/hooks/use-toast";
 import { useLeads } from "@/hooks/useSales";
 import { LeadFormModal } from "@/components/leads/LeadFormModal";
 import { SendRateRequestModal } from "@/components/leads/SendRateRequestModal";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 
 export default function Leads() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -103,13 +104,15 @@ export default function Leads() {
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-semibold text-foreground">Leads</h1>
           <div className="flex gap-2">
-            <Button
-              onClick={handleGenerateLead}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Generate Lead
-            </Button>
+            <PermissionGate permission="leads_add">
+              <Button
+                onClick={handleGenerateLead}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Generate Lead
+              </Button>
+            </PermissionGate>
             <Button
               onClick={handleSendRateRequest}
               variant="outline"
@@ -198,14 +201,16 @@ export default function Leads() {
                         />
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 bg-green-500 hover:bg-green-600 text-white rounded"
-                          onClick={() => handleEditLead(lead.id)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
+                        <PermissionGate permission="leads_edit">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 bg-green-500 hover:bg-green-600 text-white rounded"
+                            onClick={() => handleEditLead(lead.id)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </PermissionGate>
                       </TableCell>
                       <TableCell className="font-medium">{lead.leadNo}</TableCell>
                       <TableCell>{formatDate(lead.leadDate, "dd-MM-yyyy")}</TableCell>

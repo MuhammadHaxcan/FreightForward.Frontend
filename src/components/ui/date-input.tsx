@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { format, parse } from "date-fns";
+import { useState, useEffect } from "react";
+import { format, parse, isValid } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { cn, parseDateOnly, formatDateToISO } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -21,49 +21,69 @@ interface DateInputProps {
 
 export function DateInput({ value, onChange, placeholder = "dd-mm-yyyy", className, disabled }: DateInputProps) {
   const [open, setOpen] = useState(false);
+  const [inputValue, setInputValue] = useState("");
 
-  // Convert ISO date to dd-mm-yyyy format for display
-  // Uses parseDateOnly to avoid timezone issues with DateOnly strings
+  // Convert ISO date to dd-MM-yyyy format for display
   const formatDisplayDate = (isoDate: string) => {
     if (!isoDate) return "";
     const date = parseDateOnly(isoDate);
-    if (!date) return isoDate;
+    if (!date) return "";
     return format(date, "dd-MM-yyyy");
   };
 
-  // Convert dd-mm-yyyy to ISO format for storage
-  const parseInputDate = (displayDate: string) => {
-    if (!displayDate) return "";
+  // Sync local input state when parent value changes (e.g., from calendar or external update)
+  useEffect(() => {
+    setInputValue(formatDisplayDate(value));
+  }, [value]);
+
+  // Convert dd-MM-yyyy to ISO format for storage
+  const parseInputDate = (displayDate: string): string | null => {
+    if (!displayDate || displayDate.length !== 10) return null;
     try {
       const date = parse(displayDate, "dd-MM-yyyy", new Date());
-      if (isNaN(date.getTime())) return displayDate;
+      if (!isValid(date)) return null;
+      // Additional validation: ensure the parsed date matches the input
+      // This catches cases like 31-02-2024 which would parse to a different date
+      const reparsed = format(date, "dd-MM-yyyy");
+      if (reparsed !== displayDate) return null;
       return format(date, "yyyy-MM-dd");
     } catch {
-      return displayDate;
+      return null;
     }
   };
 
-  // Get Date object from ISO string
-  // Uses parseDateOnly to avoid timezone issues with DateOnly strings
+  // Get Date object from ISO string for calendar
   const getDateFromValue = () => {
     if (!value) return undefined;
     return parseDateOnly(value) ?? undefined;
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputValue = e.target.value;
-    // Allow typing in dd-mm-yyyy format
-    if (inputValue.match(/^\d{2}-\d{2}-\d{4}$/)) {
-      onChange(parseInputDate(inputValue));
-    } else {
-      // For partial input, try to preserve it
-      onChange(inputValue);
+    const newValue = e.target.value;
+
+    // Allow free typing - just update local state
+    setInputValue(newValue);
+
+    // Only update parent if we have a valid complete date
+    const isoDate = parseInputDate(newValue);
+    if (isoDate) {
+      onChange(isoDate);
+    }
+  };
+
+  const handleBlur = () => {
+    // On blur, if current input is invalid, reset to the last valid value
+    const isoDate = parseInputDate(inputValue);
+    if (!isoDate && value) {
+      setInputValue(formatDisplayDate(value));
     }
   };
 
   const handleCalendarSelect = (date: Date | undefined) => {
     if (date) {
-      onChange(formatDateToISO(date));
+      const isoDate = formatDateToISO(date);
+      onChange(isoDate);
+      setInputValue(format(date, "dd-MM-yyyy"));
     }
     setOpen(false);
   };
@@ -71,8 +91,9 @@ export function DateInput({ value, onChange, placeholder = "dd-mm-yyyy", classNa
   return (
     <div className={cn("relative flex items-center", className)}>
       <Input
-        value={formatDisplayDate(value)}
+        value={inputValue}
         onChange={handleInputChange}
+        onBlur={handleBlur}
         placeholder={placeholder}
         disabled={disabled}
         className="pr-10"

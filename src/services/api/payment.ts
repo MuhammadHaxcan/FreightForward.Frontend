@@ -18,6 +18,7 @@ export interface PaymentVoucher {
   chequeBank?: string;
   purchaseInvoiceCount: number;
   purchaseInvoiceNumbers?: string;
+  jobNumbers?: string;
   createdAt: string;
 }
 
@@ -87,6 +88,20 @@ export interface CreatePaymentVoucherPurchaseInvoiceRequest {
   currencyId: number;
 }
 
+export interface UpdatePaymentVoucherRequest {
+  vendorId: number;
+  paymentMode: PaymentMode;
+  paymentDate: string;
+  narration?: string;
+  remarks?: string;
+  currencyId?: number;
+  bankId?: number;
+  chequeNo?: string;
+  chequeDate?: string;
+  chequeBank?: string;
+  amount: number;
+}
+
 // Payment Voucher API functions
 export async function getPaymentVouchers(params: {
   pageNumber?: number;
@@ -142,6 +157,14 @@ export async function createPaymentVoucher(request: CreatePaymentVoucherRequest)
 export async function deletePaymentVoucher(id: number): Promise<ApiResponse<void>> {
   return fetchApi<void>(`/invoices/payments/${id}`, {
     method: 'DELETE',
+  });
+}
+
+export async function updatePaymentVoucher(id: number, request: UpdatePaymentVoucherRequest): Promise<ApiResponse<void>> {
+  return fetchApi<void>(`/invoices/payments/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
   });
 }
 

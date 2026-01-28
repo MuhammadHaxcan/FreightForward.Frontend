@@ -8,6 +8,10 @@ export type ShipmentMode = 'SeaFreightFCL' | 'SeaFreightLCL' | 'AirFreight' | 'B
 export type BLStatus = 'HBL' | 'MBL' | 'HAWB' | 'MAWB' | 'Express';
 export type BLServiceType = 'FCLFCL' | 'LCLLCL';
 export type FreightType = 'Prepaid' | 'Collect';
+export type StatusEventType =
+  | 'GateOutEmpty' | 'GateIn' | 'LoadOnVessel' | 'VesselDeparture'
+  | 'VesselArrival' | 'Discharge' | 'OnRail' | 'OffRail'
+  | 'CustomsClearance' | 'Delivered' | 'EmptyContainerReturn' | 'Other';
 export type PartyType =
   | 'Shipper' | 'Consignee' | 'Buyer' | 'Supplier' | 'Customer' | 'BookingParty' | 'NotifyParty'
   | 'Forwarder' | 'CoLoader' | 'Transporter' | 'Courier' | 'ClearingAgent' | 'DeliveryAgent' | 'OriginAgent' | 'OverseasAgents'
@@ -52,6 +56,7 @@ export interface Shipment {
   invoiceGenerated: boolean;
   status?: string;
   createdAt: string;
+  latestEvent?: LatestStatusEvent;
 }
 
 export interface ShipmentDetail extends Shipment {
@@ -208,12 +213,31 @@ export interface FileUploadResponse {
 
 export interface ShipmentStatusLog {
   id: number;
-  statusDate: string;
+  eventType: StatusEventType;
+  eventTypeDisplay: string;
+  eventDescription: string;
+  eventDateTime: string;
+  location?: string;
+  vesselName?: string;
+  voyageNumber?: string;
   remarks?: string;
 }
 
+export interface LatestStatusEvent {
+  eventType?: StatusEventType;
+  eventTypeDisplay?: string;
+  eventDescription?: string;
+  location?: string;
+  eventDateTime?: string;
+}
+
 export interface AddShipmentStatusLogRequest {
-  statusDate: string;
+  eventType: StatusEventType;
+  eventDescription: string;
+  eventDateTime: string;
+  location?: string;
+  vesselName?: string;
+  voyageNumber?: string;
   remarks?: string;
 }
 

@@ -18,6 +18,7 @@ import { useNavigate } from "react-router-dom";
 import { CustomerModal } from "@/components/customers/CustomerModal";
 import { useCustomers, useDeleteCustomer } from "@/hooks/useCustomers";
 import { Customer } from "@/services/api";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 
 const MasterCustomers = () => {
   const navigate = useNavigate();
@@ -90,10 +91,12 @@ const MasterCustomers = () => {
 
         {/* Actions Row */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <Button className="btn-success gap-2" onClick={handleAddNew}>
-            <Plus size={16} />
-            Add New Customer
-          </Button>
+          <PermissionGate permission="cust_add">
+            <Button className="btn-success gap-2" onClick={handleAddNew}>
+              <Plus size={16} />
+              Add New Customer
+            </Button>
+          </PermissionGate>
 
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
@@ -179,14 +182,16 @@ const MasterCustomers = () => {
                         <td className="px-4 py-3 text-sm text-muted-foreground">{customer.country}</td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
-                              onClick={() => handleEdit(customer)}
-                            >
-                              <Pencil size={16} />
-                            </Button>
+                            <PermissionGate permission="cust_edit">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                                onClick={() => handleEdit(customer)}
+                              >
+                                <Pencil size={16} />
+                              </Button>
+                            </PermissionGate>
                             {(customer.masterType === "Debtors" || customer.masterType === "Creditors" || customer.masterType === "Neutral") && (
                               <Button
                                 size="icon"
@@ -197,14 +202,16 @@ const MasterCustomers = () => {
                                 <Eye size={16} />
                               </Button>
                             )}
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={() => handleDelete(customer)}
-                            >
-                              <Trash2 size={16} />
-                            </Button>
+                            <PermissionGate permission="cust_delete">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => handleDelete(customer)}
+                              >
+                                <Trash2 size={16} />
+                              </Button>
+                            </PermissionGate>
                           </div>
                         </td>
                       </tr>

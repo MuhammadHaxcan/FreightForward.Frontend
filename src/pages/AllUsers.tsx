@@ -1,126 +1,218 @@
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Pencil, Trash2, Minus } from "lucide-react";
-
-interface User {
-  id: number;
-  firstName: string;
-  lastName: string;
-  name: string;
-  email: string;
-  contactNumber: string;
-  companyBranch: string;
-  permissions: { role: string; country: string }[];
-  status: string;
-}
-
-interface PermissionRow {
-  id: number;
-  role: string;
-  country: string;
-}
-
-const mockUsers: User[] = [
-  { id: 1, firstName: "Transparant", lastName: "Admin", name: "Transparant Admin", email: "admin@tfs-global.com", contactNumber: "", companyBranch: "TRANSPARENT FREIGHT SERVICES", permissions: [{ role: "Administrator", country: "TRANSPARENT FREIGHT SERVICES" }], status: "Active" },
-  { id: 2, firstName: "SOULAT", lastName: "TFSU", name: "SOULAT TFSU", email: "soulat@tfs-global.com", contactNumber: "", companyBranch: "TRANSPARENT FREIGHT SERVICES", permissions: [{ role: "Employee", country: "TRANSPARENT FREIGHT SERVICES" }], status: "Active" },
-  { id: 3, firstName: "ACCOUNTS", lastName: "TFSU", name: "ACCOUNTS TFSU", email: "accounts@tfs-global.com", contactNumber: "", companyBranch: "TRANSPARENT FREIGHT SERVICES", permissions: [{ role: "Employee", country: "TRANSPARENT FREIGHT SERVICES" }], status: "Active" },
-  { id: 4, firstName: "Safuvan", lastName: "cmc", name: "Safuvan cmc", email: "cmcsafuvan46@gmail.com", contactNumber: "", companyBranch: "TRANSPARENT FREIGHT SERVICES", permissions: [{ role: "Employee", country: "TRANSPARENT FREIGHT SERVICES" }], status: "Active" },
-  { id: 5, firstName: "admin", lastName: "pakistan s", name: "admin pakistan s", email: "salepakistan@transparant.com", contactNumber: "", companyBranch: "TRANSPARENT FREIGHT SERVICES", permissions: [{ role: "Manager", country: "TRANSPARENT FREIGHT SERVICES WLL" }], status: "Active" },
-  { id: 6, firstName: "admin", lastName: "qatar s", name: "admin qatar s", email: "saleqatar@transparant.com", contactNumber: "", companyBranch: "TRANSPARENT FREIGHT SERVICES", permissions: [{ role: "Manager", country: "TRANSPARENT FREIGHT SERVICES WLL" }], status: "Active" },
-  { id: 7, firstName: "Shireen", lastName: "TFSU", name: "Shireen TFSU", email: "cus1@tfs-global.com", contactNumber: "", companyBranch: "TRANSPARENT FREIGHT SERVICES", permissions: [{ role: "Employee", country: "TRANSPARENT FREIGHT SERVICES" }], status: "Active" },
-  { id: 8, firstName: "Qaseem", lastName: "tfs", name: "Qaseem tfs", email: "qaseem@tfs-global.com", contactNumber: "", companyBranch: "TRANSPARENT FREIGHT SERVICES", permissions: [{ role: "Employee", country: "TRANSPARENT FREIGHT SERVICES" }], status: "In-Active" },
-  { id: 9, firstName: "Mazeeda", lastName: "TFSU", name: "Mazeeda TFSU", email: "cs2@tfs-global.com", contactNumber: "", companyBranch: "TRANSPARENT FREIGHT SERVICES", permissions: [{ role: "Employee", country: "TRANSPARENT FREIGHT SERVICES" }], status: "Active" },
-  { id: 10, firstName: "sales", lastName: "TFS", name: "sales TFS", email: "sales1@tfs-global.com", contactNumber: "", companyBranch: "TRANSPARENT FREIGHT SERVICES", permissions: [{ role: "SALES", country: "TRANSPARENT FREIGHT SERVICES" }], status: "Active" },
-];
-
-const roles = ["Administrator", "Employee", "Manager", "Junior Employee", "President", "CEOs", "SALES"];
-const countries = ["TRANSPARENT FREIGHT SERVICES", "TRANSPARENT FREIGHT SERVICES WLL", "TRANSPARENT FREIGHT SERVICES LLC"];
-const branches = ["TRANSPARENT FREIGHT SERVICES", "TRANSPARENT FREIGHT SERVICES WLL", "TRANSPARENT FREIGHT SERVICES LLC"];
+import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Plus, Pencil, Trash2, ChevronDown, X } from "lucide-react";
+import { usersApi, rolesApi } from "../services/api/auth";
+import { PermissionGate } from "../components/auth/PermissionGate";
+import type { UserListItem, CreateUserRequest, UpdateUserRequest } from "../types/auth";
 
 const AllUsers = () => {
-  const [users] = useState<User[]>(mockUsers);
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
+  const [currentPage, setCurrentPage] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"add" | "edit">("add");
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingUserId, setEditingUserId] = useState<number | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<UserListItem | null>(null);
 
   // Form state
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [contactNumber, setContactNumber] = useState("");
   const [email, setEmail] = useState("");
-  const [companyBranch, setCompanyBranch] = useState("");
-  const [permissionRows, setPermissionRows] = useState<PermissionRow[]>([
-    { id: 1, role: "", country: "" }
-  ]);
+  const [password, setPassword] = useState("");
+  const [isActive, setIsActive] = useState(true);
+  const [selectedRoleIds, setSelectedRoleIds] = useState<number[]>([]);
+  const [rolesPopoverOpen, setRolesPopoverOpen] = useState(false);
 
-  const filteredUsers = users.filter(
-    (user) =>
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Fetch users
+  const { data: usersData, isLoading: usersLoading } = useQuery({
+    queryKey: ["users", currentPage, parseInt(entriesPerPage), searchTerm],
+    queryFn: async () => {
+      const result = await usersApi.getAll({
+        pageNumber: currentPage,
+        pageSize: parseInt(entriesPerPage),
+        searchTerm: searchTerm || undefined,
+      });
+      if (result.error) throw new Error(result.error);
+      return result.data;
+    },
+  });
+
+  // Fetch all roles for dropdown
+  const { data: rolesData } = useQuery({
+    queryKey: ["roles-list"],
+    queryFn: async () => {
+      const result = await rolesApi.getAllList();
+      if (result.error) throw new Error(result.error);
+      return result.data;
+    },
+  });
+
+  // Create user mutation
+  const createUserMutation = useMutation({
+    mutationFn: async (data: CreateUserRequest) => {
+      const result = await usersApi.create(data);
+      if (result.error) throw new Error(result.error);
+      return result.data;
+    },
+    onSuccess: () => {
+      toast.success("User created successfully");
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      setModalOpen(false);
+      resetForm();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to create user");
+    },
+  });
+
+  // Update user mutation
+  const updateUserMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: UpdateUserRequest }) => {
+      const result = await usersApi.update(id, data);
+      if (result.error) throw new Error(result.error);
+      return result.data;
+    },
+    onSuccess: () => {
+      toast.success("User updated successfully");
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      setModalOpen(false);
+      resetForm();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to update user");
+    },
+  });
+
+  // Delete user mutation
+  const deleteUserMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const result = await usersApi.delete(id);
+      if (result.error) throw new Error(result.error);
+      return result.data;
+    },
+    onSuccess: () => {
+      toast.success("User deleted successfully");
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      setDeleteDialogOpen(false);
+      setUserToDelete(null);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to delete user");
+    },
+  });
+
+  const users = usersData?.items || [];
+  const totalCount = usersData?.totalCount || 0;
+  const totalPages = usersData?.totalPages || 1;
+  const roles = rolesData || [];
 
   const resetForm = () => {
     setFirstName("");
     setLastName("");
     setContactNumber("");
     setEmail("");
-    setCompanyBranch("");
-    setPermissionRows([{ id: 1, role: "", country: "" }]);
+    setPassword("");
+    setIsActive(true);
+    setSelectedRoleIds([]);
+    setEditingUserId(null);
   };
 
   const handleAddNew = () => {
     resetForm();
     setModalMode("add");
-    setEditingUser(null);
     setModalOpen(true);
   };
 
-  const handleEdit = (user: User) => {
-    setFirstName(user.firstName);
-    setLastName(user.lastName);
-    setContactNumber(user.contactNumber);
-    setEmail(user.email);
-    setCompanyBranch(user.companyBranch);
-    setPermissionRows(user.permissions.map((p, i) => ({ id: i + 1, role: p.role, country: p.country })));
+  const handleEdit = async (user: UserListItem) => {
+    // Fetch full user details to get role IDs
+    const result = await usersApi.getById(user.id);
+    if (result.error) {
+      toast.error("Failed to load user details");
+      return;
+    }
+    const fullUser = result.data!;
+
+    setFirstName(fullUser.firstName);
+    setLastName(fullUser.lastName);
+    setContactNumber(fullUser.contactNumber || "");
+    setEmail(fullUser.email);
+    setPassword("");
+    setIsActive(fullUser.isActive);
+    setSelectedRoleIds(fullUser.roles.map(r => r.id));
     setModalMode("edit");
-    setEditingUser(user);
+    setEditingUserId(user.id);
     setModalOpen(true);
   };
 
-  const handleAddPermissionRow = () => {
-    setPermissionRows([...permissionRows, { id: Date.now(), role: "", country: "" }]);
+  const handleDelete = (user: UserListItem) => {
+    setUserToDelete(user);
+    setDeleteDialogOpen(true);
   };
 
-  const handleRemovePermissionRow = (id: number) => {
-    if (permissionRows.length > 1) {
-      setPermissionRows(permissionRows.filter(row => row.id !== id));
+  const confirmDelete = () => {
+    if (userToDelete) {
+      deleteUserMutation.mutate(userToDelete.id);
     }
   };
 
-  const updatePermissionRow = (id: number, field: "role" | "country", value: string) => {
-    setPermissionRows(permissionRows.map(row =>
-      row.id === id ? { ...row, [field]: value } : row
-    ));
+  const handleSave = () => {
+    if (modalMode === "add") {
+      if (!password) {
+        toast.error("Password is required for new users");
+        return;
+      }
+      const createData: CreateUserRequest = {
+        firstName,
+        lastName,
+        email,
+        password,
+        contactNumber: contactNumber || undefined,
+        isActive,
+        roleIds: selectedRoleIds,
+      };
+      createUserMutation.mutate(createData);
+    } else if (editingUserId) {
+      const updateData: UpdateUserRequest = {
+        firstName,
+        lastName,
+        email,
+        password: password || undefined,
+        contactNumber: contactNumber || undefined,
+        isActive,
+        roleIds: selectedRoleIds,
+      };
+      updateUserMutation.mutate({ id: editingUserId, data: updateData });
+    }
   };
 
-  const handleSave = () => {
-    console.log("Saving:", {
-      firstName,
-      lastName,
-      contactNumber,
-      email,
-      companyBranch,
-      permissions: permissionRows
-    });
-    setModalOpen(false);
-    resetForm();
+  const toggleRole = (roleId: number) => {
+    setSelectedRoleIds(prev =>
+      prev.includes(roleId)
+        ? prev.filter(id => id !== roleId)
+        : [...prev, roleId]
+    );
+  };
+
+  const removeRole = (roleId: number) => {
+    setSelectedRoleIds(prev => prev.filter(id => id !== roleId));
+  };
+
+  const getSelectedRoleNames = () => {
+    return roles
+      .filter(r => selectedRoleIds.includes(r.id))
+      .map(r => r.name);
   };
 
   return (
@@ -131,16 +223,18 @@ const AllUsers = () => {
           <h1 className="text-2xl font-semibold text-foreground">
             List All <span className="font-normal">Employees</span>
           </h1>
-          <Button className="btn-success gap-2" onClick={handleAddNew}>
-            <Plus size={16} />
-            Add New
-          </Button>
+          <PermissionGate permission="user_add">
+            <Button className="btn-success gap-2" onClick={handleAddNew}>
+              <Plus size={16} />
+              Add New
+            </Button>
+          </PermissionGate>
         </div>
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Show:</span>
-            <Select value={entriesPerPage} onValueChange={setEntriesPerPage}>
+            <Select value={entriesPerPage} onValueChange={(value) => { setEntriesPerPage(value); setCurrentPage(1); }}>
               <SelectTrigger className="w-[70px] h-8">
                 <SelectValue />
               </SelectTrigger>
@@ -157,7 +251,7 @@ const AllUsers = () => {
             <span className="text-sm text-muted-foreground">Search:</span>
             <Input
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
               className="w-[200px] h-8"
             />
           </div>
@@ -171,43 +265,68 @@ const AllUsers = () => {
                   <th className="px-4 py-3 text-left text-sm font-semibold">Action</th>
                   <th className="px-4 py-3 text-left text-sm font-semibold">Name</th>
                   <th className="px-4 py-3 text-left text-sm font-semibold">Email</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Roles</th>
                   <th className="px-4 py-3 text-left text-sm font-semibold">Status</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.map((user, index) => (
-                  <tr
-                    key={user.id}
-                    className={`border-b border-border hover:bg-table-row-hover transition-colors ${
-                      index % 2 === 0 ? "bg-card" : "bg-secondary/30"
-                    }`}
-                  >
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <button 
-                          className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
-                          onClick={() => handleEdit(user)}
-                        >
-                          <Pencil size={14} />
-                        </button>
-                        <button className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors">
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-primary font-medium">{user.name}</td>
-                    <td className="px-4 py-3 text-sm text-primary">{user.email}</td>
-                    <td className="px-4 py-3">
-                      <span className={`px-3 py-1 rounded text-sm font-medium text-white ${
-                        user.status === "Active" 
-                          ? "bg-green-500" 
-                          : "bg-red-400"
-                      }`}>
-                        {user.status}
-                      </span>
+                {usersLoading ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+                      Loading...
                     </td>
                   </tr>
-                ))}
+                ) : users.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+                      No users found
+                    </td>
+                  </tr>
+                ) : (
+                  users.map((user, index) => (
+                    <tr
+                      key={user.id}
+                      className={`border-b border-border hover:bg-table-row-hover transition-colors ${
+                        index % 2 === 0 ? "bg-card" : "bg-secondary/30"
+                      }`}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <PermissionGate permission="user_edit">
+                            <button
+                              className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                              onClick={() => handleEdit(user)}
+                            >
+                              <Pencil size={14} />
+                            </button>
+                          </PermissionGate>
+                          <PermissionGate permission="user_delete">
+                            <button
+                              className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
+                              onClick={() => handleDelete(user)}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </PermissionGate>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-primary font-medium">{user.fullName}</td>
+                      <td className="px-4 py-3 text-sm text-primary">{user.email}</td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground">
+                        {user.roleNames?.join(", ") || "-"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`px-3 py-1 rounded text-sm font-medium text-white ${
+                            user.isActive ? "bg-green-500" : "bg-red-400"
+                          }`}
+                        >
+                          {user.isActive ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -215,20 +334,47 @@ const AllUsers = () => {
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-primary">
-            Showing 1 to {filteredUsers.length} of 13 entries
+            Showing {users.length > 0 ? (currentPage - 1) * parseInt(entriesPerPage) + 1 : 0} to{" "}
+            {Math.min(currentPage * parseInt(entriesPerPage), totalCount)} of {totalCount} entries
           </p>
           <div className="flex items-center gap-1">
-            <Button variant="outline" size="sm" disabled>Previous</Button>
-            <Button variant="default" size="sm" className="btn-success">1</Button>
-            <Button variant="outline" size="sm">2</Button>
-            <Button variant="outline" size="sm">Next</Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(p => p - 1)}
+            >
+              Previous
+            </Button>
+            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+              const page = i + 1;
+              return (
+                <Button
+                  key={page}
+                  variant={currentPage === page ? "default" : "outline"}
+                  size="sm"
+                  className={currentPage === page ? "btn-success" : ""}
+                  onClick={() => setCurrentPage(page)}
+                >
+                  {page}
+                </Button>
+              );
+            })}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(p => p + 1)}
+            >
+              Next
+            </Button>
           </div>
         </div>
       </div>
 
       {/* Add/Edit Employee Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {modalMode === "add" ? "Add New" : "Edit"} Employee
@@ -238,7 +384,7 @@ const AllUsers = () => {
           <div className="space-y-6 py-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-sm">First Name</Label>
+                <Label className="text-sm">First Name <span className="text-destructive">*</span></Label>
                 <Input
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
@@ -246,7 +392,7 @@ const AllUsers = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-sm">Last Name</Label>
+                <Label className="text-sm">Last Name <span className="text-destructive">*</span></Label>
                 <Input
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
@@ -257,15 +403,7 @@ const AllUsers = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-sm">Contact Number</Label>
-                <Input
-                  value={contactNumber}
-                  onChange={(e) => setContactNumber(e.target.value)}
-                  placeholder="Contact Number"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm">Email</Label>
+                <Label className="text-sm">Email <span className="text-destructive">*</span></Label>
                 <Input
                   type="email"
                   value={email}
@@ -273,72 +411,151 @@ const AllUsers = () => {
                   placeholder="Email"
                 />
               </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Contact Number</Label>
+                <Input
+                  value={contactNumber}
+                  onChange={(e) => setContactNumber(e.target.value)}
+                  placeholder="Contact Number"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm">
+                  Password {modalMode === "add" && <span className="text-destructive">*</span>}
+                  {modalMode === "edit" && <span className="text-muted-foreground text-xs">(leave blank to keep current)</span>}
+                </Label>
+                <Input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={modalMode === "add" ? "Password" : "New Password (optional)"}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Status</Label>
+                <div className="flex items-center gap-2 h-10">
+                  <Checkbox
+                    id="isActive"
+                    checked={isActive}
+                    onCheckedChange={(checked) => setIsActive(checked === true)}
+                  />
+                  <Label htmlFor="isActive" className="text-sm font-normal cursor-pointer">
+                    Active
+                  </Label>
+                </div>
+              </div>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm">Company Branch</Label>
-              <Select value={companyBranch} onValueChange={setCompanyBranch}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Branch" />
-                </SelectTrigger>
-                <SelectContent>
-                  {branches.map((branch) => (
-                    <SelectItem key={branch} value={branch}>{branch}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-4">
-              <div className="grid grid-cols-[1fr_1fr_auto] gap-4 items-end">
-                <Label className="text-sm">Permission Role</Label>
-                <Label className="text-sm">Permission Country</Label>
-                <div></div>
-              </div>
-
-              {permissionRows.map((row, index) => (
-                <div key={row.id} className="grid grid-cols-[1fr_1fr_auto] gap-4 items-center">
-                  <Select value={row.role} onValueChange={(v) => updatePermissionRow(row.id, "role", v)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {roles.map((role) => (
-                        <SelectItem key={role} value={role}>{role}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={row.country} onValueChange={(v) => updatePermissionRow(row.id, "country", v)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Country" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {countries.map((country) => (
-                        <SelectItem key={country} value={country}>{country}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {index === 0 ? (
-                    <Button className="btn-success gap-1" onClick={handleAddPermissionRow}>
-                      <Plus size={16} /> Add Cargo
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      onClick={() => handleRemovePermissionRow(row.id)}
-                    >
-                      <Trash2 size={16} />
-                    </Button>
-                  )}
-                </div>
-              ))}
+              <Label className="text-sm">Roles</Label>
+              <Popover open={rolesPopoverOpen} onOpenChange={setRolesPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={rolesPopoverOpen}
+                    className="w-full justify-between h-auto min-h-10 py-2"
+                  >
+                    <div className="flex flex-wrap gap-1">
+                      {selectedRoleIds.length === 0 ? (
+                        <span className="text-muted-foreground">Select roles...</span>
+                      ) : (
+                        getSelectedRoleNames().map((name) => {
+                          const role = roles.find(r => r.name === name);
+                          return (
+                            <span
+                              key={name}
+                              className="bg-primary/10 text-primary px-2 py-0.5 rounded text-sm flex items-center gap-1"
+                            >
+                              {name}
+                              <X
+                                size={12}
+                                className="cursor-pointer hover:text-destructive"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (role) removeRole(role.id);
+                                }}
+                              />
+                            </span>
+                          );
+                        })
+                      )}
+                    </div>
+                    <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="w-[280px] p-0"
+                  align="start"
+                  onWheel={(e) => e.stopPropagation()}
+                >
+                  <div
+                    className="max-h-[180px] overflow-y-auto p-1 overscroll-contain [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                    onWheel={(e) => {
+                      e.stopPropagation();
+                      const target = e.currentTarget;
+                      target.scrollTop += e.deltaY;
+                    }}
+                  >
+                    {roles.map((role) => (
+                      <div
+                        key={role.id}
+                        className="flex items-center gap-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer"
+                        onClick={() => toggleRole(role.id)}
+                      >
+                        <Checkbox
+                          checked={selectedRoleIds.includes(role.id)}
+                          onCheckedChange={() => toggleRole(role.id)}
+                        />
+                        <span className="text-sm">{role.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-4 border-t border-border">
             <Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
-            <Button className="btn-success" onClick={handleSave}>Save</Button>
+            <Button
+              className="btn-success"
+              onClick={handleSave}
+              disabled={createUserMutation.isPending || updateUserMutation.isPending}
+            >
+              {(createUserMutation.isPending || updateUserMutation.isPending) ? "Saving..." : "Save"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete user{" "}
+              <span className="font-medium text-foreground">{userToDelete?.fullName}</span>?
+              This action cannot be undone.
+            </p>
+          </div>
+          <div className="flex justify-end gap-2 pt-4 border-t border-border">
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={deleteUserMutation.isPending}
+            >
+              {deleteUserMutation.isPending ? "Deleting..." : "Delete"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

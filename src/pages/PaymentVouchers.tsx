@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import { Plus, Eye, Trash2, FileText, Download } from "lucide-react";
+import { Plus, Eye, Trash2, Edit, Download, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Input } from "@/components/ui/input";
@@ -21,14 +21,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -40,6 +32,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import RecordPaymentModal from "@/components/payments/RecordPaymentModal";
 import PaymentDetailsModal from "@/components/payments/PaymentDetailsModal";
+import UpdatePaymentModal from "@/components/payments/UpdatePaymentModal";
 import { usePaymentVouchers, useDeletePaymentVoucher } from "@/hooks/usePaymentVouchers";
 import { type PaymentVoucher } from "@/services/api/payment";
 import { formatDate } from "@/lib/utils";
@@ -51,8 +44,12 @@ export default function PaymentVouchers() {
   const [searchTerm, setSearchTerm] = useState("");
   const [recordModalOpen, setRecordModalOpen] = useState(false);
   const [detailsModalPaymentId, setDetailsModalPaymentId] = useState<number | null>(null);
+  const [editPaymentId, setEditPaymentId] = useState<number | null>(null);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<PaymentVoucher | null>(null);
+
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://localhost:7001/api';
 
   const { data, isLoading, refetch } = usePaymentVouchers({
     pageNumber,
@@ -77,6 +74,30 @@ export default function PaymentVouchers() {
 
   const handlePrintPdf = (id: number) => {
     window.open(`/accounts/payment-vouchers/${id}/print`, "_blank");
+  };
+
+  const handleEdit = (paymentId: number) => {
+    setEditPaymentId(paymentId);
+    setIsUpdateModalOpen(true);
+  };
+
+  const handleDownload = async (id: number, paymentNo: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/invoices/payments/${id}/pdf`);
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${paymentNo}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
+    } catch (error) {
+      console.error("Error downloading PDF:", error);
+    }
   };
 
   const handleViewDetails = (paymentId: number) => {
@@ -134,21 +155,22 @@ export default function PaymentVouchers() {
       <div className="border rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-green-700 hover:bg-green-700">
-              <TableHead className="text-white font-semibold">Date</TableHead>
-              <TableHead className="text-white font-semibold">Purchase Voucher No.</TableHead>
-              <TableHead className="text-white font-semibold">Payment Type</TableHead>
-              <TableHead className="text-white font-semibold">Purchases</TableHead>
-              <TableHead className="text-white font-semibold">Vendor Name</TableHead>
-              <TableHead className="text-white font-semibold">Narration (HBL#)</TableHead>
-              <TableHead className="text-white font-semibold text-right">Amount</TableHead>
-              <TableHead className="text-white font-semibold text-center">Actions</TableHead>
+            <TableRow className="bg-primary">
+              <TableHead className="text-primary-foreground font-semibold">Date</TableHead>
+              <TableHead className="text-primary-foreground font-semibold">Payment Voucher No.</TableHead>
+              <TableHead className="text-primary-foreground font-semibold">Job #</TableHead>
+              <TableHead className="text-primary-foreground font-semibold">Payment Type</TableHead>
+              <TableHead className="text-primary-foreground font-semibold">Purchases</TableHead>
+              <TableHead className="text-primary-foreground font-semibold">Vendor Name</TableHead>
+              <TableHead className="text-primary-foreground font-semibold">Narration (HBL#)</TableHead>
+              <TableHead className="text-primary-foreground font-semibold">Amount</TableHead>
+              <TableHead className="text-primary-foreground font-semibold">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8">
+                <TableCell colSpan={9} className="text-center py-8">
                   Loading...
                 </TableCell>
               </TableRow>
@@ -160,6 +182,9 @@ export default function PaymentVouchers() {
                   </TableCell>
                   <TableCell className="text-green-600 font-medium">
                     {payment.paymentNo}
+                  </TableCell>
+                  <TableCell className="max-w-[150px] truncate" title={payment.jobNumbers || ""}>
+                    {payment.jobNumbers || "-"}
                   </TableCell>
                   <TableCell>
                     <span className="px-2 py-1 rounded text-xs bg-green-100 text-green-800">
@@ -180,20 +205,26 @@ export default function PaymentVouchers() {
                     {payment.currencyCode} {payment.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </TableCell>
                   <TableCell>
-                    <div className="flex justify-center gap-1">
+                    <div className="flex items-center gap-1">
                       <Button
-                        variant="ghost"
                         size="sm"
-                        className="h-8 w-8 p-0 bg-blue-500 hover:bg-blue-600 text-white"
+                        className="bg-yellow-500 hover:bg-yellow-600 text-white h-8 w-8 p-0"
                         onClick={() => navigate(`/accounts/payment-vouchers/${payment.id}`)}
                         title="View"
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
                       <Button
-                        variant="ghost"
                         size="sm"
-                        className="h-8 w-8 p-0 bg-red-500 hover:bg-red-600 text-white"
+                        className="bg-amber-500 hover:bg-amber-600 text-white h-8 w-8 p-0"
+                        onClick={() => handleEdit(payment.id)}
+                        title="Edit"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="bg-red-500 hover:bg-red-600 text-white h-8 w-8 p-0"
                         onClick={() => {
                           setSelectedPayment(payment);
                           setDeleteDialogOpen(true);
@@ -203,13 +234,20 @@ export default function PaymentVouchers() {
                         <Trash2 className="h-4 w-4" />
                       </Button>
                       <Button
-                        variant="ghost"
                         size="sm"
-                        className="h-8 w-8 p-0 bg-orange-500 hover:bg-orange-600 text-white"
-                        onClick={() => handlePrintPdf(payment.id)}
-                        title="Print PDF"
+                        className="bg-yellow-500 hover:bg-yellow-600 text-white h-8 w-8 p-0"
+                        onClick={() => handleDownload(payment.id, payment.paymentNo)}
+                        title="Download"
                       >
                         <Download className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="bg-green-500 hover:bg-green-600 text-white h-8 w-8 p-0"
+                        onClick={() => handlePrintPdf(payment.id)}
+                        title="Print"
+                      >
+                        <Printer className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>
@@ -217,7 +255,7 @@ export default function PaymentVouchers() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                   No payment vouchers found
                 </TableCell>
               </TableRow>
@@ -227,39 +265,65 @@ export default function PaymentVouchers() {
       </div>
 
       {/* Pagination */}
-      {data && data.totalPages > 1 && (
-        <div className="mt-4 flex justify-center">
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={() => setPageNumber((p) => Math.max(1, p - 1))}
-                  className={pageNumber === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                />
-              </PaginationItem>
-              {Array.from({ length: Math.min(5, data.totalPages) }, (_, i) => {
-                const page = pageNumber <= 3 ? i + 1 : pageNumber + i - 2;
-                if (page > data.totalPages || page < 1) return null;
-                return (
-                  <PaginationItem key={page}>
-                    <PaginationLink
-                      onClick={() => setPageNumber(page)}
-                      isActive={pageNumber === page}
-                      className="cursor-pointer"
-                    >
-                      {page}
-                    </PaginationLink>
-                  </PaginationItem>
-                );
-              })}
-              <PaginationItem>
-                <PaginationNext
-                  onClick={() => setPageNumber((p) => Math.min(data.totalPages, p + 1))}
-                  className={pageNumber === data.totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+      {data && (
+        <div className="mt-4 flex justify-between items-center">
+          <div className="text-sm text-muted-foreground">
+            Showing {data.totalCount > 0 ? (pageNumber - 1) * pageSize + 1 : 0} to {Math.min(pageNumber * pageSize, data.totalCount)} of {data.totalCount} entries
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPageNumber((p) => Math.max(1, p - 1))}
+              disabled={pageNumber === 1}
+            >
+              Previous
+            </Button>
+            {data.totalPages > 0 && Array.from({ length: Math.min(7, data.totalPages) }, (_, i) => {
+              let pageNum: number;
+              if (data.totalPages <= 7) {
+                pageNum = i + 1;
+              } else if (pageNumber <= 4) {
+                pageNum = i + 1;
+              } else if (pageNumber >= data.totalPages - 3) {
+                pageNum = data.totalPages - 6 + i;
+              } else {
+                pageNum = pageNumber - 3 + i;
+              }
+              return (
+                <Button
+                  key={pageNum}
+                  variant={pageNumber === pageNum ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setPageNumber(pageNum)}
+                  className="w-8"
+                >
+                  {pageNum}
+                </Button>
+              );
+            })}
+            {data.totalPages > 7 && pageNumber < data.totalPages - 3 && (
+              <>
+                <span className="px-2">...</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPageNumber(data.totalPages)}
+                  className="w-8"
+                >
+                  {data.totalPages}
+                </Button>
+              </>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPageNumber((p) => Math.min(data.totalPages, p + 1))}
+              disabled={pageNumber === data.totalPages || data.totalPages === 0}
+            >
+              Next
+            </Button>
+          </div>
         </div>
       )}
 
@@ -278,6 +342,18 @@ export default function PaymentVouchers() {
         paymentId={detailsModalPaymentId}
         open={!!detailsModalPaymentId}
         onOpenChange={(open) => !open && setDetailsModalPaymentId(null)}
+      />
+
+      {/* Update Payment Modal */}
+      <UpdatePaymentModal
+        open={isUpdateModalOpen}
+        onOpenChange={setIsUpdateModalOpen}
+        paymentId={editPaymentId}
+        onSuccess={() => {
+          setIsUpdateModalOpen(false);
+          setEditPaymentId(null);
+          refetch();
+        }}
       />
 
       {/* Delete Confirmation Dialog */}

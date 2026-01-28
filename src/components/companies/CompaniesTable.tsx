@@ -22,6 +22,7 @@ import {
 import { CompanyModal } from "./CompanyModal";
 import { useCompanies, useDeleteCompany } from "@/hooks/useCompanies";
 import { Company } from "@/services/api";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 
 export function CompaniesTable() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -68,10 +69,12 @@ export function CompaniesTable() {
           <h2 className="text-xl font-semibold text-foreground">
             <span className="font-bold">List All</span> Companies
           </h2>
-          <Button className="btn-success gap-2" onClick={() => setIsAddModalOpen(true)}>
-            <Plus size={16} />
-            Add New
-          </Button>
+          <PermissionGate permission="company_add">
+            <Button className="btn-success gap-2" onClick={() => setIsAddModalOpen(true)}>
+              <Plus size={16} />
+              Add New
+            </Button>
+          </PermissionGate>
         </div>
 
         {/* Controls */}
@@ -147,18 +150,22 @@ export function CompaniesTable() {
                     >
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleEdit(company)}
-                            className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
-                          >
-                            <Edit size={14} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(company)}
-                            className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          <PermissionGate permission="company_edit">
+                            <button
+                              onClick={() => handleEdit(company)}
+                              className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                            >
+                              <Edit size={14} />
+                            </button>
+                          </PermissionGate>
+                          <PermissionGate permission="company_delete">
+                            <button
+                              onClick={() => handleDelete(company)}
+                              className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </PermissionGate>
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm text-foreground font-medium">
