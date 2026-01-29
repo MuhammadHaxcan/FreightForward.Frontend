@@ -10,6 +10,7 @@ import { settingsApi as _settingsApi } from './settings';
 import { invoiceApi as _invoiceApi, receiptApi as _receiptApi } from './invoice';
 import { costSheetApi as _costSheetApi } from './costSheet';
 import { expenseApi as _expenseApi } from './expense';
+import { dashboardApi as _dashboardApi } from './dashboard';
 
 // Base types and utilities
 export { fetchApi, fetchBlob, API_BASE_URL, type PaginatedList, type ApiResponse, type MasterType, type PaymentStatus } from './base';
@@ -186,6 +187,14 @@ export {
   type UpdateExpenseRequest,
 } from './expense';
 
+// Dashboard
+export {
+  dashboardApi,
+  type DashboardStats,
+  type MonthlyShipment,
+  type ShipmentDistribution,
+} from './dashboard';
+
 // Export combined API object for convenience
 export const api = {
   banks: _bankApi,
@@ -200,6 +209,7 @@ export const api = {
   settings: _settingsApi,
   costSheet: _costSheetApi,
   expenses: _expenseApi,
+  dashboard: _dashboardApi,
 };
 
 export default api;

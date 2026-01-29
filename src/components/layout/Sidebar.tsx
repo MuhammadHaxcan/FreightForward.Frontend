@@ -194,37 +194,40 @@ export function Sidebar() {
     >
       {/* Header */}
       <div className={cn(
-        "flex items-center border-b border-sidebar-border",
+        "flex items-center border-b border-sidebar-border transition-all duration-300",
         collapsed ? "justify-center p-3" : "justify-between p-4"
       )}>
-        {collapsed ? (
+        <div
+          className={cn(
+            "flex items-center gap-2 cursor-pointer",
+            collapsed && "justify-center"
+          )}
+          onClick={() => collapsed && setCollapsed(false)}
+        >
           <img
             src="/icon.png"
             alt="TFS"
-            className="h-8 w-8 object-contain cursor-pointer"
-            onClick={() => setCollapsed(false)}
+            className={cn(
+              "object-contain transition-all duration-300",
+              collapsed ? "h-8 w-8" : "h-9 w-9"
+            )}
           />
-        ) : (
-          <>
-            <div className="flex items-center gap-2 animate-fade-in">
-              <img
-                src="/icon.png"
-                alt="TFS"
-                className="h-9 w-9 object-contain"
-              />
-              <img
-                src="/logo-black.png"
-                alt="Transparent Freight Services"
-                className="h-8 w-auto object-contain"
-              />
-            </div>
-            <button
-              onClick={() => setCollapsed(!collapsed)}
-              className="p-2 rounded-md hover:bg-sidebar-accent text-sidebar-foreground transition-colors"
-            >
-              <ChevronLeft size={20} />
-            </button>
-          </>
+          <img
+            src="/logo-black.png"
+            alt="Transparent Freight Services"
+            className={cn(
+              "h-8 object-contain transition-all duration-300",
+              collapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+            )}
+          />
+        </div>
+        {!collapsed && (
+          <button
+            onClick={() => setCollapsed(true)}
+            className="p-2 rounded-md hover:bg-sidebar-accent text-sidebar-foreground transition-colors"
+          >
+            <ChevronLeft size={20} />
+          </button>
         )}
       </div>
 
