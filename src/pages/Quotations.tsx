@@ -44,7 +44,7 @@ import {
   useRateRequestForConversion,
   useApproveQuotation,
 } from "@/hooks/useSales";
-import { useAllCustomers, useAllCreditors, useCustomer } from "@/hooks/useCustomers";
+import { useAllCustomers, useAllDebtors, useCustomer } from "@/hooks/useCustomers";
 import {
   useAllIncoTerms,
   useAllPorts,
@@ -168,7 +168,7 @@ export default function Quotations() {
 
   // Dropdown data queries
   const { data: customersData } = useAllCustomers();
-  const { data: creditorsData } = useAllCreditors(); // Creditors for Company Name dropdown
+  const { data: debtorsData } = useAllDebtors(); // Debtors for Company Name dropdown
   const { data: selectedCustomer } = useCustomer(formData.customerId || 0);
   const { data: incoTermsData } = useAllIncoTerms();
   const { data: portsData } = useAllPorts();
@@ -179,7 +179,7 @@ export default function Quotations() {
 
   // Ensure arrays are always defined to prevent .map() errors on first load
   const customers = useMemo(() => Array.isArray(customersData) ? customersData : [], [customersData]);
-  const creditors = useMemo(() => Array.isArray(creditorsData) ? creditorsData : [], [creditorsData]);
+  const debtors = useMemo(() => Array.isArray(debtorsData) ? debtorsData : [], [debtorsData]);
   const incoTerms = useMemo(() => Array.isArray(incoTermsData) ? incoTermsData : [], [incoTermsData]);
   const ports = useMemo(() => Array.isArray(portsData) ? portsData : [], [portsData]);
   const packageTypes = useMemo(() => Array.isArray(packageTypesData) ? packageTypesData : [], [packageTypesData]);
@@ -850,13 +850,13 @@ export default function Quotations() {
                   <Label>Company Name</Label>
                   <SearchableSelect
                     disabled={isReadOnly}
-                    options={creditors?.map((customer) => ({
+                    options={debtors?.map((customer) => ({
                       value: customer.id.toString(),
                       label: customer.name,
                     })) || []}
                     value={formData.customerId?.toString() || ""}
                     onValueChange={(value) => {
-                      const customer = creditors?.find((c) => c.id === parseInt(value));
+                      const customer = debtors?.find((c) => c.id === parseInt(value));
                       setFormData({
                         ...formData,
                         customerId: parseInt(value),

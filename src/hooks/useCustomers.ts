@@ -170,6 +170,21 @@ export function useAllCreditors() {
   });
 }
 
+// Get all debtors (customers with Debtors master type) for Company Name dropdown
+export function useAllDebtors() {
+  return useQuery({
+    queryKey: ['customers', 'debtors'],
+    queryFn: async () => {
+      const response = await customerApi.getAll({ pageSize: 500, masterType: 'Debtors' });
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!.items;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes - dropdown data changes less frequently
+  });
+}
+
 // Get all customers (any type) for dropdowns
 export function useAllCustomers() {
   return useQuery({

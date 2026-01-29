@@ -399,6 +399,14 @@ const AddShipment = () => {
   });
   const blTypes = useMemo(() => blTypesResponse?.data ?? [], [blTypesResponse?.data]);
 
+  // Fetch Container Types
+  const { data: containerTypesResponse } = useQuery({
+    queryKey: ['containerTypes', 'all'],
+    queryFn: () => settingsApi.getAllContainerTypes(),
+    staleTime: 60 * 60 * 1000, // Cache for 1 hour
+  });
+  const containerTypes = useMemo(() => containerTypesResponse?.data ?? [], [containerTypesResponse?.data]);
+
   // Fetch shipment invoices when we have a saved shipment ID
   const { data: shipmentInvoicesResponse } = useQuery({
     queryKey: ['shipmentInvoices', savedShipmentId],
@@ -541,12 +549,18 @@ const AddShipment = () => {
         direction: "Import", // Default to Import as per plan
         mode: shipmentMode,
         incoterms: incoTermCode,
+        // Port of Loading → Load, Receipt, Place of Receipt
         portOfLoadingId: quotationForShipment.loadingPortId,
         portOfLoading: quotationForShipment.loadingPortName || "",
+        portOfReceiptId: quotationForShipment.loadingPortId,
+        portOfReceipt: quotationForShipment.loadingPortName || "",
+        placeOfReceipt: quotationForShipment.loadingPortName || "",
+        // Port of Discharge → Discharge, Final Destination, Place of Delivery
         portOfDischargeId: quotationForShipment.destinationPortId,
         portOfDischarge: quotationForShipment.destinationPortName || "",
-        placeOfReceipt: quotationForShipment.pickupAddress || "",
-        placeOfDelivery: quotationForShipment.deliveryAddress || "",
+        portOfFinalDestinationId: quotationForShipment.destinationPortId,
+        portOfFinalDestination: quotationForShipment.destinationPortName || "",
+        placeOfDelivery: quotationForShipment.destinationPortName || "",
         notes: quotationForShipment.notes || "",
         internalNotes: quotationForShipment.notesForBooking || "",
       }));
@@ -576,6 +590,44 @@ const AddShipment = () => {
           };
           try {
             await addPartyMutation.mutateAsync({ shipmentId: savedShipmentId, data: partyData });
+          } catch (error) {
+            // Ignore if party already exists
+          }
+        }
+
+        // Add contact person as Customer party (if exists)
+        if (quotationForShipment.contactPersonId && quotationForShipment.contactPersonName) {
+          const contactPartyData: AddShipmentPartyRequest = {
+            shipmentId: savedShipmentId,
+            masterType: 'Debtors',
+            partyType: 'Customer',
+            customerId: quotationForShipment.contactPersonId,
+            customerName: quotationForShipment.contactPersonName || '',
+            mobile: '',
+            phone: '',
+            email: '',
+          };
+          try {
+            await addPartyMutation.mutateAsync({ shipmentId: savedShipmentId, data: contactPartyData });
+          } catch (error) {
+            // Ignore if party already exists
+          }
+        }
+
+        // Add vendor as Supplier party (if exists)
+        if (quotationForShipment.vendorId && quotationForShipment.vendorName) {
+          const vendorPartyData: AddShipmentPartyRequest = {
+            shipmentId: savedShipmentId,
+            masterType: 'Creditors',
+            partyType: 'Supplier',
+            customerId: quotationForShipment.vendorId,
+            customerName: quotationForShipment.vendorName || '',
+            mobile: '',
+            phone: '',
+            email: '',
+          };
+          try {
+            await addPartyMutation.mutateAsync({ shipmentId: savedShipmentId, data: vendorPartyData });
           } catch (error) {
             // Ignore if party already exists
           }
@@ -620,16 +672,19 @@ const AddShipment = () => {
         // Add cargo details from quotation
         if (quotationForShipment.cargoDetails && quotationForShipment.cargoDetails.length > 0) {
           for (const cargo of quotationForShipment.cargoDetails) {
+            // Find container type ID from loadType name
+            const containerType = containerTypes?.find(ct => ct.name === cargo.loadType);
+
             const containerData: AddShipmentContainerRequest = {
               shipmentId: savedShipmentId,
               containerNumber: '',
-              containerTypeId: null,
+              containerTypeId: containerType?.id || null,
               sealNo: '',
               noOfPcs: cargo.quantity || 0,
               packageTypeId: cargo.packageTypeId || null,
               grossWeight: cargo.totalWeight || cargo.weight || 0,
               volume: cargo.totalCbm || cargo.cbm || 0,
-              description: cargo.cargoDescription || '',
+              description: cargo.cargoDescription || cargo.loadType || '',
             };
             try {
               await addContainerMutation.mutateAsync({ shipmentId: savedShipmentId, data: containerData });

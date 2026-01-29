@@ -404,6 +404,11 @@ export interface QuotationForShipment {
   notesForBooking?: string;
   remarks?: string;
 
+  // RateRequest/Vendor Info
+  rateRequestId?: number;
+  vendorId?: number;
+  vendorName?: string;
+
   // Collections
   charges: QuotationCharge[];
   cargoDetails: QuotationCargoDetail[];
