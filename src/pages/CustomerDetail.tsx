@@ -11,7 +11,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { ArrowLeft, Plus, CalendarIcon, Pencil, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { formatDate } from "@/lib/utils";
+import { formatDate, cn } from "@/lib/utils";
 import { customerApi, settingsApi, CustomerCategoryType, CurrencyType, Invoice as ApiInvoice, AccountReceivable as ApiAccountReceivable, AccountPayable as ApiAccountPayable, PaymentStatus, Receipt as ApiReceipt, CustomerStatement } from "@/services/api";
 import { getPaymentVouchers, PaymentVoucher } from "@/services/api/payment";
 import { invoiceApi, AccountPurchaseInvoice } from "@/services/api/invoice";

@@ -75,11 +75,11 @@ export default function RateRequests() {
   const { data: vendorsData } = useAllCreditors();
 
   // Ensure arrays are always defined to prevent .map() errors on first load
-  const countries = useMemo(() => countriesData ?? [], [countriesData]);
-  const ports = useMemo(() => portsData ?? [], [portsData]);
-  const incoTerms = useMemo(() => incoTermsData ?? [], [incoTermsData]);
-  const categoryTypes = useMemo(() => categoryTypesData ?? [], [categoryTypesData]);
-  const vendors = useMemo(() => vendorsData ?? [], [vendorsData]);
+  const countries = useMemo(() => Array.isArray(countriesData) ? countriesData : [], [countriesData]);
+  const ports = useMemo(() => Array.isArray(portsData) ? portsData : [], [portsData]);
+  const incoTerms = useMemo(() => Array.isArray(incoTermsData) ? incoTermsData : [], [incoTermsData]);
+  const categoryTypes = useMemo(() => Array.isArray(categoryTypesData) ? categoryTypesData : [], [categoryTypesData]);
+  const vendors = useMemo(() => Array.isArray(vendorsData) ? vendorsData : [], [vendorsData]);
 
   // Fetch lead data when editing (includes lead details)
   const { data: leadData, isLoading: isLeadLoading } = useLead(selectedRequest?.leadId || 0);

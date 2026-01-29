@@ -178,14 +178,14 @@ export default function Quotations() {
   const { data: containerTypesData } = useAllContainerTypes();
 
   // Ensure arrays are always defined to prevent .map() errors on first load
-  const customers = useMemo(() => customersData ?? [], [customersData]);
-  const creditors = useMemo(() => creditorsData ?? [], [creditorsData]);
-  const incoTerms = useMemo(() => incoTermsData ?? [], [incoTermsData]);
-  const ports = useMemo(() => portsData ?? [], [portsData]);
-  const packageTypes = useMemo(() => packageTypesData ?? [], [packageTypesData]);
-  const currencyTypes = useMemo(() => currencyTypesData ?? [], [currencyTypesData]);
-  const chargeItems = useMemo(() => chargeItemsData ?? [], [chargeItemsData]);
-  const containerTypes = useMemo(() => containerTypesData ?? [], [containerTypesData]);
+  const customers = useMemo(() => Array.isArray(customersData) ? customersData : [], [customersData]);
+  const creditors = useMemo(() => Array.isArray(creditorsData) ? creditorsData : [], [creditorsData]);
+  const incoTerms = useMemo(() => Array.isArray(incoTermsData) ? incoTermsData : [], [incoTermsData]);
+  const ports = useMemo(() => Array.isArray(portsData) ? portsData : [], [portsData]);
+  const packageTypes = useMemo(() => Array.isArray(packageTypesData) ? packageTypesData : [], [packageTypesData]);
+  const currencyTypes = useMemo(() => Array.isArray(currencyTypesData) ? currencyTypesData : [], [currencyTypesData]);
+  const chargeItems = useMemo(() => Array.isArray(chargeItemsData) ? chargeItemsData : [], [chargeItemsData]);
+  const containerTypes = useMemo(() => Array.isArray(containerTypesData) ? containerTypesData : [], [containerTypesData]);
 
   // Mutations
   const createMutation = useCreateQuotation();
