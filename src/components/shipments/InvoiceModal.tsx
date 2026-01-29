@@ -11,13 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DateInput } from "@/components/ui/date-input";
 import { getTodayDateOnly } from "@/lib/utils";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Table,
   TableBody,
@@ -26,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Loader2 } from "lucide-react";
+import { Search, Loader2, X } from "lucide-react";
 import { ShipmentParty, ShipmentCosting, CreateInvoiceItemRequest, invoiceApi, customerApi, settingsApi, CurrencyType } from "@/services/api";
 import { useCreateInvoice } from "@/hooks/useInvoices";
 
@@ -81,14 +75,26 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
     selectedCharges: [] as number[],
   });
 
-  // Fetch next invoice number and currency types when modal opens
+  // Reset form and fetch next invoice number when modal opens
   useEffect(() => {
     if (open) {
+      // Reset form data first
+      setFormData({
+        invoiceId: "",
+        companyName: "",
+        customerId: "",
+        invoiceDate: getTodayDateOnly(),
+        currencyId: 1,
+        currencyCode: "AED",
+        selectedCharges: [],
+      });
+      // Fetch next invoice number
       invoiceApi.getNextInvoiceNumber().then(response => {
         if (response.data) {
           setFormData(prev => ({ ...prev, invoiceId: response.data as string }));
         }
       });
+      // Fetch currency types
       settingsApi.getAllCurrencyTypes().then(response => {
         if (response.data) {
           setCurrencies(response.data);
@@ -271,38 +277,16 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto bg-card border border-border">
-        <DialogHeader>
-          <DialogTitle className="text-foreground text-lg bg-[#2c3e50] text-white p-3 -m-6 mb-0 rounded-t-lg">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto bg-card border border-border p-0">
+        <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+          <DialogTitle className="text-white text-lg font-semibold">
             New Invoice
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 pt-4">
+        <div className="space-y-4 p-6 pt-4">
           {/* Invoice Section Header */}
-          <div className="flex justify-between items-center">
-            <h3 className="text-emerald-600 font-semibold">Invoice</h3>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                className="bg-emerald-500 hover:bg-emerald-600 text-white h-9"
-                onClick={handleSave}
-                disabled={!shipmentId || !formData.customerId || formData.selectedCharges.length === 0 || createInvoiceMutation.isPending}
-              >
-                {createInvoiceMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  'Save'
-                )}
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => onOpenChange(false)} className="h-9" disabled={createInvoiceMutation.isPending}>
-                Back
-              </Button>
-            </div>
-          </div>
+          <h3 className="text-primary font-semibold">Invoice</h3>
 
           {/* Invoice Details */}
           <div className="grid grid-cols-4 gap-3">
@@ -316,22 +300,15 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
             </div>
             <div>
               <Label className="text-xs font-medium">Company Name (Debtors)</Label>
-              <Select value={formData.customerId} onValueChange={handleCompanySelect}>
-                <SelectTrigger className="bg-background border-border h-9">
-                  <SelectValue placeholder="Select debtor" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover border border-border">
-                  {debtorParties.length === 0 ? (
-                    <SelectItem value="_none" disabled>No debtors in parties</SelectItem>
-                  ) : (
-                    debtorParties.map(party => (
-                      <SelectItem key={party.id} value={party.id.toString()}>
-                        {party.customerName}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                options={debtorParties.map(party => ({ value: party.id.toString(), label: party.customerName }))}
+                value={formData.customerId}
+                onValueChange={handleCompanySelect}
+                placeholder="Select debtor"
+                searchPlaceholder="Search debtors..."
+                triggerClassName="bg-background border-border h-9"
+                emptyMessage="No debtors in parties"
+              />
             </div>
             <div>
               <Label className="text-xs font-medium">* Invoice Date</Label>
@@ -353,7 +330,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
               <Button
                 size="sm"
                 onClick={handleSubmit}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white h-9"
+                className="btn-success h-9"
               >
                 <Search className="h-4 w-4 mr-1" />
                 Submit
@@ -363,7 +340,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
 
           {/* Charges Details */}
           <div className="space-y-3">
-            <h3 className="text-emerald-600 font-semibold text-sm">Charges Details</h3>
+            <h3 className="text-primary font-semibold text-sm">Charges Details</h3>
             <div className="flex items-center gap-2">
               <Checkbox
                 id="checkAll"
@@ -435,7 +412,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
               </div>
               <div>
                 <Label className="text-xs font-semibold">Total Sale</Label>
-                <div className="text-emerald-600 font-semibold text-sm">{formData.currencyCode} {totalWithTax.toFixed(2)}</div>
+                <div className="text-primary font-semibold text-sm">{formData.currencyCode} {totalWithTax.toFixed(2)}</div>
               </div>
               <div>
                 <Label className="text-xs font-semibold">Total Cost</Label>
@@ -443,11 +420,36 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
               </div>
               <div>
                 <Label className="text-xs font-semibold">Profit (GP)</Label>
-                <div className={`font-semibold text-sm ${profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                <div className={`font-semibold text-sm ${profit >= 0 ? 'text-primary' : 'text-destructive'}`}>
                   {formData.currencyCode} {profit.toFixed(2)}
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={createInvoiceMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="btn-success"
+              onClick={handleSave}
+              disabled={!shipmentId || !formData.customerId || formData.selectedCharges.length === 0 || createInvoiceMutation.isPending}
+            >
+              {createInvoiceMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save'
+              )}
+            </Button>
           </div>
         </div>
       </DialogContent>

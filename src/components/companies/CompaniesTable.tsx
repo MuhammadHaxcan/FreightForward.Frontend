@@ -2,13 +2,7 @@ import { useState } from "react";
 import { Edit, Trash2, Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -81,20 +75,20 @@ export function CompaniesTable() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Show</span>
-            <Select value={entriesPerPage} onValueChange={(value) => {
-              setEntriesPerPage(value);
-              setCurrentPage(1);
-            }}>
-              <SelectTrigger className="w-20 h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-popover border border-border">
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              options={[
+                { value: "10", label: "10" },
+                { value: "25", label: "25" },
+                { value: "50", label: "50" },
+                { value: "100", label: "100" },
+              ]}
+              value={entriesPerPage}
+              onValueChange={(value) => {
+                setEntriesPerPage(value);
+                setCurrentPage(1);
+              }}
+              triggerClassName="w-20 h-9"
+            />
             <span className="text-sm text-muted-foreground">entries</span>
           </div>
           <div className="flex items-center gap-2">
@@ -125,12 +119,12 @@ export function CompaniesTable() {
             <table className="w-full">
               <thead>
                 <tr className="bg-table-header text-table-header-foreground">
-                  <th className="px-4 py-3 text-left text-sm font-semibold">Action</th>
                   <th className="px-4 py-3 text-left text-sm font-semibold">Company</th>
                   <th className="px-4 py-3 text-left text-sm font-semibold">Email</th>
                   <th className="px-4 py-3 text-left text-sm font-semibold">Website</th>
                   <th className="px-4 py-3 text-left text-sm font-semibold">Contact</th>
                   <th className="px-4 py-3 text-left text-sm font-semibold">City</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -148,6 +142,21 @@ export function CompaniesTable() {
                         index % 2 === 0 ? "bg-card" : "bg-secondary/30"
                       }`}
                     >
+                      <td className="px-4 py-3 text-sm text-foreground font-medium">
+                        {company.name}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground">
+                        {company.email || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-primary hover:underline cursor-pointer">
+                        {company.website || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground">
+                        {company.contactNumber || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground">
+                        {company.city || '-'}
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <PermissionGate permission="company_edit">
@@ -167,21 +176,6 @@ export function CompaniesTable() {
                             </button>
                           </PermissionGate>
                         </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-foreground font-medium">
-                        {company.name}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-muted-foreground">
-                        {company.email || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-primary hover:underline cursor-pointer">
-                        {company.website || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-muted-foreground">
-                        {company.contactNumber || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-muted-foreground">
-                        {company.city || '-'}
                       </td>
                     </tr>
                   ))
@@ -232,17 +226,17 @@ export function CompaniesTable() {
 
       {/* Add Modal */}
       <CompanyModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
+        open={isAddModalOpen}
+        onOpenChange={(open) => setIsAddModalOpen(open)}
         mode="add"
       />
 
       {/* Edit Modal */}
       <CompanyModal
-        isOpen={isEditModalOpen}
-        onClose={() => {
-          setIsEditModalOpen(false);
-          setSelectedCompany(null);
+        open={isEditModalOpen}
+        onOpenChange={(open) => {
+          setIsEditModalOpen(open);
+          if (!open) setSelectedCompany(null);
         }}
         company={selectedCompany}
         mode="edit"

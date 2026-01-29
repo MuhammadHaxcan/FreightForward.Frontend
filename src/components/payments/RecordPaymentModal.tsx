@@ -10,13 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Table,
   TableBody,
@@ -61,7 +55,7 @@ interface SelectedInvoice {
   currencyCode: string;
 }
 
-export default function RecordPaymentModal({
+export function RecordPaymentModal({
   open,
   onOpenChange,
   onSuccess,
@@ -125,7 +119,7 @@ export default function RecordPaymentModal({
         setVendors(response.data.items);
       }
     } catch (error) {
-      console.error("Error fetching vendors:", error);
+      toast.error("Failed to load vendors");
     }
   };
 
@@ -136,7 +130,7 @@ export default function RecordPaymentModal({
         setBanks(response.data.items);
       }
     } catch (error) {
-      console.error("Error fetching banks:", error);
+      toast.error("Failed to load banks");
     }
   };
 
@@ -147,7 +141,6 @@ export default function RecordPaymentModal({
         setPaymentTypes(response.data);
       }
     } catch (error) {
-      console.error("Error fetching payment types:", error);
       // Fallback to default payment types
       setPaymentTypes([
         { id: 1, code: "Cash", name: "Cash", requiresBank: false, requiresChequeDetails: false, sortOrder: 1 },
@@ -165,7 +158,7 @@ export default function RecordPaymentModal({
         setCurrencies(response.data);
       }
     } catch (error) {
-      console.error("Error fetching currencies:", error);
+      toast.error("Failed to load currencies");
     }
   };
 
@@ -176,7 +169,7 @@ export default function RecordPaymentModal({
         setNextPaymentNo(response.data);
       }
     } catch (error) {
-      console.error("Error fetching next payment number:", error);
+      toast.error("Failed to get payment number");
     }
   };
 
@@ -187,7 +180,7 @@ export default function RecordPaymentModal({
         setUnpaidInvoices(response.data);
       }
     } catch (error) {
-      console.error("Error fetching unpaid invoices:", error);
+      toast.error("Failed to load unpaid invoices");
     }
   };
 
@@ -288,7 +281,6 @@ export default function RecordPaymentModal({
       toast.success("Payment voucher recorded successfully");
       onSuccess();
     } catch (error) {
-      console.error("Error creating payment voucher:", error);
       toast.error("Failed to record payment voucher");
     } finally {
       setLoading(false);
@@ -297,30 +289,25 @@ export default function RecordPaymentModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-xl">Record Purchase Payment</DialogTitle>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
+        <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+          <DialogTitle className="text-white text-lg font-semibold">Record Purchase Payment</DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-3 gap-4 py-4">
+        <div className="grid grid-cols-3 gap-4 p-6">
           {/* Vendor Selection */}
           <div className="space-y-2">
             <Label>Vendors</Label>
-            <Select
+            <SearchableSelect
+              options={vendors.map((vendor) => ({
+                value: vendor.id.toString(),
+                label: vendor.name,
+              }))}
               value={vendorId?.toString() || ""}
               onValueChange={(v) => setVendorId(parseInt(v))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Vendor" />
-              </SelectTrigger>
-              <SelectContent>
-                {vendors.map((vendor) => (
-                  <SelectItem key={vendor.id} value={vendor.id.toString()}>
-                    {vendor.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="Select Vendor"
+              searchPlaceholder="Search vendors..."
+            />
           </div>
 
           {/* Purchase Invoice Selection (multi-select chips) */}
@@ -344,34 +331,34 @@ export default function RecordPaymentModal({
                   </span>
                 ))}
               </div>
-              <Select
+              <SearchableSelect
+                options={unpaidInvoices
+                  .filter(inv => !selectedInvoices.some(si => si.purchaseInvoiceId === inv.id))
+                  .map((invoice) => ({
+                    value: invoice.id.toString(),
+                    label: `${invoice.purchaseNo} - Pending: ${invoice.currencyCode} ${invoice.pendingAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                  }))}
                 value=""
                 onValueChange={(v) => {
                   const invoice = unpaidInvoices.find(i => i.id === parseInt(v));
                   if (invoice) handleInvoiceSelect(invoice, true);
                 }}
+                placeholder="Select Invoice"
+                searchPlaceholder="Search invoices..."
                 disabled={!vendorId}
-              >
-                <SelectTrigger className="h-8">
-                  <SelectValue placeholder="Select Invoice" />
-                </SelectTrigger>
-                <SelectContent>
-                  {unpaidInvoices
-                    .filter(inv => !selectedInvoices.some(si => si.purchaseInvoiceId === inv.id))
-                    .map((invoice) => (
-                      <SelectItem key={invoice.id} value={invoice.id.toString()}>
-                        {invoice.purchaseNo} - Pending: {invoice.currencyCode} {invoice.pendingAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+                triggerClassName="h-8"
+              />
             </div>
           </div>
 
           {/* Payment Type */}
           <div className="space-y-2">
             <Label>Payment Type</Label>
-            <Select
+            <SearchableSelect
+              options={paymentTypes.map((pt) => ({
+                value: pt.code,
+                label: pt.name.toUpperCase(),
+              }))}
               value={paymentMode}
               onValueChange={(v) => {
                 setPaymentMode(v as PaymentMode);
@@ -385,18 +372,9 @@ export default function RecordPaymentModal({
                   setChequeBank("");
                 }
               }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Type" />
-              </SelectTrigger>
-              <SelectContent>
-                {paymentTypes.map((pt) => (
-                  <SelectItem key={pt.code} value={pt.code}>
-                    {pt.name.toUpperCase()}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="Select Type"
+              searchPlaceholder="Search payment types..."
+            />
           </div>
 
           {/* Cheque Details Row - Only show for Cheque payment type */}
@@ -438,7 +416,7 @@ export default function RecordPaymentModal({
 
           {/* Payment Date */}
           <div className="space-y-2">
-            <Label>Purchase Date</Label>
+            <Label>Purchase Payment Date</Label>
             <Input
               type="date"
               value={paymentDate}
@@ -459,39 +437,35 @@ export default function RecordPaymentModal({
           {/* Currency - Locked to vendor's base currency */}
           <div className="space-y-2">
             <Label>Currency</Label>
-            <Select value={currencyId?.toString() || ""} onValueChange={(v) => setCurrencyId(parseInt(v))} disabled={!!vendorId}>
-              <SelectTrigger className={vendorId ? "bg-muted" : ""}>
-                <SelectValue placeholder="Select Currency" />
-              </SelectTrigger>
-              <SelectContent>
-                {currencies.map((curr) => (
-                  <SelectItem key={curr.id} value={curr.id.toString()}>
-                    {curr.code}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              options={currencies.map((curr) => ({
+                value: curr.id.toString(),
+                label: curr.code,
+              }))}
+              value={currencyId?.toString() || ""}
+              onValueChange={(v) => setCurrencyId(parseInt(v))}
+              placeholder="Select Currency"
+              searchPlaceholder="Search currencies..."
+              disabled={!!vendorId}
+              triggerClassName={vendorId ? "bg-muted" : ""}
+            />
           </div>
 
           {/* Bank Selection - Only show for payment types that require bank */}
           <div className="space-y-2">
             <Label>Bank</Label>
-            <Select
+            <SearchableSelect
+              options={banks.map((bank) => ({
+                value: bank.id.toString(),
+                label: bank.bankName,
+              }))}
               value={bankId?.toString() || ""}
               onValueChange={(v) => setBankId(v ? parseInt(v) : null)}
+              placeholder="Select Bank"
+              searchPlaceholder="Search banks..."
               disabled={!requiresBank}
-            >
-              <SelectTrigger className={!requiresBank ? "bg-muted" : ""}>
-                <SelectValue placeholder="Select Bank" />
-              </SelectTrigger>
-              <SelectContent>
-                {banks.map((bank) => (
-                  <SelectItem key={bank.id} value={bank.id.toString()}>
-                    {bank.bankName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              triggerClassName={!requiresBank ? "bg-muted" : ""}
+            />
           </div>
 
           {/* Total Amount */}
@@ -507,14 +481,14 @@ export default function RecordPaymentModal({
 
         {/* Invoice Details Table */}
         {selectedInvoices.length > 0 && (
-          <div className="border rounded-lg overflow-hidden mb-4">
+          <div className="border rounded-lg overflow-hidden mx-6 mb-4">
             <Table>
               <TableHeader>
-                <TableRow className="bg-green-700">
-                  <TableHead className="text-white font-semibold">Purchase No</TableHead>
-                  <TableHead className="text-white font-semibold">Total Amount</TableHead>
-                  <TableHead className="text-white font-semibold">Pending Amount</TableHead>
-                  <TableHead className="text-white font-semibold">Paying Amount</TableHead>
+                <TableRow className="bg-table-header">
+                  <TableHead className="text-table-header-foreground font-semibold">Purchase No</TableHead>
+                  <TableHead className="text-table-header-foreground font-semibold">Total Amount</TableHead>
+                  <TableHead className="text-table-header-foreground font-semibold">Pending Amount</TableHead>
+                  <TableHead className="text-table-header-foreground font-semibold">Paying Amount</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -553,16 +527,16 @@ export default function RecordPaymentModal({
         )}
 
         {/* Actions */}
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 px-6 pb-6">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button
-            className="bg-green-500 hover:bg-green-600 text-white"
+            className="btn-success"
             onClick={handleSubmit}
             disabled={loading}
           >
             {loading ? "Submitting..." : "Submit"}
-          </Button>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Close
           </Button>
         </div>
       </DialogContent>

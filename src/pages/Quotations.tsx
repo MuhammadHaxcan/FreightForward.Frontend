@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 import {
   Table,
   TableBody,
@@ -12,13 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Dialog,
   DialogContent,
@@ -172,15 +167,25 @@ export default function Quotations() {
   const { data: quotationDetail } = useQuotation(editingQuotationId || 0);
 
   // Dropdown data queries
-  const { data: customers } = useAllCustomers();
-  const { data: creditors } = useAllCreditors(); // Creditors for Company Name dropdown
+  const { data: customersData } = useAllCustomers();
+  const { data: creditorsData } = useAllCreditors(); // Creditors for Company Name dropdown
   const { data: selectedCustomer } = useCustomer(formData.customerId || 0);
-  const { data: incoTerms } = useAllIncoTerms();
-  const { data: ports } = useAllPorts();
-  const { data: packageTypes } = useAllPackageTypes();
-  const { data: currencyTypes } = useAllCurrencyTypes();
-  const { data: chargeItems } = useAllChargeItems();
-  const { data: containerTypes } = useAllContainerTypes();
+  const { data: incoTermsData } = useAllIncoTerms();
+  const { data: portsData } = useAllPorts();
+  const { data: packageTypesData } = useAllPackageTypes();
+  const { data: currencyTypesData } = useAllCurrencyTypes();
+  const { data: chargeItemsData } = useAllChargeItems();
+  const { data: containerTypesData } = useAllContainerTypes();
+
+  // Ensure arrays are always defined to prevent .map() errors on first load
+  const customers = useMemo(() => customersData ?? [], [customersData]);
+  const creditors = useMemo(() => creditorsData ?? [], [creditorsData]);
+  const incoTerms = useMemo(() => incoTermsData ?? [], [incoTermsData]);
+  const ports = useMemo(() => portsData ?? [], [portsData]);
+  const packageTypes = useMemo(() => packageTypesData ?? [], [packageTypesData]);
+  const currencyTypes = useMemo(() => currencyTypesData ?? [], [currencyTypesData]);
+  const chargeItems = useMemo(() => chargeItemsData ?? [], [chargeItemsData]);
+  const containerTypes = useMemo(() => containerTypesData ?? [], [containerTypesData]);
 
   // Mutations
   const createMutation = useCreateQuotation();
@@ -193,7 +198,7 @@ export default function Quotations() {
 
   // Handle conversion pre-fill from Rate Request
   useEffect(() => {
-    if (conversionRateRequestId && conversionData && packageTypes) {
+    if (conversionRateRequestId && conversionData && packageTypesData) {
       // Determine mode based on freightMode and shippingType
       let mode = "";
       const freightMode = conversionData.freightMode?.toLowerCase() || "";
@@ -296,7 +301,7 @@ export default function Quotations() {
       // Clear the location state to prevent re-triggering
       window.history.replaceState({}, document.title);
     }
-  }, [conversionRateRequestId, conversionData, packageTypes]);
+  }, [conversionRateRequestId, conversionData, packageTypesData]);
 
   // Handle edit mode pre-fill
   useEffect(() => {
@@ -568,13 +573,15 @@ export default function Quotations() {
       <div className="p-6 space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-semibold text-foreground">Quotations</h1>
-          <Button
-            onClick={() => openModal("add")}
-            className="bg-green-600 hover:bg-green-700 text-white"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add New Quotation
-          </Button>
+          <PermissionGate permission="quot_add">
+            <Button
+              onClick={() => openModal("add")}
+              className="btn-success"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add New Quotation
+            </Button>
+          </PermissionGate>
         </div>
 
         <Tabs
@@ -595,22 +602,22 @@ export default function Quotations() {
               <div className="p-4 flex justify-between items-center border-b border-border">
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">Show</span>
-                  <Select
+                  <SearchableSelect
+                    options={[
+                      { value: "10", label: "10" },
+                      { value: "25", label: "25" },
+                      { value: "50", label: "50" },
+                      { value: "100", label: "100" },
+                    ]}
                     value={entriesPerPage}
                     onValueChange={(value) => {
                       setEntriesPerPage(value);
                       setCurrentPage(1);
                     }}
-                  >
-                    <SelectTrigger className="w-20">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="10">10</SelectItem>
-                      <SelectItem value="25">25</SelectItem>
-                      <SelectItem value="50">50</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    placeholder="10"
+                    searchPlaceholder="Search..."
+                    triggerClassName="w-20"
+                  />
                   <span className="text-sm text-muted-foreground">entries</span>
                 </div>
 
@@ -639,18 +646,18 @@ export default function Quotations() {
               ) : (
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-[#2c3e50]">
-                      <TableHead className="text-white">Date</TableHead>
-                      <TableHead className="text-white">Quotation No</TableHead>
-                      <TableHead className="text-white">Customer Name</TableHead>
-                      <TableHead className="text-white">Incoterms</TableHead>
-                      <TableHead className="text-white">Mode</TableHead>
-                      <TableHead className="text-white">POL</TableHead>
-                      <TableHead className="text-white">POD</TableHead>
-                      <TableHead className="text-white">Quote Expiry Date</TableHead>
-                      <TableHead className="text-white">Status</TableHead>
-                      <TableHead className="text-white">Booking No</TableHead>
-                      <TableHead className="text-white">Action</TableHead>
+                    <TableRow className="bg-table-header">
+                      <TableHead className="text-table-header-foreground">Date</TableHead>
+                      <TableHead className="text-table-header-foreground">Quotation No</TableHead>
+                      <TableHead className="text-table-header-foreground">Customer Name</TableHead>
+                      <TableHead className="text-table-header-foreground">Incoterms</TableHead>
+                      <TableHead className="text-table-header-foreground">Mode</TableHead>
+                      <TableHead className="text-table-header-foreground">POL</TableHead>
+                      <TableHead className="text-table-header-foreground">POD</TableHead>
+                      <TableHead className="text-table-header-foreground">Quote Expiry Date</TableHead>
+                      <TableHead className="text-table-header-foreground">Status</TableHead>
+                      <TableHead className="text-table-header-foreground">Booking No</TableHead>
+                      <TableHead className="text-table-header-foreground">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -662,7 +669,7 @@ export default function Quotations() {
                       </TableRow>
                     ) : (
                       quotations.map((quotation) => (
-                        <TableRow key={quotation.id} className="hover:bg-muted/50">
+                        <TableRow key={quotation.id} className="hover:bg-table-row-hover">
                           <TableCell>{formatDate(quotation.quotationDate, "dd-MM-yyyy")}</TableCell>
                           <TableCell className="font-medium">{quotation.quotationNo}</TableCell>
                           <TableCell className="text-green-600">{quotation.customerName}</TableCell>
@@ -675,14 +682,16 @@ export default function Quotations() {
                           <TableCell className="text-purple-600 font-medium">{quotation.quotationBookingNo || "-"}</TableCell>
                           <TableCell>
                             <div className="flex gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 bg-green-500 hover:bg-green-600 text-white rounded"
-                                onClick={() => openModal("edit", quotation)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
+                              <PermissionGate permission="quot_edit">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 btn-success rounded"
+                                  onClick={() => openModal("edit", quotation)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </PermissionGate>
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -700,39 +709,45 @@ export default function Quotations() {
                                 <Download className="h-4 w-4" />
                               </Button>
                               {quotation.quotationStatus === "Pending" && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 bg-purple-500 hover:bg-purple-600 text-white rounded"
-                                  onClick={() => {
-                                    setQuotationToApprove(quotation);
-                                    setApproveModalOpen(true);
-                                  }}
-                                >
-                                  <CheckCircle className="h-4 w-4" />
-                                </Button>
+                                <PermissionGate permission="quot_approve">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 bg-purple-500 hover:bg-purple-600 text-white rounded"
+                                    onClick={() => {
+                                      setQuotationToApprove(quotation);
+                                      setApproveModalOpen(true);
+                                    }}
+                                  >
+                                    <CheckCircle className="h-4 w-4" />
+                                  </Button>
+                                </PermissionGate>
                               )}
                               {quotation.quotationStatus === "Approved" && activeTab === "approved" && (
+                                <PermissionGate permission="quot_convert">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 bg-teal-500 hover:bg-teal-600 text-white rounded"
+                                    onClick={() => {
+                                      setQuotationToConvert(quotation);
+                                      setConvertModalOpen(true);
+                                    }}
+                                    title="Convert to Shipment"
+                                  >
+                                    <Ship className="h-4 w-4" />
+                                  </Button>
+                                </PermissionGate>
+                              )}
+                              <PermissionGate permission="quot_delete">
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-8 w-8 bg-teal-500 hover:bg-teal-600 text-white rounded"
-                                  onClick={() => {
-                                    setQuotationToConvert(quotation);
-                                    setConvertModalOpen(true);
-                                  }}
-                                  title="Convert to Shipment"
+                                  className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded"
                                 >
-                                  <Ship className="h-4 w-4" />
+                                  <Trash2 className="h-4 w-4" />
                                 </Button>
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              </PermissionGate>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -743,7 +758,7 @@ export default function Quotations() {
               )}
 
               <div className="p-4 flex justify-between items-center border-t border-border">
-                <span className="text-sm text-green-600">
+                <span className="text-sm text-muted-foreground">
                   Showing{" "}
                   {quotations.length > 0 ? (currentPage - 1) * parseInt(entriesPerPage) + 1 : 0} to{" "}
                   {Math.min(currentPage * parseInt(entriesPerPage), totalCount)} of {totalCount} entries
@@ -762,7 +777,7 @@ export default function Quotations() {
                       key={page}
                       variant={page === currentPage ? "default" : "outline"}
                       size="sm"
-                      className={page === currentPage ? "bg-green-600" : ""}
+                      className={page === currentPage ? "btn-success" : ""}
                       onClick={() => setCurrentPage(page)}
                     >
                       {page}
@@ -787,7 +802,7 @@ export default function Quotations() {
       <Dialog open={isModalOpen} onOpenChange={(open) => !open && closeModal()}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-green-600 text-xl">{getModalTitle()}</DialogTitle>
+            <DialogTitle className="text-primary text-xl">{getModalTitle()}</DialogTitle>
             <DialogDescription>
               {modalMode === "view"
                 ? "View quotation details"
@@ -821,7 +836,7 @@ export default function Quotations() {
 
             {/* Quotation Details */}
             <div className="border border-border rounded-lg p-4">
-              <h3 className="text-green-600 font-semibold mb-4">Quotation</h3>
+              <h3 className="text-primary font-semibold mb-4">Quotation</h3>
               <div className="grid grid-cols-6 gap-4 mb-4">
                 <div>
                   <Label>Quotation ID</Label>
@@ -833,8 +848,12 @@ export default function Quotations() {
                 </div>
                 <div>
                   <Label>Company Name</Label>
-                  <Select
+                  <SearchableSelect
                     disabled={isReadOnly}
+                    options={creditors?.map((customer) => ({
+                      value: customer.id.toString(),
+                      label: customer.name,
+                    })) || []}
                     value={formData.customerId?.toString() || ""}
                     onValueChange={(value) => {
                       const customer = creditors?.find((c) => c.id === parseInt(value));
@@ -845,39 +864,25 @@ export default function Quotations() {
                         contactPersonId: undefined,
                       });
                     }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Company" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {creditors?.map((customer) => (
-                        <SelectItem key={customer.id} value={customer.id.toString()}>
-                          {customer.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    placeholder="Select Company"
+                    searchPlaceholder="Search..."
+                  />
                 </div>
                 <div>
                   <Label>Contact Person</Label>
-                  <Select
+                  <SearchableSelect
                     disabled={isReadOnly || !formData.customerId}
+                    options={selectedCustomer?.contacts?.map((contact) => ({
+                      value: contact.id.toString(),
+                      label: contact.name,
+                    })) || []}
                     value={formData.contactPersonId?.toString() || ""}
                     onValueChange={(value) =>
                       setFormData({ ...formData, contactPersonId: parseInt(value) })
                     }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Contact" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {selectedCustomer?.contacts?.map((contact) => (
-                        <SelectItem key={contact.id} value={contact.id.toString()}>
-                          {contact.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    placeholder="Select Contact"
+                    searchPlaceholder="Search..."
+                  />
                 </div>
                 <div>
                   <Label>Customer Reference Code</Label>
@@ -897,21 +902,19 @@ export default function Quotations() {
                 </div>
                 <div>
                   <Label>Mode</Label>
-                  <Select
+                  <SearchableSelect
                     disabled={isReadOnly}
+                    options={[
+                      { value: "AirFreight", label: "Air Freight" },
+                      { value: "FCLSeaFreight", label: "FCL-Sea Freight" },
+                      { value: "LCLSeaFreight", label: "LCL-Sea Freight" },
+                      { value: "LandFreight", label: "Land Freight" },
+                    ]}
                     value={formData.mode || ""}
                     onValueChange={(value) => setFormData({ ...formData, mode: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Mode" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="AirFreight">Air Freight</SelectItem>
-                      <SelectItem value="FCLSeaFreight">FCL-Sea Freight</SelectItem>
-                      <SelectItem value="LCLSeaFreight">LCL-Sea Freight</SelectItem>
-                      <SelectItem value="LandFreight">Land Freight</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    placeholder="Select Mode"
+                    searchPlaceholder="Search..."
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-6 gap-4 mb-4">
@@ -935,83 +938,66 @@ export default function Quotations() {
                 </div>
                 <div>
                   <Label>Incoterm</Label>
-                  <Select
+                  <SearchableSelect
                     disabled={isReadOnly}
+                    options={incoTerms?.map((incoTerm) => ({
+                      value: incoTerm.id.toString(),
+                      label: `${incoTerm.code} - ${incoTerm.name}`,
+                    })) || []}
                     value={formData.incoTermId?.toString() || ""}
                     onValueChange={(value) =>
                       setFormData({ ...formData, incoTermId: parseInt(value) })
                     }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Incoterm" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {incoTerms?.map((incoTerm) => (
-                        <SelectItem key={incoTerm.id} value={incoTerm.id.toString()}>
-                          {incoTerm.code} - {incoTerm.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    placeholder="Select Incoterm"
+                    searchPlaceholder="Search..."
+                  />
                 </div>
                 <div>
                   <Label>Status</Label>
-                  <Select
+                  <SearchableSelect
                     disabled={isReadOnly}
+                    options={[
+                      { value: "Pending", label: "Pending" },
+                      { value: "Approved", label: "Approved" },
+                      { value: "Rejected", label: "Rejected" },
+                    ]}
                     value={formData.status || "Pending"}
                     onValueChange={(value) => setFormData({ ...formData, status: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Pending" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Pending">Pending</SelectItem>
-                      <SelectItem value="Approved">Approved</SelectItem>
-                      <SelectItem value="Rejected">Rejected</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    placeholder="Pending"
+                    searchPlaceholder="Search..."
+                  />
                 </div>
                 <div>
                   <Label>Origin/Loading Port</Label>
-                  <Select
+                  <SearchableSelect
                     disabled={isReadOnly}
+                    options={ports?.map((port) => ({
+                      value: port.id.toString(),
+                      label: port.name,
+                    })) || []}
                     value={formData.loadingPortId?.toString() || ""}
                     onValueChange={(value) =>
                       setFormData({ ...formData, loadingPortId: parseInt(value) })
                     }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Port" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ports?.map((port) => (
-                        <SelectItem key={port.id} value={port.id.toString()}>
-                          {port.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    placeholder="Select Port"
+                    searchPlaceholder="Search..."
+                  />
                 </div>
                 <div>
                   <Label>Destination/Discharge Port</Label>
-                  <Select
+                  <SearchableSelect
                     disabled={isReadOnly}
+                    options={ports?.map((port) => ({
+                      value: port.id.toString(),
+                      label: port.name,
+                    })) || []}
                     value={formData.destinationPortId?.toString() || ""}
                     onValueChange={(value) =>
                       setFormData({ ...formData, destinationPortId: parseInt(value) })
                     }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Port" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ports?.map((port) => (
-                        <SelectItem key={port.id} value={port.id.toString()}>
-                          {port.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    placeholder="Select Port"
+                    searchPlaceholder="Search..."
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-4 gap-4 mb-4">
@@ -1085,15 +1071,15 @@ export default function Quotations() {
 
             {/* Cargo Details */}
             <div className="border border-border rounded-lg p-4">
-              <h3 className="text-green-600 font-semibold mb-4">Cargo Details</h3>
+              <h3 className="text-primary font-semibold mb-4">Cargo Details</h3>
 
               {/* Cargo Calculation Mode Tabs */}
               <div className="flex gap-2 mb-4">
                 <Button
                   className={
                     formData.cargoCalculationMode === "units"
-                      ? "bg-green-600 hover:bg-green-700 text-white"
-                      : "bg-transparent text-green-600 hover:bg-green-50"
+                      ? "btn-success"
+                      : "bg-transparent text-primary hover:bg-primary/10"
                   }
                   variant={formData.cargoCalculationMode === "units" ? "default" : "ghost"}
                   onClick={() =>
@@ -1106,8 +1092,8 @@ export default function Quotations() {
                 <Button
                   className={
                     formData.cargoCalculationMode === "shipment"
-                      ? "bg-green-600 hover:bg-green-700 text-white"
-                      : "bg-transparent text-green-600 hover:bg-green-50"
+                      ? "btn-success"
+                      : "bg-transparent text-primary hover:bg-primary/10"
                   }
                   variant={formData.cargoCalculationMode === "shipment" ? "default" : "ghost"}
                   onClick={() =>
@@ -1145,24 +1131,19 @@ export default function Quotations() {
                         }
                         disabled={isReadOnly}
                       />
-                      <Select
+                      <SearchableSelect
                         disabled={isReadOnly}
+                        options={packageTypes?.map((pt) => ({
+                          value: pt.id.toString(),
+                          label: pt.name,
+                        })) || []}
                         value={row.packageTypeId?.toString() || ""}
                         onValueChange={(value) =>
                           updateCargoRow(row.id, "packageTypeId", parseInt(value))
                         }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {packageTypes?.map((pt) => (
-                            <SelectItem key={pt.id} value={pt.id.toString()}>
-                              {pt.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        placeholder="Select"
+                        searchPlaceholder="Search..."
+                      />
                       <Input
                         type="number"
                         placeholder="L"
@@ -1190,19 +1171,17 @@ export default function Quotations() {
                         }
                         disabled={isReadOnly}
                       />
-                      <Select
+                      <SearchableSelect
                         disabled={isReadOnly}
+                        options={[
+                          { value: "cm", label: "CM" },
+                          { value: "inch", label: "INCH" },
+                        ]}
                         value={row.volumeUnit || "cm"}
                         onValueChange={(value) => updateCargoRow(row.id, "volumeUnit", value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="cm">CM</SelectItem>
-                          <SelectItem value="inch">INCH</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        placeholder="CM"
+                        searchPlaceholder="Search..."
+                      />
                       <Input
                         type="number"
                         placeholder="CBM"
@@ -1221,19 +1200,17 @@ export default function Quotations() {
                         }
                         disabled={isReadOnly}
                       />
-                      <Select
+                      <SearchableSelect
                         disabled={isReadOnly}
+                        options={[
+                          { value: "kg", label: "KG" },
+                          { value: "lb", label: "LB" },
+                        ]}
                         value={row.weightUnit || "kg"}
                         onValueChange={(value) => updateCargoRow(row.id, "weightUnit", value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="kg">KG</SelectItem>
-                          <SelectItem value="lb">LB</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        placeholder="KG"
+                        searchPlaceholder="Search..."
+                      />
                       <Input
                         placeholder="Description"
                         value={row.cargoDescription || ""}
@@ -1247,7 +1224,7 @@ export default function Quotations() {
                           (index === cargoRows.length - 1 ? (
                             <Button
                               onClick={addCargoRow}
-                              className="bg-green-600 hover:bg-green-700 text-white w-full"
+                              className="btn-success w-full"
                             >
                               +
                             </Button>
@@ -1298,24 +1275,19 @@ export default function Quotations() {
                     </div>
                     <div>
                       <Label>Load Type</Label>
-                      <Select
+                      <SearchableSelect
                         disabled={isReadOnly}
+                        options={containerTypes?.map((ct) => ({
+                          value: ct.name,
+                          label: ct.name,
+                        })) || []}
                         value={cargoRows[0]?.loadType || ""}
                         onValueChange={(value) =>
                           updateCargoRow(cargoRows[0]?.id || 1, "loadType", value)
                         }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {containerTypes?.map((ct) => (
-                            <SelectItem key={ct.id} value={ct.name}>
-                              {ct.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        placeholder="Select"
+                        searchPlaceholder="Search..."
+                      />
                     </div>
                     <div>
                       <Label>Total CBM</Label>
@@ -1349,21 +1321,19 @@ export default function Quotations() {
                     </div>
                     <div>
                       <Label>Weight Type</Label>
-                      <Select
+                      <SearchableSelect
                         disabled={isReadOnly}
+                        options={[
+                          { value: "kg", label: "KG" },
+                          { value: "lb", label: "LB" },
+                        ]}
                         value={cargoRows[0]?.weightUnit || "kg"}
                         onValueChange={(value) =>
                           updateCargoRow(cargoRows[0]?.id || 1, "weightUnit", value)
                         }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="kg">KG</SelectItem>
-                          <SelectItem value="lb">LB</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        placeholder="KG"
+                        searchPlaceholder="Search..."
+                      />
                     </div>
                   </div>
                   <div>
@@ -1383,7 +1353,7 @@ export default function Quotations() {
 
             {/* Charges Details */}
             <div className="border border-border rounded-lg p-4">
-              <h3 className="text-green-600 font-semibold mb-4">Charges Details</h3>
+              <h3 className="text-primary font-semibold mb-4">Charges Details</h3>
               <div className="grid grid-cols-8 gap-2 mb-2 text-sm font-medium">
                 <div>Charge Type</div>
                 <div>Bases</div>
@@ -1396,8 +1366,12 @@ export default function Quotations() {
               </div>
               {chargeRows.map((row, index) => (
                 <div key={row.id} className="grid grid-cols-8 gap-2 mb-2">
-                  <Select
+                  <SearchableSelect
                     disabled={isReadOnly}
+                    options={chargeItems?.map((ci) => ({
+                      value: ci.id.toString(),
+                      label: ci.name,
+                    })) || []}
                     value={row.chargeItemId?.toString() || ""}
                     onValueChange={(value) => {
                       const chargeItem = chargeItems?.find((ci) => ci.id === parseInt(value));
@@ -1413,40 +1387,26 @@ export default function Quotations() {
                         )
                       );
                     }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Charge" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {chargeItems?.map((ci) => (
-                        <SelectItem key={ci.id} value={ci.id.toString()}>
-                          {ci.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    placeholder="Select Charge"
+                    searchPlaceholder="Search..."
+                  />
                   <Input
                     placeholder="Bases"
                     value={row.bases}
                     onChange={(e) => updateChargeRow(row.id, "bases", e.target.value)}
                     disabled={isReadOnly}
                   />
-                  <Select
+                  <SearchableSelect
                     disabled={isReadOnly}
+                    options={currencyTypes?.map((ct) => ({
+                      value: ct.code,
+                      label: ct.code,
+                    })) || []}
                     value={row.currency}
                     onValueChange={(value) => updateChargeRow(row.id, "currency", value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Currency" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {currencyTypes?.map((ct) => (
-                        <SelectItem key={ct.id} value={ct.code}>
-                          {ct.code}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    placeholder="Currency"
+                    searchPlaceholder="Search..."
+                  />
                   <Input
                     type="number"
                     placeholder="Rate"
@@ -1480,7 +1440,7 @@ export default function Quotations() {
                       (index === chargeRows.length - 1 ? (
                         <Button
                           onClick={addChargeRow}
-                          className="bg-green-600 hover:bg-green-700 text-white w-full"
+                          className="btn-success w-full"
                         >
                           +
                         </Button>
@@ -1506,7 +1466,7 @@ export default function Quotations() {
               </Button>
               {modalMode === "add" && (
                 <Button
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="btn-success"
                   onClick={handleSave}
                   disabled={createMutation.isPending}
                 >
@@ -1516,7 +1476,7 @@ export default function Quotations() {
               )}
               {modalMode === "edit" && (
                 <Button
-                  className="bg-blue-500 hover:bg-blue-600 text-white"
+                  className="btn-success"
                   onClick={handleSave}
                   disabled={updateMutation.isPending}
                 >

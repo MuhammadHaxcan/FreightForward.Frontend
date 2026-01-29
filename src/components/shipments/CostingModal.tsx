@@ -11,16 +11,11 @@ import { Label } from "@/components/ui/label";
 import { DateInput } from "@/components/ui/date-input";
 import { getTodayDateOnly } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { ShipmentParty, ShipmentCosting, settingsApi } from "@/services/api";
 import { useCurrencyTypes } from "@/hooks/useSettings";
 import { useQuery } from "@tanstack/react-query";
+import { X } from "lucide-react";
 
 // Extend ShipmentCosting with UI-specific fields for the modal
 // The modal transforms between API format (currencyId) and display format (currency code)
@@ -483,32 +478,27 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl bg-card border border-border">
-        <DialogHeader>
-          <DialogTitle className="text-foreground text-lg bg-[#2c3e50] text-white p-3 -m-6 mb-0 rounded-t-lg">
+      <DialogContent className="max-w-2xl bg-card border border-border p-0">
+        <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+          <DialogTitle className="text-white text-lg font-semibold">
             {costing ? "Edit Costing" : "Add Costing"}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 pt-4">
+        <div className="space-y-4 p-6 pt-4">
           {/* Common Fields - Row 1 */}
           <div className="grid grid-cols-4 gap-3">
             <div className="col-span-2">
               <Label className="text-xs font-medium">Charge</Label>
-              <Select value={formData.charge} onValueChange={handleChargeChange}>
-                <SelectTrigger className="bg-background border-border h-9">
-                  <SelectValue placeholder="Select charge type" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover border border-border">
-                  {chargeItems.length > 0 ? (
-                    chargeItems.map(item => (
-                      <SelectItem key={item.id} value={item.name}>{item.name}</SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="_none" disabled>No charge items available</SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                options={chargeItems.map(item => ({ value: item.name, label: item.name }))}
+                value={formData.charge}
+                onValueChange={handleChargeChange}
+                placeholder="Select charge type"
+                searchPlaceholder="Search charges..."
+                triggerClassName="bg-background border-border h-9"
+                emptyMessage="No charge items available"
+              />
             </div>
             <div className="col-span-2">
               <Label className="text-xs font-medium">Description</Label>
@@ -525,20 +515,18 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
           <div className="grid grid-cols-4 gap-3">
             <div>
               <Label className="text-xs font-medium">PP/CC</Label>
-              <Select value={formData.ppcc} onValueChange={(v) => handleInputChange("ppcc", v)}>
-                <SelectTrigger className="bg-background border-border h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-popover border border-border">
-                  {ppccOptions.map(opt => (
-                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                options={ppccOptions.map(opt => ({ value: opt, label: opt }))}
+                value={formData.ppcc}
+                onValueChange={(v) => handleInputChange("ppcc", v)}
+                triggerClassName="bg-background border-border h-9"
+                searchPlaceholder="Search..."
+              />
             </div>
             <div>
               <Label className="text-xs font-medium">Unit</Label>
-              <Select
+              <SearchableSelect
+                options={costingUnits.map(unit => ({ value: unit.id.toString(), label: unit.name }))}
                 value={formData.unitId?.toString() || ""}
                 onValueChange={(v) => {
                   const selectedUnit = costingUnits.find(u => u.id.toString() === v);
@@ -548,20 +536,11 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
                     unit: selectedUnit?.code || ""
                   }));
                 }}
-              >
-                <SelectTrigger className="bg-background border-border h-9">
-                  <SelectValue placeholder="Select unit" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover border border-border">
-                  {costingUnits.length > 0 ? (
-                    costingUnits.map(unit => (
-                      <SelectItem key={unit.id} value={unit.id.toString()}>{unit.name}</SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="_none" disabled>Loading...</SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
+                placeholder="Select unit"
+                searchPlaceholder="Search units..."
+                triggerClassName="bg-background border-border h-9"
+                emptyMessage="Loading..."
+              />
             </div>
             <div className="col-span-2">
               <Label className="text-xs font-medium">Remarks</Label>
@@ -579,13 +558,13 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
             <TabsList className="grid w-full grid-cols-2 h-9">
               <TabsTrigger
                 value="cost"
-                className="data-[state=active]:bg-[#2c3e50] data-[state=active]:text-white text-sm h-8"
+                className="data-[state=active]:bg-modal-header data-[state=active]:text-white text-sm h-8"
               >
                 Cost
               </TabsTrigger>
               <TabsTrigger
                 value="sale"
-                className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white text-sm h-8"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-sm h-8"
               >
                 Sale
               </TabsTrigger>
@@ -596,24 +575,16 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
               <div className="grid grid-cols-6 gap-2">
                 <div>
                   <Label className="text-xs">Currency</Label>
-                  <Select value={formData.costCurrency} onValueChange={handleCostCurrencyChange}>
-                    <SelectTrigger className="bg-background border-border h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      {currencyTypes.length > 0 ? (
-                        currencyTypes.map(curr => (
-                          <SelectItem key={curr.id} value={curr.code}>{curr.code}</SelectItem>
-                        ))
-                      ) : (
-                        <>
-                          <SelectItem value="AED">AED</SelectItem>
-                          <SelectItem value="USD">USD</SelectItem>
-                          <SelectItem value="EUR">EUR</SelectItem>
-                        </>
-                      )}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    options={currencyTypes.length > 0
+                      ? currencyTypes.map(curr => ({ value: curr.code, label: curr.code }))
+                      : [{ value: "AED", label: "AED" }, { value: "USD", label: "USD" }, { value: "EUR", label: "EUR" }]
+                    }
+                    value={formData.costCurrency}
+                    onValueChange={handleCostCurrencyChange}
+                    triggerClassName="bg-background border-border h-8 text-xs"
+                    searchPlaceholder="Search..."
+                  />
                 </div>
                 <div>
                   <Label className="text-xs">Ex.Rate (ROE)</Label>
@@ -661,19 +632,17 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
               <div className="grid grid-cols-4 gap-2">
                 <div>
                   <Label className="text-xs">Vendor (Creditor)</Label>
-                  <Select value={formData.costVendor} onValueChange={handleVendorSelect}>
-                    <SelectTrigger className="bg-background border-border h-8 text-xs">
-                      <SelectValue placeholder="Select vendor" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="_none">Select Creditor</SelectItem>
-                      {creditorParties.map(party => (
-                        <SelectItem key={party.id} value={party.id.toString()}>
-                          {party.customerName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    options={[
+                      { value: "_none", label: "Select Creditor" },
+                      ...creditorParties.map(party => ({ value: party.id.toString(), label: party.customerName }))
+                    ]}
+                    value={formData.costVendor}
+                    onValueChange={handleVendorSelect}
+                    placeholder="Select vendor"
+                    searchPlaceholder="Search vendors..."
+                    triggerClassName="bg-background border-border h-8 text-xs"
+                  />
                 </div>
                 <div>
                   <Label className="text-xs">Reference No</Label>
@@ -694,16 +663,13 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
                 </div>
                 <div>
                   <Label className="text-xs">Tax %</Label>
-                  <Select value={formData.costTax} onValueChange={(v) => handleInputChange("costTax", v)}>
-                    <SelectTrigger className="bg-background border-border h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      {taxOptions.map(tax => (
-                        <SelectItem key={tax} value={tax}>{tax}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    options={taxOptions.map(tax => ({ value: tax, label: tax }))}
+                    value={formData.costTax}
+                    onValueChange={(v) => handleInputChange("costTax", v)}
+                    triggerClassName="bg-background border-border h-8 text-xs"
+                    searchPlaceholder="Search..."
+                  />
                 </div>
               </div>
             </TabsContent>
@@ -713,24 +679,16 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
               <div className="grid grid-cols-6 gap-2">
                 <div>
                   <Label className="text-xs">Currency</Label>
-                  <Select value={formData.saleCurrency} onValueChange={handleSaleCurrencyChange}>
-                    <SelectTrigger className="bg-background border-border h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      {currencyTypes.length > 0 ? (
-                        currencyTypes.map(curr => (
-                          <SelectItem key={curr.id} value={curr.code}>{curr.code}</SelectItem>
-                        ))
-                      ) : (
-                        <>
-                          <SelectItem value="AED">AED</SelectItem>
-                          <SelectItem value="USD">USD</SelectItem>
-                          <SelectItem value="EUR">EUR</SelectItem>
-                        </>
-                      )}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    options={currencyTypes.length > 0
+                      ? currencyTypes.map(curr => ({ value: curr.code, label: curr.code }))
+                      : [{ value: "AED", label: "AED" }, { value: "USD", label: "USD" }, { value: "EUR", label: "EUR" }]
+                    }
+                    value={formData.saleCurrency}
+                    onValueChange={handleSaleCurrencyChange}
+                    triggerClassName="bg-background border-border h-8 text-xs"
+                    searchPlaceholder="Search..."
+                  />
                 </div>
                 <div>
                   <Label className="text-xs">Ex.Rate (ROE)</Label>
@@ -778,19 +736,17 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
               <div className="grid grid-cols-3 gap-2">
                 <div>
                   <Label className="text-xs">Bill to (Debtor) <span className="text-red-500">*</span></Label>
-                  <Select value={formData.saleBillTo} onValueChange={handleBillToSelect}>
-                    <SelectTrigger className="bg-background border-border h-8 text-xs">
-                      <SelectValue placeholder="Select debtor" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="_none">Select Debitor</SelectItem>
-                      {debtorParties.map(party => (
-                        <SelectItem key={party.id} value={party.id.toString()}>
-                          {party.customerName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    options={[
+                      { value: "_none", label: "Select Debitor" },
+                      ...debtorParties.map(party => ({ value: party.id.toString(), label: party.customerName }))
+                    ]}
+                    value={formData.saleBillTo}
+                    onValueChange={handleBillToSelect}
+                    placeholder="Select debtor"
+                    searchPlaceholder="Search debtors..."
+                    triggerClassName="bg-background border-border h-8 text-xs"
+                  />
                 </div>
                 <div>
                   <Label className="text-xs">GP (Gross Profit)</Label>
@@ -802,35 +758,32 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
                 </div>
                 <div>
                   <Label className="text-xs">Tax %</Label>
-                  <Select value={formData.saleTax} onValueChange={(v) => handleInputChange("saleTax", v)}>
-                    <SelectTrigger className="bg-background border-border h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      {taxOptions.map(tax => (
-                        <SelectItem key={tax} value={tax}>{tax}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    options={taxOptions.map(tax => ({ value: tax, label: tax }))}
+                    value={formData.saleTax}
+                    onValueChange={(v) => handleInputChange("saleTax", v)}
+                    triggerClassName="bg-background border-border h-8 text-xs"
+                    searchPlaceholder="Search..."
+                  />
                 </div>
               </div>
             </TabsContent>
           </Tabs>
 
           {/* Actions */}
-          <div className="flex justify-center gap-3 pt-2">
+          <div className="flex justify-end gap-3 pt-2">
             <Button
               variant="outline"
               size="sm"
               onClick={() => onOpenChange(false)}
-              className="bg-[#34495e] hover:bg-[#4a5568] text-white border-[#4a5568] px-6 h-9"
+              className="px-6 h-9"
             >
-              Close
+              Cancel
             </Button>
             <Button
               size="sm"
               onClick={handleSave}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 h-9"
+              className="btn-success px-6 h-9"
             >
               {costing ? "Update" : "Add"}
             </Button>

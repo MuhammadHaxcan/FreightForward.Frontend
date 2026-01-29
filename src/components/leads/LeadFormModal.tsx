@@ -11,13 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { DateInput } from "@/components/ui/date-input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -127,15 +121,16 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
   const isSaving = createLead.isPending || updateLead.isPending;
 
   // Filter ports by selected country
-  const pickupPorts = ports?.filter(
+  const portsArray = Array.isArray(ports) ? ports : [];
+  const pickupPorts = portsArray.filter(
     (p) => !formData.pickupCountryId ||
     countries?.find(c => c.id === formData.pickupCountryId)?.name === p.country
-  ) || [];
+  );
 
-  const deliveryPorts = ports?.filter(
+  const deliveryPorts = portsArray.filter(
     (p) => !formData.deliveryCountryId ||
     countries?.find(c => c.id === formData.deliveryCountryId)?.name === p.country
-  ) || [];
+  );
 
   useEffect(() => {
     if (!open) {
@@ -295,16 +290,16 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[90vh] p-0">
-        <DialogHeader className="px-6 pt-6 pb-0">
-          <DialogTitle className="text-xl">
+        <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+          <DialogTitle className="text-white text-lg font-semibold">
             {isEditing ? "Edit Lead" : "Generate Lead"}
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[calc(90vh-140px)] px-6">
+        <ScrollArea className="max-h-[calc(90vh-140px)] px-6 pt-4">
           {isEditing && isLeadLoading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <span className="ml-2 text-muted-foreground">Loading lead data...</span>
             </div>
           ) : (
@@ -312,7 +307,7 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
             {/* Section 1: Contact Information */}
             <Card>
               <CardHeader className="pb-4">
-                <CardTitle className="text-lg text-green-600">
+                <CardTitle className="text-lg text-primary">
                   Contact Information
                 </CardTitle>
               </CardHeader>
@@ -320,21 +315,16 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="customerSelect">Customer Name *</Label>
-                    <Select
+                    <SearchableSelect
+                      options={(customers?.items || []).map((customer) => ({
+                        value: customer.id.toString(),
+                        label: customer.name,
+                      }))}
                       value={formData.customerId?.toString() || ""}
                       onValueChange={handleCustomerChange}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select customer" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {customers?.items.map((customer) => (
-                          <SelectItem key={customer.id} value={customer.id.toString()}>
-                            {customer.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      placeholder="Select customer"
+                      searchPlaceholder="Search customers..."
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">Email Address *</Label>
@@ -369,21 +359,21 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
                   >
                     <ToggleGroupItem
                       value="SeaFreight"
-                      className="data-[state=on]:bg-green-600 data-[state=on]:text-white px-6"
+                      className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground px-6"
                     >
                       <Ship className="h-4 w-4 mr-2" />
                       Sea Freight
                     </ToggleGroupItem>
                     <ToggleGroupItem
                       value="AirFreight"
-                      className="data-[state=on]:bg-green-600 data-[state=on]:text-white px-6"
+                      className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground px-6"
                     >
                       <Plane className="h-4 w-4 mr-2" />
                       Air Freight
                     </ToggleGroupItem>
                     <ToggleGroupItem
                       value="LandFreight"
-                      className="data-[state=on]:bg-green-600 data-[state=on]:text-white px-6"
+                      className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground px-6"
                     >
                       <Truck className="h-4 w-4 mr-2" />
                       Land Freight
@@ -396,7 +386,7 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
             {/* Section 2: What are you shipping? */}
             <Card>
               <CardHeader className="pb-4">
-                <CardTitle className="text-lg text-green-600">
+                <CardTitle className="text-lg text-primary">
                   What are you shipping?
                 </CardTitle>
               </CardHeader>
@@ -404,20 +394,18 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="unitOfMeasurement">Unit of Measurement</Label>
-                    <Select
+                    <SearchableSelect
+                      options={[
+                        { value: "KG", label: "KG" },
+                        { value: "LB", label: "LB" },
+                      ]}
                       value={formData.unitOfMeasurement}
                       onValueChange={(value) =>
                         updateField("unitOfMeasurement", value as UnitOfMeasurement)
                       }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="KG">KG</SelectItem>
-                        <SelectItem value="LB">LB</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      placeholder="Select unit"
+                      searchPlaceholder="Search..."
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>Shipping Type</Label>
@@ -431,14 +419,14 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
                     >
                       <ToggleGroupItem
                         value="FTL"
-                        className="data-[state=on]:bg-green-600 data-[state=on]:text-white px-6"
+                        className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground px-6"
                       >
                         <Container className="h-4 w-4 mr-2" />
                         Equipment (FTL)
                       </ToggleGroupItem>
                       <ToggleGroupItem
                         value="LTL"
-                        className="data-[state=on]:bg-green-600 data-[state=on]:text-white px-6"
+                        className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground px-6"
                       >
                         <Package className="h-4 w-4 mr-2" />
                         Box/Pallets (LTL)
@@ -466,7 +454,7 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
             {/* Section 3: Pickup & Drop-Off Information */}
             <Card>
               <CardHeader className="pb-4">
-                <CardTitle className="text-lg text-green-600">
+                <CardTitle className="text-lg text-primary">
                   Pickup & Drop-Off Information
                 </CardTitle>
               </CardHeader>
@@ -479,42 +467,32 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
                     </h4>
                     <div className="space-y-2">
                       <Label htmlFor="pickupCountry">Country *</Label>
-                      <Select
+                      <SearchableSelect
+                        options={(countries || []).map((country) => ({
+                          value: country.id.toString(),
+                          label: `${country.name} (${country.code})`,
+                        }))}
                         value={formData.pickupCountryId?.toString() || ""}
                         onValueChange={(value) => {
                           updateField("pickupCountryId", parseInt(value));
                           updateField("loadingPortId", undefined);
                         }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select country" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {countries?.map((country) => (
-                            <SelectItem key={country.id} value={country.id.toString()}>
-                              {country.name} ({country.code})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        placeholder="Select country"
+                        searchPlaceholder="Search countries..."
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="loadingPort">Loading Port *</Label>
-                      <Select
+                      <SearchableSelect
+                        options={pickupPorts.map((port) => ({
+                          value: port.id.toString(),
+                          label: `${port.name} (${port.country})`,
+                        }))}
                         value={formData.loadingPortId?.toString() || ""}
                         onValueChange={(value) => updateField("loadingPortId", parseInt(value))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select loading port" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {pickupPorts.map((port) => (
-                            <SelectItem key={port.id} value={port.id.toString()}>
-                              {port.name} ({port.country})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        placeholder="Select loading port"
+                        searchPlaceholder="Search ports..."
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="pickupAddress">Pickup Address</Label>
@@ -535,44 +513,34 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
                     </h4>
                     <div className="space-y-2">
                       <Label htmlFor="deliveryCountry">Country *</Label>
-                      <Select
+                      <SearchableSelect
+                        options={(countries || []).map((country) => ({
+                          value: country.id.toString(),
+                          label: `${country.name} (${country.code})`,
+                        }))}
                         value={formData.deliveryCountryId?.toString() || ""}
                         onValueChange={(value) => {
                           updateField("deliveryCountryId", parseInt(value));
                           updateField("destinationPortId", undefined);
                         }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select country" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {countries?.map((country) => (
-                            <SelectItem key={country.id} value={country.id.toString()}>
-                              {country.name} ({country.code})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        placeholder="Select country"
+                        searchPlaceholder="Search countries..."
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="destinationPort">Destination Port *</Label>
-                      <Select
+                      <SearchableSelect
+                        options={deliveryPorts.map((port) => ({
+                          value: port.id.toString(),
+                          label: `${port.name} (${port.country})`,
+                        }))}
                         value={formData.destinationPortId?.toString() || ""}
                         onValueChange={(value) =>
                           updateField("destinationPortId", parseInt(value))
                         }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select destination port" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {deliveryPorts.map((port) => (
-                            <SelectItem key={port.id} value={port.id.toString()}>
-                              {port.name} ({port.country})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        placeholder="Select destination port"
+                        searchPlaceholder="Search ports..."
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="deliveryAddress">Delivery Address</Label>
@@ -628,7 +596,7 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
             {/* Section 4: Product Details */}
             <Card>
               <CardHeader className="pb-4">
-                <CardTitle className="text-lg text-green-600">
+                <CardTitle className="text-lg text-primary">
                   Product Details
                 </CardTitle>
               </CardHeader>
@@ -636,21 +604,16 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="productType">Product Type</Label>
-                    <Select
+                    <SearchableSelect
+                      options={PRODUCT_TYPES.map((type) => ({
+                        value: type,
+                        label: type,
+                      }))}
                       value={formData.productType}
                       onValueChange={(value) => updateField("productType", value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select product type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {PRODUCT_TYPES.map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {type}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      placeholder="Select product type"
+                      searchPlaceholder="Search product types..."
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="productDescription">Product description</Label>
@@ -665,23 +628,18 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="incoTerms">Inco Terms</Label>
-                    <Select
+                    <SearchableSelect
+                      options={(incoTerms || []).map((term) => ({
+                        value: term.id.toString(),
+                        label: `${term.code} - ${term.name}`,
+                      }))}
                       value={formData.incoTermId?.toString() || ""}
                       onValueChange={(value) =>
                         updateField("incoTermId", parseInt(value))
                       }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Inco Term" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {incoTerms?.map((term) => (
-                          <SelectItem key={term.id} value={term.id.toString()}>
-                            {term.code} - {term.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      placeholder="Select Inco Term"
+                      searchPlaceholder="Search inco terms..."
+                    />
                   </div>
                 </div>
               </CardContent>
@@ -697,7 +655,7 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
           <Button
             onClick={handleSubmit}
             disabled={!isFormValid() || isSaving || (isEditing && isLeadLoading)}
-            className="bg-green-600 hover:bg-green-700"
+            className="btn-success"
           >
             {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {isEditing ? "Update" : "Save"}

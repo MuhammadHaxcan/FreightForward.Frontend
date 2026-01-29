@@ -14,7 +14,7 @@ export function ProtectedRoute({
   permissions,
   requireAll = false,
 }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading, hasPermission, hasAnyPermission } = useAuth();
+  const { user, isAuthenticated, isLoading, hasPermission, hasAnyPermission } = useAuth();
   const location = useLocation();
 
   // Show loading state while checking auth
@@ -29,6 +29,11 @@ export function ProtectedRoute({
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Force password change - redirect to change-password page (except if already there)
+  if (user?.forcePasswordChange && location.pathname !== '/change-password') {
+    return <Navigate to="/change-password" replace />;
   }
 
   // Check single permission

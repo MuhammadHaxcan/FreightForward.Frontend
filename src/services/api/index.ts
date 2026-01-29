@@ -12,7 +12,7 @@ import { costSheetApi as _costSheetApi } from './costSheet';
 import { expenseApi as _expenseApi } from './expense';
 
 // Base types and utilities
-export { fetchApi, type PaginatedList, type ApiResponse, type MasterType, type PaymentStatus } from './base';
+export { fetchApi, fetchBlob, API_BASE_URL, type PaginatedList, type ApiResponse, type MasterType, type PaymentStatus } from './base';
 
 // Bank
 export { bankApi, type Bank, type CreateBankRequest, type UpdateBankRequest } from './bank';

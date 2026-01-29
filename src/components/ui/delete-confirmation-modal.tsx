@@ -50,7 +50,7 @@ export function DeleteConfirmationModal({
               onConfirm();
             }}
             disabled={isLoading}
-            className="bg-red-500 hover:bg-red-600 text-white"
+            className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
           >
             {isLoading ? (
               <>

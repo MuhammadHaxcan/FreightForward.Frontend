@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Truck,
@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface SubMenuItem {
   title: string;
@@ -91,6 +92,7 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, logout, hasPermission } = useAuth();
 
   // Filter sidebar items based on permissions
@@ -191,39 +193,71 @@ export function Sidebar() {
       )}
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
-        {!collapsed && (
-          <span className="text-sidebar-foreground font-semibold text-lg animate-fade-in">
-            FreightFlow
-          </span>
+      <div className={cn(
+        "flex items-center border-b border-sidebar-border",
+        collapsed ? "justify-center p-3" : "justify-between p-4"
+      )}>
+        {collapsed ? (
+          <img
+            src="/icon.png"
+            alt="TFS"
+            className="h-8 w-8 object-contain cursor-pointer"
+            onClick={() => setCollapsed(false)}
+          />
+        ) : (
+          <>
+            <div className="flex items-center gap-2 animate-fade-in">
+              <img
+                src="/icon.png"
+                alt="TFS"
+                className="h-9 w-9 object-contain"
+              />
+              <img
+                src="/logo-black.png"
+                alt="Transparent Freight Services"
+                className="h-8 w-auto object-contain"
+              />
+            </div>
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              className="p-2 rounded-md hover:bg-sidebar-accent text-sidebar-foreground transition-colors"
+            >
+              <ChevronLeft size={20} />
+            </button>
+          </>
         )}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className={cn(
-            "p-2 rounded-md hover:bg-sidebar-accent text-sidebar-foreground transition-colors",
-            collapsed && "mx-auto"
-          )}
-        >
-          {collapsed ? <Menu size={20} /> : <ChevronLeft size={20} />}
-        </button>
       </div>
 
       {/* User Info */}
-      {!collapsed && user && (
-        <div className="px-4 py-3 border-b border-sidebar-border">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-sidebar-primary text-sidebar-primary-foreground flex items-center justify-center text-sm font-medium">
-              {user.firstName?.[0]}{user.lastName?.[0]}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-sidebar-foreground truncate">
-                {user.fullName}
-              </p>
-              <Badge variant="secondary" className="text-xs mt-0.5">
-                {primaryRole}
-              </Badge>
-            </div>
-          </div>
+      {user && (
+        <div className={cn(
+          "border-b border-sidebar-border",
+          collapsed ? "px-2 py-3 flex justify-center" : "px-4 py-3"
+        )}>
+          <button
+            onClick={() => navigate('/profile')}
+            className={cn(
+              "hover:opacity-80 transition-opacity",
+              collapsed ? "flex justify-center" : "flex items-center gap-3 w-full text-left"
+            )}
+          >
+            <Avatar className="h-10 w-10">
+              <AvatarImage src={user.profilePictureUrl} alt={user.fullName} />
+              <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-sm font-medium">
+                {user.firstName?.[0]}{user.lastName?.[0]}
+              </AvatarFallback>
+            </Avatar>
+            {!collapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-sidebar-foreground truncate">
+                  {user.fullName}
+                </p>
+                <Badge variant="secondary" className="text-xs mt-0.5">
+                  {primaryRole}
+                </Badge>
+              </div>
+            )}
+          </button>
         </div>
       )}
 

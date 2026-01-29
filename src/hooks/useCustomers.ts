@@ -18,6 +18,7 @@ export function useCustomers(params?: {
       }
       return response.data!;
     },
+    staleTime: 30 * 1000, // 30 seconds
   });
 }
 
@@ -159,12 +160,13 @@ export function useAllCreditors() {
   return useQuery({
     queryKey: ['customers', 'creditors'],
     queryFn: async () => {
-      const response = await customerApi.getAll({ pageSize: 1000, masterType: 'Creditors' });
+      const response = await customerApi.getAll({ pageSize: 500, masterType: 'Creditors' });
       if (response.error) {
         throw new Error(response.error);
       }
       return response.data!.items;
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes - dropdown data changes less frequently
   });
 }
 
@@ -173,11 +175,12 @@ export function useAllCustomers() {
   return useQuery({
     queryKey: ['customers', 'all'],
     queryFn: async () => {
-      const response = await customerApi.getAll({ pageSize: 1000 });
+      const response = await customerApi.getAll({ pageSize: 500 });
       if (response.error) {
         throw new Error(response.error);
       }
       return response.data!.items;
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes - dropdown data changes less frequently
   });
 }

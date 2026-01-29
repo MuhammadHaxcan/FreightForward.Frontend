@@ -2,15 +2,13 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { SearchableMultiSelect } from "@/components/ui/searchable-multi-select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
-import { ArrowLeft, Plus, ChevronDown, Check, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { cn } from "@/lib/utils";
 import { customerApi, settingsApi, CustomerCategoryType, CurrencyType } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
 
@@ -56,7 +54,7 @@ const NeutralDetail = () => {
   const [profileData, setProfileData] = useState({
     code: "",
     masterType: "Neutral" as const,
-    categoryIds: [] as number[],
+    categoryIds: [] as string[],
     name: "",
     city: "",
     country: "United Arab Emirates",
@@ -96,7 +94,7 @@ const NeutralDetail = () => {
             setProfileData({
               code: customer.code,
               masterType: "Neutral",
-              categoryIds: customer.categories?.map(c => c.id) || [],
+              categoryIds: customer.categories?.map(c => c.id.toString()) || [],
               name: customer.name,
               city: customer.city || "",
               country: customer.country || "United Arab Emirates",
@@ -163,7 +161,7 @@ const NeutralDetail = () => {
           id: parseInt(id),
           name: profileData.name,
           masterType: profileData.masterType,
-          categoryIds: profileData.categoryIds,
+          categoryIds: profileData.categoryIds.map(id => parseInt(id)),
           phone: profileData.phone || undefined,
           fax: profileData.fax || undefined,
           email: profileData.generalEmail || undefined,
@@ -191,7 +189,7 @@ const NeutralDetail = () => {
         const createData = {
           name: profileData.name,
           masterType: profileData.masterType,
-          categoryIds: profileData.categoryIds,
+          categoryIds: profileData.categoryIds.map(id => parseInt(id)),
           phone: profileData.phone || undefined,
           fax: profileData.fax || undefined,
           email: profileData.generalEmail || undefined,
@@ -248,15 +246,6 @@ const NeutralDetail = () => {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [contactForm, setContactForm] = useState<Partial<Contact>>({});
 
-  const toggleCategory = (categoryId: number) => {
-    setProfileData(prev => ({
-      ...prev,
-      categoryIds: prev.categoryIds.includes(categoryId)
-        ? prev.categoryIds.filter(id => id !== categoryId)
-        : [...prev.categoryIds, categoryId]
-    }));
-  };
-
   const handleSaveContact = () => {
     if (contactForm.name) {
       setContacts([...contacts, { ...contactForm, id: Date.now() } as Contact]);
@@ -276,46 +265,25 @@ const NeutralDetail = () => {
         </div>
         <div className="space-y-2">
           <Label className="text-sm">Master Type</Label>
-          <Select value={profileData.masterType} onValueChange={v => setProfileData({...profileData, masterType: v as 'Neutral'})} disabled={isViewMode}>
-            <SelectTrigger className="bg-muted/50"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Neutral">Neutral</SelectItem>
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={[{ value: "Neutral", label: "Neutral" }]}
+            value={profileData.masterType}
+            onValueChange={v => setProfileData({...profileData, masterType: v as 'Neutral'})}
+            disabled={isViewMode}
+            triggerClassName="bg-muted/50"
+          />
         </div>
         <div className="space-y-2">
           <Label className="text-sm">Category</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full justify-between bg-muted/50 font-normal h-10" disabled={isViewMode}>
-                <div className="flex flex-wrap gap-1 flex-1">
-                  {profileData.categoryIds.map(catId => {
-                    const cat = categoryTypes.find(c => c.id === catId);
-                    return cat ? (
-                      <span key={catId} className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary text-primary-foreground rounded-md">× {cat.name}</span>
-                    ) : null;
-                  })}
-                </div>
-                <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[200px] p-0" align="start">
-              <Command>
-                <CommandList>
-                  <CommandGroup>
-                    {categoryTypes.map(cat => (
-                      <CommandItem key={cat.id} onSelect={() => toggleCategory(cat.id)} className="cursor-pointer">
-                        <div className={cn("mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary", profileData.categoryIds.includes(cat.id) ? "bg-primary text-primary-foreground" : "opacity-50")}>
-                          {profileData.categoryIds.includes(cat.id) && <Check className="h-3 w-3" />}
-                        </div>
-                        {cat.name}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+          <SearchableMultiSelect
+            options={categoryTypes.map(cat => ({ value: cat.id.toString(), label: cat.name }))}
+            values={profileData.categoryIds}
+            onValuesChange={values => setProfileData({...profileData, categoryIds: values})}
+            disabled={isViewMode}
+            triggerClassName="bg-muted/50"
+            placeholder="Select categories..."
+            searchPlaceholder="Search categories..."
+          />
         </div>
         <div className="space-y-2">
           <Label className="text-sm">Name</Label>
@@ -330,12 +298,13 @@ const NeutralDetail = () => {
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div className="space-y-2">
           <Label className="text-sm">Country</Label>
-          <Select value={profileData.country} onValueChange={v => setProfileData({...profileData, country: v})} disabled={isViewMode}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {countries.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={countries.map(c => ({ value: c, label: c }))}
+            value={profileData.country}
+            onValueChange={v => setProfileData({...profileData, country: v})}
+            disabled={isViewMode}
+            searchPlaceholder="Search countries..."
+          />
         </div>
         <div className="space-y-2">
           <Label className="text-sm">Phone</Label>
@@ -366,13 +335,15 @@ const NeutralDetail = () => {
         </div>
         <div className="space-y-2">
           <Label className="text-sm">Status</Label>
-          <Select value={profileData.status} onValueChange={v => setProfileData({...profileData, status: v})} disabled={isViewMode}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Active">Active</SelectItem>
-              <SelectItem value="Inactive">Inactive</SelectItem>
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={[
+              { value: "Active", label: "Active" },
+              { value: "Inactive", label: "Inactive" },
+            ]}
+            value={profileData.status}
+            onValueChange={v => setProfileData({...profileData, status: v})}
+            disabled={isViewMode}
+          />
         </div>
         <div className="space-y-2">
           <Label className="text-sm">Carrier Code</Label>
@@ -399,13 +370,15 @@ const NeutralDetail = () => {
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Show:</span>
-            <Select defaultValue="10">
-              <SelectTrigger className="w-[70px] h-8"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              options={[
+                { value: "10", label: "10" },
+                { value: "25", label: "25" },
+              ]}
+              value="10"
+              onValueChange={() => {}}
+              triggerClassName="w-[90px] h-8"
+            />
             <span className="text-sm text-muted-foreground">entries</span>
           </div>
           <div className="flex items-center gap-2">
@@ -475,22 +448,25 @@ const NeutralDetail = () => {
         </div>
         <div className="space-y-2">
           <Label className="text-sm">Currency</Label>
-          <Select value={accountDetails.currency} onValueChange={v => setAccountDetails({...accountDetails, currency: v})} disabled={isViewMode}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {currencyTypes.map(c => <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={currencyTypes.map(c => ({ value: c.code, label: c.code }))}
+            value={accountDetails.currency}
+            onValueChange={v => setAccountDetails({...accountDetails, currency: v})}
+            disabled={isViewMode}
+            searchPlaceholder="Search currencies..."
+          />
         </div>
         <div className="space-y-2">
           <Label className="text-sm">Type</Label>
-          <Select value={accountDetails.type} onValueChange={v => setAccountDetails({...accountDetails, type: v})} disabled={isViewMode}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Credit">Credit</SelectItem>
-              <SelectItem value="Debit">Debit</SelectItem>
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={[
+              { value: "Credit", label: "Credit" },
+              { value: "Debit", label: "Debit" },
+            ]}
+            value={accountDetails.type}
+            onValueChange={v => setAccountDetails({...accountDetails, type: v})}
+            disabled={isViewMode}
+          />
         </div>
       </div>
 

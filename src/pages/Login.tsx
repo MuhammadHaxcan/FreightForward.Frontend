@@ -14,17 +14,19 @@ export default function Login() {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { login, isAuthenticated, isLoading } = useAuth();
+  const { login, isAuthenticated, isLoading, getDefaultRoute } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated && !isLoading) {
-      const from = location.state?.from?.pathname || '/';
-      navigate(from, { replace: true });
+      // Use the requested path if available, otherwise find the first accessible route
+      const from = location.state?.from?.pathname;
+      const defaultRoute = getDefaultRoute();
+      navigate(from || defaultRoute, { replace: true });
     }
-  }, [isAuthenticated, isLoading, navigate, location]);
+  }, [isAuthenticated, isLoading, navigate, location, getDefaultRoute]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -36,9 +38,11 @@ export default function Login() {
     if (!result.success) {
       setError(result.error || 'Login failed');
       setIsSubmitting(false);
-    } else {
-      // Navigate will happen via the useEffect above
+    } else if (result.forcePasswordChange) {
+      // Redirect to change password page
+      navigate('/change-password', { replace: true });
     }
+    // else: Navigate will happen via the useEffect above
   };
 
   // Don't render login form if already authenticated
@@ -119,10 +123,6 @@ export default function Login() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-gray-500">
-            <p>Default admin credentials:</p>
-            <p className="font-mono text-xs mt-1">admin@company.com / Admin@123!</p>
-          </div>
         </CardContent>
       </Card>
     </div>

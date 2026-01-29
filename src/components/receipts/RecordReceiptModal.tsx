@@ -11,13 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Table,
   TableBody,
@@ -59,7 +53,7 @@ interface SelectedInvoice {
   currencyId?: number;
 }
 
-export default function RecordReceiptModal({
+export function RecordReceiptModal({
   open,
   onOpenChange,
   onSuccess,
@@ -123,7 +117,7 @@ export default function RecordReceiptModal({
         setCustomers(response.data.items);
       }
     } catch (error) {
-      console.error("Error fetching customers:", error);
+      toast.error("Failed to load customers");
     }
   };
 
@@ -134,7 +128,7 @@ export default function RecordReceiptModal({
         setBanks(response.data.items);
       }
     } catch (error) {
-      console.error("Error fetching banks:", error);
+      toast.error("Failed to load banks");
     }
   };
 
@@ -145,7 +139,6 @@ export default function RecordReceiptModal({
         setPaymentTypes(response.data);
       }
     } catch (error) {
-      console.error("Error fetching payment types:", error);
       // Fallback to default payment types
       setPaymentTypes([
         { id: 1, code: "Cash", name: "Cash", requiresBank: false, requiresChequeDetails: false, sortOrder: 1 },
@@ -163,7 +156,7 @@ export default function RecordReceiptModal({
         setCurrencies(response.data);
       }
     } catch (error) {
-      console.error("Error fetching currencies:", error);
+      toast.error("Failed to load currencies");
     }
   };
 
@@ -174,7 +167,7 @@ export default function RecordReceiptModal({
         setNextReceiptNo(response.data);
       }
     } catch (error) {
-      console.error("Error fetching next receipt number:", error);
+      toast.error("Failed to get receipt number");
     }
   };
 
@@ -185,7 +178,7 @@ export default function RecordReceiptModal({
         setUnpaidInvoices(response.data);
       }
     } catch (error) {
-      console.error("Error fetching unpaid invoices:", error);
+      toast.error("Failed to load unpaid invoices");
     }
   };
 
@@ -293,7 +286,6 @@ export default function RecordReceiptModal({
       toast.success("Receipt recorded successfully");
       onSuccess();
     } catch (error) {
-      console.error("Error creating receipt:", error);
       toast.error("Failed to record receipt");
     } finally {
       setLoading(false);
@@ -302,30 +294,25 @@ export default function RecordReceiptModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-xl">Record Receipt</DialogTitle>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
+        <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+          <DialogTitle className="text-white text-lg font-semibold">Record Receipt</DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-3 gap-4 py-4">
+        <div className="grid grid-cols-3 gap-4 p-6">
           {/* Customer Selection */}
           <div className="space-y-2">
             <Label>Customers</Label>
-            <Select
+            <SearchableSelect
+              options={customers.map((customer) => ({
+                value: customer.id.toString(),
+                label: customer.name,
+              }))}
               value={customerId?.toString() || ""}
               onValueChange={(v) => setCustomerId(parseInt(v))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Customer" />
-              </SelectTrigger>
-              <SelectContent>
-                {customers.map((customer) => (
-                  <SelectItem key={customer.id} value={customer.id.toString()}>
-                    {customer.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="Select Customer"
+              searchPlaceholder="Search customers..."
+            />
           </div>
 
           {/* Invoice Selection (multi-select chips) */}
@@ -349,34 +336,34 @@ export default function RecordReceiptModal({
                   </span>
                 ))}
               </div>
-              <Select
+              <SearchableSelect
+                options={unpaidInvoices
+                  .filter(inv => !selectedInvoices.some(si => si.invoiceId === inv.id))
+                  .map((invoice) => ({
+                    value: invoice.id.toString(),
+                    label: `${invoice.invoiceNo} - Pending: ${invoice.currencyCode || "AED"} ${invoice.pendingAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                  }))}
                 value=""
                 onValueChange={(v) => {
                   const invoice = unpaidInvoices.find(i => i.id === parseInt(v));
                   if (invoice) handleInvoiceSelect(invoice, true);
                 }}
+                placeholder="Select Invoice"
+                searchPlaceholder="Search invoices..."
                 disabled={!customerId}
-              >
-                <SelectTrigger className="h-8">
-                  <SelectValue placeholder="Select Invoice" />
-                </SelectTrigger>
-                <SelectContent>
-                  {unpaidInvoices
-                    .filter(inv => !selectedInvoices.some(si => si.invoiceId === inv.id))
-                    .map((invoice) => (
-                      <SelectItem key={invoice.id} value={invoice.id.toString()}>
-                        {invoice.invoiceNo} - Pending: {invoice.currencyCode || "AED"} {invoice.pendingAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+                triggerClassName="h-8"
+              />
             </div>
           </div>
 
           {/* Payment Type */}
           <div className="space-y-2">
             <Label>Payment Type</Label>
-            <Select
+            <SearchableSelect
+              options={paymentTypes.map((pt) => ({
+                value: pt.code,
+                label: pt.name.toUpperCase(),
+              }))}
               value={paymentMode}
               onValueChange={(v) => {
                 setPaymentMode(v as PaymentMode);
@@ -390,18 +377,9 @@ export default function RecordReceiptModal({
                   setChequeBank("");
                 }
               }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Payment Type" />
-              </SelectTrigger>
-              <SelectContent>
-                {paymentTypes.map((pt) => (
-                  <SelectItem key={pt.code} value={pt.code}>
-                    {pt.name.toUpperCase()}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="Select Payment Type"
+              searchPlaceholder="Search payment types..."
+            />
           </div>
 
           {/* Cheque Details Row - Only show for Cheque payment type */}
@@ -465,39 +443,35 @@ export default function RecordReceiptModal({
           {/* Currency - Locked to customer's base currency */}
           <div className="space-y-2">
             <Label>Currency</Label>
-            <Select value={currency} onValueChange={(v) => setCurrency(v as Currency)} disabled={!!customerId}>
-              <SelectTrigger className={customerId ? "bg-muted" : ""}>
-                <SelectValue placeholder="Select Currency" />
-              </SelectTrigger>
-              <SelectContent>
-                {currencies.map((curr) => (
-                  <SelectItem key={curr.id} value={curr.code}>
-                    {curr.code} - {curr.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              options={currencies.map((curr) => ({
+                value: curr.code,
+                label: `${curr.code} - ${curr.name}`,
+              }))}
+              value={currency}
+              onValueChange={(v) => setCurrency(v as Currency)}
+              placeholder="Select Currency"
+              searchPlaceholder="Search currencies..."
+              disabled={!!customerId}
+              triggerClassName={customerId ? "bg-muted" : ""}
+            />
           </div>
 
           {/* Bank Selection - Only show for payment types that require bank */}
           <div className="space-y-2">
             <Label>Bank</Label>
-            <Select
+            <SearchableSelect
+              options={banks.map((bank) => ({
+                value: bank.id.toString(),
+                label: bank.bankName,
+              }))}
               value={bankId?.toString() || ""}
               onValueChange={(v) => setBankId(v ? parseInt(v) : null)}
+              placeholder="Select Bank"
+              searchPlaceholder="Search banks..."
               disabled={!requiresBank}
-            >
-              <SelectTrigger className={!requiresBank ? "bg-muted" : ""}>
-                <SelectValue placeholder="Select Bank" />
-              </SelectTrigger>
-              <SelectContent>
-                {banks.map((bank) => (
-                  <SelectItem key={bank.id} value={bank.id.toString()}>
-                    {bank.bankName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              triggerClassName={!requiresBank ? "bg-muted" : ""}
+            />
           </div>
 
           {/* Total Amount */}
@@ -513,14 +487,14 @@ export default function RecordReceiptModal({
 
         {/* Invoice Details Table */}
         {selectedInvoices.length > 0 && (
-          <div className="border rounded-lg overflow-hidden mb-4">
+          <div className="border rounded-lg overflow-hidden mx-6 mb-4">
             <Table>
               <TableHeader>
-                <TableRow className="bg-green-700">
-                  <TableHead className="text-white font-semibold">Invoice No</TableHead>
-                  <TableHead className="text-white font-semibold">Total Amount</TableHead>
-                  <TableHead className="text-white font-semibold">Pending Amount</TableHead>
-                  <TableHead className="text-white font-semibold">Paying Amount</TableHead>
+                <TableRow className="bg-table-header">
+                  <TableHead className="text-table-header-foreground font-semibold">Invoice No</TableHead>
+                  <TableHead className="text-table-header-foreground font-semibold">Total Amount</TableHead>
+                  <TableHead className="text-table-header-foreground font-semibold">Pending Amount</TableHead>
+                  <TableHead className="text-table-header-foreground font-semibold">Paying Amount</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -559,16 +533,16 @@ export default function RecordReceiptModal({
         )}
 
         {/* Actions */}
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 px-6 pb-6">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button
-            className="bg-green-500 hover:bg-green-600 text-white"
+            className="btn-success"
             onClick={handleSubmit}
             disabled={loading}
           >
             {loading ? "Submitting..." : "Submit"}
-          </Button>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Close
           </Button>
         </div>
       </DialogContent>

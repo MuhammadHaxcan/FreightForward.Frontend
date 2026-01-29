@@ -13,6 +13,7 @@ export interface User {
   forcePasswordChange: boolean;
   lastLoginAt?: string;
   createdAt: string;
+  profilePictureUrl?: string;
   roles: Role[];
   permissions: string[];
 }
@@ -28,6 +29,7 @@ export interface UserListItem {
   isActive: boolean;
   lastLoginAt?: string;
   createdAt: string;
+  profilePictureUrl?: string;
   roleNames: string[];
 }
 
@@ -62,8 +64,10 @@ export interface CurrentUser {
   lastName: string;
   fullName: string;
   email: string;
+  contactNumber?: string;
   companyName?: string;
   forcePasswordChange: boolean;
+  profilePictureUrl?: string;
   roles: string[];
   permissions: string[];
 }
@@ -92,6 +96,7 @@ export interface CreateUserRequest {
   contactNumber?: string;
   companyId?: number;
   isActive: boolean;
+  profilePictureUrl?: string;
   roleIds: number[];
 }
 
@@ -103,6 +108,7 @@ export interface UpdateUserRequest {
   contactNumber?: string;
   companyId?: number;
   isActive: boolean;
+  profilePictureUrl?: string;
   roleIds: number[];
 }
 
@@ -121,6 +127,13 @@ export interface UpdateRoleRequest {
 export interface ChangePasswordRequest {
   currentPassword: string;
   newPassword: string;
+}
+
+export interface UpdateProfileRequest {
+  firstName: string;
+  lastName: string;
+  contactNumber?: string;
+  profilePictureUrl?: string;
 }
 
 // Auth state

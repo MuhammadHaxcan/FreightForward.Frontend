@@ -10,16 +10,10 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { DateInput } from "@/components/ui/date-input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { AddShipmentStatusLogRequest, StatusEventType } from "@/services/api/shipment";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { getTodayDateOnly } from "@/lib/utils";
 import {
   EVENT_TYPE_OPTIONS,
@@ -134,32 +128,25 @@ export function StatusLogModal({ open, onOpenChange, onSave }: StatusLogModalPro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg bg-card border border-border">
-        <DialogHeader>
-          <DialogTitle className="text-foreground text-lg bg-[#2c3e50] text-white p-4 -m-6 mb-0 rounded-t-lg">
+      <DialogContent className="max-w-lg bg-card border border-border p-0">
+        <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+          <DialogTitle className="text-white text-lg font-semibold">
             Add Tracking Event
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 pt-6">
+        <div className="space-y-4 p-6 pt-4">
           {/* Event Type */}
           <div>
             <Label className="text-sm font-semibold">Event Type <span className="text-red-500">*</span></Label>
-            <Select
+            <SearchableSelect
+              options={EVENT_TYPE_OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
               value={formData.eventType}
               onValueChange={(value) => handleEventTypeChange(value as StatusEventType)}
-            >
-              <SelectTrigger className="bg-background border-border">
-                <SelectValue placeholder="Select event type..." />
-              </SelectTrigger>
-              <SelectContent>
-                {EVENT_TYPE_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="Select event type..."
+              searchPlaceholder="Search event types..."
+              triggerClassName="bg-background border-border"
+            />
           </div>
 
           {/* Event Description */}
@@ -232,18 +219,18 @@ export function StatusLogModal({ open, onOpenChange, onSave }: StatusLogModalPro
           </div>
 
           {/* Actions */}
-          <div className="flex justify-center gap-3 pt-4">
+          <div className="flex justify-end gap-3 pt-4">
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="bg-[#34495e] hover:bg-[#4a5568] text-white border-[#4a5568] px-8"
+              className="px-8"
               disabled={loading}
             >
-              Close
+              Cancel
             </Button>
             <Button
               onClick={handleSave}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white px-8"
+              className="btn-success px-8"
               disabled={loading}
             >
               {loading ? (

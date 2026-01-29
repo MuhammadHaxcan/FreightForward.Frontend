@@ -1,4 +1,4 @@
-import { PaymentMode, PaginatedList, ApiResponse, fetchApi } from './index';
+import { PaymentMode, PaginatedList, ApiResponse, fetchApi, fetchBlob, API_BASE_URL } from './index';
 
 export interface PaymentVoucher {
   id: number;
@@ -124,13 +124,11 @@ export async function getPaymentVoucherById(id: number): Promise<ApiResponse<Pay
 
 export async function getNextPaymentNumber(): Promise<ApiResponse<string>> {
   try {
-    const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://localhost:7001/api';
-    const response = await fetch(`${API_BASE_URL}/invoices/payments/next-number`);
+    const response = await fetchBlob(`${API_BASE_URL}/invoices/payments/next-number`);
     if (!response.ok) {
       return { error: `HTTP error! status: ${response.status}` };
     }
     const text = await response.text();
-    // Remove quotes if the response is JSON-wrapped string
     const data = text.replace(/^"|"$/g, '');
     return { data };
   } catch (error) {
@@ -169,6 +167,5 @@ export async function updatePaymentVoucher(id: number, request: UpdatePaymentVou
 }
 
 export function getPaymentVoucherPdfUrl(id: number): string {
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://localhost:7001/api';
   return `${API_BASE_URL}/invoices/payments/${id}/pdf`;
 }

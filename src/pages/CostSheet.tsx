@@ -97,7 +97,7 @@ export const CostSheet = () => {
               <Button
                 onClick={handlePrint}
                 disabled={isLoading || costSheetData.length === 0}
-                className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                className="btn-success"
               >
                 <Printer className="h-4 w-4 mr-2" />
                 Print

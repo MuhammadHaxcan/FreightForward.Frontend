@@ -1,9 +1,25 @@
-import { Link } from 'react-router-dom';
-import { Button } from '../components/ui/button';
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { ShieldX, Home, ArrowLeft } from 'lucide-react';
+import { ShieldX, Loader2 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Unauthorized() {
+  const { getDefaultRoute, isAuthenticated, isLoading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Wait for auth to load, then redirect to first accessible route
+    if (!isLoading && isAuthenticated) {
+      const defaultRoute = getDefaultRoute();
+      // Small delay to show the message briefly
+      const timer = setTimeout(() => {
+        navigate(defaultRoute, { replace: true });
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, isAuthenticated, getDefaultRoute, navigate]);
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
       <Card className="w-full max-w-md text-center">
@@ -22,19 +38,10 @@ export default function Unauthorized() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-gray-500">
-            If you believe this is an error, please contact your administrator.
+            Redirecting you to an accessible page...
           </p>
-          <div className="flex justify-center gap-4">
-            <Button variant="outline" onClick={() => window.history.back()}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Go Back
-            </Button>
-            <Link to="/">
-              <Button>
-                <Home className="mr-2 h-4 w-4" />
-                Home
-              </Button>
-            </Link>
+          <div className="flex justify-center">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
           </div>
         </CardContent>
       </Card>

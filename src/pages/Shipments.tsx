@@ -12,13 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Edit, Search, Calendar, CheckCircle, Loader2, Plus, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useShipments } from "@/hooks/useShipments";
@@ -145,7 +139,7 @@ const Shipments = () => {
             </div>
             <PermissionGate permission="ship_add">
               <Button
-                className="bg-emerald-500 hover:bg-emerald-600 text-white gap-2"
+                className="btn-success gap-2"
                 onClick={handleAddNew}
               >
                 <Plus size={16} />
@@ -157,17 +151,19 @@ const Shipments = () => {
 
         {/* Filters Row */}
         <div className="flex flex-wrap items-center gap-3">
-          <Select value={searchBy} onValueChange={setSearchBy}>
-            <SelectTrigger className="w-[150px] bg-card border-border">
-              <SelectValue placeholder="Job No" />
-            </SelectTrigger>
-            <SelectContent className="bg-popover border border-border">
-              <SelectItem value="jobNo">Job No</SelectItem>
-              <SelectItem value="hbl">HBL No</SelectItem>
-              <SelectItem value="mbl">MBL No</SelectItem>
-              <SelectItem value="customer">Customer</SelectItem>
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={[
+              { value: "jobNo", label: "Job No" },
+              { value: "hbl", label: "HBL No" },
+              { value: "mbl", label: "MBL No" },
+              { value: "customer", label: "Customer" },
+            ]}
+            value={searchBy}
+            onValueChange={setSearchBy}
+            placeholder="Job No"
+            searchPlaceholder="Search..."
+            triggerClassName="w-[150px] bg-card border-border"
+          />
 
           <Input
             placeholder="Search..."
@@ -179,20 +175,22 @@ const Shipments = () => {
             className="w-[300px] bg-card"
           />
 
-          <Select value={statusFilter} onValueChange={(value) => {
-            setStatusFilter(value);
-            setCurrentPage(1);
-          }}>
-            <SelectTrigger className="w-[150px] bg-card">
-              <SelectValue placeholder="All" />
-            </SelectTrigger>
-            <SelectContent className="bg-popover border border-border">
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="Opened">Opened</SelectItem>
-              <SelectItem value="Closed">Closed</SelectItem>
-              <SelectItem value="Cancelled">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={[
+              { value: "all", label: "All" },
+              { value: "Opened", label: "Opened" },
+              { value: "Closed", label: "Closed" },
+              { value: "Cancelled", label: "Cancelled" },
+            ]}
+            value={statusFilter}
+            onValueChange={(value) => {
+              setStatusFilter(value);
+              setCurrentPage(1);
+            }}
+            placeholder="All"
+            searchPlaceholder="Search status..."
+            triggerClassName="w-[150px] bg-card"
+          />
 
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-2 border border-border rounded-md px-3 py-2 bg-card">
@@ -225,7 +223,7 @@ const Shipments = () => {
           </div>
 
           <Button
-            className="bg-emerald-500 hover:bg-emerald-600 text-white gap-2"
+            className="btn-success gap-2"
             onClick={() => setCurrentPage(1)}
           >
             <Search size={16} />
@@ -236,20 +234,20 @@ const Shipments = () => {
         {/* Table Controls */}
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Show</span>
-          <Select value={entriesPerPage} onValueChange={(value) => {
-            setEntriesPerPage(value);
-            setCurrentPage(1);
-          }}>
-            <SelectTrigger className="w-[70px] h-8">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-popover border border-border">
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="25">25</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-              <SelectItem value="100">100</SelectItem>
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={[
+              { value: "10", label: "10" },
+              { value: "25", label: "25" },
+              { value: "50", label: "50" },
+              { value: "100", label: "100" },
+            ]}
+            value={entriesPerPage}
+            onValueChange={(value) => {
+              setEntriesPerPage(value);
+              setCurrentPage(1);
+            }}
+            triggerClassName="w-[90px] h-8"
+          />
           <span className="text-sm text-muted-foreground">entries</span>
         </div>
 
@@ -300,14 +298,14 @@ const Shipments = () => {
                   shipments.map((shipment, index) => (
                     <TableRow
                       key={shipment.id}
-                      className={`hover:bg-muted/50 ${index % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}
+                      className={`hover:bg-table-row-hover ${index % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}
                     >
                       <TableCell>
                         <PermissionGate permission="ship_edit">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600 text-white rounded"
+                            className="h-8 w-8 btn-success rounded"
                             onClick={() => handleEdit(shipment)}
                           >
                             <Edit className="h-4 w-4" />
@@ -378,7 +376,7 @@ const Shipments = () => {
 
         {/* Pagination */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-emerald-600">
+          <p className="text-sm text-muted-foreground">
             {totalCount > 0 ? (
               <>
                 Showing {((currentPage - 1) * parseInt(entriesPerPage)) + 1} to {Math.min(currentPage * parseInt(entriesPerPage), totalCount)} of {totalCount} entries
@@ -401,7 +399,7 @@ const Shipments = () => {
                 key={page}
                 variant={page === currentPage ? "default" : "outline"}
                 size="sm"
-                className={page === currentPage ? "bg-emerald-500 hover:bg-emerald-600" : ""}
+                className={page === currentPage ? "btn-success" : ""}
                 onClick={() => setCurrentPage(page)}
                 disabled={isLoading}
               >

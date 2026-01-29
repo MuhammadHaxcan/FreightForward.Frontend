@@ -2,7 +2,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Plus, Pencil, Eye, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -87,34 +87,35 @@ const MasterCustomers = () => {
     <MainLayout>
       <div className="p-6 space-y-4">
         {/* Header */}
-        <h1 className="text-2xl font-semibold text-foreground">Customers</h1>
-
-        {/* Actions Row */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-semibold text-foreground">Customers</h1>
           <PermissionGate permission="cust_add">
             <Button className="btn-success gap-2" onClick={handleAddNew}>
               <Plus size={16} />
               Add New Customer
             </Button>
           </PermissionGate>
+        </div>
 
+        {/* Actions Row */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Show:</span>
-              <Select value={entriesPerPage} onValueChange={(value) => {
-                setEntriesPerPage(value);
-                setCurrentPage(1);
-              }}>
-                <SelectTrigger className="w-[70px] h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="25">25</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                options={[
+                  { value: "10", label: "10" },
+                  { value: "25", label: "25" },
+                  { value: "50", label: "50" },
+                  { value: "100", label: "100" },
+                ]}
+                value={entriesPerPage}
+                onValueChange={(value) => {
+                  setEntriesPerPage(value);
+                  setCurrentPage(1);
+                }}
+                triggerClassName="w-[90px] h-8"
+              />
               <span className="text-sm text-muted-foreground">entries</span>
             </div>
 

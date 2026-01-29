@@ -70,7 +70,7 @@ export function EquipmentGrid({ equipments, onChange, containerTypes }: Equipmen
       <div className="border rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-[#2c3e50]">
+            <TableRow className="bg-modal-header">
               <TableHead className="text-white">Quantity</TableHead>
               <TableHead className="text-white">Equipment Type</TableHead>
               <TableHead className="text-white">Sub Category</TableHead>
@@ -87,7 +87,7 @@ export function EquipmentGrid({ equipments, onChange, containerTypes }: Equipmen
               </TableRow>
             ) : (
               equipments.map((equipment, index) => (
-                <TableRow key={index}>
+                <TableRow key={equipment.id || `equipment-${index}`}>
                   <TableCell>{equipment.quantity}</TableCell>
                   <TableCell>{equipment.containerTypeName || "-"}</TableCell>
                   <TableCell>{equipment.subCategory || "-"}</TableCell>

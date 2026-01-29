@@ -55,9 +55,9 @@ export function ReceiptDetailsModal({ open, onOpenChange, receiptId }: ReceiptDe
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl">
-        <DialogHeader>
-          <DialogTitle className="text-xl">Receipt Details</DialogTitle>
+      <DialogContent className="max-w-4xl p-0">
+        <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+          <DialogTitle className="text-white text-lg font-semibold">Receipt Details</DialogTitle>
         </DialogHeader>
 
         {loading ? (
@@ -65,7 +65,7 @@ export function ReceiptDetailsModal({ open, onOpenChange, receiptId }: ReceiptDe
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
         ) : receipt ? (
-          <div className="space-y-4">
+          <div className="space-y-4 p-6">
             <div className="border rounded-lg overflow-hidden">
               <Table>
                 <TableHeader>

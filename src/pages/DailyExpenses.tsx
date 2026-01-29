@@ -9,13 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Table,
   TableBody,
@@ -31,6 +25,7 @@ import { useAllExpenseTypes } from "@/hooks/useSettings";
 import { useBanks } from "@/hooks/useBanks";
 import { useExpenses, useCreateExpense, useUpdateExpense, useDeleteExpense } from "@/hooks/useExpenses";
 import { Expense as ApiExpense, CreateExpenseRequest } from "@/services/api";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 
 // Map PaymentMode enum values to display labels
 const paymentModeLabels: Record<string, string> = {
@@ -75,7 +70,7 @@ export default function DailyExpenses() {
 
   // Map expense types to category names
   const expenseCategories = useMemo(() => {
-    if (!expenseTypesData) return [];
+    if (!Array.isArray(expenseTypesData)) return [];
     return expenseTypesData.map((et) => et.name);
   }, [expenseTypesData]);
 
@@ -199,10 +194,12 @@ export default function DailyExpenses() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-foreground">All Expenses</h1>
-          <Button onClick={openAddModal} className="bg-green-500 hover:bg-green-600 text-white">
-            <Plus className="h-4 w-4 mr-2" />
-            Add New
-          </Button>
+          <PermissionGate permission="expense_add">
+            <Button onClick={openAddModal} className="btn-success">
+              <Plus className="h-4 w-4 mr-2" />
+              Add New
+            </Button>
+          </PermissionGate>
         </div>
 
         {/* Filters */}
@@ -218,31 +215,29 @@ export default function DailyExpenses() {
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground mb-1 block">Bank</label>
-              <Select value={selectedBank} onValueChange={setSelectedBank}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select All" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Select All</SelectItem>
-                  {bankNames.map((bank) => (
-                    <SelectItem key={bank} value={bank}>{bank}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                options={[
+                  { value: "all", label: "Select All" },
+                  ...bankNames.map((bank) => ({ value: bank, label: bank }))
+                ]}
+                value={selectedBank}
+                onValueChange={setSelectedBank}
+                placeholder="Select All"
+                searchPlaceholder="Search banks..."
+              />
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground mb-1 block">Expense Type</label>
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select All" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Select All</SelectItem>
-                  {expenseCategories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                options={[
+                  { value: "all", label: "Select All" },
+                  ...expenseCategories.map((cat) => ({ value: cat, label: cat }))
+                ]}
+                value={selectedCategory}
+                onValueChange={setSelectedCategory}
+                placeholder="Select All"
+                searchPlaceholder="Search expense types..."
+              />
             </div>
             <div className="flex items-end gap-2">
               <Button className="bg-primary hover:bg-primary/90">
@@ -270,23 +265,20 @@ export default function DailyExpenses() {
           <div className="p-4 flex justify-between items-center">
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Show</span>
-              <Select
+              <SearchableSelect
+                options={[
+                  { value: "10", label: "10" },
+                  { value: "25", label: "25" },
+                  { value: "50", label: "50" },
+                  { value: "100", label: "100" },
+                ]}
                 value={pageSize.toString()}
                 onValueChange={(v) => {
                   setPageSize(parseInt(v));
                   setPageNumber(1);
                 }}
-              >
-                <SelectTrigger className="w-20">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="25">25</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
-                </SelectContent>
-              </Select>
+                triggerClassName="w-20"
+              />
               <span className="text-sm text-muted-foreground">entries</span>
             </div>
             <div className="flex items-center gap-2">
@@ -307,15 +299,15 @@ export default function DailyExpenses() {
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="bg-primary">
-                  <TableHead className="text-primary-foreground font-semibold">Date</TableHead>
-                  <TableHead className="text-primary-foreground font-semibold">Payment Type/Mode</TableHead>
-                  <TableHead className="text-primary-foreground font-semibold">Category</TableHead>
-                  <TableHead className="text-primary-foreground font-semibold">Bank</TableHead>
-                  <TableHead className="text-primary-foreground font-semibold">Description</TableHead>
-                  <TableHead className="text-primary-foreground font-semibold">Receipt</TableHead>
-                  <TableHead className="text-primary-foreground font-semibold">Payment</TableHead>
-                  <TableHead className="text-primary-foreground font-semibold">Action</TableHead>
+                <TableRow className="bg-table-header">
+                  <TableHead className="text-table-header-foreground font-semibold">Date</TableHead>
+                  <TableHead className="text-table-header-foreground font-semibold">Payment Type/Mode</TableHead>
+                  <TableHead className="text-table-header-foreground font-semibold">Category</TableHead>
+                  <TableHead className="text-table-header-foreground font-semibold">Bank</TableHead>
+                  <TableHead className="text-table-header-foreground font-semibold">Description</TableHead>
+                  <TableHead className="text-table-header-foreground font-semibold">Receipt</TableHead>
+                  <TableHead className="text-table-header-foreground font-semibold">Payment</TableHead>
+                  <TableHead className="text-table-header-foreground font-semibold">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -327,7 +319,7 @@ export default function DailyExpenses() {
                   </TableRow>
                 ) : (
                   filteredExpenses.map((expense) => (
-                    <TableRow key={expense.id} className="hover:bg-muted/30">
+                    <TableRow key={expense.id} className="hover:bg-table-row-hover">
                       <TableCell className="whitespace-nowrap">{formatDate(expense.expenseDate)}</TableCell>
                       <TableCell>{expense.paymentType} || {paymentModeLabels[expense.paymentMode] || expense.paymentMode}</TableCell>
                       <TableCell>{expense.category}</TableCell>
@@ -345,23 +337,27 @@ export default function DailyExpenses() {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button
-                            size="sm"
-                            className="bg-amber-500 hover:bg-amber-600 text-white h-8 w-8 p-0"
-                            title="Edit"
-                            onClick={() => openEditModal(expense)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            className="bg-red-500 hover:bg-red-600 text-white h-8 w-8 p-0"
-                            title="Delete"
-                            onClick={() => handleDeleteExpense(expense.id)}
-                            disabled={deleteExpense.isPending}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <PermissionGate permission="expense_edit">
+                            <Button
+                              size="sm"
+                              className="bg-amber-500 hover:bg-amber-600 text-white h-8 w-8 p-0"
+                              title="Edit"
+                              onClick={() => openEditModal(expense)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </PermissionGate>
+                          <PermissionGate permission="expense_delete">
+                            <Button
+                              size="sm"
+                              className="bg-red-500 hover:bg-red-600 text-white h-8 w-8 p-0"
+                              title="Delete"
+                              onClick={() => handleDeleteExpense(expense.id)}
+                              disabled={deleteExpense.isPending}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </PermissionGate>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -437,10 +433,10 @@ export default function DailyExpenses() {
       </div>
 
       <ExpenseModal
-        isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setEditingExpense(null);
+        open={isModalOpen}
+        onOpenChange={(open) => {
+          setIsModalOpen(open);
+          if (!open) setEditingExpense(null);
         }}
         onSubmit={editingExpense ? handleEditExpense : handleAddExpense}
         expense={editingExpense}

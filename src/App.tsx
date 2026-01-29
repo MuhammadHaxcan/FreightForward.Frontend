@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -5,45 +6,57 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
-import Login from "./pages/Login";
-import Unauthorized from "./pages/Unauthorized";
-import Dashboard from "./pages/Dashboard";
-import Companies from "./pages/Companies";
-import Shipments from "./pages/Shipments";
-import ShipmentDetail from "./pages/ShipmentDetail";
-import AddShipment from "./pages/AddShipment";
-import MasterCustomers from "./pages/MasterCustomers";
-import CustomerDetail from "./pages/CustomerDetail";
-import NeutralDetail from "./pages/NeutralDetail";
-import AllUsers from "./pages/AllUsers";
-import PermissionRoles from "./pages/PermissionRoles";
-import Settings from "./pages/Settings";
-import Banks from "./pages/Banks";
-import Leads from "./pages/Leads";
-import RateRequests from "./pages/RateRequests";
-import Quotations from "./pages/Quotations";
-import QuotationView from "./pages/QuotationView";
-import DailyExpenses from "./pages/DailyExpenses";
-import ExpensePrintView from "./pages/ExpensePrintView";
-import Invoices from "./pages/Invoices";
-import InvoiceView from "./pages/InvoiceView";
-import InvoicePrintView from "./pages/InvoicePrintView";
-import PurchaseInvoices from "./pages/PurchaseInvoices";
-import PurchaseInvoiceView from "./pages/PurchaseInvoiceView";
-import PurchaseInvoicePrintView from "./pages/PurchaseInvoicePrintView";
-import StatementPrintView from "./pages/StatementPrintView";
-import ReceiptVouchers from "./pages/ReceiptVouchers";
-import ReceiptView from "./pages/ReceiptView";
-import ReceiptPrintView from "./pages/ReceiptPrintView";
-import PaymentVouchers from "./pages/PaymentVouchers";
-import PaymentView from "./pages/PaymentView";
-import PaymentVoucherPrintView from "./pages/PaymentVoucherPrintView";
-import CostSheet from "./pages/CostSheet";
-import CostSheetDetail from "./pages/CostSheetDetail";
-import CostSheetPrintView from "./pages/CostSheetPrintView";
-import CostSheetDetailPrintView from "./pages/CostSheetDetailPrintView";
-import VatReport from "./pages/VatReport";
-import NotFound from "./pages/NotFound";
+import { Loader2 } from "lucide-react";
+
+// Lazy load page components for code splitting
+const Login = lazy(() => import("./pages/Login"));
+const Unauthorized = lazy(() => import("./pages/Unauthorized"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Companies = lazy(() => import("./pages/Companies"));
+const Shipments = lazy(() => import("./pages/Shipments"));
+const ShipmentDetail = lazy(() => import("./pages/ShipmentDetail"));
+const AddShipment = lazy(() => import("./pages/AddShipment"));
+const MasterCustomers = lazy(() => import("./pages/MasterCustomers"));
+const CustomerDetail = lazy(() => import("./pages/CustomerDetail"));
+const NeutralDetail = lazy(() => import("./pages/NeutralDetail"));
+const AllUsers = lazy(() => import("./pages/AllUsers"));
+const PermissionRoles = lazy(() => import("./pages/PermissionRoles"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Banks = lazy(() => import("./pages/Banks"));
+const Leads = lazy(() => import("./pages/Leads"));
+const RateRequests = lazy(() => import("./pages/RateRequests"));
+const Quotations = lazy(() => import("./pages/Quotations"));
+const QuotationView = lazy(() => import("./pages/QuotationView"));
+const DailyExpenses = lazy(() => import("./pages/DailyExpenses"));
+const ExpensePrintView = lazy(() => import("./pages/ExpensePrintView"));
+const Invoices = lazy(() => import("./pages/Invoices"));
+const InvoiceView = lazy(() => import("./pages/InvoiceView"));
+const InvoicePrintView = lazy(() => import("./pages/InvoicePrintView"));
+const PurchaseInvoices = lazy(() => import("./pages/PurchaseInvoices"));
+const PurchaseInvoiceView = lazy(() => import("./pages/PurchaseInvoiceView"));
+const PurchaseInvoicePrintView = lazy(() => import("./pages/PurchaseInvoicePrintView"));
+const StatementPrintView = lazy(() => import("./pages/StatementPrintView"));
+const ReceiptVouchers = lazy(() => import("./pages/ReceiptVouchers"));
+const ReceiptView = lazy(() => import("./pages/ReceiptView"));
+const ReceiptPrintView = lazy(() => import("./pages/ReceiptPrintView"));
+const PaymentVouchers = lazy(() => import("./pages/PaymentVouchers"));
+const PaymentView = lazy(() => import("./pages/PaymentView"));
+const PaymentVoucherPrintView = lazy(() => import("./pages/PaymentVoucherPrintView"));
+const CostSheet = lazy(() => import("./pages/CostSheet"));
+const CostSheetDetail = lazy(() => import("./pages/CostSheetDetail"));
+const CostSheetPrintView = lazy(() => import("./pages/CostSheetPrintView"));
+const CostSheetDetailPrintView = lazy(() => import("./pages/CostSheetDetailPrintView"));
+const VatReport = lazy(() => import("./pages/VatReport"));
+const ChangePassword = lazy(() => import("./pages/ChangePassword"));
+const Profile = lazy(() => import("./pages/Profile"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+// Loading fallback component
+const PageLoader = () => (
+  <div className="flex h-screen items-center justify-center bg-background">
+    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+  </div>
+);
 
 const queryClient = new QueryClient();
 
@@ -54,10 +67,21 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
+            <Route path="/change-password" element={
+              <ProtectedRoute>
+                <ChangePassword />
+              </ProtectedRoute>
+            } />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            } />
 
             {/* Protected routes */}
             <Route path="/" element={
@@ -257,6 +281,7 @@ const App = () => (
             } />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

@@ -9,13 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { LeadDetailItem, MeasurementType, PackageType } from "@/services/api";
 
 interface BoxPalletRowModalProps {
@@ -100,32 +94,27 @@ export function BoxPalletRowModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>
+      <DialogContent className="max-w-lg p-0">
+        <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+          <DialogTitle className="text-white text-lg font-semibold">
             {boxPallet ? "Edit Box/Pallet" : "Add Box/Pallet"}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="grid gap-4 py-4">
+        <div className="grid gap-4 p-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="packageTypeId">Packaging Type *</Label>
-              <Select
+              <SearchableSelect
+                options={packageTypes.map((type) => ({
+                  value: type.id.toString(),
+                  label: type.name,
+                }))}
                 value={formData.packageTypeId?.toString() || ""}
                 onValueChange={handlePackageTypeChange}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {packageTypes.map((type) => (
-                    <SelectItem key={type.id} value={type.id.toString()}>
-                      {type.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Select type"
+                searchPlaceholder="Search package types..."
+              />
             </div>
 
             <div className="grid gap-2">
@@ -189,20 +178,18 @@ export function BoxPalletRowModal({
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="measurementType">Measurement</Label>
-              <Select
+              <SearchableSelect
+                options={[
+                  { value: "Total", label: "Total" },
+                  { value: "PerUnit", label: "Per Unit" },
+                ]}
                 value={formData.measurementType || "Total"}
                 onValueChange={(value) =>
                   updateField("measurementType", value as MeasurementType)
                 }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Total">Total</SelectItem>
-                  <SelectItem value="PerUnit">Per Unit</SelectItem>
-                </SelectContent>
-              </Select>
+                placeholder="Select measurement"
+                searchPlaceholder="Search..."
+              />
             </div>
 
             <div className="grid gap-2">
@@ -239,7 +226,7 @@ export function BoxPalletRowModal({
           <Button
             onClick={handleSave}
             disabled={!formData.packageTypeId}
-            className="bg-green-600 hover:bg-green-700"
+            className="btn-success"
           >
             {boxPallet ? "Update" : "Add"}
           </Button>

@@ -13,6 +13,7 @@ import type {
   UpdateRoleRequest,
   Permission,
   ChangePasswordRequest,
+  UpdateProfileRequest,
 } from '../../types/auth';
 
 // Auth API
@@ -66,6 +67,12 @@ export const authApi = {
   changePassword: (request: ChangePasswordRequest) =>
     fetchApi<void>('/auth/change-password', {
       method: 'POST',
+      body: JSON.stringify(request),
+    }),
+
+  updateProfile: (request: UpdateProfileRequest) =>
+    fetchApi<CurrentUser>('/auth/profile', {
+      method: 'PUT',
       body: JSON.stringify(request),
     }),
 };

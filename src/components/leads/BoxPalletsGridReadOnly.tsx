@@ -23,7 +23,7 @@ export function BoxPalletsGridReadOnly({ boxPallets }: BoxPalletsGridReadOnlyPro
       <div className="border rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-[#2c3e50]">
+            <TableRow className="bg-modal-header">
               <TableHead className="text-white">Packaging</TableHead>
               <TableHead className="text-white">Qty</TableHead>
               <TableHead className="text-white">L</TableHead>

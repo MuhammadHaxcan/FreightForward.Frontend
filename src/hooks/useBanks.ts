@@ -12,6 +12,7 @@ export function useBanks(params?: { pageNumber?: number; pageSize?: number; sear
       }
       return response.data!;
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes - bank data changes infrequently
   });
 }
 
@@ -26,6 +27,7 @@ export function useBank(id: number) {
       return response.data!;
     },
     enabled: id > 0,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 

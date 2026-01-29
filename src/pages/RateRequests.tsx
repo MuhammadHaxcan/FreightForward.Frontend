@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 import {
   Table,
   TableBody,
@@ -11,13 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Dialog,
   DialogContent,
@@ -73,11 +68,18 @@ export default function RateRequests() {
   const updateMutation = useUpdateRateRequest();
 
   // Load reference data for dropdowns
-  const { data: countries } = useAllCountries();
-  const { data: ports } = useAllPorts();
-  const { data: incoTerms } = useAllIncoTerms();
-  const { data: categoryTypes } = useAllCustomerCategoryTypes();
-  const { data: vendors } = useAllCreditors();
+  const { data: countriesData } = useAllCountries();
+  const { data: portsData } = useAllPorts();
+  const { data: incoTermsData } = useAllIncoTerms();
+  const { data: categoryTypesData } = useAllCustomerCategoryTypes();
+  const { data: vendorsData } = useAllCreditors();
+
+  // Ensure arrays are always defined to prevent .map() errors on first load
+  const countries = useMemo(() => countriesData ?? [], [countriesData]);
+  const ports = useMemo(() => portsData ?? [], [portsData]);
+  const incoTerms = useMemo(() => incoTermsData ?? [], [incoTermsData]);
+  const categoryTypes = useMemo(() => categoryTypesData ?? [], [categoryTypesData]);
+  const vendors = useMemo(() => vendorsData ?? [], [vendorsData]);
 
   // Fetch lead data when editing (includes lead details)
   const { data: leadData, isLoading: isLeadLoading } = useLead(selectedRequest?.leadId || 0);
@@ -154,13 +156,15 @@ export default function RateRequests() {
               <FileText className="h-4 w-4 mr-2" />
               Convert to Quotation
             </Button>
-            <Button
-              onClick={() => openModal("add")}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Send Rate Request
-            </Button>
+            <PermissionGate permission="ratereq_add">
+              <Button
+                onClick={() => openModal("add")}
+                className="btn-success"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Send Rate Request
+              </Button>
+            </PermissionGate>
           </div>
         </div>
 
@@ -168,19 +172,22 @@ export default function RateRequests() {
           <div className="p-4 flex justify-between items-center border-b border-border">
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Show</span>
-              <Select value={entriesPerPage} onValueChange={(value) => {
-                setEntriesPerPage(value);
-                setCurrentPage(1);
-              }}>
-                <SelectTrigger className="w-20">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="25">25</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                options={[
+                  { value: "10", label: "10" },
+                  { value: "25", label: "25" },
+                  { value: "50", label: "50" },
+                  { value: "100", label: "100" },
+                ]}
+                value={entriesPerPage}
+                onValueChange={(value) => {
+                  setEntriesPerPage(value);
+                  setCurrentPage(1);
+                }}
+                placeholder="10"
+                searchPlaceholder="Search..."
+                triggerClassName="w-20"
+              />
               <span className="text-sm text-muted-foreground">entries</span>
             </div>
 
@@ -209,19 +216,19 @@ export default function RateRequests() {
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="bg-[#2c3e50]">
-                  <TableHead className="text-white w-12">Select</TableHead>
-                  <TableHead className="text-white">Action</TableHead>
-                  <TableHead className="text-white">Rate request No.</TableHead>
-                  <TableHead className="text-white">Date</TableHead>
-                  <TableHead className="text-white">Customer Name</TableHead>
-                  <TableHead className="text-white">Freight Mode</TableHead>
-                  <TableHead className="text-white">Vendor Type</TableHead>
-                  <TableHead className="text-white">Vendor Name</TableHead>
-                  <TableHead className="text-white">Vendor Email</TableHead>
-                  <TableHead className="text-white">Pickup Country</TableHead>
-                  <TableHead className="text-white">Delivery Country</TableHead>
-                  <TableHead className="text-white">Status</TableHead>
+                <TableRow className="bg-table-header">
+                  <TableHead className="text-table-header-foreground w-12">Select</TableHead>
+                  <TableHead className="text-table-header-foreground">Action</TableHead>
+                  <TableHead className="text-table-header-foreground">Rate request No.</TableHead>
+                  <TableHead className="text-table-header-foreground">Date</TableHead>
+                  <TableHead className="text-table-header-foreground">Customer Name</TableHead>
+                  <TableHead className="text-table-header-foreground">Freight Mode</TableHead>
+                  <TableHead className="text-table-header-foreground">Vendor Type</TableHead>
+                  <TableHead className="text-table-header-foreground">Vendor Name</TableHead>
+                  <TableHead className="text-table-header-foreground">Vendor Email</TableHead>
+                  <TableHead className="text-table-header-foreground">Pickup Country</TableHead>
+                  <TableHead className="text-table-header-foreground">Delivery Country</TableHead>
+                  <TableHead className="text-table-header-foreground">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -235,7 +242,7 @@ export default function RateRequests() {
                   rateRequests.map((request) => (
                     <TableRow
                       key={request.id}
-                      className={`hover:bg-muted/50 ${selectedRateRequestId === request.id ? 'bg-green-50' : ''}`}
+                      className={`hover:bg-table-row-hover ${selectedRateRequestId === request.id ? 'bg-primary/10' : ''}`}
                     >
                       <TableCell>
                         <input
@@ -248,27 +255,31 @@ export default function RateRequests() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 bg-green-500 hover:bg-green-600 text-white rounded"
-                            onClick={() => openModal("edit", request)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          {request.requestStatus !== "Received" && (
+                          <PermissionGate permission="ratereq_edit">
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 bg-blue-500 hover:bg-blue-600 text-white rounded"
-                              onClick={() => {
-                                setRateRequestToMarkReceived(request);
-                                setShowReceivedConfirm(true);
-                              }}
-                              title="Mark as Received"
+                              className="h-8 w-8 btn-success rounded"
+                              onClick={() => openModal("edit", request)}
                             >
-                              <Check className="h-4 w-4" />
+                              <Edit className="h-4 w-4" />
                             </Button>
+                          </PermissionGate>
+                          {request.requestStatus !== "Received" && (
+                            <PermissionGate permission="ratereq_edit">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 bg-blue-500 hover:bg-blue-600 text-white rounded"
+                                onClick={() => {
+                                  setRateRequestToMarkReceived(request);
+                                  setShowReceivedConfirm(true);
+                                }}
+                                title="Mark as Received"
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                            </PermissionGate>
                           )}
                           {request.requestStatus === "Received" && (
                             <Button
@@ -301,7 +312,7 @@ export default function RateRequests() {
           )}
 
           <div className="p-4 flex justify-between items-center border-t border-border">
-            <span className="text-sm text-green-600">
+            <span className="text-sm text-muted-foreground">
               Showing {rateRequests.length > 0 ? ((currentPage - 1) * parseInt(entriesPerPage)) + 1 : 0} to {Math.min(currentPage * parseInt(entriesPerPage), totalCount)} of {totalCount} entries
             </span>
             <div className="flex gap-1">
@@ -318,7 +329,7 @@ export default function RateRequests() {
                   key={page}
                   variant={page === currentPage ? "default" : "outline"}
                   size="sm"
-                  className={page === currentPage ? "bg-green-600" : ""}
+                  className={page === currentPage ? "btn-success" : ""}
                   onClick={() => setCurrentPage(page)}
                 >
                   {page}
@@ -341,7 +352,7 @@ export default function RateRequests() {
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-green-600 text-xl">{getModalTitle()}</DialogTitle>
+            <DialogTitle className="text-primary text-xl">{getModalTitle()}</DialogTitle>
             <DialogDescription>
               {modalMode === "edit" ? "Edit rate request details" : "Fill in the rate request details"}
             </DialogDescription>
@@ -363,7 +374,7 @@ export default function RateRequests() {
             )}
             {modalMode === "edit" && selectedRequest?.status === "Received" && (
               <Button
-                className="bg-green-600 hover:bg-green-700 text-white"
+                className="btn-success"
                 onClick={() => {
                   setIsModalOpen(false);
                   if (selectedRequest) handleConvertToQuotation(selectedRequest);
@@ -373,7 +384,7 @@ export default function RateRequests() {
                 Convert to Quotation
               </Button>
             )}
-            <Button className="bg-[#2c3e50] hover:bg-[#34495e] text-white">
+            <Button className="bg-modal-header hover:bg-modal-header/80 text-modal-header-foreground">
               Send Rate Request
             </Button>
           </div>
@@ -381,7 +392,7 @@ export default function RateRequests() {
           <div className="space-y-6">
             {/* General Details */}
             <div className="border border-border rounded-lg p-4">
-              <h3 className="text-green-600 font-semibold mb-4">General Details</h3>
+              <h3 className="text-primary font-semibold mb-4">General Details</h3>
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label className="text-red-500">* Rate code</Label>
@@ -393,38 +404,37 @@ export default function RateRequests() {
                 </div>
                 <div>
                   <Label className="text-red-500">* Shipment Mode</Label>
-                  <Select defaultValue={selectedRequest?.mode === "FCLSeaFreight" ? "fcl" : selectedRequest?.mode === "LCLSeaFreight" ? "lcl" : "air"}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="air">Air Freight</SelectItem>
-                      <SelectItem value="fcl">FCL-Sea Freight</SelectItem>
-                      <SelectItem value="lcl">LCL-Sea Freight</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    options={[
+                      { value: "air", label: "Air Freight" },
+                      { value: "fcl", label: "FCL-Sea Freight" },
+                      { value: "lcl", label: "LCL-Sea Freight" },
+                    ]}
+                    value={selectedRequest?.mode === "FCLSeaFreight" ? "fcl" : selectedRequest?.mode === "LCLSeaFreight" ? "lcl" : "air"}
+                    onValueChange={() => {}}
+                    placeholder="Select"
+                    searchPlaceholder="Search..."
+                  />
                 </div>
                 <div>
                   <Label>Incoterm</Label>
-                  <Select defaultValue={selectedRequest?.incoTermId?.toString() || ""}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {incoTerms?.map((term) => (
-                        <SelectItem key={term.id} value={term.id.toString()}>
-                          {term.code}-{term.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    options={incoTerms?.map((term) => ({
+                      value: term.id.toString(),
+                      label: `${term.code}-${term.name}`,
+                    })) || []}
+                    value={selectedRequest?.incoTermId?.toString() || ""}
+                    onValueChange={() => {}}
+                    placeholder="Select"
+                    searchPlaceholder="Search..."
+                  />
                 </div>
               </div>
             </div>
 
             {/* Package Details */}
             <div className="border border-border rounded-lg p-4">
-              <h3 className="text-green-600 font-semibold mb-4">Package Details</h3>
+              <h3 className="text-primary font-semibold mb-4">Package Details</h3>
 
               {isLeadLoading && selectedRequest?.leadId ? (
                 <div className="flex items-center justify-center py-8">
@@ -467,37 +477,33 @@ export default function RateRequests() {
 
             {/* Vendor Details */}
             <div className="border border-border rounded-lg p-4">
-              <h3 className="text-green-600 font-semibold mb-4">Vendor Details</h3>
+              <h3 className="text-primary font-semibold mb-4">Vendor Details</h3>
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label>Vendors</Label>
-                  <Select defaultValue={selectedRequest?.vendorId?.toString() || ""}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {vendors?.map((vendor) => (
-                        <SelectItem key={vendor.id} value={vendor.id.toString()}>
-                          {vendor.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    options={vendors?.map((vendor) => ({
+                      value: vendor.id.toString(),
+                      label: vendor.name,
+                    })) || []}
+                    value={selectedRequest?.vendorId?.toString() || ""}
+                    onValueChange={() => {}}
+                    placeholder="Select"
+                    searchPlaceholder="Search..."
+                  />
                 </div>
                 <div>
                   <Label>Vendor Type</Label>
-                  <Select defaultValue={selectedRequest?.vendorType || ""}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categoryTypes?.map((type) => (
-                        <SelectItem key={type.id} value={type.name}>
-                          {type.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    options={categoryTypes?.map((type) => ({
+                      value: type.name,
+                      label: type.name,
+                    })) || []}
+                    value={selectedRequest?.vendorType || ""}
+                    onValueChange={() => {}}
+                    placeholder="Select"
+                    searchPlaceholder="Search..."
+                  />
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-1">
@@ -520,67 +526,59 @@ export default function RateRequests() {
 
             {/* Port Details */}
             <div className="border border-border rounded-lg p-4">
-              <h3 className="text-green-600 font-semibold mb-4">Port Details</h3>
+              <h3 className="text-primary font-semibold mb-4">Port Details</h3>
               <div className="grid grid-cols-4 gap-4 mb-4">
                 <div>
                   <Label className="text-red-500">* Arriving Country</Label>
-                  <Select defaultValue={selectedRequest?.deliveryCountryId?.toString() || ""}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {countries?.map((country) => (
-                        <SelectItem key={country.id} value={country.id.toString()}>
-                          {country.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    options={countries?.map((country) => ({
+                      value: country.id.toString(),
+                      label: country.name,
+                    })) || []}
+                    value={selectedRequest?.deliveryCountryId?.toString() || ""}
+                    onValueChange={() => {}}
+                    placeholder="Select"
+                    searchPlaceholder="Search..."
+                  />
                 </div>
                 <div>
                   <Label className="text-red-500">* Arrival Port</Label>
-                  <Select defaultValue={selectedRequest?.destinationPortId?.toString() || ""}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ports?.map((port) => (
-                        <SelectItem key={port.id} value={port.id.toString()}>
-                          {port.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    options={ports?.map((port) => ({
+                      value: port.id.toString(),
+                      label: port.name,
+                    })) || []}
+                    value={selectedRequest?.destinationPortId?.toString() || ""}
+                    onValueChange={() => {}}
+                    placeholder="Select"
+                    searchPlaceholder="Search..."
+                  />
                 </div>
                 <div>
                   <Label className="text-red-500">* Departure Country</Label>
-                  <Select defaultValue={selectedRequest?.pickupCountryId?.toString() || ""}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {countries?.map((country) => (
-                        <SelectItem key={country.id} value={country.id.toString()}>
-                          {country.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    options={countries?.map((country) => ({
+                      value: country.id.toString(),
+                      label: country.name,
+                    })) || []}
+                    value={selectedRequest?.pickupCountryId?.toString() || ""}
+                    onValueChange={() => {}}
+                    placeholder="Select"
+                    searchPlaceholder="Search..."
+                  />
                 </div>
                 <div>
                   <Label>Departure Port</Label>
-                  <Select defaultValue={selectedRequest?.loadingPortId?.toString() || ""}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ports?.map((port) => (
-                        <SelectItem key={port.id} value={port.id.toString()}>
-                          {port.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    options={ports?.map((port) => ({
+                      value: port.id.toString(),
+                      label: port.name,
+                    })) || []}
+                    value={selectedRequest?.loadingPortId?.toString() || ""}
+                    onValueChange={() => {}}
+                    placeholder="Select"
+                    searchPlaceholder="Search..."
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-4">
@@ -605,7 +603,7 @@ export default function RateRequests() {
                 <Button variant="outline" onClick={() => setIsModalOpen(false)}>
                   Cancel
                 </Button>
-                <Button className="bg-green-600 hover:bg-green-700 text-white">
+                <Button className="btn-success">
                   Send Rate Request
                 </Button>
               </div>
@@ -629,7 +627,7 @@ export default function RateRequests() {
             <AlertDialogAction
               onClick={handleMarkAsReceived}
               disabled={updateMutation.isPending}
-              className="bg-green-600 hover:bg-green-700"
+              className="btn-success"
             >
               {updateMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Yes, Mark as Received

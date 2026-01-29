@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { invoiceApi, AccountPurchaseInvoiceDetail } from "@/services/api";
-import { API_BASE_URL } from "@/services/api/base";
+import { API_BASE_URL, fetchBlob } from "@/services/api/base";
 
 export default function PurchaseInvoiceView() {
   const { id } = useParams<{ id: string }>();
@@ -47,7 +47,7 @@ export default function PurchaseInvoiceView() {
   const handleDownload = async () => {
     if (!id) return;
     try {
-      const response = await fetch(`${API_BASE_URL}/invoices/purchases/${id}/pdf`);
+      const response = await fetchBlob(`${API_BASE_URL}/invoices/purchases/${id}/pdf`);
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
@@ -114,7 +114,7 @@ export default function PurchaseInvoiceView() {
             <Edit className="h-4 w-4 mr-2" />
             Edit
           </Button>
-          <Button className="bg-green-500 hover:bg-green-600 text-white" onClick={handlePrint}>
+          <Button className="btn-success" onClick={handlePrint}>
             <Printer className="h-4 w-4 mr-2" />
             Print
           </Button>

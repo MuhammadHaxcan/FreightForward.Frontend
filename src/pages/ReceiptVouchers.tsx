@@ -4,13 +4,7 @@ import { formatDate } from "@/lib/utils";
 import { Eye, Plus, Trash2, Download, Printer, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Table,
   TableBody,
@@ -21,10 +15,11 @@ import {
 } from "@/components/ui/table";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { receiptApi, ReceiptVoucher as Receipt } from "@/services/api";
-import { API_BASE_URL } from "@/services/api/base";
-import RecordReceiptModal from "@/components/receipts/RecordReceiptModal";
-import UpdateReceiptModal from "@/components/receipts/UpdateReceiptModal";
+import { API_BASE_URL, fetchBlob } from "@/services/api/base";
+import { RecordReceiptModal } from "@/components/receipts/RecordReceiptModal";
+import { UpdateReceiptModal } from "@/components/receipts/UpdateReceiptModal";
 import { ReceiptDetailsModal } from "@/components/receipts/ReceiptDetailsModal";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 import { toast } from "sonner";
 
 export default function ReceiptVouchers() {
@@ -92,7 +87,7 @@ export default function ReceiptVouchers() {
 
   const handleDownload = async (id: number, receiptNo: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/invoices/receipts/${id}/pdf`);
+      const response = await fetchBlob(`${API_BASE_URL}/invoices/receipts/${id}/pdf`);
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
@@ -146,30 +141,32 @@ export default function ReceiptVouchers() {
         {/* Header */}
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-semibold">All Receipt Vouchers</h1>
-          <Button
-            className="bg-green-500 hover:bg-green-600 text-white"
-            onClick={() => setIsModalOpen(true)}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Record Receipt
-          </Button>
+          <PermissionGate permission="receipt_add">
+            <Button
+              className="btn-success"
+              onClick={() => setIsModalOpen(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Record Receipt
+            </Button>
+          </PermissionGate>
         </div>
 
         {/* Table Controls */}
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
             <span className="text-sm">Show</span>
-            <Select value={pageSize.toString()} onValueChange={(v) => { setPageSize(parseInt(v)); setPageNumber(1); }}>
-              <SelectTrigger className="w-20">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              options={[
+                { value: "10", label: "10" },
+                { value: "25", label: "25" },
+                { value: "50", label: "50" },
+                { value: "100", label: "100" },
+              ]}
+              value={pageSize.toString()}
+              onValueChange={(v) => { setPageSize(parseInt(v)); setPageNumber(1); }}
+              triggerClassName="w-20"
+            />
             <span className="text-sm">entries</span>
           </div>
           <div className="flex items-center gap-2">
@@ -188,16 +185,16 @@ export default function ReceiptVouchers() {
         <div className="border rounded-lg overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow className="bg-primary">
-                <TableHead className="text-primary-foreground font-semibold">Date</TableHead>
-                <TableHead className="text-primary-foreground font-semibold">Receipt Voucher No</TableHead>
-                <TableHead className="text-primary-foreground font-semibold">Job #</TableHead>
-                <TableHead className="text-primary-foreground font-semibold">Payment Type</TableHead>
-                <TableHead className="text-primary-foreground font-semibold">Invoice(s) Details</TableHead>
-                <TableHead className="text-primary-foreground font-semibold">Customer</TableHead>
-                <TableHead className="text-primary-foreground font-semibold">Narration</TableHead>
-                <TableHead className="text-primary-foreground font-semibold">Amount</TableHead>
-                <TableHead className="text-primary-foreground font-semibold">Action</TableHead>
+              <TableRow className="bg-table-header">
+                <TableHead className="text-table-header-foreground font-semibold">Date</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold">Receipt Voucher No</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold">Job #</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold">Payment Type</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold">Invoice(s) Details</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold">Customer</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold">Narration</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold">Amount</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -215,7 +212,7 @@ export default function ReceiptVouchers() {
                 </TableRow>
               ) : (
                 receipts.map((receipt) => (
-                  <TableRow key={receipt.id} className="hover:bg-muted/50">
+                  <TableRow key={receipt.id} className="hover:bg-table-row-hover">
                     <TableCell>
                       {formatDate(receipt.receiptDate)}
                     </TableCell>
@@ -258,22 +255,26 @@ export default function ReceiptVouchers() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button
-                          size="sm"
-                          className="bg-amber-500 hover:bg-amber-600 text-white h-8 w-8 p-0"
-                          title="Edit"
-                          onClick={() => handleEdit(receipt.id)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="bg-red-500 hover:bg-red-600 text-white h-8 w-8 p-0"
-                          title="Delete"
-                          onClick={() => handleDelete(receipt.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <PermissionGate permission="receipt_edit">
+                          <Button
+                            size="sm"
+                            className="bg-amber-500 hover:bg-amber-600 text-white h-8 w-8 p-0"
+                            title="Edit"
+                            onClick={() => handleEdit(receipt.id)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </PermissionGate>
+                        <PermissionGate permission="receipt_delete">
+                          <Button
+                            size="sm"
+                            className="bg-red-500 hover:bg-red-600 text-white h-8 w-8 p-0"
+                            title="Delete"
+                            onClick={() => handleDelete(receipt.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </PermissionGate>
                         <Button
                           size="sm"
                           className="bg-yellow-500 hover:bg-yellow-600 text-white h-8 w-8 p-0"
@@ -284,7 +285,7 @@ export default function ReceiptVouchers() {
                         </Button>
                         <Button
                           size="sm"
-                          className="bg-green-500 hover:bg-green-600 text-white h-8 w-8 p-0"
+                          className="btn-success h-8 w-8 p-0"
                           title="Print"
                           onClick={() => handlePrint(receipt.id)}
                         >

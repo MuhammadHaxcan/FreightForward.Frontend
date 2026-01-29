@@ -187,7 +187,7 @@ export default function QuotationView() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Quotations
           </Button>
-          <Button onClick={handlePrint} className="bg-green-600 hover:bg-green-700 text-white">
+          <Button onClick={handlePrint} className="btn-success">
             <Printer className="h-4 w-4 mr-2" />
             Print Quotation
           </Button>

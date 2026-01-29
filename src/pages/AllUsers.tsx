@@ -4,12 +4,12 @@ import { toast } from "sonner";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { SearchableMultiSelect } from "@/components/ui/searchable-multi-select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, Pencil, Trash2, ChevronDown, X } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { usersApi, rolesApi } from "../services/api/auth";
 import { PermissionGate } from "../components/auth/PermissionGate";
 import type { UserListItem, CreateUserRequest, UpdateUserRequest } from "../types/auth";
@@ -32,8 +32,7 @@ const AllUsers = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isActive, setIsActive] = useState(true);
-  const [selectedRoleIds, setSelectedRoleIds] = useState<number[]>([]);
-  const [rolesPopoverOpen, setRolesPopoverOpen] = useState(false);
+  const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([]);
 
   // Fetch users
   const { data: usersData, isLoading: usersLoading } = useQuery({
@@ -129,6 +128,9 @@ const AllUsers = () => {
     setEditingUserId(null);
   };
 
+  // Convert string[] to number[] for API calls
+  const getSelectedRoleIdsAsNumbers = () => selectedRoleIds.map(id => parseInt(id));
+
   const handleAddNew = () => {
     resetForm();
     setModalMode("add");
@@ -150,7 +152,7 @@ const AllUsers = () => {
     setEmail(fullUser.email);
     setPassword("");
     setIsActive(fullUser.isActive);
-    setSelectedRoleIds(fullUser.roles.map(r => r.id));
+    setSelectedRoleIds(fullUser.roles.map(r => r.id.toString()));
     setModalMode("edit");
     setEditingUserId(user.id);
     setModalOpen(true);
@@ -180,7 +182,7 @@ const AllUsers = () => {
         password,
         contactNumber: contactNumber || undefined,
         isActive,
-        roleIds: selectedRoleIds,
+        roleIds: getSelectedRoleIdsAsNumbers(),
       };
       createUserMutation.mutate(createData);
     } else if (editingUserId) {
@@ -191,30 +193,13 @@ const AllUsers = () => {
         password: password || undefined,
         contactNumber: contactNumber || undefined,
         isActive,
-        roleIds: selectedRoleIds,
+        roleIds: getSelectedRoleIdsAsNumbers(),
       };
       updateUserMutation.mutate({ id: editingUserId, data: updateData });
     }
   };
 
-  const toggleRole = (roleId: number) => {
-    setSelectedRoleIds(prev =>
-      prev.includes(roleId)
-        ? prev.filter(id => id !== roleId)
-        : [...prev, roleId]
-    );
-  };
-
-  const removeRole = (roleId: number) => {
-    setSelectedRoleIds(prev => prev.filter(id => id !== roleId));
-  };
-
-  const getSelectedRoleNames = () => {
-    return roles
-      .filter(r => selectedRoleIds.includes(r.id))
-      .map(r => r.name);
-  };
-
+  
   return (
     <MainLayout>
       <div className="p-6 space-y-4">
@@ -234,16 +219,17 @@ const AllUsers = () => {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Show:</span>
-            <Select value={entriesPerPage} onValueChange={(value) => { setEntriesPerPage(value); setCurrentPage(1); }}>
-              <SelectTrigger className="w-[70px] h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              options={[
+                { value: "10", label: "10" },
+                { value: "25", label: "25" },
+                { value: "50", label: "50" },
+                { value: "100", label: "100" },
+              ]}
+              value={entriesPerPage}
+              onValueChange={(value) => { setEntriesPerPage(value); setCurrentPage(1); }}
+              triggerClassName="w-[90px] h-8"
+            />
             <span className="text-sm text-muted-foreground">entries</span>
           </div>
 
@@ -333,7 +319,7 @@ const AllUsers = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-primary">
+          <p className="text-sm text-muted-foreground">
             Showing {users.length > 0 ? (currentPage - 1) * parseInt(entriesPerPage) + 1 : 0} to{" "}
             {Math.min(currentPage * parseInt(entriesPerPage), totalCount)} of {totalCount} entries
           </p>
@@ -451,71 +437,13 @@ const AllUsers = () => {
 
             <div className="space-y-2">
               <Label className="text-sm">Roles</Label>
-              <Popover open={rolesPopoverOpen} onOpenChange={setRolesPopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={rolesPopoverOpen}
-                    className="w-full justify-between h-auto min-h-10 py-2"
-                  >
-                    <div className="flex flex-wrap gap-1">
-                      {selectedRoleIds.length === 0 ? (
-                        <span className="text-muted-foreground">Select roles...</span>
-                      ) : (
-                        getSelectedRoleNames().map((name) => {
-                          const role = roles.find(r => r.name === name);
-                          return (
-                            <span
-                              key={name}
-                              className="bg-primary/10 text-primary px-2 py-0.5 rounded text-sm flex items-center gap-1"
-                            >
-                              {name}
-                              <X
-                                size={12}
-                                className="cursor-pointer hover:text-destructive"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (role) removeRole(role.id);
-                                }}
-                              />
-                            </span>
-                          );
-                        })
-                      )}
-                    </div>
-                    <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  className="w-[280px] p-0"
-                  align="start"
-                  onWheel={(e) => e.stopPropagation()}
-                >
-                  <div
-                    className="max-h-[180px] overflow-y-auto p-1 overscroll-contain [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-                    onWheel={(e) => {
-                      e.stopPropagation();
-                      const target = e.currentTarget;
-                      target.scrollTop += e.deltaY;
-                    }}
-                  >
-                    {roles.map((role) => (
-                      <div
-                        key={role.id}
-                        className="flex items-center gap-2 px-2 py-1.5 hover:bg-accent rounded cursor-pointer"
-                        onClick={() => toggleRole(role.id)}
-                      >
-                        <Checkbox
-                          checked={selectedRoleIds.includes(role.id)}
-                          onCheckedChange={() => toggleRole(role.id)}
-                        />
-                        <span className="text-sm">{role.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </PopoverContent>
-              </Popover>
+              <SearchableMultiSelect
+                options={roles.map(role => ({ value: role.id.toString(), label: role.name }))}
+                values={selectedRoleIds}
+                onValuesChange={setSelectedRoleIds}
+                placeholder="Select roles..."
+                searchPlaceholder="Search roles..."
+              />
             </div>
           </div>
 

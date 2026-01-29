@@ -2,11 +2,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ChevronDown, Check, Loader2 } from "lucide-react";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { SearchableMultiSelect } from "@/components/ui/searchable-multi-select";
+import { Loader2 } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { cn } from "@/lib/utils";
 import { useCreateCustomer, useUpdateCustomer } from "@/hooks/useCustomers";
 import { Customer, customerApi, settingsApi, NextCustomerCodes, CurrencyType, CustomerCategoryType } from "@/services/api";
 import { useQuery } from "@tanstack/react-query";
@@ -111,14 +110,6 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
     }
   }, [customer, mode, open, refetchNextCodes]);
 
-  const toggleCategory = (categoryId: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      categoryIds: prev.categoryIds.includes(categoryId)
-        ? prev.categoryIds.filter((id) => id !== categoryId)
-        : [...prev.categoryIds, categoryId],
-    }));
-  };
 
   const handleSubmit = async () => {
     const requestData = {
@@ -156,14 +147,14 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] bg-card border-border">
-        <DialogHeader>
-          <DialogTitle className="text-lg font-semibold">
+      <DialogContent className="sm:max-w-[600px] bg-card border-border p-0">
+        <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+          <DialogTitle className="text-white text-lg font-semibold">
             {mode === "add" ? "Add New Customer" : "Edit Customer"}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-2 gap-4 py-4">
+        <div className="grid grid-cols-2 gap-4 p-6">
           {/* Left Column */}
           <div className="space-y-4">
             <div className="space-y-2">
@@ -197,100 +188,27 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
               <Label htmlFor="masterType" className="text-sm">
                 *Master Type
               </Label>
-              <Select
+              <SearchableSelect
+                options={masterTypes.map((type) => ({ value: type, label: type }))}
                 value={formData.masterType}
                 onValueChange={(value) => {
                   const newCode = mode === "add" ? getCodeForMasterType(value) : formData.code;
                   setFormData({ ...formData, masterType: value, code: newCode });
                 }}
-              >
-                <SelectTrigger className="bg-muted/50">
-                  <SelectValue placeholder="Select" />
-                </SelectTrigger>
-                <SelectContent>
-                  {masterTypes.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Select"
+                triggerClassName="bg-muted/50"
+              />
             </div>
 
             <div className="space-y-2">
               <Label className="text-sm">*Customer Type</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    className="w-full justify-between bg-muted/50 font-normal h-auto min-h-[40px] py-2"
-                  >
-                    <div className="flex flex-wrap gap-1 flex-1">
-                      {formData.categoryIds.length === 0 ? (
-                        <span className="text-muted-foreground">Select customer types...</span>
-                      ) : (
-                        formData.categoryIds.map((categoryId) => {
-                          const categoryType = categoryTypes.find(ct => ct.id === categoryId);
-                          return (
-                            <span
-                              key={categoryId}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary text-primary-foreground rounded-md"
-                            >
-                              {categoryType?.name || `Category ${categoryId}`}
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleCategory(categoryId);
-                                }}
-                                className="hover:bg-primary-foreground/20 rounded-full"
-                              >
-                                x
-                              </button>
-                            </span>
-                          );
-                        })
-                      )}
-                    </div>
-                    <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  className="w-[var(--radix-popover-trigger-width)] p-0"
-                  align="start"
-                  onWheel={(e) => e.stopPropagation()}
-                >
-                  <div
-                    className="max-h-[180px] overflow-y-auto p-1 overscroll-contain [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-                    onWheel={(e) => {
-                      e.stopPropagation();
-                      const target = e.currentTarget;
-                      target.scrollTop += e.deltaY;
-                    }}
-                  >
-                    {categoryTypes.map((categoryType) => (
-                      <div
-                        key={categoryType.id}
-                        onClick={() => toggleCategory(categoryType.id)}
-                        className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
-                      >
-                        <div
-                          className={cn(
-                            "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                            formData.categoryIds.includes(categoryType.id)
-                              ? "bg-primary text-primary-foreground"
-                              : "opacity-50"
-                          )}
-                        >
-                          {formData.categoryIds.includes(categoryType.id) && <Check className="h-3 w-3" />}
-                        </div>
-                        {categoryType.name}
-                      </div>
-                    ))}
-                  </div>
-                </PopoverContent>
-              </Popover>
+              <SearchableMultiSelect
+                options={categoryTypes.map((ct) => ({ value: ct.id.toString(), label: ct.name }))}
+                values={formData.categoryIds.map((id) => id.toString())}
+                onValuesChange={(vals) => setFormData({ ...formData, categoryIds: vals.map((v) => parseInt(v)) })}
+                placeholder="Select customer types..."
+                triggerClassName="bg-muted/50"
+              />
             </div>
 
             <div className="space-y-2">
@@ -353,21 +271,16 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
               <Label htmlFor="currencyId" className="text-sm">
                 *Base Currency
               </Label>
-              <Select
+              <SearchableSelect
+                options={currencies.map((currency) => ({
+                  value: currency.id.toString(),
+                  label: `${currency.code} - ${currency.name}`,
+                }))}
                 value={formData.currencyId}
                 onValueChange={(value) => setFormData({ ...formData, currencyId: value })}
-              >
-                <SelectTrigger className="bg-muted/50">
-                  <SelectValue placeholder="Select" />
-                </SelectTrigger>
-                <SelectContent>
-                  {currencies.map((currency) => (
-                    <SelectItem key={currency.id} value={currency.id.toString()}>
-                      {currency.code} - {currency.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Select"
+                triggerClassName="bg-muted/50"
+              />
             </div>
 
             <div className="space-y-2">
@@ -385,7 +298,7 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 pt-4 border-t border-border">
+        <div className="flex justify-end gap-3 px-6 pb-6 pt-4 border-t border-border">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
             Cancel
           </Button>

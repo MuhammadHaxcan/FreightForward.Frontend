@@ -11,13 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Edit, Send, Loader2, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -107,20 +101,22 @@ export default function Leads() {
             <PermissionGate permission="leads_add">
               <Button
                 onClick={handleGenerateLead}
-                className="bg-green-600 hover:bg-green-700 text-white"
+                className="btn-success"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Generate Lead
               </Button>
             </PermissionGate>
-            <Button
-              onClick={handleSendRateRequest}
-              variant="outline"
-              className="border-green-600 text-green-600 hover:bg-green-50"
-            >
-              <Send className="h-4 w-4 mr-2" />
-              Send Rate Request
-            </Button>
+            <PermissionGate permission="ratereq_add">
+              <Button
+                onClick={handleSendRateRequest}
+                variant="outline"
+                className="border-green-600 text-green-600 hover:bg-green-50"
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Send Rate Request
+              </Button>
+            </PermissionGate>
           </div>
         </div>
 
@@ -128,19 +124,22 @@ export default function Leads() {
           <div className="p-4 flex justify-between items-center border-b border-border">
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Show</span>
-              <Select value={entriesPerPage} onValueChange={(value) => {
-                setEntriesPerPage(value);
-                setCurrentPage(1);
-              }}>
-                <SelectTrigger className="w-20">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="25">25</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                options={[
+                  { value: "10", label: "10" },
+                  { value: "25", label: "25" },
+                  { value: "50", label: "50" },
+                  { value: "100", label: "100" },
+                ]}
+                value={entriesPerPage}
+                onValueChange={(value) => {
+                  setEntriesPerPage(value);
+                  setCurrentPage(1);
+                }}
+                placeholder="10"
+                searchPlaceholder="Search..."
+                triggerClassName="w-20"
+              />
               <span className="text-sm text-muted-foreground">entries</span>
             </div>
 
@@ -169,19 +168,19 @@ export default function Leads() {
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="bg-[#2c3e50]">
-                  <TableHead className="text-white w-12"></TableHead>
-                  <TableHead className="text-white">Action</TableHead>
-                  <TableHead className="text-white">Lead No.</TableHead>
-                  <TableHead className="text-white">Date</TableHead>
-                  <TableHead className="text-white">Customer Name</TableHead>
-                  <TableHead className="text-white">Freight Mode</TableHead>
-                  <TableHead className="text-white">Inco Terms</TableHead>
-                  <TableHead className="text-white">Pickup Country</TableHead>
-                  <TableHead className="text-white">Delivery Country</TableHead>
-                  <TableHead className="text-white">Items</TableHead>
-                  <TableHead className="text-white">Weight</TableHead>
-                  <TableHead className="text-white">Status</TableHead>
+                <TableRow className="bg-table-header">
+                  <TableHead className="text-table-header-foreground w-12"></TableHead>
+                  <TableHead className="text-table-header-foreground">Action</TableHead>
+                  <TableHead className="text-table-header-foreground">Lead No.</TableHead>
+                  <TableHead className="text-table-header-foreground">Date</TableHead>
+                  <TableHead className="text-table-header-foreground">Customer Name</TableHead>
+                  <TableHead className="text-table-header-foreground">Freight Mode</TableHead>
+                  <TableHead className="text-table-header-foreground">Inco Terms</TableHead>
+                  <TableHead className="text-table-header-foreground">Pickup Country</TableHead>
+                  <TableHead className="text-table-header-foreground">Delivery Country</TableHead>
+                  <TableHead className="text-table-header-foreground">Items</TableHead>
+                  <TableHead className="text-table-header-foreground">Weight</TableHead>
+                  <TableHead className="text-table-header-foreground">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -193,7 +192,7 @@ export default function Leads() {
                   </TableRow>
                 ) : (
                   leads.map((lead) => (
-                    <TableRow key={lead.id} className="hover:bg-muted/50">
+                    <TableRow key={lead.id} className="hover:bg-table-row-hover">
                       <TableCell>
                         <Checkbox
                           checked={selectedLeadId === lead.id}
@@ -205,7 +204,7 @@ export default function Leads() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 bg-green-500 hover:bg-green-600 text-white rounded"
+                            className="h-8 w-8 btn-success rounded"
                             onClick={() => handleEditLead(lead.id)}
                           >
                             <Edit className="h-4 w-4" />
@@ -230,7 +229,7 @@ export default function Leads() {
           )}
 
           <div className="p-4 flex justify-between items-center border-t border-border">
-            <span className="text-sm text-green-600">
+            <span className="text-sm text-muted-foreground">
               Showing {leads.length > 0 ? ((currentPage - 1) * parseInt(entriesPerPage)) + 1 : 0} to {Math.min(currentPage * parseInt(entriesPerPage), totalCount)} of {totalCount} entries
             </span>
             <div className="flex gap-1">
@@ -247,7 +246,7 @@ export default function Leads() {
                   key={page}
                   variant={page === currentPage ? "default" : "outline"}
                   size="sm"
-                  className={page === currentPage ? "bg-green-600" : ""}
+                  className={page === currentPage ? "btn-success" : ""}
                   onClick={() => setCurrentPage(page)}
                 >
                   {page}

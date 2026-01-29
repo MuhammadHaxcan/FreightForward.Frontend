@@ -9,15 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  SelectGroup,
-  SelectLabel,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useQuery } from "@tanstack/react-query";
 import { settingsApi, PackageType, ContainerType, ShipmentContainer } from "@/services/api";
 
@@ -132,12 +124,12 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl bg-card border border-border">
-        <DialogHeader>
-          <DialogTitle className="text-foreground text-lg">{isEditing ? "Edit Container" : "Add Container"}</DialogTitle>
+      <DialogContent className="max-w-4xl bg-card border border-border p-0">
+        <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+          <DialogTitle className="text-white text-lg font-semibold">{isEditing ? "Edit Container" : "Add Container"}</DialogTitle>
         </DialogHeader>
-        
-        <div className="space-y-4 p-4">
+
+        <div className="space-y-4 p-6">
           {/* Row 1 */}
           <div className="grid grid-cols-5 gap-4">
             <div>
@@ -150,25 +142,16 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
             </div>
             <div>
               <Label className="text-sm">Container Type</Label>
-              <Select
+              <SearchableSelect
+                options={Object.entries(containerTypesByCategory).flatMap(([category, types]) =>
+                  types.map(ct => ({ value: ct.id.toString(), label: `${category} > ${ct.name}` }))
+                )}
                 value={formData.containerTypeId}
                 onValueChange={(v) => handleInputChange("containerTypeId", v)}
                 disabled={isLoadingContainerTypes}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={isLoadingContainerTypes ? "Loading..." : "Select container type"} />
-                </SelectTrigger>
-                <SelectContent className="bg-popover border border-border">
-                  {Object.entries(containerTypesByCategory).map(([category, types]) => (
-                    <SelectGroup key={category}>
-                      <SelectLabel className="text-muted-foreground font-semibold">{category}</SelectLabel>
-                      {types.map(ct => (
-                        <SelectItem key={ct.id} value={ct.id.toString()}>{ct.name}</SelectItem>
-                      ))}
-                    </SelectGroup>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder={isLoadingContainerTypes ? "Loading..." : "Select container type"}
+                searchPlaceholder="Search container types..."
+              />
             </div>
             <div>
               <Label className="text-sm">Container No</Label>
@@ -188,25 +171,16 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
             </div>
             <div>
               <Label className="text-sm">Packages</Label>
-              <Select
+              <SearchableSelect
+                options={Object.entries(packageTypesByCategory).flatMap(([category, types]) =>
+                  types.map(pt => ({ value: pt.id.toString(), label: `${category} > ${pt.name}` }))
+                )}
                 value={formData.packageTypeId}
                 onValueChange={(v) => handleInputChange("packageTypeId", v)}
                 disabled={isLoadingPackageTypes}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={isLoadingPackageTypes ? "Loading..." : "Select package type"} />
-                </SelectTrigger>
-                <SelectContent className="bg-popover border border-border">
-                  {Object.entries(packageTypesByCategory).map(([category, types]) => (
-                    <SelectGroup key={category}>
-                      <SelectLabel className="text-muted-foreground font-semibold">{category}</SelectLabel>
-                      {types.map(pt => (
-                        <SelectItem key={pt.id} value={pt.id.toString()}>{pt.name}</SelectItem>
-                      ))}
-                    </SelectGroup>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder={isLoadingPackageTypes ? "Loading..." : "Select package type"}
+                searchPlaceholder="Search package types..."
+              />
             </div>
           </div>
 
@@ -229,16 +203,13 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
                   placeholder="Gross Weight"
                   className="flex-1"
                 />
-                <Select value={formData.weightUnit} onValueChange={(v) => handleInputChange("weightUnit", v)}>
-                  <SelectTrigger className="w-20">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border border-border">
-                    {weightUnits.map(unit => (
-                      <SelectItem key={unit} value={unit}>{unit}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  options={weightUnits.map(unit => ({ value: unit, label: unit }))}
+                  value={formData.weightUnit}
+                  onValueChange={(v) => handleInputChange("weightUnit", v)}
+                  triggerClassName="w-20"
+                  searchPlaceholder="Search..."
+                />
               </div>
             </div>
             <div>
@@ -262,16 +233,16 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
 
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => onOpenChange(false)}
               className="px-6"
             >
-              Close
+              Cancel
             </Button>
             <Button
               onClick={handleSave}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white px-6"
+              className="btn-success px-6"
             >
               {isEditing ? "Update" : "Add"}
             </Button>

@@ -1,15 +1,10 @@
 import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Edit, Trash2, Plus, Loader2, Upload } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Dialog,
   DialogContent,
@@ -62,6 +57,13 @@ const Settings = () => {
   const [chargePage, setChargePage] = useState(1);
   const [expensePage, setExpensePage] = useState(1);
   const [bankPage, setBankPage] = useState(1);
+
+  // Page size state
+  const [currencyPageSize, setCurrencyPageSize] = useState("10");
+  const [portPageSize, setPortPageSize] = useState("10");
+  const [chargePageSize, setChargePageSize] = useState("10");
+  const [expensePageSize, setExpensePageSize] = useState("10");
+  const [bankPageSize, setBankPageSize] = useState("10");
 
   // Search state
   const [currencySearch, setCurrencySearch] = useState("");
@@ -151,31 +153,31 @@ const Settings = () => {
   // API queries
   const { data: currencyData, isLoading: currencyLoading } = useCurrencyTypes({
     pageNumber: currencyPage,
-    pageSize: 10,
+    pageSize: parseInt(currencyPageSize),
     searchTerm: currencySearch || undefined,
   });
 
   const { data: portData, isLoading: portLoading } = usePorts({
     pageNumber: portPage,
-    pageSize: 10,
+    pageSize: parseInt(portPageSize),
     searchTerm: portSearch || undefined,
   });
 
   const { data: chargeData, isLoading: chargeLoading } = useChargeItems({
     pageNumber: chargePage,
-    pageSize: 10,
+    pageSize: parseInt(chargePageSize),
     searchTerm: chargeSearch || undefined,
   });
 
   const { data: expenseData, isLoading: expenseLoading } = useExpenseTypes({
     pageNumber: expensePage,
-    pageSize: 10,
+    pageSize: parseInt(expensePageSize),
     searchTerm: expenseSearch || undefined,
   });
 
   const { data: bankData, isLoading: bankLoading } = useBanks({
     pageNumber: bankPage,
-    pageSize: 10,
+    pageSize: parseInt(bankPageSize),
     searchTerm: bankSearch || undefined,
   });
 
@@ -550,8 +552,8 @@ const Settings = () => {
         setCompanyId(res.data!);
         toast.success("Company created successfully");
       }
-    } catch (err: any) {
-      toast.error(err.message || "Failed to save company");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save company");
     } finally {
       setCompanySaving(false);
     }
@@ -607,6 +609,21 @@ const Settings = () => {
                 <h2 className="text-lg font-semibold text-primary">List All Currencies</h2>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Show</span>
+                    <SearchableSelect
+                      options={[
+                        { value: "10", label: "10" },
+                        { value: "25", label: "25" },
+                        { value: "50", label: "50" },
+                        { value: "100", label: "100" },
+                      ]}
+                      value={currencyPageSize}
+                      onValueChange={(value) => { setCurrencyPageSize(value); setCurrencyPage(1); }}
+                      triggerClassName="w-[90px] h-8"
+                    />
+                    <span className="text-sm text-muted-foreground">entries</span>
+                  </div>
+                  <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Search:</span>
                     <Input
                       placeholder=""
@@ -615,10 +632,12 @@ const Settings = () => {
                       className="h-9 w-48"
                     />
                   </div>
-                  <Button className="btn-success gap-2" onClick={() => setAddCurrencyModalOpen(true)}>
-                    <Plus size={16} />
-                    Add New
-                  </Button>
+                  <PermissionGate permission="currency_add">
+                    <Button className="btn-success gap-2" onClick={() => setAddCurrencyModalOpen(true)}>
+                      <Plus size={16} />
+                      Add New
+                    </Button>
+                  </PermissionGate>
                 </div>
               </div>
               <div className="overflow-x-auto">
@@ -648,21 +667,25 @@ const Settings = () => {
                         >
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => {
-                                  setEditCurrency({ ...currency });
-                                  setEditCurrencyModalOpen(true);
-                                }}
-                                className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
-                              >
-                                <Edit size={14} />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteCurrency(currency.id)}
-                                className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
-                              >
-                                <Trash2 size={14} />
-                              </button>
+                              <PermissionGate permission="currency_edit">
+                                <button
+                                  onClick={() => {
+                                    setEditCurrency({ ...currency });
+                                    setEditCurrencyModalOpen(true);
+                                  }}
+                                  className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                                >
+                                  <Edit size={14} />
+                                </button>
+                              </PermissionGate>
+                              <PermissionGate permission="currency_delete">
+                                <button
+                                  onClick={() => handleDeleteCurrency(currency.id)}
+                                  className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </PermissionGate>
                             </div>
                           </td>
                           <td className="px-4 py-3 text-sm text-primary font-medium">{currency.name}</td>
@@ -686,7 +709,7 @@ const Settings = () => {
               {currencyData && (
                 <div className="flex items-center justify-between p-4">
                   <p className="text-sm text-muted-foreground">
-                    Showing {((currencyPage - 1) * 10) + 1} to {Math.min(currencyPage * 10, currencyData.totalCount)} of {currencyData.totalCount} entries
+                    Showing {((currencyPage - 1) * parseInt(currencyPageSize)) + 1} to {Math.min(currencyPage * parseInt(currencyPageSize), currencyData.totalCount)} of {currencyData.totalCount} entries
                   </p>
                   <div className="flex items-center gap-1">
                     <Button
@@ -721,6 +744,21 @@ const Settings = () => {
                 <h2 className="text-lg font-semibold text-primary">List All Ports</h2>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Show</span>
+                    <SearchableSelect
+                      options={[
+                        { value: "10", label: "10" },
+                        { value: "25", label: "25" },
+                        { value: "50", label: "50" },
+                        { value: "100", label: "100" },
+                      ]}
+                      value={portPageSize}
+                      onValueChange={(value) => { setPortPageSize(value); setPortPage(1); }}
+                      triggerClassName="w-[90px] h-8"
+                    />
+                    <span className="text-sm text-muted-foreground">entries</span>
+                  </div>
+                  <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Search:</span>
                     <Input
                       placeholder=""
@@ -729,10 +767,12 @@ const Settings = () => {
                       className="h-9 w-48"
                     />
                   </div>
-                  <Button className="btn-success gap-2" onClick={() => setAddPortModalOpen(true)}>
-                    <Plus size={16} />
-                    Add New
-                  </Button>
+                  <PermissionGate permission="port_add">
+                    <Button className="btn-success gap-2" onClick={() => setAddPortModalOpen(true)}>
+                      <Plus size={16} />
+                      Add New
+                    </Button>
+                  </PermissionGate>
                 </div>
               </div>
               <div className="overflow-x-auto">
@@ -759,21 +799,25 @@ const Settings = () => {
                         >
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => {
-                                  setEditPort({ ...port });
-                                  setEditPortModalOpen(true);
-                                }}
-                                className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
-                              >
-                                <Edit size={14} />
-                              </button>
-                              <button
-                                onClick={() => handleDeletePort(port.id)}
-                                className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
-                              >
-                                <Trash2 size={14} />
-                              </button>
+                              <PermissionGate permission="port_edit">
+                                <button
+                                  onClick={() => {
+                                    setEditPort({ ...port });
+                                    setEditPortModalOpen(true);
+                                  }}
+                                  className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                                >
+                                  <Edit size={14} />
+                                </button>
+                              </PermissionGate>
+                              <PermissionGate permission="port_delete">
+                                <button
+                                  onClick={() => handleDeletePort(port.id)}
+                                  className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </PermissionGate>
                             </div>
                           </td>
                           <td className="px-4 py-3 text-sm text-primary font-medium">{port.name}</td>
@@ -794,7 +838,7 @@ const Settings = () => {
               {portData && (
                 <div className="flex items-center justify-between p-4">
                   <p className="text-sm text-muted-foreground">
-                    Showing {((portPage - 1) * 10) + 1} to {Math.min(portPage * 10, portData.totalCount)} of {portData.totalCount} entries
+                    Showing {((portPage - 1) * parseInt(portPageSize)) + 1} to {Math.min(portPage * parseInt(portPageSize), portData.totalCount)} of {portData.totalCount} entries
                   </p>
                   <div className="flex items-center gap-1">
                     <Button
@@ -829,6 +873,21 @@ const Settings = () => {
                 <h2 className="text-lg font-semibold text-primary">List All Charges</h2>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Show</span>
+                    <SearchableSelect
+                      options={[
+                        { value: "10", label: "10" },
+                        { value: "25", label: "25" },
+                        { value: "50", label: "50" },
+                        { value: "100", label: "100" },
+                      ]}
+                      value={chargePageSize}
+                      onValueChange={(value) => { setChargePageSize(value); setChargePage(1); }}
+                      triggerClassName="w-[90px] h-8"
+                    />
+                    <span className="text-sm text-muted-foreground">entries</span>
+                  </div>
+                  <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Search:</span>
                     <Input
                       placeholder=""
@@ -837,10 +896,12 @@ const Settings = () => {
                       className="h-9 w-48"
                     />
                   </div>
-                  <Button className="btn-success gap-2" onClick={() => setAddChargeModalOpen(true)}>
-                    <Plus size={16} />
-                    Add New
-                  </Button>
+                  <PermissionGate permission="chargeitem_add">
+                    <Button className="btn-success gap-2" onClick={() => setAddChargeModalOpen(true)}>
+                      <Plus size={16} />
+                      Add New
+                    </Button>
+                  </PermissionGate>
                 </div>
               </div>
               <div className="overflow-x-auto">
@@ -866,21 +927,25 @@ const Settings = () => {
                         >
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => {
-                                  setEditCharge({ ...charge });
-                                  setEditChargeModalOpen(true);
-                                }}
-                                className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
-                              >
-                                <Edit size={14} />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteCharge(charge.id)}
-                                className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
-                              >
-                                <Trash2 size={14} />
-                              </button>
+                              <PermissionGate permission="chargeitem_edit">
+                                <button
+                                  onClick={() => {
+                                    setEditCharge({ ...charge });
+                                    setEditChargeModalOpen(true);
+                                  }}
+                                  className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                                >
+                                  <Edit size={14} />
+                                </button>
+                              </PermissionGate>
+                              <PermissionGate permission="chargeitem_delete">
+                                <button
+                                  onClick={() => handleDeleteCharge(charge.id)}
+                                  className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </PermissionGate>
                             </div>
                           </td>
                           <td className="px-4 py-3 text-sm text-primary font-medium">{charge.name}</td>
@@ -900,7 +965,7 @@ const Settings = () => {
               {chargeData && (
                 <div className="flex items-center justify-between p-4">
                   <p className="text-sm text-muted-foreground">
-                    Showing {((chargePage - 1) * 10) + 1} to {Math.min(chargePage * 10, chargeData.totalCount)} of {chargeData.totalCount} entries
+                    Showing {((chargePage - 1) * parseInt(chargePageSize)) + 1} to {Math.min(chargePage * parseInt(chargePageSize), chargeData.totalCount)} of {chargeData.totalCount} entries
                   </p>
                   <div className="flex items-center gap-1">
                     <Button
@@ -935,6 +1000,21 @@ const Settings = () => {
                 <h2 className="text-lg font-semibold text-primary">List All Expenses</h2>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Show</span>
+                    <SearchableSelect
+                      options={[
+                        { value: "10", label: "10" },
+                        { value: "25", label: "25" },
+                        { value: "50", label: "50" },
+                        { value: "100", label: "100" },
+                      ]}
+                      value={expensePageSize}
+                      onValueChange={(value) => { setExpensePageSize(value); setExpensePage(1); }}
+                      triggerClassName="w-[90px] h-8"
+                    />
+                    <span className="text-sm text-muted-foreground">entries</span>
+                  </div>
+                  <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Search:</span>
                     <Input
                       placeholder=""
@@ -943,10 +1023,12 @@ const Settings = () => {
                       className="h-9 w-48"
                     />
                   </div>
-                  <Button className="btn-success gap-2" onClick={() => setAddExpenseModalOpen(true)}>
-                    <Plus size={16} />
-                    Add New
-                  </Button>
+                  <PermissionGate permission="expensetype_add">
+                    <Button className="btn-success gap-2" onClick={() => setAddExpenseModalOpen(true)}>
+                      <Plus size={16} />
+                      Add New
+                    </Button>
+                  </PermissionGate>
                 </div>
               </div>
               <div className="overflow-x-auto">
@@ -973,21 +1055,25 @@ const Settings = () => {
                         >
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => {
-                                  setEditExpense({ ...expense });
-                                  setEditExpenseModalOpen(true);
-                                }}
-                                className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
-                              >
-                                <Edit size={14} />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteExpense(expense.id)}
-                                className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
-                              >
-                                <Trash2 size={14} />
-                              </button>
+                              <PermissionGate permission="expensetype_edit">
+                                <button
+                                  onClick={() => {
+                                    setEditExpense({ ...expense });
+                                    setEditExpenseModalOpen(true);
+                                  }}
+                                  className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                                >
+                                  <Edit size={14} />
+                                </button>
+                              </PermissionGate>
+                              <PermissionGate permission="expensetype_delete">
+                                <button
+                                  onClick={() => handleDeleteExpense(expense.id)}
+                                  className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </PermissionGate>
                             </div>
                           </td>
                           <td className="px-4 py-3 text-sm text-foreground">{expense.paymentDirectionName}</td>
@@ -1008,7 +1094,7 @@ const Settings = () => {
               {expenseData && (
                 <div className="flex items-center justify-between p-4">
                   <p className="text-sm text-muted-foreground">
-                    Showing {((expensePage - 1) * 10) + 1} to {Math.min(expensePage * 10, expenseData.totalCount)} of {expenseData.totalCount} entries
+                    Showing {((expensePage - 1) * parseInt(expensePageSize)) + 1} to {Math.min(expensePage * parseInt(expensePageSize), expenseData.totalCount)} of {expenseData.totalCount} entries
                   </p>
                   <div className="flex items-center gap-1">
                     <Button
@@ -1218,35 +1304,23 @@ const Settings = () => {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-foreground mb-1">Country</label>
-                        <Select
+                        <SearchableSelect
+                          options={countries.map((c) => ({ value: c, label: c }))}
                           value={companyProfile.country}
                           onValueChange={(val) => setCompanyProfile({ ...companyProfile, country: val })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select Country" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {countries.map((c) => (
-                              <SelectItem key={c} value={c}>{c}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          placeholder="Select Country"
+                          searchPlaceholder="Search countries..."
+                        />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-foreground mb-1">Bank</label>
-                        <Select
+                        <SearchableSelect
+                          options={allBanks.map((b) => ({ value: b.id.toString(), label: b.bankName }))}
                           value={companyProfile.bankId?.toString() ?? ""}
                           onValueChange={(val) => setCompanyProfile({ ...companyProfile, bankId: val ? parseInt(val) : null })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select Bank" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {allBanks.map((b) => (
-                              <SelectItem key={b.id} value={b.id.toString()}>{b.bankName}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          placeholder="Select Bank"
+                          searchPlaceholder="Search banks..."
+                        />
                       </div>
                     </div>
                   </div>
@@ -1273,6 +1347,21 @@ const Settings = () => {
                 <h2 className="text-lg font-semibold text-primary">List All Banks</h2>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Show</span>
+                    <SearchableSelect
+                      options={[
+                        { value: "10", label: "10" },
+                        { value: "25", label: "25" },
+                        { value: "50", label: "50" },
+                        { value: "100", label: "100" },
+                      ]}
+                      value={bankPageSize}
+                      onValueChange={(value) => { setBankPageSize(value); setBankPage(1); }}
+                      triggerClassName="w-[90px] h-8"
+                    />
+                    <span className="text-sm text-muted-foreground">entries</span>
+                  </div>
+                  <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Search:</span>
                     <Input
                       placeholder=""
@@ -1281,10 +1370,12 @@ const Settings = () => {
                       className="h-9 w-48"
                     />
                   </div>
-                  <Button className="btn-success gap-2" onClick={() => setAddBankModalOpen(true)}>
-                    <Plus size={16} />
-                    Add New
-                  </Button>
+                  <PermissionGate permission="banks_add">
+                    <Button className="btn-success gap-2" onClick={() => setAddBankModalOpen(true)}>
+                      <Plus size={16} />
+                      Add New
+                    </Button>
+                  </PermissionGate>
                 </div>
               </div>
               <div className="overflow-x-auto">
@@ -1315,21 +1406,25 @@ const Settings = () => {
                         >
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => {
-                                  setEditBank({ ...bank });
-                                  setEditBankModalOpen(true);
-                                }}
-                                className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
-                              >
-                                <Edit size={14} />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteBank(bank.id)}
-                                className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
-                              >
-                                <Trash2 size={14} />
-                              </button>
+                              <PermissionGate permission="banks_edit">
+                                <button
+                                  onClick={() => {
+                                    setEditBank({ ...bank });
+                                    setEditBankModalOpen(true);
+                                  }}
+                                  className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                                >
+                                  <Edit size={14} />
+                                </button>
+                              </PermissionGate>
+                              <PermissionGate permission="banks_delete">
+                                <button
+                                  onClick={() => handleDeleteBank(bank.id)}
+                                  className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </PermissionGate>
                             </div>
                           </td>
                           <td className="px-4 py-3 text-sm text-primary font-medium">{bank.bankName}</td>
@@ -1354,7 +1449,7 @@ const Settings = () => {
               {bankData && (
                 <div className="flex items-center justify-between p-4">
                   <p className="text-sm text-muted-foreground">
-                    Showing {((bankPage - 1) * 10) + 1} to {Math.min(bankPage * 10, bankData.totalCount)} of {bankData.totalCount} entries
+                    Showing {((bankPage - 1) * parseInt(bankPageSize)) + 1} to {Math.min(bankPage * parseInt(bankPageSize), bankData.totalCount)} of {bankData.totalCount} entries
                   </p>
                   <div className="flex items-center gap-1">
                     <Button
@@ -1487,7 +1582,7 @@ const Settings = () => {
                 <Input value={editCurrency.roe} onChange={(e) => setEditCurrency({ ...editCurrency, roe: parseFloat(e.target.value) || 0 })} />
               </div>
               <div className="flex justify-end gap-3 pt-4">
-                <Button variant="outline" onClick={() => setEditCurrencyModalOpen(false)}>Close</Button>
+                <Button variant="outline" onClick={() => setEditCurrencyModalOpen(false)}>Cancel</Button>
                 <Button
                   className="btn-success"
                   onClick={handleUpdateCurrency}
@@ -1519,14 +1614,13 @@ const Settings = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Country</label>
-              <Select value={portForm.country} onValueChange={(value) => setPortForm({ ...portForm, country: value })}>
-                <SelectTrigger><SelectValue placeholder="Select Country" /></SelectTrigger>
-                <SelectContent className="bg-popover border border-border">
-                  {countries.map((country) => (
-                    <SelectItem key={country} value={country}>{country}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                options={countries.map((country) => ({ value: country, label: country }))}
+                value={portForm.country}
+                onValueChange={(value) => setPortForm({ ...portForm, country: value })}
+                placeholder="Select Country"
+                searchPlaceholder="Search countries..."
+              />
             </div>
             <div className="flex justify-end gap-3 pt-4">
               <Button variant="outline" onClick={() => setAddPortModalOpen(false)}>Cancel</Button>
@@ -1557,17 +1651,16 @@ const Settings = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Country</label>
-                <Select value={editPort.country} onValueChange={(value) => setEditPort({ ...editPort, country: value })}>
-                  <SelectTrigger><SelectValue placeholder="Select Country" /></SelectTrigger>
-                  <SelectContent className="bg-popover border border-border">
-                    {countries.map((country) => (
-                      <SelectItem key={country} value={country}>{country}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  options={countries.map((country) => ({ value: country, label: country }))}
+                  value={editPort.country}
+                  onValueChange={(value) => setEditPort({ ...editPort, country: value })}
+                  placeholder="Select Country"
+                  searchPlaceholder="Search countries..."
+                />
               </div>
               <div className="flex justify-end gap-3 pt-4">
-                <Button variant="outline" onClick={() => setEditPortModalOpen(false)}>Close</Button>
+                <Button variant="outline" onClick={() => setEditPortModalOpen(false)}>Cancel</Button>
                 <Button
                   className="btn-success"
                   onClick={handleUpdatePort}
@@ -1625,7 +1718,7 @@ const Settings = () => {
                 <Input value={editCharge.name} onChange={(e) => setEditCharge({ ...editCharge, name: e.target.value })} />
               </div>
               <div className="flex justify-end gap-3 pt-4">
-                <Button variant="outline" onClick={() => setEditChargeModalOpen(false)}>Close</Button>
+                <Button variant="outline" onClick={() => setEditChargeModalOpen(false)}>Cancel</Button>
                 <Button
                   className="btn-success"
                   onClick={handleUpdateCharge}
@@ -1649,13 +1742,16 @@ const Settings = () => {
           <div className="space-y-4 py-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Category</label>
-              <Select value={expenseForm.paymentDirection} onValueChange={(value: PaymentType) => setExpenseForm({ ...expenseForm, paymentDirection: value })}>
-                <SelectTrigger><SelectValue placeholder="Select One" /></SelectTrigger>
-                <SelectContent className="bg-popover border border-border">
-                  <SelectItem value="Outwards">Outwards</SelectItem>
-                  <SelectItem value="Inwards">Inwards</SelectItem>
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                options={[
+                  { value: "Outwards", label: "Outwards" },
+                  { value: "Inwards", label: "Inwards" },
+                ]}
+                value={expenseForm.paymentDirection}
+                onValueChange={(value) => setExpenseForm({ ...expenseForm, paymentDirection: value as PaymentType })}
+                placeholder="Select One"
+                searchPlaceholder="Search..."
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Payment Type</label>
@@ -1690,20 +1786,23 @@ const Settings = () => {
             <div className="space-y-4 py-4">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Category</label>
-                <Select value={editExpense.paymentDirection} onValueChange={(value: PaymentType) => setEditExpense({ ...editExpense, paymentDirection: value })}>
-                  <SelectTrigger><SelectValue placeholder="Select Category" /></SelectTrigger>
-                  <SelectContent className="bg-popover border border-border">
-                    <SelectItem value="Outwards">Outwards</SelectItem>
-                    <SelectItem value="Inwards">Inwards</SelectItem>
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  options={[
+                    { value: "Outwards", label: "Outwards" },
+                    { value: "Inwards", label: "Inwards" },
+                  ]}
+                  value={editExpense.paymentDirection}
+                  onValueChange={(value) => setEditExpense({ ...editExpense, paymentDirection: value as PaymentType })}
+                  placeholder="Select Category"
+                  searchPlaceholder="Search..."
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Payment Type</label>
                 <Input value={editExpense.name} onChange={(e) => setEditExpense({ ...editExpense, name: e.target.value })} />
               </div>
               <div className="flex justify-end gap-3 pt-4">
-                <Button variant="outline" onClick={() => setEditExpenseModalOpen(false)}>Close</Button>
+                <Button variant="outline" onClick={() => setEditExpenseModalOpen(false)}>Cancel</Button>
                 <Button
                   className="btn-success"
                   onClick={handleUpdateExpense}
@@ -1821,7 +1920,7 @@ const Settings = () => {
                 <Input value={editBank.branch || ""} onChange={(e) => setEditBank({ ...editBank, branch: e.target.value })} />
               </div>
               <div className="flex justify-end gap-3 pt-4">
-                <Button variant="outline" onClick={() => setEditBankModalOpen(false)}>Close</Button>
+                <Button variant="outline" onClick={() => setEditBankModalOpen(false)}>Cancel</Button>
                 <Button
                   className="btn-success"
                   onClick={handleUpdateBank}

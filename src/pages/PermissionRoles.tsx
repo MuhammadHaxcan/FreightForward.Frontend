@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
@@ -13,6 +13,17 @@ import { toast } from "sonner";
 import { rolesApi, permissionsApi } from "../services/api/auth";
 import { PermissionGate } from "../components/auth/PermissionGate";
 import type { Permission, RoleListItem, CreateRoleRequest, UpdateRoleRequest } from "../types/auth";
+
+// Minimum required permissions - these are always selected and cannot be unchecked
+// Settings view permissions are required for dropdowns to work in shipments, customers, etc.
+const MINIMUM_REQUIRED_PERMISSION_CODES = [
+  'banks_view',
+  'company_view',
+  'currency_view',
+  'port_view',
+  'chargeitem_view',
+  'expensetype_view',
+];
 
 interface PermissionGroupState {
   [module: string]: {
@@ -111,6 +122,22 @@ const PermissionRoles = () => {
     },
   });
 
+  // Get minimum required permission IDs from the permission groups
+  const getMinimumRequiredPermissionIds = (groups: Record<string, Permission[]> | undefined): Set<number> => {
+    if (!groups) return new Set();
+    const ids = new Set<number>();
+    Object.values(groups).forEach((permissions) => {
+      permissions.forEach((p) => {
+        if (MINIMUM_REQUIRED_PERMISSION_CODES.includes(p.code)) {
+          ids.add(p.id);
+        }
+      });
+    });
+    return ids;
+  };
+
+  const minimumRequiredIds = getMinimumRequiredPermissionIds(permissionGroups);
+
   // Initialize permission group state when permissions load
   const initializePermissionGroupState = (groups: Record<string, Permission[]>) => {
     const state: PermissionGroupState = {};
@@ -134,6 +161,9 @@ const PermissionRoles = () => {
   };
 
   const togglePermission = (permissionId: number) => {
+    // Don't allow unchecking minimum required permissions
+    if (minimumRequiredIds.has(permissionId)) return;
+
     setSelectedPermissionIds((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(permissionId)) {
@@ -153,7 +183,10 @@ const PermissionRoles = () => {
       const newSet = new Set(prev);
       groupPermissions.forEach((p) => {
         if (allSelected) {
-          newSet.delete(p.id);
+          // Don't uncheck minimum required permissions
+          if (!minimumRequiredIds.has(p.id)) {
+            newSet.delete(p.id);
+          }
         } else {
           newSet.add(p.id);
         }
@@ -177,7 +210,8 @@ const PermissionRoles = () => {
     setEditingRole(null);
     setRoleName("");
     setRoleDescription("");
-    setSelectedPermissionIds(new Set());
+    // Pre-select minimum required permissions
+    setSelectedPermissionIds(new Set(minimumRequiredIds));
     if (permissionGroups) {
       setPermissionGroupState(initializePermissionGroupState(permissionGroups));
     }
@@ -198,6 +232,8 @@ const PermissionRoles = () => {
 
     const fullRole = result.data!;
     const permIds = new Set<number>(fullRole.permissions?.map((p) => p.id) || []);
+    // Always include minimum required permissions
+    minimumRequiredIds.forEach((id) => permIds.add(id));
     setSelectedPermissionIds(permIds);
 
     if (permissionGroups) {
@@ -278,17 +314,26 @@ const PermissionRoles = () => {
             </div>
             {isExpanded && (
               <div className="ml-8 space-y-1">
-                {permissions.map((perm) => (
-                  <div key={perm.id} className="flex items-center gap-2">
-                    <Checkbox
-                      checked={selectedPermissionIds.has(perm.id)}
-                      onCheckedChange={() => togglePermission(perm.id)}
-                    />
-                    <span className="text-sm" title={perm.description || perm.code}>
-                      {perm.action}
-                    </span>
-                  </div>
-                ))}
+                {permissions.map((perm) => {
+                  const isRequired = minimumRequiredIds.has(perm.id);
+                  return (
+                    <div key={perm.id} className="flex items-center gap-2">
+                      <Checkbox
+                        checked={selectedPermissionIds.has(perm.id)}
+                        onCheckedChange={() => togglePermission(perm.id)}
+                        disabled={isRequired}
+                        className={isRequired ? "opacity-70" : ""}
+                      />
+                      <span
+                        className={`text-sm ${isRequired ? "text-muted-foreground" : ""}`}
+                        title={isRequired ? "Required - cannot be unchecked" : (perm.description || perm.code)}
+                      >
+                        {perm.action}
+                        {isRequired && <span className="ml-1 text-xs text-primary">(Required)</span>}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -305,16 +350,17 @@ const PermissionRoles = () => {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Show:</span>
-            <Select value={entriesPerPage} onValueChange={(v) => { setEntriesPerPage(v); setCurrentPage(1); }}>
-              <SelectTrigger className="w-[70px] h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              options={[
+                { value: "10", label: "10" },
+                { value: "25", label: "25" },
+                { value: "50", label: "50" },
+                { value: "100", label: "100" },
+              ]}
+              value={entriesPerPage}
+              onValueChange={(v) => { setEntriesPerPage(v); setCurrentPage(1); }}
+              triggerClassName="w-[90px] h-8"
+            />
             <span className="text-sm text-muted-foreground">entries</span>
           </div>
 

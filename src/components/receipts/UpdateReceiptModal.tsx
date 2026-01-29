@@ -10,13 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   receiptApi,
   bankApi,
@@ -35,7 +29,7 @@ interface UpdateReceiptModalProps {
   onSuccess: () => void;
 }
 
-export default function UpdateReceiptModal({
+export function UpdateReceiptModal({
   open,
   onOpenChange,
   receiptId,
@@ -177,9 +171,9 @@ export default function UpdateReceiptModal({
   if (fetchingData) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle className="text-xl">Update Receipt</DialogTitle>
+        <DialogContent className="max-w-3xl p-0">
+          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+            <DialogTitle className="text-white text-lg font-semibold">Update Receipt</DialogTitle>
           </DialogHeader>
           <div className="flex items-center justify-center py-8">
             Loading...
@@ -191,12 +185,12 @@ export default function UpdateReceiptModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
-        <DialogHeader>
-          <DialogTitle className="text-xl">Update Receipt</DialogTitle>
+      <DialogContent className="max-w-3xl p-0">
+        <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+          <DialogTitle className="text-white text-lg font-semibold">Update Receipt</DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-3 gap-4 py-4">
+        <div className="grid grid-cols-3 gap-4 p-6">
           {/* Customer - Read Only */}
           <div className="space-y-2">
             <Label>Customer</Label>
@@ -225,7 +219,11 @@ export default function UpdateReceiptModal({
           {/* Payment Type */}
           <div className="space-y-2">
             <Label>Payment Type</Label>
-            <Select
+            <SearchableSelect
+              options={paymentTypes.map((pt) => ({
+                value: pt.code,
+                label: pt.name,
+              }))}
               value={paymentMode}
               onValueChange={(v) => {
                 setPaymentMode(v as PaymentMode);
@@ -240,18 +238,9 @@ export default function UpdateReceiptModal({
                   setChequeBank("");
                 }
               }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Payment Type" />
-              </SelectTrigger>
-              <SelectContent>
-                {paymentTypes.map((pt) => (
-                  <SelectItem key={pt.code} value={pt.code}>
-                    {pt.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="Select Payment Type"
+              searchPlaceholder="Search payment types..."
+            />
           </div>
 
           {/* Cheque Details Row - Only show for Cheque payment type */}
@@ -331,22 +320,18 @@ export default function UpdateReceiptModal({
           {/* Bank Selection */}
           <div className="space-y-2">
             <Label>Bank</Label>
-            <Select
+            <SearchableSelect
+              options={banks.map((bank) => ({
+                value: bank.id.toString(),
+                label: `${bank.bankName} (${bank.accountNo || ""})`,
+              }))}
               value={bankId?.toString() || ""}
               onValueChange={(v) => setBankId(v ? parseInt(v) : null)}
+              placeholder="Select Bank"
+              searchPlaceholder="Search banks..."
               disabled={!requiresBank}
-            >
-              <SelectTrigger className={!requiresBank ? "bg-muted" : ""}>
-                <SelectValue placeholder="Select Bank" />
-              </SelectTrigger>
-              <SelectContent>
-                {banks.map((bank) => (
-                  <SelectItem key={bank.id} value={bank.id.toString()}>
-                    {bank.bankName} ({bank.accountNo || ""})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              triggerClassName={!requiresBank ? "bg-muted" : ""}
+            />
           </div>
 
           {/* Amount - Read Only */}
@@ -362,16 +347,16 @@ export default function UpdateReceiptModal({
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 px-6 pb-6">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button
-            className="bg-green-500 hover:bg-green-600 text-white"
+            className="btn-success"
             onClick={handleSubmit}
             disabled={loading}
           >
             {loading ? "Updating..." : "Update"}
-          </Button>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Close
           </Button>
         </div>
       </DialogContent>

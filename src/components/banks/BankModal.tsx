@@ -13,13 +13,13 @@ import { Bank } from "@/services/api";
 import { Loader2 } from "lucide-react";
 
 interface BankModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   bank?: Bank | null;
   mode: "add" | "edit";
 }
 
-export function BankModal({ isOpen, onClose, bank, mode }: BankModalProps) {
+export function BankModal({ open, onOpenChange, bank, mode }: BankModalProps) {
   const [formData, setFormData] = useState({
     bankName: "",
     acHolder: "",
@@ -60,7 +60,7 @@ export function BankModal({ isOpen, onClose, bank, mode }: BankModalProps) {
         faxNo: "",
       });
     }
-  }, [bank, mode, isOpen]);
+  }, [bank, mode, open]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -72,7 +72,7 @@ export function BankModal({ isOpen, onClose, bank, mode }: BankModalProps) {
     if (mode === "add") {
       createMutation.mutate(formData, {
         onSuccess: () => {
-          onClose();
+          onOpenChange(false);
         },
       });
     } else if (bank) {
@@ -83,7 +83,7 @@ export function BankModal({ isOpen, onClose, bank, mode }: BankModalProps) {
         },
         {
           onSuccess: () => {
-            onClose();
+            onOpenChange(false);
           },
         }
       );
@@ -91,14 +91,14 @@ export function BankModal({ isOpen, onClose, bank, mode }: BankModalProps) {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl bg-card">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">
-            <span className="font-bold">{mode === "add" ? "Add New" : "Edit"}</span> Bank
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-2xl bg-card p-0">
+        <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+          <DialogTitle className="text-white text-lg font-semibold">
+            {mode === "add" ? "Add New" : "Edit"} Bank
           </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="py-4">
+        <form onSubmit={handleSubmit} className="p-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Left Column */}
             <div className="space-y-4">
@@ -182,7 +182,7 @@ export function BankModal({ isOpen, onClose, bank, mode }: BankModalProps) {
             </div>
           </div>
           <div className="flex justify-end gap-3 pt-6">
-            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
               Cancel
             </Button>
             <Button type="submit" className="btn-success px-8" disabled={isLoading}>

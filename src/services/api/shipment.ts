@@ -1,4 +1,4 @@
-import { fetchApi, PaginatedList, MasterType, PaymentStatus } from './base';
+import { fetchApi, PaginatedList, MasterType, PaymentStatus, getAccessToken, isDevAuthDisabled, attemptTokenRefresh } from './base';
 import { Incoterms } from './sales';
 
 // Shipment Types
@@ -525,10 +525,27 @@ export const fileApi = {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch(`${API_BASE_URL}/files/upload`, {
-      method: 'POST',
-      body: formData,
-    });
+    const makeRequest = async (token: string | null) => {
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      return fetch(`${API_BASE_URL}/files/upload`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+    };
+
+    let response = await makeRequest(isDevAuthDisabled() ? null : getAccessToken());
+
+    // Handle 401 with token refresh
+    if (response.status === 401 && !isDevAuthDisabled()) {
+      const refreshed = await attemptTokenRefresh();
+      if (refreshed) {
+        response = await makeRequest(getAccessToken());
+      }
+    }
 
     if (!response.ok) {
       throw new Error(`File upload failed: ${response.statusText}`);
@@ -542,9 +559,26 @@ export const fileApi = {
   },
 
   delete: async (fileName: string): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/files/${encodeURIComponent(fileName)}`, {
-      method: 'DELETE',
-    });
+    const makeRequest = async (token: string | null) => {
+      const headers: HeadersInit = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      return fetch(`${API_BASE_URL}/files/${encodeURIComponent(fileName)}`, {
+        method: 'DELETE',
+        headers,
+      });
+    };
+
+    let response = await makeRequest(isDevAuthDisabled() ? null : getAccessToken());
+
+    // Handle 401 with token refresh
+    if (response.status === 401 && !isDevAuthDisabled()) {
+      const refreshed = await attemptTokenRefresh();
+      if (refreshed) {
+        response = await makeRequest(getAccessToken());
+      }
+    }
 
     if (!response.ok) {
       throw new Error(`File delete failed: ${response.statusText}`);

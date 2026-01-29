@@ -9,13 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Loader2 } from "lucide-react";
 import { useCustomers } from "@/hooks/useCustomers";
 import { useAllCustomerCategoryTypes } from "@/hooks/useSettings";
@@ -121,9 +115,9 @@ export function SendRateRequestModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-green-600">
+      <DialogContent className="max-w-md p-0">
+        <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+          <DialogTitle className="text-white text-lg font-semibold">
             Send Rate Request
           </DialogTitle>
         </DialogHeader>
@@ -133,54 +127,43 @@ export function SendRateRequestModal({
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-4 p-6">
             <div className="space-y-2">
               <Label>
                 Vendor Type <span className="text-red-500">*</span>
               </Label>
-              <Select value={vendorType} onValueChange={(value) => {
-                setVendorType(value);
-                setVendorId("");
-                setVendorEmail("");
-              }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select vendor type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categoryTypes?.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.name}>
-                      {cat.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                options={(categoryTypes || []).map((cat) => ({
+                  value: cat.name,
+                  label: cat.name,
+                }))}
+                value={vendorType}
+                onValueChange={(value) => {
+                  setVendorType(value);
+                  setVendorId("");
+                  setVendorEmail("");
+                }}
+                placeholder="Select vendor type"
+                searchPlaceholder="Search vendor types..."
+              />
             </div>
 
             <div className="space-y-2">
               <Label>
                 Vendor Name <span className="text-red-500">*</span>
               </Label>
-              <Select
+              <SearchableSelect
+                options={filteredVendors.map((vendor) => ({
+                  value: vendor.id.toString(),
+                  label: vendor.name,
+                }))}
                 value={vendorId}
                 onValueChange={setVendorId}
+                placeholder={vendorType ? "Select vendor" : "Select vendor type first"}
+                searchPlaceholder="Search vendors..."
                 disabled={!vendorType}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={vendorType ? "Select vendor" : "Select vendor type first"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredVendors.map((vendor) => (
-                    <SelectItem key={vendor.id} value={vendor.id.toString()}>
-                      {vendor.name}
-                    </SelectItem>
-                  ))}
-                  {filteredVendors.length === 0 && (
-                    <div className="px-2 py-1 text-sm text-muted-foreground">
-                      No vendors found for this category
-                    </div>
-                  )}
-                </SelectContent>
-              </Select>
+                emptyMessage="No vendors found for this category"
+              />
             </div>
 
             <div className="space-y-2">
@@ -201,7 +184,7 @@ export function SendRateRequestModal({
           <Button
             onClick={handleSubmit}
             disabled={!vendorId || createRateRequest.isPending}
-            className="bg-green-600 hover:bg-green-700 text-white"
+            className="btn-success"
           >
             {createRateRequest.isPending ? (
               <>

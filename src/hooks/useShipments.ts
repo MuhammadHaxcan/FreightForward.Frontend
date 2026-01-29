@@ -29,6 +29,7 @@ export function useShipments(params?: {
       }
       return response.data!;
     },
+    staleTime: 30 * 1000, // 30 seconds
   });
 }
 
@@ -43,6 +44,7 @@ export function useShipment(id: number) {
       return response.data!;
     },
     enabled: id > 0,
+    staleTime: 30 * 1000, // 30 seconds
   });
 }
 

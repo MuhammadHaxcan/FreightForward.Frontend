@@ -68,6 +68,10 @@ export default {
           "header-foreground": "hsl(var(--table-header-foreground))",
           "row-hover": "hsl(var(--table-row-hover))",
         },
+        modal: {
+          header: "hsl(var(--modal-header))",
+          "header-foreground": "hsl(var(--modal-header-foreground))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",

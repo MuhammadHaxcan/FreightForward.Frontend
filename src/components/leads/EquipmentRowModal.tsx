@@ -9,13 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { LeadDetailItem, ContainerType } from "@/services/api";
 
 interface EquipmentRowModalProps {
@@ -75,14 +69,14 @@ export function EquipmentRowModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>
+      <DialogContent className="max-w-md p-0">
+        <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+          <DialogTitle className="text-white text-lg font-semibold">
             {equipment ? "Edit Equipment" : "Add Equipment"}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="grid gap-4 py-4">
+        <div className="grid gap-4 p-6">
           <div className="grid gap-2">
             <Label htmlFor="quantity">Quantity *</Label>
             <Input
@@ -98,21 +92,16 @@ export function EquipmentRowModal({
 
           <div className="grid gap-2">
             <Label htmlFor="containerTypeId">Equipment Type *</Label>
-            <Select
+            <SearchableSelect
+              options={containerTypes.map((type) => ({
+                value: type.id.toString(),
+                label: type.name,
+              }))}
               value={formData.containerTypeId?.toString() || ""}
               onValueChange={handleContainerTypeChange}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select equipment type" />
-              </SelectTrigger>
-              <SelectContent>
-                {containerTypes.map((type) => (
-                  <SelectItem key={type.id} value={type.id.toString()}>
-                    {type.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="Select equipment type"
+              searchPlaceholder="Search equipment types..."
+            />
           </div>
 
           <div className="grid gap-2">
@@ -149,7 +138,7 @@ export function EquipmentRowModal({
           <Button
             onClick={handleSave}
             disabled={!formData.containerTypeId}
-            className="bg-green-600 hover:bg-green-700"
+            className="btn-success"
           >
             {equipment ? "Update" : "Add"}
           </Button>

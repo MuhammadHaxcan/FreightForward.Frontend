@@ -11,13 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DateInput } from "@/components/ui/date-input";
 import { getTodayDateOnly } from "@/lib/utils";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { settingsApi, DocumentType } from "@/services/api/settings";
 import { fileApi, AddShipmentDocumentRequest, FileUploadResponse } from "@/services/api/shipment";
 import { useToast } from "@/hooks/use-toast";
@@ -180,33 +174,26 @@ export function DocumentModal({ open, onOpenChange, onSave }: DocumentModalProps
 
   return (
     <Dialog open={open} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-w-lg bg-card border border-border">
-        <DialogHeader>
-          <DialogTitle className="text-foreground text-lg bg-[#2c3e50] text-white p-4 -m-6 mb-0 rounded-t-lg">
+      <DialogContent className="max-w-lg bg-card border border-border p-0">
+        <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+          <DialogTitle className="text-white text-lg font-semibold">
             Add Document
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 pt-6">
+        <div className="space-y-4 p-6 pt-4">
           {/* Row 1 */}
           <div className="grid grid-cols-3 gap-4">
             <div>
               <Label className="text-sm">Document Type</Label>
-              <Select
+              <SearchableSelect
+                options={documentTypes.map(type => ({ value: type.id.toString(), label: type.name }))}
                 value={formData.documentTypeId?.toString() || ""}
                 onValueChange={(v) => handleInputChange("documentTypeId", v ? parseInt(v) : null)}
-              >
-                <SelectTrigger className="bg-background border-border">
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover border border-border">
-                  {documentTypes.map(type => (
-                    <SelectItem key={type.id} value={type.id.toString()}>
-                      {type.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Select type"
+                searchPlaceholder="Search document types..."
+                triggerClassName="bg-background border-border"
+              />
             </div>
             <div>
               <Label className="text-sm">Document No <span className="text-red-500">*</span></Label>
@@ -233,7 +220,7 @@ export function DocumentModal({ open, onOpenChange, onSave }: DocumentModalProps
               <label htmlFor="file-upload" className="cursor-pointer">
                 <Button
                   type="button"
-                  className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                  className="btn-success"
                   onClick={() => document.getElementById('file-upload')?.click()}
                   disabled={uploading}
                 >
@@ -280,18 +267,18 @@ export function DocumentModal({ open, onOpenChange, onSave }: DocumentModalProps
           </div>
 
           {/* Actions */}
-          <div className="flex justify-center gap-3 pt-4">
+          <div className="flex justify-end gap-3 pt-4">
             <Button
               variant="outline"
               onClick={handleClose}
-              className="bg-[#34495e] hover:bg-[#4a5568] text-white border-[#4a5568] px-8"
+              className="px-8"
               disabled={loading}
             >
-              Close
+              Cancel
             </Button>
             <Button
               onClick={handleSave}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white px-8"
+              className="btn-success px-8"
               disabled={loading || uploading}
             >
               {loading ? (

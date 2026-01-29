@@ -2,13 +2,7 @@ import { useState } from "react";
 import { Edit, Trash2, Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -81,20 +75,20 @@ export function BanksTable() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Show</span>
-            <Select value={entriesPerPage} onValueChange={(value) => {
-              setEntriesPerPage(value);
-              setCurrentPage(1);
-            }}>
-              <SelectTrigger className="w-20 h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-popover border border-border">
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              options={[
+                { value: "10", label: "10" },
+                { value: "25", label: "25" },
+                { value: "50", label: "50" },
+                { value: "100", label: "100" },
+              ]}
+              value={entriesPerPage}
+              onValueChange={(value) => {
+                setEntriesPerPage(value);
+                setCurrentPage(1);
+              }}
+              triggerClassName="w-20 h-9"
+            />
             <span className="text-sm text-muted-foreground">entries</span>
           </div>
           <div className="flex items-center gap-2">
@@ -244,17 +238,17 @@ export function BanksTable() {
 
       {/* Add Modal */}
       <BankModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
+        open={isAddModalOpen}
+        onOpenChange={(open) => setIsAddModalOpen(open)}
         mode="add"
       />
 
       {/* Edit Modal */}
       <BankModal
-        isOpen={isEditModalOpen}
-        onClose={() => {
-          setIsEditModalOpen(false);
-          setSelectedBank(null);
+        open={isEditModalOpen}
+        onOpenChange={(open) => {
+          setIsEditModalOpen(open);
+          if (!open) setSelectedBank(null);
         }}
         bank={selectedBank}
         mode="edit"

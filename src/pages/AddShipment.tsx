@@ -8,13 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DateInput } from "@/components/ui/date-input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Table,
   TableBody,
@@ -1030,7 +1024,7 @@ const AddShipment = () => {
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold text-foreground">Add New Shipment</h1>
           <div className="flex gap-2">
-            <Button variant="outline" className="bg-[#2c3e50] hover:bg-[#34495e] text-white border-[#2c3e50]" onClick={() => navigate("/shipments")}>
+            <Button variant="outline" className="bg-modal-header hover:bg-modal-header/80 text-modal-header-foreground border-modal-header" onClick={() => navigate("/shipments")}>
               Back
             </Button>
           </div>
@@ -1114,29 +1108,42 @@ const AddShipment = () => {
                   </div>
                   <div>
                     <Label className="text-sm">Job Status</Label>
-                    <Select value={formData.jobStatus} onValueChange={(v) => handleInputChange("jobStatus", v)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-popover border border-border">
-                        <SelectItem value="Opened">Opened</SelectItem>
-                        <SelectItem value="Closed">Closed</SelectItem>
-                        <SelectItem value="Cancelled">Cancelled</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <SearchableSelect
+                      options={[
+                        { value: "Opened", label: "Opened" },
+                        { value: "Closed", label: "Closed" },
+                        { value: "Cancelled", label: "Cancelled" },
+                      ]}
+                      value={formData.jobStatus}
+                      onValueChange={(v) => handleInputChange("jobStatus", v)}
+                    />
                   </div>
                   <div>
                     <Label className="text-sm">Direction</Label>
-                    <Select value={formData.direction} onValueChange={(v) => handleInputChange("direction", v)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-popover border border-border">
-                        <SelectItem value="Import">Import</SelectItem>
-                        <SelectItem value="Export">Export</SelectItem>
-                        <SelectItem value="Cross-Trade">Cross-Trade</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <SearchableSelect
+                      options={[
+                        { value: "Import", label: "Import" },
+                        { value: "Export", label: "Export" },
+                        { value: "Cross-Trade", label: "Cross-Trade" },
+                      ]}
+                      value={formData.direction}
+                      onValueChange={(v) => handleInputChange("direction", v)}
+                    />
                   </div>
                   <div>
                     <Label className="text-sm">Mode</Label>
-                    <Select
+                    <SearchableSelect
+                      options={
+                        transportModes.length > 0
+                          ? transportModes.map((mode) => ({ value: mode.name, label: mode.name }))
+                          : [
+                              { value: "Air Freight", label: "Air Freight" },
+                              { value: "Sea Freight FCL", label: "Sea Freight FCL" },
+                              { value: "Sea Freight LCL", label: "Sea Freight LCL" },
+                              { value: "Break-Bulk", label: "Break-Bulk" },
+                              { value: "RO-RO", label: "RO-RO" },
+                            ]
+                      }
                       value={formData.mode}
                       onValueChange={(v) => {
                         handleInputChange("mode", v);
@@ -1144,41 +1151,22 @@ const AddShipment = () => {
                         const selectedMode = transportModes.find(m => m.name === v);
                         setFormData(prev => ({ ...prev, transportModeId: selectedMode?.id }));
                       }}
-                    >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-popover border border-border">
-                        {transportModes.length > 0 ? (
-                          transportModes.map((mode) => (
-                            <SelectItem key={mode.id} value={mode.name}>{mode.name}</SelectItem>
-                          ))
-                        ) : (
-                          <>
-                            <SelectItem value="Air Freight">Air Freight</SelectItem>
-                            <SelectItem value="Sea Freight FCL">Sea Freight FCL</SelectItem>
-                            <SelectItem value="Sea Freight LCL">Sea Freight LCL</SelectItem>
-                            <SelectItem value="Break-Bulk">Break-Bulk</SelectItem>
-                            <SelectItem value="RO-RO">RO-RO</SelectItem>
-                          </>
-                        )}
-                      </SelectContent>
-                    </Select>
+                      searchPlaceholder="Search modes..."
+                    />
                   </div>
                   <div>
                     <Label className="text-sm">INCO Terms</Label>
-                    <Select value={formData.incoterms} onValueChange={(v) => handleInputChange("incoterms", v)}>
-                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent className="bg-popover border border-border">
-                        {incoTerms.length === 0 ? (
-                          <SelectItem value="_loading" disabled>Loading...</SelectItem>
-                        ) : (
-                          incoTerms.map(term => (
-                            <SelectItem key={term.id} value={term.code}>
-                              {term.code} - {term.name}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
+                    <SearchableSelect
+                      options={incoTerms.map(term => ({
+                        value: term.code,
+                        label: `${term.code} - ${term.name}`,
+                      }))}
+                      value={formData.incoterms}
+                      onValueChange={(v) => handleInputChange("incoterms", v)}
+                      placeholder="Select"
+                      searchPlaceholder="Search incoterms..."
+                      emptyMessage={incoTerms.length === 0 ? "Loading..." : "No incoterms found"}
+                    />
                   </div>
                 </div>
               </div>
@@ -1201,33 +1189,33 @@ const AddShipment = () => {
                     </div>
                     <div>
                       <Label className="text-sm">{formData.mode === 'Air Freight' ? 'AWB Status' : 'BL Status'}</Label>
-                      <Select value={formData.houseBLStatus} onValueChange={(v) => handleInputChange("houseBLStatus", v)}>
-                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                        <SelectContent className="bg-popover border border-border">
-                          {filteredBLTypes.length > 0 ? (
-                            filteredBLTypes
-                              .filter(bt => bt.code === 'HBL' || bt.code === 'HAWB' || bt.code === 'EXPRESS')
-                              .map(bt => (
-                                <SelectItem key={bt.id} value={bt.code}>{bt.code} - {bt.name}</SelectItem>
-                              ))
-                          ) : (
-                            <>
-                              <SelectItem value="HBL">HBL - House Bill of Lading</SelectItem>
-                              <SelectItem value="Express">Express Release</SelectItem>
-                            </>
-                          )}
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        options={
+                          filteredBLTypes.length > 0
+                            ? filteredBLTypes
+                                .filter(bt => bt.code === 'HBL' || bt.code === 'HAWB' || bt.code === 'EXPRESS')
+                                .map(bt => ({ value: bt.code, label: `${bt.code} - ${bt.name}` }))
+                            : [
+                                { value: "HBL", label: "HBL - House Bill of Lading" },
+                                { value: "Express", label: "Express Release" },
+                              ]
+                        }
+                        value={formData.houseBLStatus}
+                        onValueChange={(v) => handleInputChange("houseBLStatus", v)}
+                        placeholder="Select"
+                        searchPlaceholder="Search..."
+                      />
                     </div>
                     <div>
                       <Label className="text-sm">BL Service Type</Label>
-                      <Select value={formData.hblServiceType} onValueChange={(v) => handleInputChange("hblServiceType", v)}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent className="bg-popover border border-border">
-                          <SelectItem value="LCL/LCL">LCL/LCL</SelectItem>
-                          <SelectItem value="FCL/FCL">FCL/FCL</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        options={[
+                          { value: "LCL/LCL", label: "LCL/LCL" },
+                          { value: "FCL/FCL", label: "FCL/FCL" },
+                        ]}
+                        value={formData.hblServiceType}
+                        onValueChange={(v) => handleInputChange("hblServiceType", v)}
+                      />
                     </div>
                     <div>
                       <Label className="text-sm">No BL Issued</Label>
@@ -1235,13 +1223,14 @@ const AddShipment = () => {
                     </div>
                     <div>
                       <Label className="text-sm">Freight</Label>
-                      <Select value={formData.hblFreight} onValueChange={(v) => handleInputChange("hblFreight", v)}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent className="bg-popover border border-border">
-                          <SelectItem value="Prepaid">Prepaid</SelectItem>
-                          <SelectItem value="Collect">Collect</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        options={[
+                          { value: "Prepaid", label: "Prepaid" },
+                          { value: "Collect", label: "Collect" },
+                        ]}
+                        value={formData.hblFreight}
+                        onValueChange={(v) => handleInputChange("hblFreight", v)}
+                      />
                     </div>
                   </div>
                 </div>
@@ -1260,33 +1249,33 @@ const AddShipment = () => {
                     </div>
                     <div>
                       <Label className="text-sm">{formData.mode === 'Air Freight' ? 'AWB Status' : 'BL Status'}</Label>
-                      <Select value={formData.mblStatus} onValueChange={(v) => handleInputChange("mblStatus", v)}>
-                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                        <SelectContent className="bg-popover border border-border">
-                          {filteredBLTypes.length > 0 ? (
-                            filteredBLTypes
-                              .filter(bt => bt.code === 'MBL' || bt.code === 'MAWB' || bt.code === 'EXPRESS')
-                              .map(bt => (
-                                <SelectItem key={bt.id} value={bt.code}>{bt.code} - {bt.name}</SelectItem>
-                              ))
-                          ) : (
-                            <>
-                              <SelectItem value="MBL">MBL - Master Bill of Lading</SelectItem>
-                              <SelectItem value="Express">Express Release</SelectItem>
-                            </>
-                          )}
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        options={
+                          filteredBLTypes.length > 0
+                            ? filteredBLTypes
+                                .filter(bt => bt.code === 'MBL' || bt.code === 'MAWB' || bt.code === 'EXPRESS')
+                                .map(bt => ({ value: bt.code, label: `${bt.code} - ${bt.name}` }))
+                            : [
+                                { value: "MBL", label: "MBL - Master Bill of Lading" },
+                                { value: "Express", label: "Express Release" },
+                              ]
+                        }
+                        value={formData.mblStatus}
+                        onValueChange={(v) => handleInputChange("mblStatus", v)}
+                        placeholder="Select"
+                        searchPlaceholder="Search..."
+                      />
                     </div>
                     <div>
                       <Label className="text-sm">BL Service Type</Label>
-                      <Select value={formData.mblServiceType} onValueChange={(v) => handleInputChange("mblServiceType", v)}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent className="bg-popover border border-border">
-                          <SelectItem value="FCL/FCL">FCL/FCL</SelectItem>
-                          <SelectItem value="LCL/LCL">LCL/LCL</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        options={[
+                          { value: "FCL/FCL", label: "FCL/FCL" },
+                          { value: "LCL/LCL", label: "LCL/LCL" },
+                        ]}
+                        value={formData.mblServiceType}
+                        onValueChange={(v) => handleInputChange("mblServiceType", v)}
+                      />
                     </div>
                     <div>
                       <Label className="text-sm">No BL Issued</Label>
@@ -1294,13 +1283,14 @@ const AddShipment = () => {
                     </div>
                     <div>
                       <Label className="text-sm">Freight</Label>
-                      <Select value={formData.mblFreight} onValueChange={(v) => handleInputChange("mblFreight", v)}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent className="bg-popover border border-border">
-                          <SelectItem value="Prepaid">Prepaid</SelectItem>
-                          <SelectItem value="Collect">Collect</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        options={[
+                          { value: "Prepaid", label: "Prepaid" },
+                          { value: "Collect", label: "Collect" },
+                        ]}
+                        value={formData.mblFreight}
+                        onValueChange={(v) => handleInputChange("mblFreight", v)}
+                      />
                     </div>
                   </div>
                 </div>
@@ -1321,23 +1311,17 @@ const AddShipment = () => {
                   </div>
                   <div>
                     <Label className="text-sm">Network Partner</Label>
-                    <Select
+                    <SearchableSelect
+                      options={networkPartners.map(partner => ({
+                        value: partner.id.toString(),
+                        label: `${partner.code} - ${partner.name}`,
+                      }))}
                       value={formData.networkPartnerId?.toString() || ""}
                       onValueChange={(v) => setFormData(prev => ({ ...prev, networkPartnerId: v ? parseInt(v) : undefined }))}
-                    >
-                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent className="bg-popover border border-border">
-                        {networkPartners.length === 0 ? (
-                          <SelectItem value="_loading" disabled>Loading...</SelectItem>
-                        ) : (
-                          networkPartners.map(partner => (
-                            <SelectItem key={partner.id} value={partner.id.toString()}>
-                              {partner.code} - {partner.name}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
+                      placeholder="Select"
+                      searchPlaceholder="Search partners..."
+                      emptyMessage={networkPartners.length === 0 ? "Loading..." : "No partners found"}
+                    />
                   </div>
                 </div>
               </div>
@@ -1352,68 +1336,53 @@ const AddShipment = () => {
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <Label className="text-sm">Place of Receipt</Label>
-                      <Select value={formData.placeOfReceipt} onValueChange={(v) => handleInputChange("placeOfReceipt", v)}>
-                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                        <SelectContent className="bg-popover border border-border">
-                          {ports.length === 0 ? (
-                            <SelectItem value="_loading" disabled>Loading...</SelectItem>
-                          ) : (
-                            ports.map(port => (
-                              <SelectItem key={port.id} value={port.name}>
-                                {port.name}{port.code ? ` (${port.code})` : ''} - {port.country}
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        options={ports.map(port => ({
+                          value: port.name,
+                          label: `${port.name}${port.code ? ` (${port.code})` : ''} - ${port.country}`,
+                        }))}
+                        value={formData.placeOfReceipt}
+                        onValueChange={(v) => handleInputChange("placeOfReceipt", v)}
+                        placeholder="Select"
+                        searchPlaceholder="Search ports..."
+                        emptyMessage={ports.length === 0 ? "Loading..." : "No ports found"}
+                      />
                     </div>
                     <div>
                       <Label className="text-sm">Port of Receipt</Label>
-                      <Select
+                      <SearchableSelect
+                        options={ports.map(port => ({
+                          value: port.name,
+                          label: `${port.name}${port.code ? ` (${port.code})` : ''} - ${port.country}`,
+                        }))}
                         value={formData.portOfReceipt}
                         onValueChange={(v) => {
                           handleInputChange("portOfReceipt", v);
                           const selectedPort = ports.find(p => p.name === v);
                           setFormData(prev => ({ ...prev, portOfReceiptId: selectedPort?.id }));
                         }}
-                      >
-                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                        <SelectContent className="bg-popover border border-border">
-                          {ports.length === 0 ? (
-                            <SelectItem value="_loading" disabled>Loading...</SelectItem>
-                          ) : (
-                            ports.map(port => (
-                              <SelectItem key={port.id} value={port.name}>
-                                {port.name}{port.code ? ` (${port.code})` : ''} - {port.country}
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
+                        placeholder="Select"
+                        searchPlaceholder="Search ports..."
+                        emptyMessage={ports.length === 0 ? "Loading..." : "No ports found"}
+                      />
                     </div>
                     <div>
                       <Label className="text-sm">Port of Loading</Label>
-                      <Select
+                      <SearchableSelect
+                        options={ports.map(port => ({
+                          value: port.name,
+                          label: `${port.name}${port.code ? ` (${port.code})` : ''} - ${port.country}`,
+                        }))}
                         value={formData.portOfLoading}
                         onValueChange={(v) => {
                           handleInputChange("portOfLoading", v);
                           const selectedPort = ports.find(p => p.name === v);
                           setFormData(prev => ({ ...prev, portOfLoadingId: selectedPort?.id }));
                         }}
-                      >
-                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                        <SelectContent className="bg-popover border border-border">
-                          {ports.length === 0 ? (
-                            <SelectItem value="_loading" disabled>Loading...</SelectItem>
-                          ) : (
-                            ports.map(port => (
-                              <SelectItem key={port.id} value={port.name}>
-                                {port.name}{port.code ? ` (${port.code})` : ''} - {port.country}
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
+                        placeholder="Select"
+                        searchPlaceholder="Search ports..."
+                        emptyMessage={ports.length === 0 ? "Loading..." : "No ports found"}
+                      />
                     </div>
                   </div>
                 </div>
@@ -1424,68 +1393,53 @@ const AddShipment = () => {
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <Label className="text-sm">Port of Discharge</Label>
-                      <Select
+                      <SearchableSelect
+                        options={ports.map(port => ({
+                          value: port.name,
+                          label: `${port.name}${port.code ? ` (${port.code})` : ''} - ${port.country}`,
+                        }))}
                         value={formData.portOfDischarge}
                         onValueChange={(v) => {
                           handleInputChange("portOfDischarge", v);
                           const selectedPort = ports.find(p => p.name === v);
                           setFormData(prev => ({ ...prev, portOfDischargeId: selectedPort?.id }));
                         }}
-                      >
-                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                        <SelectContent className="bg-popover border border-border">
-                          {ports.length === 0 ? (
-                            <SelectItem value="_loading" disabled>Loading...</SelectItem>
-                          ) : (
-                            ports.map(port => (
-                              <SelectItem key={port.id} value={port.name}>
-                                {port.name}{port.code ? ` (${port.code})` : ''} - {port.country}
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
+                        placeholder="Select"
+                        searchPlaceholder="Search ports..."
+                        emptyMessage={ports.length === 0 ? "Loading..." : "No ports found"}
+                      />
                     </div>
                     <div>
                       <Label className="text-sm">Port of Final Destination</Label>
-                      <Select
+                      <SearchableSelect
+                        options={ports.map(port => ({
+                          value: port.name,
+                          label: `${port.name}${port.code ? ` (${port.code})` : ''} - ${port.country}`,
+                        }))}
                         value={formData.portOfFinalDestination}
                         onValueChange={(v) => {
                           handleInputChange("portOfFinalDestination", v);
                           const selectedPort = ports.find(p => p.name === v);
                           setFormData(prev => ({ ...prev, portOfFinalDestinationId: selectedPort?.id }));
                         }}
-                      >
-                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                        <SelectContent className="bg-popover border border-border">
-                          {ports.length === 0 ? (
-                            <SelectItem value="_loading" disabled>Loading...</SelectItem>
-                          ) : (
-                            ports.map(port => (
-                              <SelectItem key={port.id} value={port.name}>
-                                {port.name}{port.code ? ` (${port.code})` : ''} - {port.country}
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
+                        placeholder="Select"
+                        searchPlaceholder="Search ports..."
+                        emptyMessage={ports.length === 0 ? "Loading..." : "No ports found"}
+                      />
                     </div>
                     <div>
                       <Label className="text-sm">Place of Delivery</Label>
-                      <Select value={formData.placeOfDelivery} onValueChange={(v) => handleInputChange("placeOfDelivery", v)}>
-                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                        <SelectContent className="bg-popover border border-border">
-                          {ports.length === 0 ? (
-                            <SelectItem value="_loading" disabled>Loading...</SelectItem>
-                          ) : (
-                            ports.map(port => (
-                              <SelectItem key={port.id} value={port.name}>
-                                {port.name}{port.code ? ` (${port.code})` : ''} - {port.country}
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        options={ports.map(port => ({
+                          value: port.name,
+                          label: `${port.name}${port.code ? ` (${port.code})` : ''} - ${port.country}`,
+                        }))}
+                        value={formData.placeOfDelivery}
+                        onValueChange={(v) => handleInputChange("placeOfDelivery", v)}
+                        placeholder="Select"
+                        searchPlaceholder="Search ports..."
+                        emptyMessage={ports.length === 0 ? "Loading..." : "No ports found"}
+                      />
                     </div>
                   </div>
                 </div>
@@ -1580,7 +1534,7 @@ const AddShipment = () => {
 
                 <Button
                   onClick={handleSaveAndContinue}
-                  className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                  className="btn-success"
                   disabled={isSaving}
                 >
                   {isSaving ? (
@@ -1604,51 +1558,42 @@ const AddShipment = () => {
               <div className="flex gap-4 items-end">
                 <div className="flex-1">
                   <Label className="text-sm text-red-500">* Customer Type</Label>
-                  <Select value={selectedPartyType} onValueChange={(v) => setSelectedPartyType(v as PartyType)}>
-                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      {partyTypes.map(type => (
-                        <SelectItem key={type} value={type}>{partyTypeLabels[type]}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    options={partyTypes.map(type => ({
+                      value: type,
+                      label: partyTypeLabels[type],
+                    }))}
+                    value={selectedPartyType}
+                    onValueChange={(v) => setSelectedPartyType(v as PartyType)}
+                    searchPlaceholder="Search types..."
+                  />
                 </div>
                 <div className="flex-1">
                   <Label className="text-sm text-red-500">* Customer Name</Label>
-                  <Select
+                  <SearchableSelect
+                    options={customers.map(customer => ({
+                      value: customer.id.toString(),
+                      label: `${customer.name} (${customer.code})`,
+                    }))}
                     value={selectedCustomerId}
                     onValueChange={setSelectedCustomerId}
                     disabled={isLoadingCustomers}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder={
-                        isLoadingCustomers ? "Loading..." :
-                        customers.length === 0 ? "No customers found" :
-                        "Select a customer"
-                      } />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      {customers.map(customer => (
-                        <SelectItem key={customer.id} value={customer.id.toString()}>
-                          {customer.name} ({customer.code})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    placeholder={
+                      isLoadingCustomers ? "Loading..." :
+                      customers.length === 0 ? "No customers found" :
+                      "Select a customer"
+                    }
+                    searchPlaceholder="Search customers..."
+                  />
                 </div>
                 <Button
-                  className="bg-emerald-500 hover:bg-emerald-600 text-white whitespace-nowrap"
+                  className="btn-success whitespace-nowrap"
                   onClick={handleAddParty}
                   disabled={!selectedCustomer}
                 >
                   Add Party
                 </Button>
               </div>
-              {customers.length === 0 && !isLoadingCustomers && (
-                <p className="text-xs text-amber-600 -mt-4">
-                  No customers with category "{partyTypeLabels[selectedPartyType]}" found.
-                </p>
-              )}
 
               <div className="space-y-4">
                 <h4 className="text-emerald-600 font-semibold">List All Parties</h4>
@@ -1709,7 +1654,7 @@ const AddShipment = () => {
                 <div className="flex items-center gap-4">
                   <span className="text-sm text-muted-foreground">Containers - {containerSummary}</span>
                   <Button 
-                    className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                    className="btn-success"
                     onClick={() => {
                       setEditingContainer(null);
                       setContainerModalOpen(true);
@@ -1753,7 +1698,7 @@ const AddShipment = () => {
                         <TableCell className="text-emerald-600">{(container.volume || 0).toFixed(3)}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600 text-white rounded" onClick={() => handleEditContainer(container)}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 btn-success rounded" onClick={() => handleEditContainer(container)}>
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button variant="ghost" size="icon" className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded" onClick={() => handleDeleteContainer(container.id, container.containerNumber)}>
@@ -1777,7 +1722,7 @@ const AddShipment = () => {
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
-                    className="bg-[#2c3e50] hover:bg-[#34495e] text-white border-[#2c3e50]"
+                    className="bg-modal-header hover:bg-modal-header/80 text-modal-header-foreground border-modal-header"
                     onClick={() => {
                       setEditingCosting(null);
                       setCostingModalOpen(true);
@@ -1787,14 +1732,14 @@ const AddShipment = () => {
                     Create
                   </Button>
                   <Button 
-                    className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                    className="btn-success"
                     onClick={() => setInvoiceModalOpen(true)}
                   >
                     <Plus className="h-4 w-4 mr-2" />
                     Generate Invoice
                   </Button>
                   <Button 
-                    className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                    className="btn-success"
                     onClick={() => setPurchaseModalOpen(true)}
                   >
                     <Plus className="h-4 w-4 mr-2" />
@@ -1875,7 +1820,7 @@ const AddShipment = () => {
                           <TableCell>{cost.gp}</TableCell>
                           <TableCell>
                             <div className="flex gap-1">
-                              <Button variant="ghost" size="icon" className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600 text-white rounded" onClick={() => handleEditCosting(cost)}>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 btn-success rounded" onClick={() => handleEditCosting(cost)}>
                                 <Edit className="h-4 w-4" />
                               </Button>
                               <Button variant="ghost" size="icon" className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded" onClick={() => handleDeleteCosting(cost.id, cost.description)}>
@@ -2015,13 +1960,15 @@ const AddShipment = () => {
                 </div>
                 <div>
                   <Label className="text-sm">Load Type</Label>
-                  <Select>
-                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                    <SelectContent className="bg-popover border border-border">
-                      <SelectItem value="FCL">FCL</SelectItem>
-                      <SelectItem value="LCL">LCL</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <SearchableSelect
+                    options={[
+                      { value: "FCL", label: "FCL" },
+                      { value: "LCL", label: "LCL" },
+                    ]}
+                    value=""
+                    onValueChange={() => {}}
+                    placeholder="Select"
+                  />
                 </div>
                 <div>
                   <Label className="text-sm">Total CBM</Label>
@@ -2037,7 +1984,7 @@ const AddShipment = () => {
                 </div>
               </div>
 
-              <Button className="bg-emerald-500 hover:bg-emerald-600 text-white">
+              <Button className="btn-success">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Cargo
               </Button>
@@ -2050,7 +1997,7 @@ const AddShipment = () => {
               <div className="flex justify-between items-center">
                 <h3 className="text-emerald-600 font-semibold text-lg">Documents</h3>
                 <Button 
-                  className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                  className="btn-success"
                   onClick={() => setDocumentModalOpen(true)}
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -2082,7 +2029,7 @@ const AddShipment = () => {
                         <TableCell>{doc.docDate}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8 bg-emerald-500 hover:bg-emerald-600 text-white rounded">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 btn-success rounded">
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button variant="ghost" size="icon" className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded" onClick={() => handleDeleteDocument(doc.id, doc.documentType)}>
@@ -2103,7 +2050,7 @@ const AddShipment = () => {
             <div className="bg-card border border-border rounded-lg p-6 space-y-6">
               <div className="flex justify-between items-center">
                 <h3 className="text-emerald-600 font-semibold text-lg">Shipment Status</h3>
-                <Button className="bg-emerald-500 hover:bg-emerald-600 text-white">
+                <Button className="btn-success">
                   <Plus className="h-4 w-4 mr-2" />
                   Create
                 </Button>

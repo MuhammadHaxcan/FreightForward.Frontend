@@ -68,7 +68,7 @@ export default function PaymentView() {
         </div>
         <div className="flex gap-2">
           <Button
-            className="bg-green-500 hover:bg-green-600 text-white"
+            className="btn-success"
             onClick={handlePrintPdf}
           >
             <Printer className="h-4 w-4 mr-2" />

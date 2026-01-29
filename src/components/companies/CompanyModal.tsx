@@ -3,13 +3,7 @@ import { Upload, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Dialog,
   DialogContent,
@@ -20,8 +14,8 @@ import { useCreateCompany, useUpdateCompany } from "@/hooks/useCompanies";
 import { Company } from "@/services/api";
 
 interface CompanyModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   company?: Company | null;
   mode: "add" | "edit";
 }
@@ -39,7 +33,7 @@ const countries = [
   "Australia",
 ];
 
-export function CompanyModal({ isOpen, onClose, company, mode }: CompanyModalProps) {
+export function CompanyModal({ open, onOpenChange, company, mode }: CompanyModalProps) {
   const [formData, setFormData] = useState({
     companyName: "",
     companyType: "",
@@ -98,7 +92,7 @@ export function CompanyModal({ isOpen, onClose, company, mode }: CompanyModalPro
         country: "",
       });
     }
-  }, [company, mode, isOpen]);
+  }, [company, mode, open]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -128,7 +122,7 @@ export function CompanyModal({ isOpen, onClose, company, mode }: CompanyModalPro
     if (mode === "add") {
       createMutation.mutate(requestData, {
         onSuccess: () => {
-          onClose();
+          onOpenChange(false);
         },
       });
     } else if (company) {
@@ -139,7 +133,7 @@ export function CompanyModal({ isOpen, onClose, company, mode }: CompanyModalPro
         },
         {
           onSuccess: () => {
-            onClose();
+            onOpenChange(false);
           },
         }
       );
@@ -147,14 +141,14 @@ export function CompanyModal({ isOpen, onClose, company, mode }: CompanyModalPro
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto bg-card">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">
-            <span className="font-bold">{mode === "add" ? "Add New" : "Edit"}</span> Company
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto bg-card p-0">
+        <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+          <DialogTitle className="text-white text-lg font-semibold">
+            {mode === "add" ? "Add New" : "Edit"} Company
           </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="py-4">
+        <form onSubmit={handleSubmit} className="p-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column */}
             <div className="space-y-4">
@@ -305,26 +299,19 @@ export function CompanyModal({ isOpen, onClose, company, mode }: CompanyModalPro
               </div>
               <div>
                 <Label className="form-label">Country</Label>
-                <Select
+                <SearchableSelect
+                  options={countries.map((country) => ({ value: country, label: country }))}
                   value={formData.country}
                   onValueChange={(value) => handleInputChange("country", value)}
-                >
-                  <SelectTrigger className="form-input">
-                    <SelectValue placeholder="Select One" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border border-border">
-                    {countries.map((country) => (
-                      <SelectItem key={country} value={country}>
-                        {country}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  triggerClassName="form-input"
+                  placeholder="Select One"
+                  searchPlaceholder="Search..."
+                />
               </div>
             </div>
           </div>
           <div className="flex justify-end gap-3 pt-6">
-            <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
               Cancel
             </Button>
             <Button type="submit" className="btn-success px-8" disabled={isLoading}>

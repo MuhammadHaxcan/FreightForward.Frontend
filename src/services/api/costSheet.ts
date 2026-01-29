@@ -1,4 +1,4 @@
-import { fetchApi } from './base';
+import { fetchApi, API_BASE_URL, fetchBlob } from './base';
 
 // Cost Sheet Summary DTO (for list)
 export interface CostSheetSummaryDto {
@@ -83,8 +83,6 @@ export interface CostSheetPurchaseInvoiceDto {
   status?: string;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://localhost:7001/api';
-
 export const costSheetApi = {
   // Get cost sheet summary list
   getList: (fromDate: string, toDate: string) =>
@@ -97,7 +95,7 @@ export const costSheetApi = {
   // Download cost sheet report PDF
   getReportPdf: async (fromDate: string, toDate: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/cost-sheet/pdf?fromDate=${fromDate}&toDate=${toDate}`);
+      const response = await fetchBlob(`${API_BASE_URL}/cost-sheet/pdf?fromDate=${fromDate}&toDate=${toDate}`);
       if (!response.ok) {
         return { error: `HTTP error! status: ${response.status}` };
       }
@@ -111,7 +109,7 @@ export const costSheetApi = {
   // Download cost sheet detail PDF
   getDetailPdf: async (shipmentId: number) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/cost-sheet/${shipmentId}/pdf`);
+      const response = await fetchBlob(`${API_BASE_URL}/cost-sheet/${shipmentId}/pdf`);
       if (!response.ok) {
         return { error: `HTTP error! status: ${response.status}` };
       }

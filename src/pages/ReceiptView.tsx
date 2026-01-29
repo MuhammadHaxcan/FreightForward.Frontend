@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { receiptApi, ReceiptDetail } from "@/services/api";
-import { API_BASE_URL } from "@/services/api/base";
+import { API_BASE_URL, fetchBlob } from "@/services/api/base";
 
 export default function ReceiptView() {
   const { id } = useParams<{ id: string }>();
@@ -47,7 +47,7 @@ export default function ReceiptView() {
   const handleDownload = async () => {
     if (!id) return;
     try {
-      const response = await fetch(`${API_BASE_URL}/invoices/receipts/${id}/pdf`);
+      const response = await fetchBlob(`${API_BASE_URL}/invoices/receipts/${id}/pdf`);
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
@@ -120,7 +120,7 @@ export default function ReceiptView() {
             <h1 className="text-2xl font-bold">Receipt Voucher - {receipt.receiptNo}</h1>
           </div>
           <div className="flex gap-2">
-            <Button className="bg-green-500 hover:bg-green-600 text-white" onClick={handlePrint}>
+            <Button className="btn-success" onClick={handlePrint}>
               <Printer className="h-4 w-4 mr-2" />
               Print
             </Button>

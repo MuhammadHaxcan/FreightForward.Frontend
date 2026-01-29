@@ -1,16 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { formatDate, formatDateToISO, formatDateForDisplay } from "@/lib/utils";
 import { Search, Calendar, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Table,
   TableBody,
@@ -52,8 +47,8 @@ export default function Invoices() {
     fetchCustomers();
   }, []);
 
-  // Fetch invoices
-  const fetchInvoices = async () => {
+  // Fetch invoices - wrapped in useCallback for proper dependency tracking
+  const fetchInvoices = useCallback(async () => {
     setLoading(true);
     try {
       const response = await invoiceApi.getAll({
@@ -70,19 +65,20 @@ export default function Invoices() {
         setTotalPages(response.data.totalPages);
       }
     } catch (error) {
-      console.error("Error fetching invoices:", error);
+      toast.error("Failed to load invoices");
     } finally {
       setLoading(false);
     }
-  };
+  }, [pageNumber, pageSize, searchTerm, selectedCustomer, dateRange]);
 
+  // Fetch on pagination changes and initial load
   useEffect(() => {
     fetchInvoices();
-  }, [pageNumber, pageSize]);
+  }, [fetchInvoices]);
 
   const handleSearch = () => {
     setPageNumber(1);
-    fetchInvoices();
+    // fetchInvoices will be called by the useEffect when pageNumber changes
   };
 
   const handleViewInvoice = (invoiceId: number) => {
@@ -123,19 +119,19 @@ export default function Invoices() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
             <label className="text-sm font-medium text-green-600">Customers</label>
-            <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select All" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Select All</SelectItem>
-                {customers.map((customer) => (
-                  <SelectItem key={customer.id} value={customer.id.toString()}>
-                    {customer.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              options={[
+                { value: "all", label: "Select All" },
+                ...customers.map((customer) => ({
+                  value: customer.id.toString(),
+                  label: customer.name,
+                })),
+              ]}
+              value={selectedCustomer}
+              onValueChange={setSelectedCustomer}
+              placeholder="Select All"
+              searchPlaceholder="Search customers..."
+            />
           </div>
 
           <div className="space-y-2">
@@ -186,17 +182,17 @@ export default function Invoices() {
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
           <span className="text-sm">Show</span>
-          <Select value={pageSize.toString()} onValueChange={(v) => setPageSize(parseInt(v))}>
-            <SelectTrigger className="w-20">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="25">25</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-              <SelectItem value="100">100</SelectItem>
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={[
+              { value: "10", label: "10" },
+              { value: "25", label: "25" },
+              { value: "50", label: "50" },
+              { value: "100", label: "100" },
+            ]}
+            value={pageSize.toString()}
+            onValueChange={(v) => setPageSize(parseInt(v))}
+            triggerClassName="w-20"
+          />
           <span className="text-sm">entries</span>
         </div>
         <div className="flex items-center gap-2">
@@ -215,17 +211,17 @@ export default function Invoices() {
       <div className="border rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-primary">
-              <TableHead className="text-primary-foreground font-semibold">Invoice Details</TableHead>
-              <TableHead className="text-primary-foreground font-semibold">Job Number</TableHead>
-              <TableHead className="text-primary-foreground font-semibold">Customer</TableHead>
-              <TableHead className="text-primary-foreground font-semibold">Amount</TableHead>
-              <TableHead className="text-primary-foreground font-semibold">Due Date</TableHead>
-              <TableHead className="text-primary-foreground font-semibold">Aging</TableHead>
-              <TableHead className="text-primary-foreground font-semibold">Added</TableHead>
-              <TableHead className="text-primary-foreground font-semibold">Payment Status</TableHead>
-              <TableHead className="text-primary-foreground font-semibold">Status</TableHead>
-              <TableHead className="text-primary-foreground font-semibold">Actions</TableHead>
+            <TableRow className="bg-table-header">
+              <TableHead className="text-table-header-foreground font-semibold">Invoice Details</TableHead>
+              <TableHead className="text-table-header-foreground font-semibold">Job Number</TableHead>
+              <TableHead className="text-table-header-foreground font-semibold">Customer</TableHead>
+              <TableHead className="text-table-header-foreground font-semibold">Amount</TableHead>
+              <TableHead className="text-table-header-foreground font-semibold">Due Date</TableHead>
+              <TableHead className="text-table-header-foreground font-semibold">Aging</TableHead>
+              <TableHead className="text-table-header-foreground font-semibold">Added</TableHead>
+              <TableHead className="text-table-header-foreground font-semibold">Payment Status</TableHead>
+              <TableHead className="text-table-header-foreground font-semibold">Status</TableHead>
+              <TableHead className="text-table-header-foreground font-semibold">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -243,7 +239,7 @@ export default function Invoices() {
               </TableRow>
             ) : (
               invoices.map((invoice) => (
-                <TableRow key={invoice.id} className="hover:bg-muted/50">
+                <TableRow key={invoice.id} className="hover:bg-table-row-hover">
                   <TableCell>
                     <div>
                       <div className="text-sm">Date - {formatDate(invoice.invoiceDate)}</div>
@@ -261,7 +257,7 @@ export default function Invoices() {
                   <TableCell>
                     <Button
                       size="sm"
-                      className="bg-green-500 hover:bg-green-600 text-white"
+                      className="btn-success"
                       onClick={() => handleViewInvoice(invoice.id)}
                     >
                       <Eye className="h-4 w-4 mr-1" />

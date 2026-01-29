@@ -59,6 +59,10 @@
     --table-header: 152 45% 35%;
     --table-header-foreground: 0 0% 100%;
     --table-row-hover: 152 60% 97%;
+
+    /* Modal Header - dark blue-gray (#2c3e50) */
+    --modal-header: 210 29% 24%;
+    --modal-header-foreground: 0 0% 100%;
   }
 
   .dark {
@@ -103,12 +107,20 @@
     --table-header: 152 45% 30%;
     --table-header-foreground: 0 0% 100%;
     --table-row-hover: 152 30% 15%;
+
+    /* Modal Header - dark blue-gray */
+    --modal-header: 210 29% 20%;
+    --modal-header-foreground: 0 0% 100%;
   }
 }
 
 @layer base {
   * {
     @apply border-border;
+  }
+
+  html {
+    font-size: 13px;
   }
 
   body {
@@ -124,6 +136,10 @@
   
   .form-input {
     @apply w-full px-3 py-2.5 border border-input rounded-md text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all duration-200;
+  }
+
+  .form-textarea {
+    @apply w-full px-3 py-2.5 border border-input rounded-md text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all duration-200 min-h-[80px] resize-y;
   }
 
   .btn-success {

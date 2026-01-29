@@ -1,15 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import { formatDate, formatDateToISO, formatDateForDisplay } from "@/lib/utils";
 import { Search, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Table,
   TableBody,
@@ -77,7 +72,7 @@ export default function VatReport() {
         setTotals(response.data.totals);
       }
     } catch (error) {
-      console.error("Error fetching VAT report:", error);
+      toast.error("Failed to load VAT report");
     } finally {
       setLoading(false);
     }
@@ -109,19 +104,19 @@ export default function VatReport() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium text-green-600">Customers</label>
-              <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select All" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Select All</SelectItem>
-                  {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id.toString()}>
-                      {customer.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                options={[
+                  { value: "all", label: "Select All" },
+                  ...customers.map((customer) => ({
+                    value: customer.id.toString(),
+                    label: customer.name,
+                  })),
+                ]}
+                value={selectedCustomer}
+                onValueChange={setSelectedCustomer}
+                placeholder="Select All"
+                searchPlaceholder="Search customers..."
+              />
             </div>
 
             <div className="space-y-2">
@@ -172,17 +167,17 @@ export default function VatReport() {
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
             <span className="text-sm">Show</span>
-            <Select value={pageSize.toString()} onValueChange={(v) => { setPageSize(parseInt(v)); setPageNumber(1); }}>
-              <SelectTrigger className="w-20">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              options={[
+                { value: "10", label: "10" },
+                { value: "25", label: "25" },
+                { value: "50", label: "50" },
+                { value: "100", label: "100" },
+              ]}
+              value={pageSize.toString()}
+              onValueChange={(v) => { setPageSize(parseInt(v)); setPageNumber(1); }}
+              triggerClassName="w-20"
+            />
             <span className="text-sm">entries</span>
           </div>
           <div className="flex items-center gap-2">
@@ -201,19 +196,19 @@ export default function VatReport() {
         <div className="border rounded-lg overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow className="bg-green-700 hover:bg-green-700">
-                <TableHead className="text-white font-semibold">Job No.</TableHead>
-                <TableHead className="text-white font-semibold">Bill of Lading No.</TableHead>
-                <TableHead className="text-white font-semibold">Invoice No.</TableHead>
-                <TableHead className="text-white font-semibold">Invoice Date</TableHead>
-                <TableHead className="text-white font-semibold">Customer</TableHead>
-                <TableHead className="text-white font-semibold">Curr Unit</TableHead>
-                <TableHead className="text-white font-semibold text-right">Amount</TableHead>
-                <TableHead className="text-white font-semibold text-right">Non-Taxable Sale(AED)</TableHead>
-                <TableHead className="text-white font-semibold text-right">Taxable Sale(AED)</TableHead>
-                <TableHead className="text-white font-semibold text-right">Tax (5%)(AED)</TableHead>
-                <TableHead className="text-white font-semibold text-right">Total Invoice(AED)</TableHead>
-                <TableHead className="text-white font-semibold">Remarks</TableHead>
+              <TableRow className="bg-table-header">
+                <TableHead className="text-table-header-foreground font-semibold">Job No.</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold">Bill of Lading No.</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold">Invoice No.</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold">Invoice Date</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold">Customer</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold">Curr Unit</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold text-right">Amount</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold text-right">Non-Taxable Sale(AED)</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold text-right">Taxable Sale(AED)</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold text-right">Tax (5%)(AED)</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold text-right">Total Invoice(AED)</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold">Remarks</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

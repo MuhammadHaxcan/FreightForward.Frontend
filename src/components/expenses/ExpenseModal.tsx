@@ -8,13 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { DateInput } from "@/components/ui/date-input";
 import { format } from "date-fns";
 import { useExpenseTypesByDirection, useAllCurrencyTypes } from "@/hooks/useSettings";
@@ -40,8 +34,8 @@ const paymentModeToEnum: Record<string, string> = {
 };
 
 interface ExpenseModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onSubmit: (expense: {
     date: string;
     paymentType: string;
@@ -73,8 +67,8 @@ const paymentTypes = ["Inwards", "Outwards"] as const;
 const paymentModes = ["CASH", "CHEQUE", "BANK WIRE", "BANK TRANSFER", "CARD"];
 
 export function ExpenseModal({
-  isOpen,
-  onClose,
+  open,
+  onOpenChange,
   onSubmit,
   expense,
   banks,
@@ -103,10 +97,10 @@ export function ExpenseModal({
   const { data: currencyTypesData, isLoading: isLoadingCurrencies } = useAllCurrencyTypes();
 
   // Map expense types to category names
-  const categories = expenseTypesData?.map((et) => et.name) || [];
+  const categories = Array.isArray(expenseTypesData) ? expenseTypesData.map((et) => et.name) : [];
 
   // Map currency types to currency codes
-  const currencies = currencyTypesData?.map((ct) => ct.code) || [];
+  const currencies = Array.isArray(currencyTypesData) ? currencyTypesData.map((ct) => ct.code) : [];
 
   useEffect(() => {
     if (expense) {
@@ -140,7 +134,7 @@ export function ExpenseModal({
         chequeDate: "",
       });
     }
-  }, [expense, isOpen, banks]);
+  }, [expense, open, banks]);
 
   const requiresBank = paymentModeConfig[formData.paymentMode]?.requiresBank ?? false;
   const requiresChequeDetails = paymentModeConfig[formData.paymentMode]?.requiresChequeDetails ?? false;
@@ -157,8 +151,8 @@ export function ExpenseModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const currencyId = currencyTypesData?.find(ct => ct.code === formData.currencyCode)?.id;
-    const expenseTypeId = expenseTypesData?.find(et => et.name === formData.category)?.id;
+    const currencyId = Array.isArray(currencyTypesData) ? currencyTypesData.find(ct => ct.code === formData.currencyCode)?.id : undefined;
+    const expenseTypeId = Array.isArray(expenseTypesData) ? expenseTypesData.find(et => et.name === formData.category)?.id : undefined;
     onSubmit({
       date: formData.date,
       paymentType: formData.paymentType,
@@ -181,59 +175,44 @@ export function ExpenseModal({
     : "";
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{expense ? "Edit Record" : "New Record"}</DialogTitle>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl p-0">
+        <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+          <DialogTitle className="text-white text-lg font-semibold">{expense ? "Edit Record" : "New Record"}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 p-6">
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="text-sm font-medium mb-1 block">Payment Type</label>
-              <Select
+              <label className="form-label">Payment Type</label>
+              <SearchableSelect
+                options={paymentTypes.map((type) => ({ value: type, label: type }))}
                 value={formData.paymentType}
                 onValueChange={handlePaymentTypeChange}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select One" />
-                </SelectTrigger>
-                <SelectContent>
-                  {paymentTypes.map((type) => (
-                    <SelectItem key={type} value={type}>{type}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Select One"
+                searchPlaceholder="Search..."
+              />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Category</label>
-              <Select
+              <label className="form-label">Category</label>
+              <SearchableSelect
+                options={categories.map((cat) => ({ value: cat, label: cat }))}
                 value={formData.category}
                 onValueChange={(value) => setFormData({ ...formData, category: value })}
                 disabled={!formData.paymentType || isLoadingCategories}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={
-                    !formData.paymentType
-                      ? "Select Payment Type first"
-                      : isLoadingCategories
-                        ? "Loading..."
-                        : "Select Category"
-                  } />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.length === 0 && !isLoadingCategories && formData.paymentType ? (
-                    <div className="px-2 py-1.5 text-sm text-muted-foreground">No categories found</div>
-                  ) : (
-                    categories.map((cat) => (
-                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+                placeholder={
+                  !formData.paymentType
+                    ? "Select Payment Type first"
+                    : isLoadingCategories
+                      ? "Loading..."
+                      : "Select Category"
+                }
+                searchPlaceholder="Search..."
+                emptyMessage="No categories found"
+              />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Description</label>
+              <label className="form-label">Description</label>
               <Textarea
                 placeholder="Description"
                 value={formData.description}
@@ -245,28 +224,19 @@ export function ExpenseModal({
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="text-sm font-medium mb-1 block">Currency</label>
-              <Select
+              <label className="form-label">Currency</label>
+              <SearchableSelect
+                options={currencies.map((cur) => ({ value: cur, label: cur }))}
                 value={formData.currencyCode}
                 onValueChange={(value) => setFormData({ ...formData, currencyCode: value })}
                 disabled={isLoadingCurrencies}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={isLoadingCurrencies ? "Loading..." : "Select Currency"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {currencies.length === 0 && !isLoadingCurrencies ? (
-                    <div className="px-2 py-1.5 text-sm text-muted-foreground">No currencies found</div>
-                  ) : (
-                    currencies.map((cur) => (
-                      <SelectItem key={cur} value={cur}>{cur}</SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+                placeholder={isLoadingCurrencies ? "Loading..." : "Select Currency"}
+                searchPlaceholder="Search..."
+                emptyMessage="No currencies found"
+              />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Amount</label>
+              <label className="form-label">Amount</label>
               <Input
                 type="number"
                 placeholder="Paid Amount"
@@ -275,15 +245,16 @@ export function ExpenseModal({
               />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Bill Copy</label>
+              <label className="form-label">Bill Copy</label>
               <Input type="file" className="cursor-pointer" />
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="text-sm font-medium mb-1 block">Payment Mode</label>
-              <Select
+              <label className="form-label">Payment Mode</label>
+              <SearchableSelect
+                options={paymentModes.map((mode) => ({ value: mode, label: mode }))}
                 value={formData.paymentMode}
                 onValueChange={(value) => {
                   const config = paymentModeConfig[value];
@@ -295,38 +266,24 @@ export function ExpenseModal({
                     chequeDate: config?.requiresChequeDetails ? formData.chequeDate : "",
                   });
                 }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Payment Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {paymentModes.map((mode) => (
-                    <SelectItem key={mode} value={mode}>{mode}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Select Payment Type"
+                searchPlaceholder="Search..."
+              />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Bank</label>
-              <Select
+              <label className="form-label">Bank</label>
+              <SearchableSelect
+                options={banks.map((bank) => ({ value: bank.id.toString(), label: bank.bankName }))}
                 value={formData.bankId?.toString() || ""}
                 onValueChange={handleBankChange}
                 disabled={!requiresBank}
-              >
-                <SelectTrigger className={!requiresBank ? "bg-muted" : ""}>
-                  <SelectValue placeholder="Select Bank">
-                    {selectedBankName || "Select Bank"}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {banks.map((bank) => (
-                    <SelectItem key={bank.id} value={bank.id.toString()}>{bank.bankName}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                triggerClassName={!requiresBank ? "bg-muted" : ""}
+                placeholder="Select Bank"
+                searchPlaceholder="Search..."
+              />
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Expense Date</label>
+              <label className="form-label">Expense Date</label>
               <DateInput
                 value={formData.date}
                 onChange={(value) => setFormData({ ...formData, date: value })}
@@ -338,7 +295,7 @@ export function ExpenseModal({
           {requiresChequeDetails && (
             <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg border">
               <div>
-                <label className="text-sm font-medium mb-1 block">Cheque Number</label>
+                <label className="form-label">Cheque Number</label>
                 <Input
                   placeholder="Enter cheque number"
                   value={formData.chequeNumber}
@@ -346,7 +303,7 @@ export function ExpenseModal({
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-1 block">Cheque Date</label>
+                <label className="form-label">Cheque Date</label>
                 <DateInput
                   value={formData.chequeDate}
                   onChange={(value) => setFormData({ ...formData, chequeDate: value })}
@@ -356,12 +313,12 @@ export function ExpenseModal({
           )}
 
           <div className="flex justify-end gap-2 pt-4">
-            <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={isSubmitting}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" className="btn-success" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Submit
-            </Button>
-            <Button type="button" variant="ghost" onClick={onClose}>
-              Close
             </Button>
           </div>
         </form>

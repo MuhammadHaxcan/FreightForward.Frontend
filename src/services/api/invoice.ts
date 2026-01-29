@@ -1,4 +1,4 @@
-import { fetchApi, PaginatedList, PaymentStatus } from './base';
+import { fetchApi, fetchBlob, PaginatedList, PaymentStatus, API_BASE_URL } from './base';
 
 // Payment Mode enum
 export type PaymentMode = 'Cash' | 'Cheque' | 'BankWire' | 'BankTransfer' | 'Card';
@@ -228,8 +228,7 @@ export const invoiceApi = {
   getById: (id: number) => fetchApi<AccountInvoiceDetail>(`/invoices/${id}`),
   getNextInvoiceNumber: async () => {
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://localhost:7001/api';
-      const response = await fetch(`${API_BASE_URL}/invoices/next-number`);
+      const response = await fetchBlob(`${API_BASE_URL}/invoices/next-number`);
       if (!response.ok) {
         return { error: `HTTP error! status: ${response.status}` };
       }
@@ -242,8 +241,7 @@ export const invoiceApi = {
   },
   getNextPurchaseNumber: async () => {
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://localhost:7001/api';
-      const response = await fetch(`${API_BASE_URL}/invoices/purchases/next-number`);
+      const response = await fetchBlob(`${API_BASE_URL}/invoices/purchases/next-number`);
       if (!response.ok) {
         return { error: `HTTP error! status: ${response.status}` };
       }
@@ -393,13 +391,11 @@ export const receiptApi = {
   getById: (id: number) => fetchApi<ReceiptDetail>(`/invoices/receipts/${id}`),
   getNextNumber: async () => {
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://localhost:7001/api';
-      const response = await fetch(`${API_BASE_URL}/invoices/receipts/next-number`);
+      const response = await fetchBlob(`${API_BASE_URL}/invoices/receipts/next-number`);
       if (!response.ok) {
         return { error: `HTTP error! status: ${response.status}` };
       }
       const text = await response.text();
-      // Remove quotes if the response is JSON-wrapped string
       const data = text.replace(/^"|"$/g, '');
       return { data };
     } catch (error) {

@@ -2,6 +2,9 @@
 export const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://localhost:7001/api';
 
 // Auth token storage keys
+// SECURITY NOTE: Tokens are stored in browser storage which is vulnerable to XSS attacks.
+// For production systems with high security requirements, consider migrating to httpOnly
+// cookies with CSRF protection. This requires backend changes to set cookies in responses.
 const ACCESS_TOKEN_KEY = 'ff_access_token';
 const REFRESH_TOKEN_KEY = 'ff_refresh_token';
 
@@ -25,9 +28,10 @@ export interface ApiResponse<T> {
 export type MasterType = 'Debtors' | 'Creditors' | 'Neutral';
 export type PaymentStatus = 'Pending' | 'Paid' | 'PartiallyPaid' | 'Overdue' | 'Closed';
 
-// Token management
+// Token management - sessionStorage for access (clears on tab close)
+// localStorage for refresh (persists for "remember me" and auto-refresh)
 export function getAccessToken(): string | null {
-  return localStorage.getItem(ACCESS_TOKEN_KEY);
+  return sessionStorage.getItem(ACCESS_TOKEN_KEY);
 }
 
 export function getRefreshToken(): string | null {
@@ -35,12 +39,12 @@ export function getRefreshToken(): string | null {
 }
 
 export function setTokens(accessToken: string, refreshToken: string): void {
-  localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+  sessionStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
   localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
 }
 
 export function clearTokens(): void {
-  localStorage.removeItem(ACCESS_TOKEN_KEY);
+  sessionStorage.removeItem(ACCESS_TOKEN_KEY);
   localStorage.removeItem(REFRESH_TOKEN_KEY);
 }
 
@@ -51,8 +55,9 @@ export function setAuthFailureCallback(callback: () => void): void {
 }
 
 // Check if dev mode auth bypass is enabled
+// SECURITY: Only allows bypass in development mode (not production builds)
 export function isDevAuthDisabled(): boolean {
-  return import.meta.env.VITE_DISABLE_AUTH === 'true';
+  return import.meta.env.DEV && import.meta.env.VITE_DISABLE_AUTH === 'true';
 }
 
 // Generic fetch wrapper with auth
@@ -136,8 +141,61 @@ export async function fetchApi<T>(
   }
 }
 
-// Token refresh helper
-async function attemptTokenRefresh(): Promise<boolean> {
+// Authenticated fetch for binary data (PDFs, etc.) and simple API calls
+export async function fetchBlob(url: string): Promise<Response> {
+  const headers: HeadersInit = {};
+
+  // Add auth header if not in dev bypass mode
+  if (!isDevAuthDisabled()) {
+    const token = getAccessToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+  }
+
+  const response = await fetch(url, { headers });
+
+  // Handle 401 - attempt token refresh
+  if (response.status === 401 && !isDevAuthDisabled()) {
+    const refreshResult = await attemptTokenRefresh();
+    if (refreshResult) {
+      // Retry with new token
+      const newToken = getAccessToken();
+      if (newToken) {
+        headers['Authorization'] = `Bearer ${newToken}`;
+      }
+      return fetch(url, { headers });
+    }
+
+    // Refresh failed, trigger auth failure callback
+    clearTokens();
+    if (onAuthFailure) {
+      onAuthFailure();
+    }
+  }
+
+  return response;
+}
+
+// Token refresh mutex to prevent concurrent refresh attempts
+let refreshPromise: Promise<boolean> | null = null;
+
+// Token refresh helper with mutex to prevent race conditions
+export async function attemptTokenRefresh(): Promise<boolean> {
+  // If refresh already in progress, wait for it
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  refreshPromise = doTokenRefresh();
+  try {
+    return await refreshPromise;
+  } finally {
+    refreshPromise = null;
+  }
+}
+
+async function doTokenRefresh(): Promise<boolean> {
   const refreshToken = getRefreshToken();
   if (!refreshToken) {
     return false;

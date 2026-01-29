@@ -5,6 +5,7 @@ import { Plus, Eye, Trash2, Edit, Download, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Input } from "@/components/ui/input";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 import {
   Table,
   TableBody,
@@ -13,13 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,12 +25,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import RecordPaymentModal from "@/components/payments/RecordPaymentModal";
-import PaymentDetailsModal from "@/components/payments/PaymentDetailsModal";
-import UpdatePaymentModal from "@/components/payments/UpdatePaymentModal";
+import { RecordPaymentModal } from "@/components/payments/RecordPaymentModal";
+import { PaymentDetailsModal } from "@/components/payments/PaymentDetailsModal";
+import { UpdatePaymentModal } from "@/components/payments/UpdatePaymentModal";
 import { usePaymentVouchers, useDeletePaymentVoucher } from "@/hooks/usePaymentVouchers";
 import { type PaymentVoucher } from "@/services/api/payment";
 import { formatDate } from "@/lib/utils";
+import { API_BASE_URL, fetchBlob } from "@/services/api/base";
 
 export default function PaymentVouchers() {
   const navigate = useNavigate();
@@ -48,8 +44,6 @@ export default function PaymentVouchers() {
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<PaymentVoucher | null>(null);
-
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://localhost:7001/api';
 
   const { data, isLoading, refetch } = usePaymentVouchers({
     pageNumber,
@@ -83,7 +77,7 @@ export default function PaymentVouchers() {
 
   const handleDownload = async (id: number, paymentNo: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/invoices/payments/${id}/pdf`);
+      const response = await fetchBlob(`${API_BASE_URL}/invoices/payments/${id}/pdf`);
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
@@ -109,35 +103,36 @@ export default function PaymentVouchers() {
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">All Payment Voucher</h1>
-        <Button
-          className="bg-green-500 hover:bg-green-600 text-white"
-          onClick={() => setRecordModalOpen(true)}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Record Payment
-        </Button>
-      </div>
+          <PermissionGate permission="paymentvoucher_add">
+            <Button
+              className="btn-success"
+              onClick={() => setRecordModalOpen(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Record Payment
+            </Button>
+          </PermissionGate>
+        </div>
 
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Show</span>
-          <Select
+          <SearchableSelect
+            options={[
+              { value: "10", label: "10" },
+              { value: "25", label: "25" },
+              { value: "50", label: "50" },
+              { value: "100", label: "100" },
+            ]}
             value={pageSize.toString()}
             onValueChange={(v) => {
               setPageSize(parseInt(v));
               setPageNumber(1);
             }}
-          >
-            <SelectTrigger className="w-20">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="25">25</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-              <SelectItem value="100">100</SelectItem>
-            </SelectContent>
-          </Select>
+            placeholder="10"
+            searchPlaceholder="Search..."
+            triggerClassName="w-20"
+          />
           <span className="text-sm text-muted-foreground">entries</span>
         </div>
 
@@ -155,16 +150,16 @@ export default function PaymentVouchers() {
       <div className="border rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-primary">
-              <TableHead className="text-primary-foreground font-semibold">Date</TableHead>
-              <TableHead className="text-primary-foreground font-semibold">Payment Voucher No.</TableHead>
-              <TableHead className="text-primary-foreground font-semibold">Job #</TableHead>
-              <TableHead className="text-primary-foreground font-semibold">Payment Type</TableHead>
-              <TableHead className="text-primary-foreground font-semibold">Purchases</TableHead>
-              <TableHead className="text-primary-foreground font-semibold">Vendor Name</TableHead>
-              <TableHead className="text-primary-foreground font-semibold">Narration (HBL#)</TableHead>
-              <TableHead className="text-primary-foreground font-semibold">Amount</TableHead>
-              <TableHead className="text-primary-foreground font-semibold">Action</TableHead>
+            <TableRow className="bg-table-header">
+              <TableHead className="text-table-header-foreground font-semibold">Date</TableHead>
+              <TableHead className="text-table-header-foreground font-semibold">Payment Voucher No.</TableHead>
+              <TableHead className="text-table-header-foreground font-semibold">Job #</TableHead>
+              <TableHead className="text-table-header-foreground font-semibold">Payment Type</TableHead>
+              <TableHead className="text-table-header-foreground font-semibold">Purchases</TableHead>
+              <TableHead className="text-table-header-foreground font-semibold">Vendor Name</TableHead>
+              <TableHead className="text-table-header-foreground font-semibold">Narration (HBL#)</TableHead>
+              <TableHead className="text-table-header-foreground font-semibold">Amount</TableHead>
+              <TableHead className="text-table-header-foreground font-semibold">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -214,25 +209,29 @@ export default function PaymentVouchers() {
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button
-                        size="sm"
-                        className="bg-amber-500 hover:bg-amber-600 text-white h-8 w-8 p-0"
-                        onClick={() => handleEdit(payment.id)}
-                        title="Edit"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="bg-red-500 hover:bg-red-600 text-white h-8 w-8 p-0"
-                        onClick={() => {
-                          setSelectedPayment(payment);
-                          setDeleteDialogOpen(true);
-                        }}
-                        title="Delete"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <PermissionGate permission="paymentvoucher_edit">
+                        <Button
+                          size="sm"
+                          className="bg-amber-500 hover:bg-amber-600 text-white h-8 w-8 p-0"
+                          onClick={() => handleEdit(payment.id)}
+                          title="Edit"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </PermissionGate>
+                      <PermissionGate permission="paymentvoucher_delete">
+                        <Button
+                          size="sm"
+                          className="bg-red-500 hover:bg-red-600 text-white h-8 w-8 p-0"
+                          onClick={() => {
+                            setSelectedPayment(payment);
+                            setDeleteDialogOpen(true);
+                          }}
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </PermissionGate>
                       <Button
                         size="sm"
                         className="bg-yellow-500 hover:bg-yellow-600 text-white h-8 w-8 p-0"
@@ -243,7 +242,7 @@ export default function PaymentVouchers() {
                       </Button>
                       <Button
                         size="sm"
-                        className="bg-green-500 hover:bg-green-600 text-white h-8 w-8 p-0"
+                        className="btn-success h-8 w-8 p-0"
                         onClick={() => handlePrintPdf(payment.id)}
                         title="Print"
                       >

@@ -4,13 +4,8 @@ import { formatDate } from "@/lib/utils";
 import { Eye, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { PermissionGate } from "@/components/auth/PermissionGate";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Table,
   TableBody,
@@ -91,27 +86,31 @@ export default function PurchaseInvoices() {
         {/* Header */}
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-semibold">Purchase Invoices</h1>
-          <Button className="bg-green-500 hover:bg-green-600 text-white">
-            <Plus className="h-4 w-4 mr-2" />
-            New Purchase Invoice
-          </Button>
+          <PermissionGate permission="purchase_add">
+            <Button className="btn-success">
+              <Plus className="h-4 w-4 mr-2" />
+              New Purchase Invoice
+            </Button>
+          </PermissionGate>
         </div>
 
         {/* Table Controls */}
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
             <span className="text-sm">Show</span>
-            <Select value={pageSize.toString()} onValueChange={(v) => { setPageSize(parseInt(v)); setPageNumber(1); }}>
-              <SelectTrigger className="w-20">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              options={[
+                { value: "10", label: "10" },
+                { value: "25", label: "25" },
+                { value: "50", label: "50" },
+                { value: "100", label: "100" },
+              ]}
+              value={pageSize.toString()}
+              onValueChange={(v) => { setPageSize(parseInt(v)); setPageNumber(1); }}
+              placeholder="10"
+              searchPlaceholder="Search..."
+              triggerClassName="w-20"
+            />
             <span className="text-sm">entries</span>
           </div>
           <div className="flex items-center gap-2">
@@ -130,15 +129,15 @@ export default function PurchaseInvoices() {
         <div className="border rounded-lg overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow className="bg-primary">
-                <TableHead className="text-primary-foreground font-semibold">Purchase Inv #</TableHead>
-                <TableHead className="text-primary-foreground font-semibold">Job #</TableHead>
-                <TableHead className="text-primary-foreground font-semibold">Vendor Invoice Date</TableHead>
-                <TableHead className="text-primary-foreground font-semibold">Vendor Invoice No</TableHead>
-                <TableHead className="text-primary-foreground font-semibold">Vendor Name</TableHead>
-                <TableHead className="text-primary-foreground font-semibold">Amount</TableHead>
-                <TableHead className="text-primary-foreground font-semibold">Added</TableHead>
-                <TableHead className="text-primary-foreground font-semibold">Action</TableHead>
+              <TableRow className="bg-table-header">
+                <TableHead className="text-table-header-foreground font-semibold">Purchase Inv #</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold">Job #</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold">Vendor Invoice Date</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold">Vendor Invoice No</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold">Vendor Name</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold">Amount</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold">Added</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -156,10 +155,10 @@ export default function PurchaseInvoices() {
                 </TableRow>
               ) : (
                 invoices.map((invoice) => (
-                  <TableRow key={invoice.id} className="hover:bg-muted/50">
+                  <TableRow key={invoice.id} className="hover:bg-table-row-hover">
                     <TableCell>
                       <span
-                        className="text-green-600 hover:underline cursor-pointer"
+                        className="text-primary hover:underline cursor-pointer"
                         onClick={() => handleViewInvoice(invoice.id)}
                       >
                         {invoice.purchaseNo}
@@ -173,7 +172,7 @@ export default function PurchaseInvoices() {
                     </TableCell>
                     <TableCell>{invoice.vendorInvoiceNo || "-"}</TableCell>
                     <TableCell>
-                      <span className="text-green-600 hover:underline cursor-pointer">
+                      <span className="text-primary hover:underline cursor-pointer">
                         {invoice.vendorName || "-"}
                       </span>
                     </TableCell>
@@ -182,7 +181,7 @@ export default function PurchaseInvoices() {
                     <TableCell>
                       <Button
                         size="sm"
-                        className="bg-green-500 hover:bg-green-600 text-white"
+                        className="btn-success"
                         onClick={() => handleViewInvoice(invoice.id)}
                       >
                         <Eye className="h-4 w-4 mr-1" />

@@ -2,16 +2,16 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { SearchableMultiSelect } from "@/components/ui/searchable-multi-select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { Calendar } from "@/components/ui/calendar";
-import { ArrowLeft, Plus, ChevronDown, Check, CalendarIcon, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, CalendarIcon, Pencil, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { cn, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { customerApi, settingsApi, CustomerCategoryType, CurrencyType, Invoice as ApiInvoice, AccountReceivable as ApiAccountReceivable, AccountPayable as ApiAccountPayable, PaymentStatus, Receipt as ApiReceipt, CustomerStatement } from "@/services/api";
 import { getPaymentVouchers, PaymentVoucher } from "@/services/api/payment";
 import { invoiceApi, AccountPurchaseInvoice } from "@/services/api/invoice";
@@ -163,7 +163,7 @@ const CustomerDetail = () => {
   const [profileData, setProfileData] = useState({
     code: "",
     masterType: "Debtors" as "Debtors" | "Creditors" | "Neutral",
-    categoryIds: [] as number[],
+    categoryIds: [] as string[],
     name: "",
     city: "",
     country: "United Arab Emirates",
@@ -203,7 +203,7 @@ const CustomerDetail = () => {
             setProfileData({
               code: customer.code,
               masterType: customer.masterType as "Debtors" | "Creditors" | "Neutral",
-              categoryIds: customer.categories?.map(c => c.id) || [],
+              categoryIds: customer.categories?.map(c => c.id.toString()) || [],
               name: customer.name,
               city: customer.city || "",
               country: customer.country || "United Arab Emirates",
@@ -403,7 +403,11 @@ const CustomerDetail = () => {
         setPvTotalPages(response.data.totalPages);
       }
     } catch (error) {
-      console.error("Error fetching payment vouchers:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load payment vouchers",
+        variant: "destructive",
+      });
     } finally {
       setPvLoading(false);
     }
@@ -431,7 +435,11 @@ const CustomerDetail = () => {
         setPiTotalPages(response.data.totalPages);
       }
     } catch (error) {
-      console.error("Error fetching purchase invoices:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load purchase invoices",
+        variant: "destructive",
+      });
     } finally {
       setPiLoading(false);
     }
@@ -513,7 +521,7 @@ const CustomerDetail = () => {
           id: parseInt(id),
           name: profileData.name,
           masterType: profileData.masterType,
-          categoryIds: profileData.categoryIds,
+          categoryIds: profileData.categoryIds.map(id => parseInt(id)),
           phone: profileData.phone || undefined,
           fax: profileData.fax || undefined,
           email: profileData.generalEmail || undefined,
@@ -541,7 +549,7 @@ const CustomerDetail = () => {
         const createData = {
           name: profileData.name,
           masterType: profileData.masterType,
-          categoryIds: profileData.categoryIds,
+          categoryIds: profileData.categoryIds.map(id => parseInt(id)),
           phone: profileData.phone || undefined,
           fax: profileData.fax || undefined,
           email: profileData.generalEmail || undefined,
@@ -655,15 +663,6 @@ const CustomerDetail = () => {
     }
   };
 
-  const toggleCategory = (categoryId: number) => {
-    setProfileData(prev => ({
-      ...prev,
-      categoryIds: prev.categoryIds.includes(categoryId)
-        ? prev.categoryIds.filter(id => id !== categoryId)
-        : [...prev.categoryIds, categoryId]
-    }));
-  };
-
   const handleSaveContact = () => {
     if (contactForm.name) {
       setContacts([...contacts, { ...contactForm, id: Date.now() } as Contact]);
@@ -683,48 +682,29 @@ const CustomerDetail = () => {
         </div>
         <div className="space-y-2">
           <Label className="text-sm">Master Type</Label>
-          <Select value={profileData.masterType} onValueChange={v => setProfileData({...profileData, masterType: v as "Debtors" | "Creditors" | "Neutral"})} disabled={isViewMode}>
-            <SelectTrigger className="bg-muted/50"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Debtors">Debtors</SelectItem>
-              <SelectItem value="Creditors">Creditors</SelectItem>
-              <SelectItem value="Neutral">Neutral</SelectItem>
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={[
+              { value: "Debtors", label: "Debtors" },
+              { value: "Creditors", label: "Creditors" },
+              { value: "Neutral", label: "Neutral" },
+            ]}
+            value={profileData.masterType}
+            onValueChange={v => setProfileData({...profileData, masterType: v as "Debtors" | "Creditors" | "Neutral"})}
+            disabled={isViewMode}
+            triggerClassName="bg-muted/50"
+          />
         </div>
         <div className="space-y-2">
           <Label className="text-sm">Category</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full justify-between bg-muted/50 font-normal min-h-10 h-auto py-2" disabled={isViewMode}>
-                <div className="flex flex-wrap gap-1 flex-1 max-h-[72px] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                  {profileData.categoryIds.map(catId => {
-                    const cat = categoryTypes.find(c => c.id === catId);
-                    return cat ? (
-                      <span key={catId} className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary text-primary-foreground rounded-md whitespace-nowrap">× {cat.name}</span>
-                    ) : null;
-                  })}
-                </div>
-                <ChevronDown className="h-4 w-4 shrink-0 opacity-50 ml-2" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[200px] p-0" align="start">
-              <Command>
-                <CommandList>
-                  <CommandGroup>
-                    {categoryTypes.map(cat => (
-                      <CommandItem key={cat.id} onSelect={() => toggleCategory(cat.id)} className="cursor-pointer">
-                        <div className={cn("mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary", profileData.categoryIds.includes(cat.id) ? "bg-primary text-primary-foreground" : "opacity-50")}>
-                          {profileData.categoryIds.includes(cat.id) && <Check className="h-3 w-3" />}
-                        </div>
-                        {cat.name}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+          <SearchableMultiSelect
+            options={categoryTypes.map(cat => ({ value: cat.id.toString(), label: cat.name }))}
+            values={profileData.categoryIds}
+            onValuesChange={values => setProfileData({...profileData, categoryIds: values})}
+            disabled={isViewMode}
+            triggerClassName="bg-muted/50"
+            placeholder="Select categories..."
+            searchPlaceholder="Search categories..."
+          />
         </div>
         <div className="space-y-2">
           <Label className="text-sm">Name</Label>
@@ -739,12 +719,13 @@ const CustomerDetail = () => {
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div className="space-y-2">
           <Label className="text-sm">Country</Label>
-          <Select value={profileData.country} onValueChange={v => setProfileData({...profileData, country: v})} disabled={isViewMode}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {countries.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={countries.map(c => ({ value: c, label: c }))}
+            value={profileData.country}
+            onValueChange={v => setProfileData({...profileData, country: v})}
+            disabled={isViewMode}
+            searchPlaceholder="Search countries..."
+          />
         </div>
         <div className="space-y-2">
           <Label className="text-sm">Phone</Label>
@@ -775,13 +756,15 @@ const CustomerDetail = () => {
         </div>
         <div className="space-y-2">
           <Label className="text-sm">Status</Label>
-          <Select value={profileData.status} onValueChange={v => setProfileData({...profileData, status: v})} disabled={isViewMode}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Active">Active</SelectItem>
-              <SelectItem value="Inactive">Inactive</SelectItem>
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={[
+              { value: "Active", label: "Active" },
+              { value: "Inactive", label: "Inactive" },
+            ]}
+            value={profileData.status}
+            onValueChange={v => setProfileData({...profileData, status: v})}
+            disabled={isViewMode}
+          />
         </div>
         <div className="space-y-2">
           <Label className="text-sm">Carrier Code</Label>
@@ -808,13 +791,15 @@ const CustomerDetail = () => {
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Show:</span>
-            <Select defaultValue="10">
-              <SelectTrigger className="w-[70px] h-8"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              options={[
+                { value: "10", label: "10" },
+                { value: "25", label: "25" },
+              ]}
+              value="10"
+              onValueChange={() => {}}
+              triggerClassName="w-[90px] h-8"
+            />
             <span className="text-sm text-muted-foreground">entries</span>
           </div>
           <div className="flex items-center gap-2">
@@ -884,22 +869,25 @@ const CustomerDetail = () => {
         </div>
         <div className="space-y-2">
           <Label className="text-sm">Currency</Label>
-          <Select value={accountDetails.currency} onValueChange={v => setAccountDetails({...accountDetails, currency: v})} disabled={isViewMode}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {currencyTypes.map(c => <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={currencyTypes.map(c => ({ value: c.code, label: c.code }))}
+            value={accountDetails.currency}
+            onValueChange={v => setAccountDetails({...accountDetails, currency: v})}
+            disabled={isViewMode}
+            searchPlaceholder="Search currencies..."
+          />
         </div>
         <div className="space-y-2">
           <Label className="text-sm">Type</Label>
-          <Select value={accountDetails.type} onValueChange={v => setAccountDetails({...accountDetails, type: v})} disabled={isViewMode}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Credit">Credit</SelectItem>
-              <SelectItem value="Debit">Debit</SelectItem>
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={[
+              { value: "Credit", label: "Credit" },
+              { value: "Debit", label: "Debit" },
+            ]}
+            value={accountDetails.type}
+            onValueChange={v => setAccountDetails({...accountDetails, type: v})}
+            disabled={isViewMode}
+          />
         </div>
       </div>
 
@@ -958,14 +946,17 @@ const CustomerDetail = () => {
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Show:</span>
-            <Select value={receiptsPageSize.toString()} onValueChange={(v) => { setReceiptsPageSize(parseInt(v)); setReceiptsPageNumber(1); }}>
-              <SelectTrigger className="w-[70px] h-8"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              options={[
+                { value: "10", label: "10" },
+                { value: "25", label: "25" },
+                { value: "50", label: "50" },
+                { value: "100", label: "100" },
+              ]}
+              value={receiptsPageSize.toString()}
+              onValueChange={(v) => { setReceiptsPageSize(parseInt(v)); setReceiptsPageNumber(1); }}
+              triggerClassName="w-[90px] h-8"
+            />
             <span className="text-sm text-muted-foreground">entries</span>
           </div>
           <div className="flex items-center gap-2">
@@ -1076,14 +1067,17 @@ const CustomerDetail = () => {
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Show:</span>
-            <Select value={invoicesPageSize.toString()} onValueChange={(v) => { setInvoicesPageSize(parseInt(v)); setInvoicesPageNumber(1); }}>
-              <SelectTrigger className="w-[70px] h-8"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              options={[
+                { value: "10", label: "10" },
+                { value: "25", label: "25" },
+                { value: "50", label: "50" },
+                { value: "100", label: "100" },
+              ]}
+              value={invoicesPageSize.toString()}
+              onValueChange={(v) => { setInvoicesPageSize(parseInt(v)); setInvoicesPageNumber(1); }}
+              triggerClassName="w-[90px] h-8"
+            />
             <span className="text-sm text-muted-foreground">entries</span>
           </div>
           <div className="flex items-center gap-2">
@@ -1222,14 +1216,17 @@ const CustomerDetail = () => {
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Show:</span>
-            <Select value={arPageSize.toString()} onValueChange={(v) => { setArPageSize(parseInt(v)); setArPageNumber(1); }}>
-              <SelectTrigger className="w-[70px] h-8"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              options={[
+                { value: "10", label: "10" },
+                { value: "25", label: "25" },
+                { value: "50", label: "50" },
+                { value: "100", label: "100" },
+              ]}
+              value={arPageSize.toString()}
+              onValueChange={(v) => { setArPageSize(parseInt(v)); setArPageNumber(1); }}
+              triggerClassName="w-[90px] h-8"
+            />
             <span className="text-sm text-muted-foreground">entries</span>
           </div>
           <div className="flex items-center gap-2">
@@ -1360,14 +1357,17 @@ const CustomerDetail = () => {
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Show:</span>
-            <Select value={apPageSize.toString()} onValueChange={(v) => { setApPageSize(parseInt(v)); setApPageNumber(1); }}>
-              <SelectTrigger className="w-[70px] h-8"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              options={[
+                { value: "10", label: "10" },
+                { value: "25", label: "25" },
+                { value: "50", label: "50" },
+                { value: "100", label: "100" },
+              ]}
+              value={apPageSize.toString()}
+              onValueChange={(v) => { setApPageSize(parseInt(v)); setApPageNumber(1); }}
+              triggerClassName="w-[90px] h-8"
+            />
             <span className="text-sm text-muted-foreground">entries</span>
           </div>
           <div className="flex items-center gap-2">
@@ -1501,10 +1501,12 @@ const CustomerDetail = () => {
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Show:</span>
-          <Select defaultValue="10">
-            <SelectTrigger className="w-[70px] h-8"><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="10">10</SelectItem></SelectContent>
-          </Select>
+          <SearchableSelect
+            options={[{ value: "10", label: "10" }]}
+            value="10"
+            onValueChange={() => {}}
+            triggerClassName="w-[90px] h-8"
+          />
           <span className="text-sm text-muted-foreground">entries</span>
         </div>
         <div className="flex items-center gap-2">
@@ -1631,14 +1633,17 @@ const CustomerDetail = () => {
         <Input placeholder="Search payment vouchers..." className="w-1/3" />
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">Entries:</span>
-          <Select value={pvPageSize.toString()} onValueChange={(v) => { setPvPageSize(parseInt(v)); setPvPageNumber(1); }}>
-            <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="25">25</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={[
+              { value: "10", label: "10" },
+              { value: "25", label: "25" },
+              { value: "50", label: "50" },
+              { value: "100", label: "100" },
+            ]}
+            value={pvPageSize.toString()}
+            onValueChange={(v) => { setPvPageSize(parseInt(v)); setPvPageNumber(1); }}
+            triggerClassName="w-20"
+          />
         </div>
       </div>
 
@@ -1704,14 +1709,17 @@ const CustomerDetail = () => {
         <Input placeholder="Search purchase invoices..." className="w-1/3" />
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500">Entries:</span>
-          <Select value={piPageSize.toString()} onValueChange={(v) => { setPiPageSize(parseInt(v)); setPiPageNumber(1); }}>
-            <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10</SelectItem>
-              <SelectItem value="25">25</SelectItem>
-              <SelectItem value="50">50</SelectItem>
-            </SelectContent>
-          </Select>
+          <SearchableSelect
+            options={[
+              { value: "10", label: "10" },
+              { value: "25", label: "25" },
+              { value: "50", label: "50" },
+              { value: "100", label: "100" },
+            ]}
+            value={piPageSize.toString()}
+            onValueChange={(v) => { setPiPageSize(parseInt(v)); setPiPageNumber(1); }}
+            triggerClassName="w-20"
+          />
         </div>
       </div>
 
@@ -1924,12 +1932,12 @@ const CustomerDetail = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <Select value={openingBalanceForm.currency} onValueChange={v => setOpeningBalanceForm({...openingBalanceForm, currency: v})}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {currencyTypes.map(c => <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                options={currencyTypes.map(c => ({ value: c.code, label: c.code }))}
+                value={openingBalanceForm.currency}
+                onValueChange={v => setOpeningBalanceForm({...openingBalanceForm, currency: v})}
+                searchPlaceholder="Search currencies..."
+              />
             </div>
           </div>
           <div className="flex justify-end gap-2">
@@ -1956,15 +1964,16 @@ const CustomerDetail = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">Job Number</Label>
-                <Select value={creditNoteForm.jobNumber} onValueChange={v => setCreditNoteForm({...creditNoteForm, jobNumber: v})}>
-                  <SelectTrigger className="bg-background">
-                    <SelectValue placeholder="Select One" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="25UAE1582">25UAE1582</SelectItem>
-                    <SelectItem value="25UAE1583">25UAE1583</SelectItem>
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  options={[
+                    { value: "25UAE1582", label: "25UAE1582" },
+                    { value: "25UAE1583", label: "25UAE1583" },
+                  ]}
+                  value={creditNoteForm.jobNumber}
+                  onValueChange={v => setCreditNoteForm({...creditNoteForm, jobNumber: v})}
+                  placeholder="Select One"
+                  triggerClassName="bg-background"
+                />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">*Credit Note #</Label>
@@ -1972,15 +1981,17 @@ const CustomerDetail = () => {
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Customer Name</Label>
-                <Select value={creditNoteForm.customerName} onValueChange={v => setCreditNoteForm({...creditNoteForm, customerName: v})}>
-                  <SelectTrigger className="bg-background">
-                    <SelectValue placeholder="Select customer" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={profileData.name}>{profileData.name}</SelectItem>
-                    <SelectItem value="EES FREIGHT SERVICES PTE LTD">EES FREIGHT SERVICES PTE LTD</SelectItem>
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  options={[
+                    { value: profileData.name, label: profileData.name },
+                    { value: "EES FREIGHT SERVICES PTE LTD", label: "EES FREIGHT SERVICES PTE LTD" },
+                  ]}
+                  value={creditNoteForm.customerName}
+                  onValueChange={v => setCreditNoteForm({...creditNoteForm, customerName: v})}
+                  placeholder="Select customer"
+                  triggerClassName="bg-background"
+                  searchPlaceholder="Search customers..."
+                />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Email</Label>
@@ -2009,15 +2020,15 @@ const CustomerDetail = () => {
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Status</Label>
-                <Select value={creditNoteForm.status} onValueChange={v => setCreditNoteForm({...creditNoteForm, status: v})}>
-                  <SelectTrigger className="bg-background">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  options={[
+                    { value: "Active", label: "Active" },
+                    { value: "Inactive", label: "Inactive" },
+                  ]}
+                  value={creditNoteForm.status}
+                  onValueChange={v => setCreditNoteForm({...creditNoteForm, status: v})}
+                  triggerClassName="bg-background"
+                />
               </div>
             </div>
           </div>
@@ -2060,30 +2071,31 @@ const CustomerDetail = () => {
                   {/* Add new charge row */}
                   <tr className="bg-card">
                     <td className="px-3 py-2">
-                      <Select value={newCharge.chargeDetails} onValueChange={v => setNewCharge({...newCharge, chargeDetails: v})}>
-                        <SelectTrigger className="h-8 text-xs bg-background">
-                          <SelectValue placeholder="Select" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Freight Charges">Freight Charges</SelectItem>
-                          <SelectItem value="Handling Charges">Handling Charges</SelectItem>
-                          <SelectItem value="Documentation">Documentation</SelectItem>
-                          <SelectItem value="THC">THC</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        options={[
+                          { value: "Freight Charges", label: "Freight Charges" },
+                          { value: "Handling Charges", label: "Handling Charges" },
+                          { value: "Documentation", label: "Documentation" },
+                          { value: "THC", label: "THC" },
+                        ]}
+                        value={newCharge.chargeDetails || ""}
+                        onValueChange={v => setNewCharge({...newCharge, chargeDetails: v})}
+                        placeholder="Select"
+                        triggerClassName="h-8 text-xs bg-background"
+                      />
                     </td>
                     <td className="px-3 py-2">
                       <Input className="h-8 text-xs" placeholder="Bases" value={newCharge.bases} onChange={e => setNewCharge({...newCharge, bases: e.target.value})} />
                     </td>
                     <td className="px-3 py-2">
-                      <Select value={newCharge.currency} onValueChange={v => setNewCharge({...newCharge, currency: v})}>
-                        <SelectTrigger className="h-8 text-xs bg-background">
-                          <SelectValue placeholder="Select" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {currencyTypes.map(c => <SelectItem key={c.code} value={c.code}>{c.code}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        options={currencyTypes.map(c => ({ value: c.code, label: c.code }))}
+                        value={newCharge.currency || ""}
+                        onValueChange={v => setNewCharge({...newCharge, currency: v})}
+                        placeholder="Select"
+                        triggerClassName="h-8 text-xs bg-background"
+                        searchPlaceholder="Search currencies..."
+                      />
                     </td>
                     <td className="px-3 py-2">
                       <Input className="h-8 text-xs" placeholder="1" value={newCharge.rate} onChange={e => setNewCharge({...newCharge, rate: e.target.value})} />
