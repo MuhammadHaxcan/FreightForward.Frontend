@@ -8,6 +8,8 @@ interface AuthContextType {
   user: CurrentUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  officeSlug: string | null;
+  officeName: string | null;
   login: (request: LoginRequest) => Promise<{ success: boolean; error?: string; forcePasswordChange?: boolean }>;
   logout: () => Promise<void>;
   hasPermission: (code: string) => boolean;
@@ -21,6 +23,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // Dev mode mock user
 const DEV_USER: CurrentUser = {
   id: 1,
+  username: 'admin',
   firstName: 'Dev',
   lastName: 'Admin',
   fullName: 'Dev Admin',
@@ -42,21 +45,22 @@ const DEV_USER: CurrentUser = {
     'creditnote_view', 'creditnote_add', 'creditnote_edit', 'creditnote_delete',
     'user_view', 'user_add', 'user_edit', 'user_delete',
     'role_view', 'role_add', 'role_edit', 'role_delete',
-    // Settings with CRUD UI (keep permissions)
     'banks_view', 'banks_add', 'banks_edit', 'banks_delete',
     'company_view', 'company_add', 'company_edit', 'company_delete',
     'currency_view', 'currency_add', 'currency_edit', 'currency_delete',
     'port_view', 'port_add', 'port_edit', 'port_delete',
     'chargeitem_view', 'chargeitem_add', 'chargeitem_edit', 'chargeitem_delete',
     'expensetype_view', 'expensetype_add', 'expensetype_edit', 'expensetype_delete',
-    // Note: containertype, packagetype, documenttype, incoterm, bltype, costingunit,
-    // networkpartner, custcat, country permissions removed - dropdown-only, no CRUD UI
   ],
+  officeSlug: 'dev',
+  officeName: 'Development Office',
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [officeSlug, setOfficeSlug] = useState<string | null>(null);
+  const [officeName, setOfficeName] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const isDevMode = isDevAuthDisabled();
@@ -70,6 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Dev mode - auto-login as admin
       if (isDevMode) {
         setUser(DEV_USER);
+        setOfficeSlug(DEV_USER.officeSlug || null);
+        setOfficeName(DEV_USER.officeName || null);
         setIsLoading(false);
         return;
       }
@@ -81,8 +87,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!token && getRefreshToken()) {
         const refreshResult = await authApi.refresh();
         if (refreshResult.data) {
-          // Refresh successful, tokens are already stored by authApi.refresh()
           token = getAccessToken();
+          // Update office context from refresh response
+          setOfficeSlug(refreshResult.data.officeSlug || null);
+          setOfficeName(refreshResult.data.officeName || null);
         }
       }
 
@@ -95,6 +103,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const result = await authApi.getCurrentUser();
       if (result.data) {
         setUser(result.data);
+        setOfficeSlug(result.data.officeSlug || null);
+        setOfficeName(result.data.officeName || null);
       } else {
         // Token invalid, clear it
         clearTokens();
@@ -110,6 +120,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!isDevMode) {
       setAuthFailureCallback(() => {
         setUser(null);
+        setOfficeSlug(null);
+        setOfficeName(null);
         navigate('/login');
       });
     }
@@ -118,6 +130,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (request: LoginRequest) => {
     if (isDevMode) {
       setUser(DEV_USER);
+      setOfficeSlug(DEV_USER.officeSlug || null);
+      setOfficeName(DEV_USER.officeName || null);
       return { success: true, forcePasswordChange: false };
     }
 
@@ -127,10 +141,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     if (result.data) {
-      // Convert User to CurrentUser format
       const authData = result.data as AuthResponse;
       const currentUser: CurrentUser = {
         id: authData.user.id,
+        username: authData.user.username,
         firstName: authData.user.firstName,
         lastName: authData.user.lastName,
         fullName: authData.user.fullName,
@@ -141,8 +155,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profilePictureUrl: authData.user.profilePictureUrl,
         roles: authData.user.roles.map(r => r.name),
         permissions: authData.user.permissions,
+        officeSlug: authData.officeSlug,
+        officeName: authData.officeName,
       };
       setUser(currentUser);
+      setOfficeSlug(authData.officeSlug || null);
+      setOfficeName(authData.officeName || null);
       return { success: true, forcePasswordChange: authData.user.forcePasswordChange };
     }
 
@@ -154,6 +172,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await authApi.logout();
     }
     setUser(null);
+    setOfficeSlug(null);
+    setOfficeName(null);
     clearTokens();
     navigate('/login');
   }, [navigate, isDevMode]);
@@ -171,12 +191,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshUser = useCallback(async () => {
     if (isDevMode) {
       setUser(DEV_USER);
+      setOfficeSlug(DEV_USER.officeSlug || null);
+      setOfficeName(DEV_USER.officeName || null);
       return;
     }
 
     const result = await authApi.getCurrentUser();
     if (result.data) {
       setUser(result.data);
+      setOfficeSlug(result.data.officeSlug || null);
+      setOfficeName(result.data.officeName || null);
     }
   }, [isDevMode]);
 
@@ -199,7 +223,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       { route: '/users/roles', permission: 'role_view' },
       { route: '/banks', permission: 'banks_view' },
       { route: '/companies', permission: 'company_view' },
-      { route: '/settings', permission: null }, // Settings doesn't require specific permission
+      { route: '/settings', permission: null },
     ];
 
     for (const { route, permission } of routePermissions) {
@@ -215,6 +239,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     isAuthenticated,
     isLoading,
+    officeSlug,
+    officeName,
     login,
     logout,
     hasPermission,

@@ -2,10 +2,11 @@
 
 export interface User {
   id: number;
+  username: string;
   firstName: string;
   lastName: string;
   fullName: string;
-  email: string;
+  email?: string;
   contactNumber?: string;
   companyId?: number;
   companyName?: string;
@@ -20,10 +21,11 @@ export interface User {
 
 export interface UserListItem {
   id: number;
+  username: string;
   firstName: string;
   lastName: string;
   fullName: string;
-  email: string;
+  email?: string;
   contactNumber?: string;
   companyName?: string;
   isActive: boolean;
@@ -60,16 +62,19 @@ export interface Permission {
 
 export interface CurrentUser {
   id: number;
+  username: string;
   firstName: string;
   lastName: string;
   fullName: string;
-  email: string;
+  email?: string;
   contactNumber?: string;
   companyName?: string;
   forcePasswordChange: boolean;
   profilePictureUrl?: string;
   roles: string[];
   permissions: string[];
+  officeSlug?: string;
+  officeName?: string;
 }
 
 export interface AuthResponse {
@@ -77,10 +82,12 @@ export interface AuthResponse {
   refreshToken: string;
   expiresAt: string;
   user: User;
+  officeSlug?: string;
+  officeName?: string;
 }
 
 export interface LoginRequest {
-  email: string;
+  username: string;  // Format: "officeSlug|username" (e.g., "dubai|admin")
   password: string;
 }
 
@@ -89,9 +96,10 @@ export interface RefreshTokenRequest {
 }
 
 export interface CreateUserRequest {
+  username: string;
   firstName: string;
   lastName: string;
-  email: string;
+  email?: string;
   password: string;
   contactNumber?: string;
   companyId?: number;
@@ -101,9 +109,10 @@ export interface CreateUserRequest {
 }
 
 export interface UpdateUserRequest {
+  username: string;
   firstName: string;
   lastName: string;
-  email: string;
+  email?: string;
   password?: string;
   contactNumber?: string;
   companyId?: number;
@@ -143,4 +152,117 @@ export interface AuthState {
   refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  officeSlug?: string;
+  officeName?: string;
+}
+
+// ===========================================
+// SYSTEM ADMIN TYPES
+// ===========================================
+
+export interface SystemAdminUser {
+  id: number;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  email: string;
+  isActive: boolean;
+  lastLoginAt?: string;
+  createdAt: string;
+}
+
+export interface SystemAdminAuthResponse {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: string;
+  user: SystemAdminUser;
+}
+
+export interface SystemAdminLoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface Office {
+  id: number;
+  name: string;
+  slug: string;
+  schemaName: string;
+  location?: string;
+  phone?: string;
+  email?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt?: string;
+  createdBy?: string;
+  updatedBy?: string;
+}
+
+export interface OfficeListItem {
+  id: number;
+  name: string;
+  slug: string;
+  location?: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface CreateOfficeRequest {
+  name: string;
+  slug: string;
+  location?: string;
+  phone?: string;
+  email?: string;
+}
+
+export interface UpdateOfficeRequest {
+  name: string;
+  location?: string;
+  phone?: string;
+  email?: string;
+}
+
+export interface OfficeAdminCredentials {
+  username: string;
+  password: string;
+}
+
+export interface OfficeCreatedResponse {
+  office: Office;
+  adminCredentials: OfficeAdminCredentials;
+}
+
+export interface OfficeAuditLog {
+  id: number;
+  officeId?: number;
+  officeName?: string;
+  action: string;
+  description: string;
+  details?: string;
+  performedBy: string;
+  ipAddress?: string;
+  isSuccess: boolean;
+  errorMessage?: string;
+  timestamp: string;
+}
+
+export interface CreateSystemAdminRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+}
+
+export interface UpdateSystemAdminRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password?: string;
+  isActive: boolean;
+}
+
+export interface MigrationsInfo {
+  pendingMigrations: string[];
+  appliedMigrations: string[];
+  hasPendingMigrations: boolean;
 }

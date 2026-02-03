@@ -93,7 +93,7 @@ export function Sidebar() {
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout, hasPermission } = useAuth();
+  const { user, logout, hasPermission, officeName } = useAuth();
 
   // Filter sidebar items based on permissions
   const sidebarItems = useMemo(() => {
@@ -230,6 +230,15 @@ export function Sidebar() {
           </button>
         )}
       </div>
+
+      {/* Office Name Badge */}
+      {officeName && !collapsed && (
+        <div className="px-4 py-2 border-b border-sidebar-border">
+          <div className="bg-sidebar-primary/10 text-sidebar-primary rounded-md px-3 py-1.5 text-center">
+            <span className="text-xs font-medium uppercase tracking-wider">{officeName}</span>
+          </div>
+        </div>
+      )}
 
       {/* User Info */}
       {user && (

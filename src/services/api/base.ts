@@ -195,6 +195,11 @@ export async function attemptTokenRefresh(): Promise<boolean> {
   }
 }
 
+// Check if on system admin routes
+function isSystemAdminRoute(): boolean {
+  return typeof window !== 'undefined' && window.location.pathname.startsWith('/system');
+}
+
 async function doTokenRefresh(): Promise<boolean> {
   const refreshToken = getRefreshToken();
   if (!refreshToken) {
@@ -202,7 +207,12 @@ async function doTokenRefresh(): Promise<boolean> {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+    // Use different refresh endpoint for system admin vs office users
+    const refreshEndpoint = isSystemAdminRoute()
+      ? `${API_BASE_URL}/auth/system/refresh`
+      : `${API_BASE_URL}/auth/refresh`;
+
+    const response = await fetch(refreshEndpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshToken }),
