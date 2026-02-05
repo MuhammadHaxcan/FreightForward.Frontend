@@ -117,6 +117,11 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
   const { data: containerTypes } = useAllContainerTypes();
   const { data: packageTypes } = useAllPackageTypes();
 
+  // Ensure arrays for safe mapping
+  const incoTermsArray = Array.isArray(incoTerms) ? incoTerms : [];
+  const containerTypesArray = Array.isArray(containerTypes) ? containerTypes : [];
+  const packageTypesArray = Array.isArray(packageTypes) ? packageTypes : [];
+
   const isEditing = !!leadId;
   const isSaving = createLead.isPending || updateLead.isPending;
 
@@ -439,13 +444,13 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
                   <EquipmentGrid
                     equipments={formData.equipments}
                     onChange={(equipments) => updateField("equipments", equipments)}
-                    containerTypes={containerTypes || []}
+                    containerTypes={containerTypesArray}
                   />
                 ) : (
                   <BoxPalletsGrid
                     boxPallets={formData.boxPallets}
                     onChange={(boxPallets) => updateField("boxPallets", boxPallets)}
-                    packageTypes={packageTypes || []}
+                    packageTypes={packageTypesArray}
                   />
                 )}
               </CardContent>
@@ -629,7 +634,7 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
                   <div className="space-y-2">
                     <Label htmlFor="incoTerms">Inco Terms</Label>
                     <SearchableSelect
-                      options={(incoTerms || []).map((term) => ({
+                      options={incoTermsArray.map((term) => ({
                         value: term.id.toString(),
                         label: `${term.code} - ${term.name}`,
                       }))}
