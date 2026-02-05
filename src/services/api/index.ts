@@ -117,6 +117,7 @@ export {
   type PaymentType,
   type TransportMode,
   type CurrencyType,
+  type CurrencyRateHistory,
   type Port,
   type ChargeItem,
   type ExpenseType,

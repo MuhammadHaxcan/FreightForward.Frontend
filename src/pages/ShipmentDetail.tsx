@@ -823,7 +823,17 @@ const ShipmentDetail = () => {
           await deleteContainerMutation.mutateAsync({ containerId: deleteModalConfig.id, shipmentId });
           break;
         case 'costing':
-          await deleteCostingMutation.mutateAsync({ costingId: deleteModalConfig.id, shipmentId });
+          try {
+            await deleteCostingMutation.mutateAsync({ costingId: deleteModalConfig.id, shipmentId });
+          } catch (error: unknown) {
+            // Show warning modal for costing deletion errors (e.g., invoices created)
+            const message = error instanceof Error ? error.message : 'Failed to delete costing';
+            setWarningMessage(message);
+            setWarningModalOpen(true);
+            setDeleteModalOpen(false);
+            setDeleteModalConfig(null);
+            return;
+          }
           break;
         case 'cargo':
           await shipmentApi.deleteCargo(deleteModalConfig.id);

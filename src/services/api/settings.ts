@@ -16,6 +16,20 @@ export interface CurrencyType {
   roe: number;
 }
 
+export interface CurrencyRateHistory {
+  id: number;
+  currencyId: number;
+  currencyCode: string;
+  currencyName: string;
+  oldRoe: number;
+  newRoe: number;
+  oldUsdRate: number;
+  newUsdRate: number;
+  effectiveDate: string;
+  reason?: string;
+  changedBy?: string;
+}
+
 export interface Port {
   id: number;
   name: string;
@@ -174,6 +188,8 @@ export const settingsApi = {
     fetchApi<void>(`/settings/currency-types/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteCurrencyType: (id: number) =>
     fetchApi<void>(`/settings/currency-types/${id}`, { method: 'DELETE' }),
+  getCurrencyRateHistory: (currencyId: number) =>
+    fetchApi<CurrencyRateHistory[]>(`/settings/currency-types/${currencyId}/rate-history`),
 
   // Ports
   getPorts: (params?: { pageNumber?: number; pageSize?: number; searchTerm?: string }) => {

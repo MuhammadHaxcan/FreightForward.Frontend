@@ -3,7 +3,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Edit, Trash2, Plus, Loader2, Upload } from "lucide-react";
+import { Edit, Trash2, Plus, Loader2, Upload, History } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Dialog,
@@ -49,6 +49,7 @@ import {
   fileApi,
 } from "@/services/api";
 import { toast } from "sonner";
+import { CurrencyRateHistoryModal } from "@/components/settings/CurrencyRateHistoryModal";
 
 const Settings = () => {
   // Pagination state
@@ -88,6 +89,10 @@ const Settings = () => {
   // Edit form states
   const [editCurrency, setEditCurrency] = useState<CurrencyType | null>(null);
   const [editPort, setEditPort] = useState<Port | null>(null);
+
+  // History modal state
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [historyModalCurrency, setHistoryModalCurrency] = useState<{ id: number; name: string; code: string } | null>(null);
   const [editCharge, setEditCharge] = useState<ChargeItem | null>(null);
   const [editExpense, setEditExpense] = useState<ExpenseType | null>(null);
   const [editBank, setEditBank] = useState<Bank | null>(null);
@@ -674,14 +679,28 @@ const Settings = () => {
                                     setEditCurrencyModalOpen(true);
                                   }}
                                   className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                                  title="Edit"
                                 >
                                   <Edit size={14} />
+                                </button>
+                              </PermissionGate>
+                              <PermissionGate permission="currency_view">
+                                <button
+                                  onClick={() => {
+                                    setHistoryModalCurrency({ id: currency.id, name: currency.name, code: currency.code });
+                                    setHistoryModalOpen(true);
+                                  }}
+                                  className="p-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                                  title="Rate History"
+                                >
+                                  <History size={14} />
                                 </button>
                               </PermissionGate>
                               <PermissionGate permission="currency_delete">
                                 <button
                                   onClick={() => handleDeleteCurrency(currency.id)}
                                   className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
+                                  title="Delete"
                                 >
                                   <Trash2 size={14} />
                                 </button>
@@ -1934,6 +1953,15 @@ const Settings = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Currency Rate History Modal */}
+      <CurrencyRateHistoryModal
+        open={historyModalOpen}
+        onOpenChange={setHistoryModalOpen}
+        currencyId={historyModalCurrency?.id ?? null}
+        currencyName={historyModalCurrency?.name ?? ""}
+        currencyCode={historyModalCurrency?.code ?? ""}
+      />
     </MainLayout>
   );
 };

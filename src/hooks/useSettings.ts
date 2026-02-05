@@ -94,6 +94,21 @@ export function useDeleteCurrencyType() {
   });
 }
 
+export function useCurrencyRateHistory(currencyId: number | null) {
+  return useQuery({
+    queryKey: ['currencyRateHistory', currencyId],
+    queryFn: async () => {
+      if (!currencyId) return [];
+      const response = await settingsApi.getCurrencyRateHistory(currencyId);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+    enabled: !!currencyId,
+  });
+}
+
 // Ports Hooks
 export function usePorts(params?: {
   pageNumber?: number;
