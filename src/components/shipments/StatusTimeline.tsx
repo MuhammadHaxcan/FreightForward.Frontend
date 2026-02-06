@@ -61,7 +61,7 @@ export function StatusTimeline({ statusLogs, onDelete }: StatusTimelineProps) {
 
   // Sort by eventDateTime descending (most recent first)
   const sortedLogs = [...statusLogs].sort(
-    (a, b) => new Date(b.eventDateTime).getTime() - new Date(a.eventDateTime).getTime()
+    (a, b) => new Date(b.eventDateTime).getTime() - new Date(a.eventDateTime).getTime() || b.id - a.id
   );
 
   const latestEvent = sortedLogs[0];

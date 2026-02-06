@@ -11,6 +11,7 @@ import { invoiceApi as _invoiceApi, receiptApi as _receiptApi } from './invoice'
 import { costSheetApi as _costSheetApi } from './costSheet';
 import { expenseApi as _expenseApi } from './expense';
 import { dashboardApi as _dashboardApi } from './dashboard';
+import { generalDocumentApi as _generalDocumentApi } from './generalDocument';
 
 // Base types and utilities
 export { fetchApi, fetchBlob, API_BASE_URL, type PaginatedList, type ApiResponse, type MasterType, type PaymentStatus } from './base';
@@ -194,6 +195,13 @@ export {
   type ShipmentDistribution,
 } from './dashboard';
 
+// General Document
+export {
+  generalDocumentApi,
+  type GeneralDocument,
+  type CreateGeneralDocumentRequest,
+} from './generalDocument';
+
 // Export combined API object for convenience
 export const api = {
   banks: _bankApi,
@@ -209,6 +217,7 @@ export const api = {
   costSheet: _costSheetApi,
   expenses: _expenseApi,
   dashboard: _dashboardApi,
+  generalDocuments: _generalDocumentApi,
 };
 
 export default api;

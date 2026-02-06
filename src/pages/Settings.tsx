@@ -1540,6 +1540,8 @@ const Settings = () => {
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">1 USD =</label>
               <Input
+                type="number"
+                step="any"
                 placeholder="1 USD ="
                 value={currencyForm.usdRate}
                 onChange={(e) => setCurrencyForm({ ...currencyForm, usdRate: e.target.value })}
@@ -1548,6 +1550,8 @@ const Settings = () => {
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">ROE</label>
               <Input
+                type="number"
+                step="any"
                 placeholder="ROE"
                 value={currencyForm.roe}
                 onChange={(e) => setCurrencyForm({ ...currencyForm, roe: e.target.value })}
@@ -1594,11 +1598,11 @@ const Settings = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">1 USD =</label>
-                <Input value={editCurrency.usdRate} onChange={(e) => setEditCurrency({ ...editCurrency, usdRate: parseFloat(e.target.value) || 0 })} />
+                <Input type="number" step="any" value={editCurrency.usdRate} onChange={(e) => setEditCurrency({ ...editCurrency, usdRate: parseFloat(e.target.value) || 0 })} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">ROE</label>
-                <Input value={editCurrency.roe} onChange={(e) => setEditCurrency({ ...editCurrency, roe: parseFloat(e.target.value) || 0 })} />
+                <Input type="number" step="any" value={editCurrency.roe} onChange={(e) => setEditCurrency({ ...editCurrency, roe: parseFloat(e.target.value) || 0 })} />
               </div>
               <div className="flex justify-end gap-3 pt-4">
                 <Button variant="outline" onClick={() => setEditCurrencyModalOpen(false)}>Cancel</Button>

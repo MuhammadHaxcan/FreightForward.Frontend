@@ -1923,13 +1923,13 @@ const AddShipment = () => {
                           <TableCell className="text-emerald-600">{cost.description}</TableCell>
                           <TableCell className={saleHighlight}>{cost.saleQty}</TableCell>
                           <TableCell className={saleHighlight}>{cost.saleUnit}</TableCell>
-                          <TableCell className={saleHighlight}>{cost.saleCurrency}</TableCell>
+                          <TableCell className={saleHighlight}>{cost.saleCurrencyCode}</TableCell>
                           <TableCell className={saleHighlight}>{cost.saleExRate}</TableCell>
                           <TableCell className={saleHighlight}>{cost.saleFCY}</TableCell>
                           <TableCell className={saleHighlight}>{cost.saleLCY}</TableCell>
                           <TableCell className={costHighlight}>{cost.costQty}</TableCell>
                           <TableCell className={costHighlight}>{cost.costUnit}</TableCell>
-                          <TableCell className={costHighlight}>{cost.costCurrency}</TableCell>
+                          <TableCell className={costHighlight}>{cost.costCurrencyCode}</TableCell>
                           <TableCell className={costHighlight}>{cost.costExRate}</TableCell>
                           <TableCell className={costHighlight}>{cost.costFCY}</TableCell>
                           <TableCell className={costHighlight}>{cost.costLCY}</TableCell>

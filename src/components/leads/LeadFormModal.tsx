@@ -110,7 +110,7 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
   const { data: lead, isLoading: isLeadLoading } = useLead(leadId || 0);
 
   // Load data from backend
-  const { data: customers, isLoading: isLoadingCustomers } = useCustomers({ pageSize: 1000 });
+  const { data: customers, isLoading: isLoadingCustomers } = useCustomers({ pageSize: 1000, masterType: 'Debtors' });
   const { data: countries, isLoading: isLoadingCountries } = useAllCountries();
   const { data: ports, isLoading: isLoadingPorts } = useAllPorts();
   const { data: incoTerms, isLoading: isLoadingIncoTerms } = useAllIncoTerms();

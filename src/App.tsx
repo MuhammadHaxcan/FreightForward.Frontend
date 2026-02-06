@@ -33,6 +33,7 @@ const Leads = lazy(() => import("./pages/Leads"));
 const RateRequests = lazy(() => import("./pages/RateRequests"));
 const Quotations = lazy(() => import("./pages/Quotations"));
 const QuotationView = lazy(() => import("./pages/QuotationView"));
+const QuotationPrintView = lazy(() => import("./pages/QuotationPrintView"));
 const DailyExpenses = lazy(() => import("./pages/DailyExpenses"));
 const ExpensePrintView = lazy(() => import("./pages/ExpensePrintView"));
 const Invoices = lazy(() => import("./pages/Invoices"));
@@ -56,6 +57,7 @@ const CostSheetDetailPrintView = lazy(() => import("./pages/CostSheetDetailPrint
 const VatReport = lazy(() => import("./pages/VatReport"));
 const ChangePassword = lazy(() => import("./pages/ChangePassword"));
 const Profile = lazy(() => import("./pages/Profile"));
+const GeneralDocuments = lazy(() => import("./pages/GeneralDocuments"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Loading fallback component
@@ -167,7 +169,7 @@ const AppRoutes = () => (
       } />
       <Route path="/sales/quotations/:id/view" element={
         <ProtectedRoute permission="quot_view">
-          <QuotationView />
+          <QuotationPrintView />
         </ProtectedRoute>
       } />
       <Route path="/accounts" element={
@@ -297,7 +299,7 @@ const AppRoutes = () => (
       } />
       <Route path="/general-document" element={
         <ProtectedRoute>
-          <Dashboard />
+          <GeneralDocuments />
         </ProtectedRoute>
       } />
       <Route path="/settings" element={
