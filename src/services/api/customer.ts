@@ -2,8 +2,6 @@ import { fetchApi, PaginatedList, MasterType, PaymentStatus } from './base';
 import type { CurrencyType } from './settings';
 
 // Customer Types
-export type CustomerCategory = 'Shipper' | 'Consignee' | 'BookingParty' | 'Agents' | 'Forwarder' | 'Customer' | 'DeliveryAgent' | 'OriginAgent' | 'NotifyParty' | 'CoLoader';
-
 export interface CustomerCategoryInfo {
   id: number;
   code: string;

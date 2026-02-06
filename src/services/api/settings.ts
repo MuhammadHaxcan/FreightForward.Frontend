@@ -3,9 +3,6 @@ import { fetchApi, PaginatedList } from './base';
 // Settings Types
 export type PaymentType = 'Inwards' | 'Outwards';
 
-// Transport mode is now an enum in the backend, use string type for frontend
-export type TransportMode = 'Air' | 'SeaFCL' | 'SeaLCL' | 'BreakBulk' | 'RoRo';
-
 export interface CurrencyType {
   id: number;
   name: string;

@@ -206,7 +206,7 @@ export default function Quotations() {
 
       if (freightMode.includes("sea")) {
         // Sea freight - determine FCL or LCL based on shippingType
-        mode = shippingType === "FTL" ? "FCLSeaFreight" : "LCLSeaFreight";
+        mode = shippingType === "FTL" ? "SeaFreightFCL" : "SeaFreightLCL";
       } else if (freightMode.includes("air")) {
         mode = "AirFreight";
       } else if (freightMode.includes("land")) {
@@ -673,7 +673,7 @@ export default function Quotations() {
                           <TableCell>{formatDate(quotation.quotationDate, "dd-MM-yyyy")}</TableCell>
                           <TableCell className="font-medium">{quotation.quotationNo}</TableCell>
                           <TableCell className="text-green-600">{quotation.customerName}</TableCell>
-                          <TableCell className="text-green-600">{quotation.incoTermCode || quotation.incoterms}</TableCell>
+                          <TableCell className="text-green-600">{quotation.incoTermCode || "-"}</TableCell>
                           <TableCell>{quotation.mode}</TableCell>
                           <TableCell className="text-green-600">{quotation.loadingPortName || quotation.pol}</TableCell>
                           <TableCell className="text-green-600">{quotation.destinationPortName || quotation.pod}</TableCell>
@@ -906,9 +906,10 @@ export default function Quotations() {
                     disabled={isReadOnly}
                     options={[
                       { value: "AirFreight", label: "Air Freight" },
-                      { value: "FCLSeaFreight", label: "FCL-Sea Freight" },
-                      { value: "LCLSeaFreight", label: "LCL-Sea Freight" },
-                      { value: "LandFreight", label: "Land Freight" },
+                      { value: "SeaFreightFCL", label: "FCL-Sea Freight" },
+                      { value: "SeaFreightLCL", label: "LCL-Sea Freight" },
+                      { value: "BreakBulk", label: "Break-Bulk" },
+                      { value: "RoRo", label: "RO-RO" },
                     ]}
                     value={formData.mode || ""}
                     onValueChange={(value) => setFormData({ ...formData, mode: value })}

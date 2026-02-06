@@ -410,7 +410,7 @@ export default function RateRequests() {
                       { value: "fcl", label: "FCL-Sea Freight" },
                       { value: "lcl", label: "LCL-Sea Freight" },
                     ]}
-                    value={selectedRequest?.mode === "FCLSeaFreight" ? "fcl" : selectedRequest?.mode === "LCLSeaFreight" ? "lcl" : "air"}
+                    value={selectedRequest?.mode === "SeaFreightFCL" ? "fcl" : selectedRequest?.mode === "SeaFreightLCL" ? "lcl" : "air"}
                     onValueChange={() => {}}
                     placeholder="Select"
                     searchPlaceholder="Search..."

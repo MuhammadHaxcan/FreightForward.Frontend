@@ -20,9 +20,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Loader2, X } from "lucide-react";
-import { ShipmentParty, ShipmentCosting, CreateInvoiceItemRequest, invoiceApi, customerApi, settingsApi, CurrencyType } from "@/services/api";
-import { useCreateInvoice } from "@/hooks/useInvoices";
+import { Search, Loader2, X, Plus } from "lucide-react";
+import { ShipmentParty, ShipmentCosting, CreateInvoiceItemRequest, UpdateInvoiceItemRequest, invoiceApi, customerApi, settingsApi, CurrencyType, AccountInvoiceDetail, shipmentApi, AddShipmentCostingRequest, UpdateShipmentCostingRequest } from "@/services/api";
+import { useCreateInvoice, useUpdateInvoice } from "@/hooks/useInvoices";
+import { useAddShipmentCosting, useUpdateShipmentCosting } from "@/hooks/useShipments";
+import { useToast } from "@/hooks/use-toast";
+import { CostingModal, type CostingModalData } from "@/components/shipments/CostingModal";
+import { useQueryClient } from "@tanstack/react-query";
 
 // Result type for the onSave callback
 interface InvoiceSaveResult {
@@ -41,6 +45,7 @@ interface InvoiceModalProps {
   chargesDetails: ShipmentCosting[];
   parties: ShipmentParty[];
   onSave: (invoice: InvoiceSaveResult) => void;
+  editInvoiceId?: number | null;
 }
 
 // Helper function to deduplicate parties by customerId
@@ -54,8 +59,15 @@ const deduplicateByCustomerId = (partyList: ShipmentParty[]): ShipmentParty[] =>
   });
 };
 
-export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, parties, onSave }: InvoiceModalProps) {
+export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, parties, onSave, editInvoiceId }: InvoiceModalProps) {
   const createInvoiceMutation = useCreateInvoice();
+  const updateInvoiceMutation = useUpdateInvoice();
+  const addCostingMutation = useAddShipmentCosting();
+  const updateCostingMutation = useUpdateShipmentCosting();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const isEditMode = !!editInvoiceId;
 
   // Filter parties to only show Debtors and deduplicate by customerId
   const debtorParties = useMemo(() =>
@@ -64,6 +76,16 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
   );
 
   const [currencies, setCurrencies] = useState<CurrencyType[]>([]);
+  const [editInvoiceData, setEditInvoiceData] = useState<AccountInvoiceDetail | null>(null);
+  const [isLoadingEdit, setIsLoadingEdit] = useState(false);
+  // Map of costing id -> existing invoice item id (for updates)
+  const [existingItemIds, setExistingItemIds] = useState<Map<number, number>>(new Map());
+
+  // Costing integration state (edit mode)
+  const [localCostings, setLocalCostings] = useState<ShipmentCosting[]>([]);
+  const [costingModalOpen, setCostingModalOpen] = useState(false);
+  const [editingCostingForModal, setEditingCostingForModal] = useState<CostingModalData | undefined>(undefined);
+  const [pendingAutoSelect, setPendingAutoSelect] = useState<number | null>(null);
 
   const [formData, setFormData] = useState({
     invoiceId: "",
@@ -72,10 +94,11 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
     invoiceDate: getTodayDateOnly(),
     currencyId: 1, // Default to AED (ID 1)
     currencyCode: "AED",
+    remarks: "",
     selectedCharges: [] as number[],
   });
 
-  // Reset form and fetch next invoice number when modal opens
+  // Reset form and fetch data when modal opens
   useEffect(() => {
     if (open) {
       // Reset form data first
@@ -86,46 +109,109 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
         invoiceDate: getTodayDateOnly(),
         currencyId: 1,
         currencyCode: "AED",
+        remarks: "",
         selectedCharges: [],
       });
-      // Fetch next invoice number
-      invoiceApi.getNextInvoiceNumber().then(response => {
-        if (response.data) {
-          setFormData(prev => ({ ...prev, invoiceId: response.data as string }));
-        }
-      });
+      setEditInvoiceData(null);
+      setExistingItemIds(new Map());
+      setLocalCostings(chargesDetails);
+      setCostingModalOpen(false);
+      setEditingCostingForModal(undefined);
+      setPendingAutoSelect(null);
+
       // Fetch currency types
       settingsApi.getAllCurrencyTypes().then(response => {
         if (response.data) {
           setCurrencies(response.data);
         }
       });
-    }
-  }, [open]);
 
-  // Filter charges to only show items with sale quantity > 0, not already invoiced,
-  // and assigned to the selected debtor
+      if (isEditMode && editInvoiceId) {
+        // Edit mode: fetch existing invoice data
+        setIsLoadingEdit(true);
+        invoiceApi.getById(editInvoiceId).then(response => {
+          if (response.data) {
+            const inv = response.data;
+            setEditInvoiceData(inv);
+
+            // Build map of costingId -> invoiceItemId
+            const itemIdMap = new Map<number, number>();
+            inv.items.forEach(item => {
+              if (item.shipmentCostingId) {
+                itemIdMap.set(item.shipmentCostingId, item.id);
+              }
+            });
+            setExistingItemIds(itemIdMap);
+
+            // Find the party matching the invoice customer
+            const matchingParty = debtorParties.find(p => p.customerId === inv.customerId);
+            const costingIds = inv.items
+              .filter(item => item.shipmentCostingId)
+              .map(item => item.shipmentCostingId!);
+
+            settingsApi.getAllCurrencyTypes().then(currResponse => {
+              if (currResponse.data) {
+                setCurrencies(currResponse.data);
+                const currency = currResponse.data.find(c => c.id === inv.currencyId);
+                setFormData({
+                  invoiceId: inv.invoiceNo,
+                  companyName: inv.customerName,
+                  customerId: matchingParty ? matchingParty.id.toString() : "",
+                  invoiceDate: inv.invoiceDate,
+                  currencyId: inv.currencyId || 1,
+                  currencyCode: currency?.code || "AED",
+                  remarks: inv.remarks || "",
+                  selectedCharges: costingIds,
+                });
+              }
+            });
+          }
+          setIsLoadingEdit(false);
+        });
+      } else {
+        // Create mode: fetch next invoice number
+        invoiceApi.getNextInvoiceNumber().then(response => {
+          if (response.data) {
+            setFormData(prev => ({ ...prev, invoiceId: response.data as string }));
+          }
+        });
+      }
+    }
+  }, [open, editInvoiceId]);
+
+  // Filter charges: show uninvoiced charges + charges from this invoice
   const filteredCharges = useMemo(() => {
     const selectedParty = debtorParties.find(p => p.id.toString() === formData.customerId);
     const selectedCustomerId = selectedParty?.customerId;
 
-    return chargesDetails.filter(c => {
-      const hasValidSale = parseFloat(c.saleQty || 0) > 0 && !c.saleInvoiced;
-      // Only show costings explicitly assigned to this debtor (exclude null)
+    // Get costing IDs that belong to this invoice (for edit mode)
+    const invoiceCostingIds = new Set(
+      editInvoiceData?.items
+        .filter(item => item.shipmentCostingId)
+        .map(item => item.shipmentCostingId!) || []
+    );
+
+    return localCostings.filter(c => {
+      // Only show costings assigned to this debtor
       const matchesCustomer = selectedCustomerId
         ? c.billToCustomerId === selectedCustomerId
         : false;
-      return hasValidSale && matchesCustomer;
-    });
-  }, [chargesDetails, formData.customerId, debtorParties]);
+      if (!matchesCustomer) return false;
 
-  // Update currency when company selection changes
+      // In edit mode: show uninvoiced charges OR charges from this invoice
+      const isFromThisInvoice = invoiceCostingIds.has(c.id);
+      const hasValidSale = parseFloat(c.saleQty || 0) > 0 && !c.saleInvoiced;
+
+      return hasValidSale || isFromThisInvoice;
+    });
+  }, [localCostings, formData.customerId, debtorParties, editInvoiceData]);
+
+  // Update currency when company selection changes (only in create mode)
   useEffect(() => {
-    if (formData.customerId) {
+    if (formData.customerId && !isEditMode) {
       const selectedParty = debtorParties.find(p => p.id.toString() === formData.customerId);
       if (selectedParty?.customerId) {
         setFormData(prev => ({ ...prev, companyName: selectedParty.customerName }));
-        // Fetch customer's default currency and resolve currency code
         customerApi.getById(selectedParty.customerId).then(customerResponse => {
           if (customerResponse.data) {
             const custCurrencyId = customerResponse.data.currencyId || 1;
@@ -139,20 +225,153 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
         });
       }
     }
-  }, [formData.customerId, debtorParties, currencies]);
+  }, [formData.customerId, debtorParties, currencies, isEditMode]);
+
+  // Cost-only charges: costings that have cost data but no sale data (edit mode only)
+  const costOnlyCharges = useMemo(() => {
+    if (!isEditMode) return [];
+    const selectedParty = debtorParties.find(p => p.id.toString() === formData.customerId);
+    const selectedCustomerId = selectedParty?.customerId;
+    if (!selectedCustomerId) return [];
+    return localCostings.filter(c => {
+      const hasCost = parseFloat(c.costQty || 0) > 0;
+      const hasSale = parseFloat(c.saleQty || 0) > 0;
+      const matchesOrUnassigned = !c.billToCustomerId || c.billToCustomerId === selectedCustomerId;
+      return hasCost && !hasSale && matchesOrUnassigned && !c.saleInvoiced;
+    });
+  }, [localCostings, formData.customerId, debtorParties, isEditMode]);
+
+  // Refetch costings from server after adding/updating a costing
+  const refetchCostings = async () => {
+    if (!shipmentId) return;
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['shipments', shipmentId] });
+      const response = await shipmentApi.getById(shipmentId);
+      if (response.data) {
+        setLocalCostings(response.data.costings);
+      }
+    } catch {
+      // silent
+    }
+  };
+
+  // Handle saving a costing from the nested CostingModal
+  const handleCostingModalSave = async (costingData: CostingModalData) => {
+    if (!shipmentId) return;
+
+    // Force billToCustomerId to match the invoice customer
+    const selectedParty = debtorParties.find(p => p.id.toString() === formData.customerId);
+    const invoiceCustomerId = selectedParty?.customerId;
+
+    const saleLCY = parseFloat(costingData.saleLCY as string) || 0;
+    const costLCY = parseFloat(costingData.costLCY as string) || 0;
+
+    try {
+      if (editingCostingForModal?.id && typeof editingCostingForModal.id === 'number' && editingCostingForModal.id < 1e12) {
+        // Update existing costing (adding sale side)
+        const data: UpdateShipmentCostingRequest = {
+          id: editingCostingForModal.id,
+          shipmentId,
+          description: costingData.description || "",
+          remarks: costingData.remarks,
+          saleQty: parseFloat(costingData.saleQty as string) || 0,
+          saleUnit: parseFloat(costingData.saleUnit as string) || 0,
+          saleCurrencyId: costingData.saleCurrencyId,
+          saleExRate: parseFloat(costingData.saleExRate as string) || 1,
+          saleFCY: parseFloat(costingData.saleFCY as string) || 0,
+          saleLCY,
+          saleTaxPercentage: parseFloat(costingData.saleTaxPercentage as string) || 0,
+          saleTaxAmount: parseFloat(costingData.saleTaxAmount as string) || 0,
+          costQty: parseFloat(costingData.costQty as string) || 0,
+          costUnit: parseFloat(costingData.costUnit as string) || 0,
+          costCurrencyId: costingData.costCurrencyId,
+          costExRate: parseFloat(costingData.costExRate as string) || 1,
+          costFCY: parseFloat(costingData.costFCY as string) || 0,
+          costLCY,
+          costTaxPercentage: parseFloat(costingData.costTaxPercentage as string) || 0,
+          costTaxAmount: parseFloat(costingData.costTaxAmount as string) || 0,
+          unitId: costingData.unitId,
+          gp: saleLCY - costLCY,
+          billToCustomerId: invoiceCustomerId || costingData.billToCustomerId,
+          vendorCustomerId: costingData.vendorCustomerId,
+          costReferenceNo: costingData.costReferenceNo || undefined,
+          costDate: costingData.costDate || undefined,
+          ppcc: costingData.ppcc || undefined,
+        };
+        await updateCostingMutation.mutateAsync({ shipmentId, costingId: editingCostingForModal.id, data });
+        setPendingAutoSelect(editingCostingForModal.id);
+      } else {
+        // Add new costing
+        const data: AddShipmentCostingRequest = {
+          shipmentId,
+          description: costingData.description || "",
+          remarks: costingData.remarks,
+          saleQty: parseFloat(costingData.saleQty as string) || 0,
+          saleUnit: parseFloat(costingData.saleUnit as string) || 0,
+          saleCurrencyId: costingData.saleCurrencyId,
+          saleExRate: parseFloat(costingData.saleExRate as string) || 1,
+          saleFCY: parseFloat(costingData.saleFCY as string) || 0,
+          saleLCY,
+          saleTaxPercentage: parseFloat(costingData.saleTaxPercentage as string) || 0,
+          saleTaxAmount: parseFloat(costingData.saleTaxAmount as string) || 0,
+          costQty: parseFloat(costingData.costQty as string) || 0,
+          costUnit: parseFloat(costingData.costUnit as string) || 0,
+          costCurrencyId: costingData.costCurrencyId,
+          costExRate: parseFloat(costingData.costExRate as string) || 1,
+          costFCY: parseFloat(costingData.costFCY as string) || 0,
+          costLCY,
+          costTaxPercentage: parseFloat(costingData.costTaxPercentage as string) || 0,
+          costTaxAmount: parseFloat(costingData.costTaxAmount as string) || 0,
+          unitId: costingData.unitId,
+          gp: saleLCY - costLCY,
+          billToCustomerId: invoiceCustomerId || costingData.billToCustomerId,
+          vendorCustomerId: costingData.vendorCustomerId,
+          costReferenceNo: costingData.costReferenceNo || undefined,
+          costDate: costingData.costDate || undefined,
+          ppcc: costingData.ppcc || undefined,
+        };
+        const newCostingId = await addCostingMutation.mutateAsync({ shipmentId, data });
+        if (newCostingId) {
+          setPendingAutoSelect(newCostingId);
+        }
+      }
+      await refetchCostings();
+      setCostingModalOpen(false);
+      setEditingCostingForModal(undefined);
+    } catch {
+      // Error handled by mutation
+    }
+  };
+
+  // Auto-select newly created/updated costing
+  useEffect(() => {
+    if (pendingAutoSelect !== null) {
+      const exists = localCostings.find(c => c.id === pendingAutoSelect);
+      if (exists) {
+        setFormData(prev => ({
+          ...prev,
+          selectedCharges: prev.selectedCharges.includes(pendingAutoSelect)
+            ? prev.selectedCharges
+            : [...prev.selectedCharges, pendingAutoSelect],
+        }));
+        setPendingAutoSelect(null);
+      }
+    }
+  }, [localCostings, pendingAutoSelect]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleCompanySelect = (partyId: string) => {
+    if (isEditMode) return; // Don't allow changing customer in edit mode
     const selectedParty = debtorParties.find(p => p.id.toString() === partyId);
     if (selectedParty) {
       setFormData(prev => ({
         ...prev,
         customerId: partyId,
         companyName: selectedParty.customerName,
-        selectedCharges: [], // Reset selections when debtor changes
+        selectedCharges: [],
       }));
     }
   };
@@ -177,6 +396,8 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
     // Filter and load selected charges
   };
 
+  const isSaving = createInvoiceMutation.isPending || updateInvoiceMutation.isPending;
+
   const handleSave = async () => {
     if (!shipmentId) {
       return;
@@ -188,68 +409,111 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
     }
 
     // Determine baseCurrencyId from the first selected charge's sale currency
-    const selectedCharges = filteredCharges
+    const selectedCharges = localCostings
       .filter(c => formData.selectedCharges.includes(c.id))
       .filter((charge, index, self) =>
         index === self.findIndex(c => c.id === charge.id)
       );
     const baseCurrencyId = selectedCharges.length > 0 ? (selectedCharges[0].saleCurrencyId || 1) : 1;
 
-    // Map selected charges to invoice items with currency conversion
-    const items: CreateInvoiceItemRequest[] = selectedCharges
-      .map(charge => {
-        const chargeRoe = parseFloat(charge.saleExRate || 1);
-        const customerCurrency = currencies.find(c => c.id === formData.currencyId);
-        const customerRoe = customerCurrency?.roe || 1;
-        // If same currency, no conversion needed
-        const sameCurrency = (charge.saleCurrencyId || 1) === formData.currencyId;
-        const exRate = sameCurrency ? 1 : chargeRoe / customerRoe;
+    if (isEditMode && editInvoiceId) {
+      // Update existing invoice
+      const items: UpdateInvoiceItemRequest[] = selectedCharges.map(charge => {
         const saleFCY = parseFloat(charge.saleFCY || 0);
-        const localAmount = saleFCY * exRate;
-        const saleTaxAmount = parseFloat(charge.saleTaxAmount || 0);
-        const taxAmount = saleTaxAmount * exRate;
+        const saleExRate = parseFloat(charge.saleExRate || 1);
+        const localAmount = saleFCY * saleExRate;
+
+        return {
+          id: existingItemIds.get(charge.id) || undefined,
+          shipmentCostingId: charge.id,
+          chargeDetails: charge.description || '',
+          ppcc: charge.ppcc || 'PP',
+          currencyId: charge.saleCurrencyId || 1,
+          quantity: parseFloat(charge.saleQty) || 1,
+          salePerUnit: parseFloat(charge.saleUnit) || 0,
+          fcyAmount: saleFCY,
+          exRate: saleExRate,
+          localAmount: localAmount,
+          taxPercentage: parseFloat(charge.saleTaxPercentage) || 0,
+          taxAmount: parseFloat(charge.saleTaxAmount) || 0,
+        };
+      });
+
+      try {
+        await updateInvoiceMutation.mutateAsync({
+          id: editInvoiceId,
+          data: {
+            invoiceDate: formData.invoiceDate,
+            customerId: selectedParty.customerId,
+            shipmentId,
+            currencyId: formData.currencyId,
+            baseCurrencyId,
+            remarks: formData.remarks || undefined,
+            items,
+          },
+        });
+
+        onSave({
+          invoiceId: formData.invoiceId,
+          companyName: formData.companyName,
+          customerId: formData.customerId,
+          invoiceDate: formData.invoiceDate,
+          currencyId: formData.currencyId,
+          charges: formData.selectedCharges,
+        });
+        onOpenChange(false);
+      } catch (error) {
+        // Error is handled by the mutation's onError callback
+      }
+    } else {
+      // Create new invoice
+      const items: CreateInvoiceItemRequest[] = selectedCharges.map(charge => {
+        const saleFCY = parseFloat(charge.saleFCY || 0);
+        const saleExRate = parseFloat(charge.saleExRate || 1);
+        const localAmount = saleFCY * saleExRate;
 
         return {
           shipmentCostingId: charge.id,
           chargeDetails: charge.description || '',
-          noOfUnit: charge.saleQty || 1,
+          quantity: parseFloat(charge.saleQty) || 1,
           ppcc: charge.ppcc || 'PP',
-          salePerUnit: charge.saleUnit || 0,
+          salePerUnit: parseFloat(charge.saleUnit) || 0,
           currencyId: charge.saleCurrencyId || 1,
           fcyAmount: saleFCY,
-          exRate: exRate,
+          exRate: saleExRate,
           localAmount: localAmount,
-          taxPercentage: charge.saleTaxPercentage || 0,
-          taxAmount: taxAmount,
+          taxPercentage: parseFloat(charge.saleTaxPercentage) || 0,
+          taxAmount: parseFloat(charge.saleTaxAmount) || 0,
         };
       });
 
-    try {
-      await createInvoiceMutation.mutateAsync({
-        shipmentId,
-        customerId: selectedParty.customerId,
-        invoiceDate: formData.invoiceDate,
-        currencyId: formData.currencyId,
-        baseCurrencyId,
-        remarks: '',
-        items,
-      });
+      try {
+        await createInvoiceMutation.mutateAsync({
+          shipmentId,
+          customerId: selectedParty.customerId,
+          invoiceDate: formData.invoiceDate,
+          currencyId: formData.currencyId,
+          baseCurrencyId,
+          remarks: formData.remarks || undefined,
+          items,
+        });
 
-      onSave({
-        invoiceId: formData.invoiceId,
-        companyName: formData.companyName,
-        customerId: formData.customerId,
-        invoiceDate: formData.invoiceDate,
-        currencyId: formData.currencyId,
-        charges: formData.selectedCharges,
-      });
-      onOpenChange(false);
-    } catch (error) {
-      // Error is handled by the mutation's onError callback
+        onSave({
+          invoiceId: formData.invoiceId,
+          companyName: formData.companyName,
+          customerId: formData.customerId,
+          invoiceDate: formData.invoiceDate,
+          currencyId: formData.currencyId,
+          charges: formData.selectedCharges,
+        });
+        onOpenChange(false);
+      } catch (error) {
+        // Error is handled by the mutation's onError callback
+      }
     }
   };
 
-  const selectedChargesData = filteredCharges.filter(c => formData.selectedCharges.includes(c.id));
+  const selectedChargesData = localCostings.filter(c => formData.selectedCharges.includes(c.id));
 
   // Convert totals to customer currency
   const convertToCustomerCurrency = (amount: number, chargeCurrencyId: number, chargeRoe: number) => {
@@ -280,10 +544,15 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto bg-card border border-border p-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-lg font-semibold">
-            New Invoice
+            {isEditMode ? "Edit Invoice" : "New Invoice"}
           </DialogTitle>
         </DialogHeader>
 
+        {isLoadingEdit ? (
+          <div className="flex items-center justify-center p-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : (
         <div className="space-y-4 p-6 pt-4">
           {/* Invoice Section Header */}
           <h3 className="text-primary font-semibold">Invoice</h3>
@@ -300,15 +569,23 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
             </div>
             <div>
               <Label className="text-xs font-medium">Company Name (Debtors)</Label>
-              <SearchableSelect
-                options={debtorParties.map(party => ({ value: party.id.toString(), label: party.customerName }))}
-                value={formData.customerId}
-                onValueChange={handleCompanySelect}
-                placeholder="Select debtor"
-                searchPlaceholder="Search debtors..."
-                triggerClassName="bg-background border-border h-9"
-                emptyMessage="No debtors in parties"
-              />
+              {isEditMode ? (
+                <Input
+                  value={formData.companyName}
+                  className="bg-muted h-9"
+                  readOnly
+                />
+              ) : (
+                <SearchableSelect
+                  options={debtorParties.map(party => ({ value: party.id.toString(), label: party.customerName }))}
+                  value={formData.customerId}
+                  onValueChange={handleCompanySelect}
+                  placeholder="Select debtor"
+                  searchPlaceholder="Search debtors..."
+                  triggerClassName="bg-background border-border h-9"
+                  emptyMessage="No debtors in parties"
+                />
+              )}
             </div>
             <div>
               <Label className="text-xs font-medium">* Invoice Date</Label>
@@ -327,14 +604,16 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
                   readOnly
                 />
               </div>
-              <Button
-                size="sm"
-                onClick={handleSubmit}
-                className="btn-success h-9"
-              >
-                <Search className="h-4 w-4 mr-1" />
-                Submit
-              </Button>
+              {!isEditMode && (
+                <Button
+                  size="sm"
+                  onClick={handleSubmit}
+                  className="btn-success h-9"
+                >
+                  <Search className="h-4 w-4 mr-1" />
+                  Submit
+                </Button>
+              )}
             </div>
           </div>
 
@@ -399,6 +678,69 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
             </Table>
           </div>
 
+          {/* Cost-Only Charges (edit mode) */}
+          {isEditMode && costOnlyCharges.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-orange-600 font-semibold text-sm">Cost-Only Charges (No Sale)</h3>
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-table-header">
+                    <TableHead className="text-table-header-foreground text-xs">Sl.No</TableHead>
+                    <TableHead className="text-table-header-foreground text-xs">Description</TableHead>
+                    <TableHead className="text-table-header-foreground text-xs">Cost Qty</TableHead>
+                    <TableHead className="text-table-header-foreground text-xs">Cost/Unit</TableHead>
+                    <TableHead className="text-table-header-foreground text-xs">Cost FCY</TableHead>
+                    <TableHead className="text-table-header-foreground text-xs">Vendor</TableHead>
+                    <TableHead className="text-table-header-foreground text-xs">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {costOnlyCharges.map((charge, index) => (
+                    <TableRow key={charge.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
+                      <TableCell className="text-xs py-2">{(index + 1) * 10}</TableCell>
+                      <TableCell className="text-xs py-2">{charge.description}</TableCell>
+                      <TableCell className="text-xs py-2">{charge.costQty}</TableCell>
+                      <TableCell className="text-xs py-2">{charge.costUnit}</TableCell>
+                      <TableCell className="text-xs py-2">{charge.costFCY}</TableCell>
+                      <TableCell className="text-xs py-2">{charge.vendorName || "-"}</TableCell>
+                      <TableCell className="text-xs py-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs"
+                          onClick={() => {
+                            setEditingCostingForModal(charge as CostingModalData);
+                            setCostingModalOpen(true);
+                          }}
+                        >
+                          Add Sale
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+
+          {/* Add New Charge button (edit mode) */}
+          {isEditMode && formData.customerId && (
+            <div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs"
+                onClick={() => {
+                  setEditingCostingForModal(undefined);
+                  setCostingModalOpen(true);
+                }}
+              >
+                <Plus className="h-3.5 w-3.5 mr-1" />
+                Add New Charge
+              </Button>
+            </div>
+          )}
+
           {/* Totals */}
           <div className="flex justify-end">
             <div className="grid grid-cols-5 gap-4 bg-secondary/30 p-3 rounded-lg">
@@ -432,27 +774,47 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={createInvoiceMutation.isPending}
+              disabled={isSaving}
             >
               Cancel
             </Button>
             <Button
               className="btn-success"
               onClick={handleSave}
-              disabled={!shipmentId || !formData.customerId || formData.selectedCharges.length === 0 || createInvoiceMutation.isPending}
+              disabled={!shipmentId || !formData.customerId || formData.selectedCharges.length === 0 || isSaving}
             >
-              {createInvoiceMutation.isPending ? (
+              {isSaving ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Saving...
                 </>
               ) : (
-                'Save'
+                isEditMode ? 'Update' : 'Save'
               )}
             </Button>
           </div>
         </div>
+        )}
       </DialogContent>
+
+      {isEditMode && (
+        <CostingModal
+          open={costingModalOpen}
+          onOpenChange={(open) => {
+            setCostingModalOpen(open);
+            if (!open) setEditingCostingForModal(undefined);
+          }}
+          parties={parties}
+          costing={editingCostingForModal}
+          onSave={handleCostingModalSave}
+          defaultBillToCustomerId={
+            !editingCostingForModal
+              ? debtorParties.find(p => p.id.toString() === formData.customerId)?.customerId
+              : undefined
+          }
+          defaultActiveTab={editingCostingForModal ? "sale" : undefined}
+        />
+      )}
     </Dialog>
   );
 }

@@ -37,6 +37,7 @@ const DailyExpenses = lazy(() => import("./pages/DailyExpenses"));
 const ExpensePrintView = lazy(() => import("./pages/ExpensePrintView"));
 const Invoices = lazy(() => import("./pages/Invoices"));
 const InvoiceView = lazy(() => import("./pages/InvoiceView"));
+const InvoiceEdit = lazy(() => import("./pages/InvoiceEdit"));
 const InvoicePrintView = lazy(() => import("./pages/InvoicePrintView"));
 const PurchaseInvoices = lazy(() => import("./pages/PurchaseInvoices"));
 const PurchaseInvoiceView = lazy(() => import("./pages/PurchaseInvoiceView"));
@@ -182,6 +183,11 @@ const AppRoutes = () => (
       <Route path="/accounts/invoices/:id" element={
         <ProtectedRoute permission="invoice_view">
           <InvoiceView />
+        </ProtectedRoute>
+      } />
+      <Route path="/accounts/invoices/:id/edit" element={
+        <ProtectedRoute permission="invoice_edit">
+          <InvoiceEdit />
         </ProtectedRoute>
       } />
       <Route path="/accounts/invoices/:id/print" element={

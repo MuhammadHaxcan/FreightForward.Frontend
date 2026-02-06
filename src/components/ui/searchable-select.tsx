@@ -115,7 +115,7 @@ export function SearchableSelect({
                   <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
                     {option.value === value && <Check className="h-4 w-4" />}
                   </span>
-                  <span className="truncate">{option.label}</span>
+                  <span className="break-words whitespace-normal">{option.label}</span>
                 </CommandPrimitive.Item>
               ))
             )}

@@ -159,6 +159,8 @@ export default function PurchaseInvoiceView() {
                   <TableHead className="text-white font-semibold text-right">ROE</TableHead>
                   <TableHead className="text-white font-semibold text-right">Quantity</TableHead>
                   <TableHead className="text-white font-semibold text-right">Amount</TableHead>
+                  <TableHead className="text-white font-semibold text-right">Tax%</TableHead>
+                  <TableHead className="text-white font-semibold text-right">Tax Amt</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -171,11 +173,13 @@ export default function PurchaseInvoiceView() {
                     <TableCell className="text-right">{(item.exRate ?? 1).toFixed(2)}</TableCell>
                     <TableCell className="text-right">{(item.noOfUnit ?? 0).toFixed(3)}</TableCell>
                     <TableCell className="text-right">{(item.localAmount ?? 0).toFixed(2)}</TableCell>
+                    <TableCell className="text-right">{(item.taxPercentage ?? 0).toFixed(2)}</TableCell>
+                    <TableCell className="text-right">{(item.taxAmount ?? 0).toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
                 {invoice.items?.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-4 text-muted-foreground">
                       No charges found
                     </TableCell>
                   </TableRow>
@@ -193,18 +197,10 @@ export default function PurchaseInvoiceView() {
                   <span className="font-semibold">{formatCurrency(subTotal, invoice.currencyCode || "AED")}</span>
                 </div>
               </div>
-              <div className="space-y-2 px-2">
+              <div className="px-2 py-1">
                 <div className="flex justify-between">
-                  <span>Discount (0%)</span>
-                  <span>{formatCurrency(0, invoice.currencyCode || "AED")}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>VAT (0%)</span>
+                  <span>Total Tax</span>
                   <span>{formatCurrency(totalTax, invoice.currencyCode || "AED")}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Adjustment</span>
-                  <span>{formatCurrency(0, invoice.currencyCode || "AED")}</span>
                 </div>
               </div>
               <div className="bg-amber-50 dark:bg-amber-900/20 p-2 mt-2">

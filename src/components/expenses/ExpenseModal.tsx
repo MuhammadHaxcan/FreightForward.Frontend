@@ -208,7 +208,7 @@ export function ExpenseModal({
                       : "Select Category"
                 }
                 searchPlaceholder="Search..."
-                emptyMessage="No categories found"
+                emptyMessage={isLoadingCategories ? "Loading..." : "No categories found"}
               />
             </div>
             <div>
@@ -232,7 +232,7 @@ export function ExpenseModal({
                 disabled={isLoadingCurrencies}
                 placeholder={isLoadingCurrencies ? "Loading..." : "Select Currency"}
                 searchPlaceholder="Search..."
-                emptyMessage="No currencies found"
+                emptyMessage={isLoadingCurrencies ? "Loading..." : "No currencies found"}
               />
             </div>
             <div>

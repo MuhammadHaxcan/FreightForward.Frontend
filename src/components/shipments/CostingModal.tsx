@@ -19,7 +19,7 @@ import { X } from "lucide-react";
 
 // Extend ShipmentCosting with UI-specific fields for the modal
 // The modal transforms between API format (currencyId) and display format (currency code)
-type CostingModalData = Partial<ShipmentCosting> & {
+export type CostingModalData = Partial<ShipmentCosting> & {
   chargeDescription?: string;
   ppcc?: string;
   saleCurrency?: string;  // Currency code for display
@@ -32,6 +32,9 @@ interface CostingModalProps {
   parties: ShipmentParty[];
   costing?: CostingModalData;
   onSave: (costing: CostingModalData) => void;
+  defaultBillToCustomerId?: number;
+  defaultVendorCustomerId?: number;
+  defaultActiveTab?: "cost" | "sale";
 }
 
 const ppccOptions = ["Prepaid", "Postpaid"];
@@ -40,15 +43,15 @@ const taxOptions = ["0%", "5%", "10%", "15%"];
 // Default local currency (UAE)
 const LOCAL_CURRENCY = "AED";
 
-export function CostingModal({ open, onOpenChange, parties, costing, onSave }: CostingModalProps) {
-  const [activeTab, setActiveTab] = useState("cost");
+export function CostingModal({ open, onOpenChange, parties, costing, onSave, defaultBillToCustomerId, defaultVendorCustomerId, defaultActiveTab }: CostingModalProps) {
+  const [activeTab, setActiveTab] = useState(defaultActiveTab || "cost");
 
   // Fetch currency types from settings
   const { data: currencyTypesData } = useCurrencyTypes({ pageSize: 100 });
   const currencyTypes = useMemo(() => currencyTypesData?.items || [], [currencyTypesData]);
 
   // Fetch charge items from settings
-  const { data: chargeItemsResponse } = useQuery({
+  const { data: chargeItemsResponse, isLoading: isLoadingChargeItems } = useQuery({
     queryKey: ['chargeItems', 'all'],
     queryFn: () => settingsApi.getAllChargeItems(),
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
@@ -56,7 +59,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
   const chargeItems = useMemo(() => chargeItemsResponse?.data || [], [chargeItemsResponse?.data]);
 
   // Fetch costing units from settings
-  const { data: costingUnitsResponse } = useQuery({
+  const { data: costingUnitsResponse, isLoading: isLoadingCostingUnits } = useQuery({
     queryKey: ['costingUnits', 'all'],
     queryFn: () => settingsApi.getAllCostingUnits(),
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
@@ -123,12 +126,14 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
   const [formData, setFormData] = useState(getDefaultFormData());
   const formInitializedRef = useRef(false);
 
-  // Reset ref when modal closes
+  // Reset ref when modal closes, set active tab when opening
   useEffect(() => {
     if (!open) {
       formInitializedRef.current = false;
+    } else {
+      setActiveTab(defaultActiveTab || "cost");
     }
-  }, [open]);
+  }, [open, defaultActiveTab]);
 
   // Set default currency IDs when currencyTypes load for new entries
   useEffect(() => {
@@ -220,6 +225,24 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
         const firstUnit = costingUnits[0];
         defaultFormData.unitId = firstUnit.id;
         defaultFormData.unit = firstUnit.code;
+      }
+      // Apply default billTo from parent (e.g. InvoiceModal)
+      if (defaultBillToCustomerId) {
+        const billToParty = debtorParties.find(p => p.customerId === defaultBillToCustomerId);
+        if (billToParty) {
+          defaultFormData.saleBillTo = billToParty.id.toString();
+          defaultFormData.saleBillToName = billToParty.customerName;
+          defaultFormData.saleBillToCustomerId = billToParty.customerId?.toString() || "";
+        }
+      }
+      // Apply default vendor from parent (e.g. PurchaseModal)
+      if (defaultVendorCustomerId) {
+        const vendorParty = creditorParties.find(p => p.customerId === defaultVendorCustomerId);
+        if (vendorParty) {
+          defaultFormData.costVendor = vendorParty.id.toString();
+          defaultFormData.costVendorName = vendorParty.customerName;
+          defaultFormData.costVendorCustomerId = vendorParty.customerId?.toString() || "";
+        }
       }
       setFormData(defaultFormData);
     }
@@ -497,7 +520,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
                 placeholder="Select charge type"
                 searchPlaceholder="Search charges..."
                 triggerClassName="bg-background border-border h-9"
-                emptyMessage="No charge items available"
+                emptyMessage={isLoadingChargeItems ? "Loading..." : "No charge items available"}
               />
             </div>
             <div className="col-span-2">
@@ -539,7 +562,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave }: C
                 placeholder="Select unit"
                 searchPlaceholder="Search units..."
                 triggerClassName="bg-background border-border h-9"
-                emptyMessage="Loading..."
+                emptyMessage={isLoadingCostingUnits ? "Loading..." : "No units available"}
               />
             </div>
             <div className="col-span-2">

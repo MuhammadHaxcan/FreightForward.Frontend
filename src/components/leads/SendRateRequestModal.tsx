@@ -162,7 +162,7 @@ export function SendRateRequestModal({
                 placeholder={vendorType ? "Select vendor" : "Select vendor type first"}
                 searchPlaceholder="Search vendors..."
                 disabled={!vendorType}
-                emptyMessage="No vendors found for this category"
+                emptyMessage={loadingCustomers ? "Loading..." : "No vendors found for this category"}
               />
             </div>
 

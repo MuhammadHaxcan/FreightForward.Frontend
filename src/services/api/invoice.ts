@@ -7,7 +7,7 @@ export type PaymentMode = 'Cash' | 'Cheque' | 'BankWire' | 'BankTransfer' | 'Car
 export interface CreateInvoiceItemRequest {
   shipmentCostingId?: number;
   chargeDetails: string;
-  noOfUnit: number;
+  quantity: number;
   ppcc?: string;
   salePerUnit: number;
   currencyId: number;
@@ -40,6 +40,59 @@ export interface CreatePurchaseInvoiceItemRequest {
   localAmount: number;
   taxPercentage: number;
   taxAmount: number;
+}
+
+// Update Invoice Types
+export interface UpdateInvoiceItemRequest {
+  id?: number;
+  shipmentCostingId?: number;
+  chargeDetails: string;
+  ppcc?: string;
+  currencyId?: number;
+  quantity: number;
+  salePerUnit: number;
+  fcyAmount: number;
+  exRate: number;
+  localAmount: number;
+  taxPercentage: number;
+  taxAmount: number;
+}
+
+export interface UpdateInvoiceRequest {
+  invoiceDate: string;
+  customerId: number;
+  shipmentId?: number;
+  currencyId?: number;
+  baseCurrencyId?: number;
+  remarks?: string;
+  items: UpdateInvoiceItemRequest[];
+}
+
+// Update Purchase Invoice Types
+export interface UpdatePurchaseInvoiceItemRequest {
+  id?: number;
+  shipmentCostingId?: number;
+  chargeDetails: string;
+  ppcc?: string;
+  currencyId?: number;
+  noOfUnit: number;
+  costPerUnit: number;
+  fcyAmount: number;
+  exRate: number;
+  localAmount: number;
+  taxPercentage: number;
+  taxAmount: number;
+}
+
+export interface UpdatePurchaseInvoiceRequest {
+  purchaseDate: string;
+  vendorId: number;
+  vendorInvoiceNo?: string;
+  vendorInvoiceDate?: string;
+  shipmentId?: number;
+  currencyId?: number;
+  remarks?: string;
+  items: UpdatePurchaseInvoiceItemRequest[];
 }
 
 export interface CreatePurchaseInvoiceRequest {
@@ -102,6 +155,8 @@ export interface AccountInvoiceDetail {
   invoiceNo: string;
   invoiceDate: string;
   dueDate?: string;
+  customerId?: number;
+  shipmentId?: number;
   jobNumber?: string;
   hblNo?: string;
   customerName: string;
@@ -130,6 +185,7 @@ export interface AccountInvoiceItem {
   taxPercentage: number;
   taxAmount: number;
   amount: number;
+  shipmentCostingId?: number;
 }
 
 // Purchase Invoice Types
@@ -254,8 +310,16 @@ export const invoiceApi = {
   },
   createInvoice: (data: CreateInvoiceRequest) =>
     fetchApi<number>('/invoices', { method: 'POST', body: JSON.stringify(data) }),
+  updateInvoice: (id: number, data: UpdateInvoiceRequest) =>
+    fetchApi<void>(`/invoices/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteInvoice: (id: number) =>
+    fetchApi<void>(`/invoices/${id}`, { method: 'DELETE' }),
   createPurchaseInvoice: (data: CreatePurchaseInvoiceRequest) =>
     fetchApi<number>('/invoices/purchases', { method: 'POST', body: JSON.stringify(data) }),
+  updatePurchaseInvoice: (id: number, data: UpdatePurchaseInvoiceRequest) =>
+    fetchApi<void>(`/invoices/purchases/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deletePurchaseInvoice: (id: number) =>
+    fetchApi<void>(`/invoices/purchases/${id}`, { method: 'DELETE' }),
 
   // Purchase Invoice endpoints
   getAllPurchaseInvoices: (params?: {

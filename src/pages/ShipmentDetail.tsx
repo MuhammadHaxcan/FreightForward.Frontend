@@ -49,9 +49,9 @@ import {
   useUpdateShipmentCosting,
   useDeleteShipmentCosting,
 } from "@/hooks/useShipments";
+import { useDeleteInvoice, useDeletePurchaseInvoice } from "@/hooks/useInvoices";
 import { useCustomers } from "@/hooks/useCustomers";
 import {
-  PartyType,
   MasterType,
   Customer,
   shipmentApi,
@@ -74,91 +74,11 @@ import {
   ShipmentStatus,
   ShipmentDirection,
   ShipmentMode,
-  BLStatus,
   BLServiceType,
   FreightType,
-  Incoterms,
   PaymentStatus,
 } from "@/services/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-
-// Map PartyType to category code for finding category ID
-const partyTypeToCategoryCode: Record<PartyType, string> = {
-  // Primary Party Types
-  Shipper: 'Shipper',
-  Consignee: 'Consignee',
-  Buyer: 'Buyer',
-  Supplier: 'Supplier',
-  Customer: 'Customer',
-  BookingParty: 'BookingParty',
-  NotifyParty: 'NotifyParty',
-  // Agents & Forwarders
-  Forwarder: 'Forwarder',
-  CoLoader: 'CoLoader',
-  Transporter: 'Transporter',
-  Courier: 'Courier',
-  ClearingAgent: 'ClearingAgent',
-  DeliveryAgent: 'DeliveryAgent',
-  OriginAgent: 'OriginAgent',
-  OverseasAgents: 'OverseasAgents',
-  // Carriers
-  ShippingLine: 'ShippingLine',
-  AirLine: 'AirLine',
-  // Facilities
-  Warehouse: 'Warehouse',
-  CFS: 'CFS',
-  Terminal: 'Terminal',
-  // Government & Financial
-  Customs: 'Customs',
-  Bank: 'Bank',
-  // Neutral Types
-  Neutral: 'Neutral',
-  ShipperNeutral: 'ShipperNeutral',
-  ConsigneeNeutral: 'ConsigneeNeutral',
-  BuyerNeutral: 'BuyerNeutral',
-  SupplierNeutral: 'SupplierNeutral',
-  NotifyPartyNeutral: 'NotifyPartyNeutral',
-  CustomerNeutral: 'CustomerNeutral',
-};
-
-// Display labels for party types
-const partyTypeLabels: Record<PartyType, string> = {
-  // Primary Party Types
-  Shipper: 'Shipper',
-  Consignee: 'Consignee',
-  Buyer: 'Buyer',
-  Supplier: 'Supplier',
-  Customer: 'Customer',
-  BookingParty: 'Booking Party',
-  NotifyParty: 'Notify Party',
-  // Agents & Forwarders
-  Forwarder: 'Forwarder',
-  CoLoader: 'Co-loader',
-  Transporter: 'Transporter',
-  Courier: 'Courier',
-  ClearingAgent: 'Clearing Agent',
-  DeliveryAgent: 'Delivery Agent',
-  OriginAgent: 'Origin Agent',
-  OverseasAgents: 'Overseas Agents',
-  // Carriers
-  ShippingLine: 'Shipping Line',
-  AirLine: 'Air Line',
-  // Facilities
-  Warehouse: 'Warehouse',
-  CFS: 'CFS',
-  Terminal: 'Terminal',
-  // Government & Financial
-  Customs: 'Customs',
-  Bank: 'Bank',
-  // Neutral Types
-  Neutral: 'Neutral',
-  ShipperNeutral: 'Shipper (Neutral)',
-  ConsigneeNeutral: 'Consignee (Neutral)',
-  BuyerNeutral: 'Buyer (Neutral)',
-  SupplierNeutral: 'Supplier (Neutral)',
-  NotifyPartyNeutral: 'Notify Party (Neutral)',
-  CustomerNeutral: 'Customer (Neutral)',
-};
 
 // Helper function to get payment status display and styling
 const getPaymentStatusDisplay = (status: PaymentStatus) => {
@@ -216,8 +136,7 @@ const emptyFormData = {
   jobStatus: "",
   direction: "",
   mode: "",
-  transportModeId: undefined as number | undefined,
-  incoterms: "",
+  incoTermId: "",
   houseBLNo: "",
   houseBLDate: "",
   houseBLStatus: "",
@@ -264,45 +183,6 @@ const emptyFormData = {
 };
 
 
-// All available party types (grouped logically)
-const partyTypes: PartyType[] = [
-  // Primary Party Types
-  'Shipper',
-  'Consignee',
-  'Buyer',
-  'Supplier',
-  'Customer',
-  'BookingParty',
-  'NotifyParty',
-  // Agents & Forwarders
-  'Forwarder',
-  'CoLoader',
-  'Transporter',
-  'Courier',
-  'ClearingAgent',
-  'DeliveryAgent',
-  'OriginAgent',
-  'OverseasAgents',
-  // Carriers
-  'ShippingLine',
-  'AirLine',
-  // Facilities
-  'Warehouse',
-  'CFS',
-  'Terminal',
-  // Government & Financial
-  'Customs',
-  'Bank',
-  // Neutral Types
-  'Neutral',
-  'ShipperNeutral',
-  'ConsigneeNeutral',
-  'BuyerNeutral',
-  'SupplierNeutral',
-  'NotifyPartyNeutral',
-  'CustomerNeutral',
-];
-
 const ShipmentDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -327,7 +207,7 @@ const ShipmentDetail = () => {
   // State
   const [activeTab, setActiveTab] = useState("shipment-info");
   const [formData, setFormData] = useState(emptyFormData);
-  const [selectedPartyType, setSelectedPartyType] = useState<PartyType>('Shipper');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
   const [cargoDetails, setCargoDetails] = useState<ShipmentCargo[]>([]);
   const [newCargoEntry, setNewCargoEntry] = useState({ quantity: "", packageTypeId: "", totalCBM: "", totalWeight: "", description: "" });
@@ -345,11 +225,17 @@ const ShipmentDetail = () => {
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
   const [editingContainer, setEditingContainer] = useState<ShipmentContainer | null>(null);
   const [editingCosting, setEditingCosting] = useState<ShipmentCosting | null>(null);
+  const [editInvoiceId, setEditInvoiceId] = useState<number | null>(null);
+  const [editPurchaseInvoiceId, setEditPurchaseInvoiceId] = useState<number | null>(null);
+
+  // Invoice delete hooks
+  const deleteInvoiceMutation = useDeleteInvoice();
+  const deletePurchaseInvoiceMutation = useDeletePurchaseInvoice();
 
   // Delete confirmation modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteModalConfig, setDeleteModalConfig] = useState<{
-    type: 'party' | 'container' | 'costing' | 'cargo' | 'document' | 'statusLog';
+    type: 'party' | 'container' | 'costing' | 'cargo' | 'document' | 'statusLog' | 'invoice' | 'purchaseInvoice';
     id: number;
     name?: string;
     filePath?: string;
@@ -377,7 +263,7 @@ const ShipmentDetail = () => {
   const categoryTypes = useMemo(() => categoryTypesResponse?.data ?? [], [categoryTypesResponse?.data]);
 
   // Fetch INCO terms
-  const { data: incoTermsResponse } = useQuery({
+  const { data: incoTermsResponse, isLoading: isLoadingIncoTerms } = useQuery({
     queryKey: ['incoTerms', 'all'],
     queryFn: () => settingsApi.getAllIncoTerms(),
     staleTime: 60 * 60 * 1000, // Cache for 1 hour (INCO terms rarely change)
@@ -404,20 +290,12 @@ const ShipmentDetail = () => {
   }, [packageTypes]);
 
   // Fetch Network Partners
-  const { data: networkPartnersResponse } = useQuery({
+  const { data: networkPartnersResponse, isLoading: isLoadingNetworkPartners } = useQuery({
     queryKey: ['networkPartners', 'all'],
     queryFn: () => settingsApi.getAllNetworkPartners(),
     staleTime: 60 * 60 * 1000, // Cache for 1 hour
   });
   const networkPartners = useMemo(() => networkPartnersResponse?.data ?? [], [networkPartnersResponse?.data]);
-
-  // Fetch Transport Modes
-  const { data: transportModesResponse } = useQuery({
-    queryKey: ['transportModes', 'all'],
-    queryFn: () => settingsApi.getAllTransportModes(),
-    staleTime: 60 * 60 * 1000, // Cache for 1 hour
-  });
-  const transportModes = useMemo(() => transportModesResponse?.data ?? [], [transportModesResponse?.data]);
 
   // Fetch BL Types
   const { data: blTypesResponse } = useQuery({
@@ -437,7 +315,7 @@ const ShipmentDetail = () => {
   }, [blTypes, formData.mode]);
 
   // Fetch Ports
-  const { data: portsResponse } = useQuery({
+  const { data: portsResponse, isLoading: isLoadingPorts } = useQuery({
     queryKey: ['ports', 'all'],
     queryFn: () => settingsApi.getAllPorts(),
     staleTime: 60 * 60 * 1000, // Cache for 1 hour
@@ -449,18 +327,13 @@ const ShipmentDetail = () => {
   const costings = shipmentData?.costings || [];
   const parties = shipmentData?.parties || [];
 
-  // Get the category ID for the selected party type
-  const selectedCategoryId = useMemo(() => {
-    const categoryCode = partyTypeToCategoryCode[selectedPartyType];
-    if (!categoryCode) return undefined;
-    const category = categoryTypes.find(c => c.code === categoryCode || c.name === categoryCode);
-    return category?.id;
-  }, [selectedPartyType, categoryTypes]);
+  // Parse selected category ID for customer filtering
+  const parsedCategoryId = selectedCategoryId ? parseInt(selectedCategoryId) : undefined;
 
   // Fetch customers filtered by the selected category ID
   const { data: customersData, isLoading: isLoadingCustomers } = useCustomers({
     pageSize: 100,
-    categoryId: selectedCategoryId,
+    categoryId: parsedCategoryId,
   });
 
   // Get the list of customers
@@ -481,8 +354,7 @@ const ShipmentDetail = () => {
         jobStatus: shipmentData.jobStatus,
         direction: mapDirectionToDisplay(shipmentData.direction),
         mode: mapModeToDisplay(shipmentData.mode),
-        transportModeId: shipmentData.transportModeId,
-        incoterms: shipmentData.incoterms || '',
+        incoTermId: shipmentData.incoTermId?.toString() || '',
         houseBLNo: shipmentData.houseBLNo || '',
         // Use correct field names from backend DTO (camelCase of HblDate, HblStatus, etc.)
         houseBLDate: shipmentData.hblDate?.split('T')[0] || '',
@@ -546,7 +418,7 @@ const ShipmentDetail = () => {
   // Reset selected customer when party type changes
   useEffect(() => {
     setSelectedCustomerId("");
-  }, [selectedPartyType]);
+  }, [selectedCategoryId]);
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -562,12 +434,13 @@ const ShipmentDetail = () => {
       return;
     }
 
-    // Check if customer is already added with the SAME party type
+    // Check if customer is already added with the SAME category
     const existingParty = parties.find(
-      p => p.customerId === selectedCustomer.id && p.partyType === selectedPartyType
+      p => p.customerId === selectedCustomer.id && p.customerCategoryId === parsedCategoryId
     );
     if (existingParty) {
-      toast.error(`${selectedCustomer.name} is already added as ${partyTypeLabels[selectedPartyType]}`);
+      const partyLabel = categoryTypes.find(c => c.id.toString() === selectedCategoryId)?.name || "this category";
+      toast.error(`${selectedCustomer.name} is already added as ${partyLabel}`);
       return;
     }
 
@@ -576,7 +449,7 @@ const ShipmentDetail = () => {
       data: {
         shipmentId,
         masterType: selectedCustomer.masterType,
-        partyType: selectedPartyType,
+        customerCategoryId: parsedCategoryId,
         customerId: selectedCustomer.id,
         customerName: selectedCustomer.name,
         mobile: '',
@@ -858,6 +731,14 @@ const ShipmentDetail = () => {
           setStatusLogs(prev => prev.filter(l => l.id !== deleteModalConfig.id));
           toast.success("Status log deleted successfully");
           break;
+        case 'invoice':
+          await deleteInvoiceMutation.mutateAsync(deleteModalConfig.id);
+          queryClient.invalidateQueries({ queryKey: ['shipment-invoices', shipmentId] });
+          break;
+        case 'purchaseInvoice':
+          await deletePurchaseInvoiceMutation.mutateAsync(deleteModalConfig.id);
+          queryClient.invalidateQueries({ queryKey: ['shipment-invoices', shipmentId] });
+          break;
       }
       refetchShipment();
       setDeleteModalOpen(false);
@@ -953,17 +834,16 @@ const ShipmentDetail = () => {
           jobStatus: (formData.jobStatus || 'Opened') as ShipmentStatus,
           direction: mapDisplayToDirection(formData.direction) as ShipmentDirection,
           mode: mapDisplayToMode(formData.mode) as ShipmentMode,
-          transportModeId: formData.transportModeId,
-          incoterms: (formData.incoterms || undefined) as Incoterms | undefined,
+          incoTermId: formData.incoTermId ? parseInt(formData.incoTermId) : undefined,
           hblNo: formData.houseBLNo || undefined,
           hblDate: formData.houseBLDate || undefined,
-          hblStatus: (formData.houseBLStatus || undefined) as BLStatus | undefined,
+          hblStatus: formData.houseBLStatus || undefined,
           hblServiceType: (formData.hblServiceType || undefined) as BLServiceType | undefined,
           hblNoBLIssued: formData.hblNoBLIssued || undefined,
           hblFreight: (formData.hblFreight || undefined) as FreightType | undefined,
           mblNo: formData.mblNumber || undefined,
           mblDate: formData.mblDate || undefined,
-          mblStatus: (formData.mblStatus || undefined) as BLStatus | undefined,
+          mblStatus: formData.mblStatus || undefined,
           mblServiceType: (formData.mblServiceType || undefined) as BLServiceType | undefined,
           mblNoBLIssued: formData.mblNoBLIssued || undefined,
           mblFreight: (formData.mblFreight || undefined) as FreightType | undefined,
@@ -1146,19 +1026,24 @@ const ShipmentDetail = () => {
                   <div>
                     <Label className="text-sm">Mode</Label>
                     <SearchableSelect
-                      options={
-                        transportModes.length > 0
-                          ? transportModes.map((mode) => ({ value: mode.name, label: mode.name }))
-                          : [
-                              { value: "Air Freight", label: "Air Freight" },
-                              { value: "Sea Freight FCL", label: "Sea Freight FCL" },
-                              { value: "Sea Freight LCL", label: "Sea Freight LCL" },
-                              { value: "Break-Bulk", label: "Break-Bulk" },
-                              { value: "RO-RO", label: "RO-RO" },
-                            ]
-                      }
+                      options={[
+                        { value: "Air Freight", label: "Air Freight" },
+                        { value: "Sea Freight FCL", label: "Sea Freight FCL" },
+                        { value: "Sea Freight LCL", label: "Sea Freight LCL" },
+                        { value: "Break-Bulk", label: "Break-Bulk" },
+                        { value: "RO-RO", label: "RO-RO" },
+                      ]}
                       value={formData.mode}
-                      onValueChange={(v) => handleInputChange("mode", v)}
+                      onValueChange={(v) => {
+                        handleInputChange("mode", v);
+                        const isAir = v === 'Air Freight';
+                        setFormData(prev => ({
+                          ...prev,
+                          mode: v,
+                          houseBLStatus: isAir ? "HAWB" : "HBL",
+                          mblStatus: isAir ? "MAWB" : "MBL",
+                        }));
+                      }}
                       searchPlaceholder="Search modes..."
                     />
                   </div>
@@ -1166,14 +1051,14 @@ const ShipmentDetail = () => {
                     <Label className="text-sm">INCO Terms</Label>
                     <SearchableSelect
                       options={incoTerms.map(term => ({
-                        value: term.code,
+                        value: term.id.toString(),
                         label: `${term.code} - ${term.name}`,
                       }))}
-                      value={formData.incoterms}
-                      onValueChange={(v) => handleInputChange("incoterms", v)}
+                      value={formData.incoTermId}
+                      onValueChange={(v) => handleInputChange("incoTermId", v)}
                       placeholder="Select"
                       searchPlaceholder="Search incoterms..."
-                      emptyMessage={incoTerms.length === 0 ? "Loading..." : "No incoterms found"}
+                      emptyMessage={isLoadingIncoTerms ? "Loading..." : "No incoterms found"}
                     />
                   </div>
                 </div>
@@ -1205,7 +1090,7 @@ const ShipmentDetail = () => {
                                 .map(bt => ({ value: bt.code, label: `${bt.code} - ${bt.name}` }))
                             : [
                                 { value: "HBL", label: "HBL - House Bill of Lading" },
-                                { value: "Express", label: "Express Release" },
+                                { value: "EXPRESS", label: "Express Release" },
                               ]
                         }
                         value={formData.houseBLStatus}
@@ -1218,8 +1103,10 @@ const ShipmentDetail = () => {
                       <Label className="text-sm">BL Service Type</Label>
                       <SearchableSelect
                         options={[
-                          { value: "LCLLCL", label: "LCL/LCL" },
                           { value: "FCLFCL", label: "FCL/FCL" },
+                          { value: "LCLLCL", label: "LCL/LCL" },
+                          { value: "LCLFCL", label: "LCL/FCL" },
+                          { value: "FCLLCL", label: "FCL/LCL" },
                         ]}
                         value={formData.hblServiceType}
                         onValueChange={(v) => handleInputChange("hblServiceType", v)}
@@ -1265,7 +1152,7 @@ const ShipmentDetail = () => {
                                 .map(bt => ({ value: bt.code, label: `${bt.code} - ${bt.name}` }))
                             : [
                                 { value: "MBL", label: "MBL - Master Bill of Lading" },
-                                { value: "Express", label: "Express Release" },
+                                { value: "EXPRESS", label: "Express Release" },
                               ]
                         }
                         value={formData.mblStatus}
@@ -1280,6 +1167,8 @@ const ShipmentDetail = () => {
                         options={[
                           { value: "FCLFCL", label: "FCL/FCL" },
                           { value: "LCLLCL", label: "LCL/LCL" },
+                          { value: "LCLFCL", label: "LCL/FCL" },
+                          { value: "FCLLCL", label: "FCL/LCL" },
                         ]}
                         value={formData.mblServiceType}
                         onValueChange={(v) => handleInputChange("mblServiceType", v)}
@@ -1328,7 +1217,7 @@ const ShipmentDetail = () => {
                       onValueChange={(v) => setFormData(prev => ({ ...prev, networkPartnerId: v ? parseInt(v) : undefined }))}
                       placeholder="Select"
                       searchPlaceholder="Search partners..."
-                      emptyMessage={networkPartners.length === 0 ? "Loading..." : "No partners found"}
+                      emptyMessage={isLoadingNetworkPartners ? "Loading..." : "No partners found"}
                     />
                   </div>
                 </div>
@@ -1353,7 +1242,7 @@ const ShipmentDetail = () => {
                         onValueChange={(v) => handleInputChange("placeOfReceipt", v)}
                         placeholder="Select"
                         searchPlaceholder="Search ports..."
-                        emptyMessage={ports.length === 0 ? "Loading..." : "No ports found"}
+                        emptyMessage={isLoadingPorts ? "Loading..." : "No ports found"}
                       />
                     </div>
                     <div>
@@ -1371,7 +1260,7 @@ const ShipmentDetail = () => {
                         }}
                         placeholder="Select"
                         searchPlaceholder="Search ports..."
-                        emptyMessage={ports.length === 0 ? "Loading..." : "No ports found"}
+                        emptyMessage={isLoadingPorts ? "Loading..." : "No ports found"}
                       />
                     </div>
                     <div>
@@ -1389,7 +1278,7 @@ const ShipmentDetail = () => {
                         }}
                         placeholder="Select"
                         searchPlaceholder="Search ports..."
-                        emptyMessage={ports.length === 0 ? "Loading..." : "No ports found"}
+                        emptyMessage={isLoadingPorts ? "Loading..." : "No ports found"}
                       />
                     </div>
                   </div>
@@ -1414,7 +1303,7 @@ const ShipmentDetail = () => {
                         }}
                         placeholder="Select"
                         searchPlaceholder="Search ports..."
-                        emptyMessage={ports.length === 0 ? "Loading..." : "No ports found"}
+                        emptyMessage={isLoadingPorts ? "Loading..." : "No ports found"}
                       />
                     </div>
                     <div>
@@ -1432,7 +1321,7 @@ const ShipmentDetail = () => {
                         }}
                         placeholder="Select"
                         searchPlaceholder="Search ports..."
-                        emptyMessage={ports.length === 0 ? "Loading..." : "No ports found"}
+                        emptyMessage={isLoadingPorts ? "Loading..." : "No ports found"}
                       />
                     </div>
                     <div>
@@ -1446,7 +1335,7 @@ const ShipmentDetail = () => {
                         onValueChange={(v) => handleInputChange("placeOfDelivery", v)}
                         placeholder="Select"
                         searchPlaceholder="Search ports..."
-                        emptyMessage={ports.length === 0 ? "Loading..." : "No ports found"}
+                        emptyMessage={isLoadingPorts ? "Loading..." : "No ports found"}
                       />
                     </div>
                   </div>
@@ -1567,12 +1456,12 @@ const ShipmentDetail = () => {
                 <div>
                   <Label className="text-sm text-red-500">* Customer Type</Label>
                   <SearchableSelect
-                    options={partyTypes.map(type => ({
-                      value: type,
-                      label: partyTypeLabels[type],
+                    options={categoryTypes.map(ct => ({
+                      value: ct.id.toString(),
+                      label: ct.name,
                     }))}
-                    value={selectedPartyType}
-                    onValueChange={(v) => setSelectedPartyType(v as PartyType)}
+                    value={selectedCategoryId}
+                    onValueChange={(v) => setSelectedCategoryId(v)}
                     searchPlaceholder="Search types..."
                   />
                 </div>
@@ -1640,7 +1529,7 @@ const ShipmentDetail = () => {
                           }
                         >
                           <TableCell>{party.masterType}</TableCell>
-                          <TableCell className="text-emerald-600">{partyTypeLabels[party.partyType] || party.partyType}</TableCell>
+                          <TableCell className="text-emerald-600">{party.customerCategoryName || "-"}</TableCell>
                           <TableCell className="text-emerald-600">{party.customerName}</TableCell>
                           <TableCell>{party.mobile || "-"}</TableCell>
                           <TableCell>{party.phone || "-"}</TableCell>
@@ -1789,7 +1678,7 @@ const ShipmentDetail = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="bg-modal-header hover:bg-modal-header/80 text-modal-header-foreground border-modal-header h-9 px-4"
+                    className="btn-success h-9 px-4"
                     onClick={() => {
                       setEditingCosting(null);
                       setCostingModalOpen(true);
@@ -1927,12 +1816,13 @@ const ShipmentDetail = () => {
                           <TableHead className="text-table-header-foreground text-xs">P.Sale</TableHead>
                           <TableHead className="text-table-header-foreground text-xs">Voucher Number</TableHead>
                           <TableHead className="text-table-header-foreground text-xs">Status</TableHead>
+                          <TableHead className="text-table-header-foreground text-xs w-20">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {!shipmentInvoices?.customerInvoices?.length ? (
                           <TableRow>
-                            <TableCell colSpan={4} className="text-center text-muted-foreground text-sm">No customer invoices</TableCell>
+                            <TableCell colSpan={5} className="text-center text-muted-foreground text-sm">No customer invoices</TableCell>
                           </TableRow>
                         ) : (
                           shipmentInvoices.customerInvoices.map((inv, index) => {
@@ -1946,6 +1836,32 @@ const ShipmentDetail = () => {
                                   <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${statusDisplay.className}`}>
                                     {statusDisplay.label}
                                   </span>
+                                </TableCell>
+                                <TableCell className="text-xs">
+                                  <div className="flex gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      onClick={() => {
+                                        setEditInvoiceId(inv.id);
+                                        setInvoiceModalOpen(true);
+                                      }}
+                                    >
+                                      <Edit className="h-3.5 w-3.5 text-primary" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      onClick={() => {
+                                        setDeleteModalConfig({ type: 'invoice', id: inv.id, name: inv.invoiceNo });
+                                        setDeleteModalOpen(true);
+                                      }}
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                    </Button>
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             );
@@ -1965,12 +1881,13 @@ const ShipmentDetail = () => {
                           <TableHead className="text-table-header-foreground text-xs">P.Cost</TableHead>
                           <TableHead className="text-table-header-foreground text-xs">Voucher Number</TableHead>
                           <TableHead className="text-table-header-foreground text-xs">Status</TableHead>
+                          <TableHead className="text-table-header-foreground text-xs w-20">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {!shipmentInvoices?.vendorInvoices?.length ? (
                           <TableRow>
-                            <TableCell colSpan={4} className="text-center text-muted-foreground text-sm">No vendor invoices</TableCell>
+                            <TableCell colSpan={5} className="text-center text-muted-foreground text-sm">No vendor invoices</TableCell>
                           </TableRow>
                         ) : (
                           shipmentInvoices.vendorInvoices.map((inv, index) => {
@@ -1984,6 +1901,32 @@ const ShipmentDetail = () => {
                                   <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${statusDisplay.className}`}>
                                     {statusDisplay.label}
                                   </span>
+                                </TableCell>
+                                <TableCell className="text-xs">
+                                  <div className="flex gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      onClick={() => {
+                                        setEditPurchaseInvoiceId(inv.id);
+                                        setPurchaseModalOpen(true);
+                                      }}
+                                    >
+                                      <Edit className="h-3.5 w-3.5 text-primary" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      onClick={() => {
+                                        setDeleteModalConfig({ type: 'purchaseInvoice', id: inv.id, name: inv.purchaseNo });
+                                        setDeleteModalOpen(true);
+                                      }}
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                    </Button>
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             );
@@ -2131,9 +2074,6 @@ const ShipmentDetail = () => {
                 </TableBody>
               </Table>
 
-              <Button className="btn-success" disabled>
-                Save and Continue
-              </Button>
             </div>
           </TabsContent>
 
@@ -2143,7 +2083,7 @@ const ShipmentDetail = () => {
               <div className="flex justify-between items-center">
                 <h3 className="text-emerald-600 font-semibold text-lg">Documents</h3>
                 <Button
-                  className="bg-modal-header hover:bg-modal-header/80 text-modal-header-foreground"
+                  className="btn-success"
                   onClick={() => setDocumentModalOpen(true)}
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -2268,7 +2208,7 @@ const ShipmentDetail = () => {
               <div className="flex justify-between items-center">
                 <h3 className="text-emerald-600 font-semibold text-lg">Status History / Tracking Events</h3>
                 <Button
-                  className="bg-modal-header hover:bg-modal-header/80 text-modal-header-foreground"
+                  className="btn-success"
                   onClick={() => setStatusLogModalOpen(true)}
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -2315,10 +2255,14 @@ const ShipmentDetail = () => {
 
       <InvoiceModal
         open={invoiceModalOpen}
-        onOpenChange={setInvoiceModalOpen}
+        onOpenChange={(open) => {
+          setInvoiceModalOpen(open);
+          if (!open) setEditInvoiceId(null);
+        }}
         shipmentId={shipmentId}
         chargesDetails={costings}
         parties={parties}
+        editInvoiceId={editInvoiceId}
         onSave={() => {
           refetchShipment();
           queryClient.invalidateQueries({ queryKey: ['shipment-invoices', shipmentId] });
@@ -2327,11 +2271,15 @@ const ShipmentDetail = () => {
 
       <PurchaseModal
         open={purchaseModalOpen}
-        onOpenChange={setPurchaseModalOpen}
+        onOpenChange={(open) => {
+          setPurchaseModalOpen(open);
+          if (!open) setEditPurchaseInvoiceId(null);
+        }}
         shipmentId={shipmentId}
         jobNumber={shipmentData?.jobNumber}
         chargesDetails={costings}
         parties={parties}
+        editPurchaseInvoiceId={editPurchaseInvoiceId}
         onSave={() => {
           refetchShipment();
           queryClient.invalidateQueries({ queryKey: ['shipment-invoices', shipmentId] });
@@ -2362,7 +2310,9 @@ const ShipmentDetail = () => {
           deleteModalConfig?.type === 'container' ? 'Delete Container' :
           deleteModalConfig?.type === 'costing' ? 'Delete Costing' :
           deleteModalConfig?.type === 'cargo' ? 'Delete Cargo' :
-          deleteModalConfig?.type === 'document' ? 'Delete Document' : 'Delete Item'
+          deleteModalConfig?.type === 'document' ? 'Delete Document' :
+          deleteModalConfig?.type === 'invoice' ? 'Delete Invoice' :
+          deleteModalConfig?.type === 'purchaseInvoice' ? 'Delete Purchase Invoice' : 'Delete Item'
         }
         itemName={deleteModalConfig?.name}
         isLoading={isDeleting}

@@ -7,6 +7,7 @@ import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../components/ui/card';
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { Loader2, Ship, Building2, ArrowLeft } from 'lucide-react';
+import loginBg from '../assets/login-bg.png';
 
 type LoginStep = 'office' | 'credentials';
 
@@ -70,7 +71,7 @@ export default function Login() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-100">
+      <div className="flex h-screen items-center justify-center bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `url(${loginBg})`, backgroundColor: '#d5e3ed' }}>
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
       </div>
     );
@@ -81,7 +82,10 @@ export default function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div
+      className="flex min-h-screen items-center justify-center p-4 bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: `url(${loginBg})`, backgroundColor: '#d5e3ed' }}
+    >
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-2">

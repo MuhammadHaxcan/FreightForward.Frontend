@@ -110,10 +110,10 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
   const { data: lead, isLoading: isLeadLoading } = useLead(leadId || 0);
 
   // Load data from backend
-  const { data: customers } = useCustomers({ pageSize: 1000 });
-  const { data: countries } = useAllCountries();
-  const { data: ports } = useAllPorts();
-  const { data: incoTerms } = useAllIncoTerms();
+  const { data: customers, isLoading: isLoadingCustomers } = useCustomers({ pageSize: 1000 });
+  const { data: countries, isLoading: isLoadingCountries } = useAllCountries();
+  const { data: ports, isLoading: isLoadingPorts } = useAllPorts();
+  const { data: incoTerms, isLoading: isLoadingIncoTerms } = useAllIncoTerms();
   const { data: containerTypes } = useAllContainerTypes();
   const { data: packageTypes } = useAllPackageTypes();
 
@@ -324,6 +324,7 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
                       onValueChange={handleCustomerChange}
                       placeholder="Select customer"
                       searchPlaceholder="Search customers..."
+                      emptyMessage={isLoadingCustomers ? "Loading..." : "No customers found"}
                     />
                   </div>
                   <div className="space-y-2">
@@ -479,6 +480,7 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
                         }}
                         placeholder="Select country"
                         searchPlaceholder="Search countries..."
+                        emptyMessage={isLoadingCountries ? "Loading..." : "No countries found"}
                       />
                     </div>
                     <div className="space-y-2">
@@ -492,6 +494,7 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
                         onValueChange={(value) => updateField("loadingPortId", parseInt(value))}
                         placeholder="Select loading port"
                         searchPlaceholder="Search ports..."
+                        emptyMessage={isLoadingPorts ? "Loading..." : "No ports found"}
                       />
                     </div>
                     <div className="space-y-2">
@@ -525,6 +528,7 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
                         }}
                         placeholder="Select country"
                         searchPlaceholder="Search countries..."
+                        emptyMessage={isLoadingCountries ? "Loading..." : "No countries found"}
                       />
                     </div>
                     <div className="space-y-2">
@@ -540,6 +544,7 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
                         }
                         placeholder="Select destination port"
                         searchPlaceholder="Search ports..."
+                        emptyMessage={isLoadingPorts ? "Loading..." : "No ports found"}
                       />
                     </div>
                     <div className="space-y-2">
@@ -639,6 +644,7 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
                       }
                       placeholder="Select Inco Term"
                       searchPlaceholder="Search inco terms..."
+                      emptyMessage={isLoadingIncoTerms ? "Loading..." : "No inco terms found"}
                     />
                   </div>
                 </div>

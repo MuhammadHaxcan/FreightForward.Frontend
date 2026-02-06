@@ -1,25 +1,15 @@
 import { fetchApi, PaginatedList, MasterType, PaymentStatus, getAccessToken, isDevAuthDisabled, attemptTokenRefresh } from './base';
-import { Incoterms } from './sales';
 
 // Shipment Types
 export type ShipmentStatus = 'Opened' | 'Closed' | 'Cancelled';
 export type ShipmentDirection = 'Import' | 'Export' | 'CrossTrade';
 export type ShipmentMode = 'SeaFreightFCL' | 'SeaFreightLCL' | 'AirFreight' | 'BreakBulk' | 'RoRo';
-export type BLStatus = 'HBL' | 'MBL' | 'HAWB' | 'MAWB' | 'Express';
-export type BLServiceType = 'FCLFCL' | 'LCLLCL';
+export type BLServiceType = 'FCLFCL' | 'LCLLCL' | 'LCLFCL' | 'FCLLCL';
 export type FreightType = 'Prepaid' | 'Collect';
 export type StatusEventType =
   | 'GateOutEmpty' | 'GateIn' | 'LoadOnVessel' | 'VesselDeparture'
   | 'VesselArrival' | 'Discharge' | 'OnRail' | 'OffRail'
   | 'CustomsClearance' | 'Delivered' | 'EmptyContainerReturn' | 'Other';
-export type PartyType =
-  | 'Shipper' | 'Consignee' | 'Buyer' | 'Supplier' | 'Customer' | 'BookingParty' | 'NotifyParty'
-  | 'Forwarder' | 'CoLoader' | 'Transporter' | 'Courier' | 'ClearingAgent' | 'DeliveryAgent' | 'OriginAgent' | 'OverseasAgents'
-  | 'ShippingLine' | 'AirLine'
-  | 'Warehouse' | 'CFS' | 'Terminal'
-  | 'Customs' | 'Bank'
-  | 'Neutral' | 'ShipperNeutral' | 'ConsigneeNeutral' | 'BuyerNeutral' | 'SupplierNeutral' | 'NotifyPartyNeutral' | 'CustomerNeutral';
-
 export interface Shipment {
   id: number;
   jobNumber: string;
@@ -29,8 +19,6 @@ export interface Shipment {
   directionDisplay: string;
   mode: ShipmentMode;
   modeDisplay: string;
-  transportModeId?: number;
-  transportModeName?: string;
   houseBLNo?: string;
   mblNumber?: string;
   customerName?: string;
@@ -60,16 +48,17 @@ export interface Shipment {
 }
 
 export interface ShipmentDetail extends Shipment {
-  incoterms?: Incoterms;
+  incoTermId?: number;
+  incoTermCode?: string;
   // House B/L fields - camelCase of backend DTO property names
   hblDate?: string;
-  hblStatus?: BLStatus;
+  hblStatus?: string;
   hblServiceType?: BLServiceType;
   hblNoBLIssued?: string;
   hblFreight?: FreightType;
   // MBL fields
   mblDate?: string;
-  mblStatus?: BLStatus;
+  mblStatus?: string;
   mblServiceType?: BLServiceType;
   mblNoBLIssued?: string;
   mblFreight?: FreightType;
@@ -102,7 +91,8 @@ export interface ShipmentDetail extends Shipment {
 export interface ShipmentParty {
   id: number;
   masterType: MasterType;
-  partyType: PartyType;
+  customerCategoryId?: number;
+  customerCategoryName?: string;
   customerId?: number;
   customerName: string;
   mobile?: string;
@@ -245,17 +235,16 @@ export interface CreateShipmentRequest {
   jobDate: string;
   direction: ShipmentDirection;
   mode: ShipmentMode;
-  transportModeId?: number;
-  incoterms?: Incoterms;
+  incoTermId?: number;
   hblNo?: string;
   hblDate?: string;
-  hblStatus?: BLStatus;
+  hblStatus?: string;
   hblServiceType?: BLServiceType;
   hblNoBLIssued?: string;
   hblFreight?: FreightType;
   mblNo?: string;
   mblDate?: string;
-  mblStatus?: BLStatus;
+  mblStatus?: string;
   mblServiceType?: BLServiceType;
   mblNoBLIssued?: string;
   mblFreight?: FreightType;
@@ -294,7 +283,7 @@ export interface UpdateShipmentRequest extends CreateShipmentRequest {
 export interface AddShipmentPartyRequest {
   shipmentId: number;
   masterType: MasterType;
-  partyType: PartyType;
+  customerCategoryId?: number;
   customerId?: number;
   customerName: string;
   mobile?: string;

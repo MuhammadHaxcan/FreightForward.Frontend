@@ -144,7 +144,7 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
               <Label className="text-sm">Container Type</Label>
               <SearchableSelect
                 options={Object.entries(containerTypesByCategory).flatMap(([category, types]) =>
-                  types.map(ct => ({ value: ct.id.toString(), label: `${category} > ${ct.name}` }))
+                  types.map(ct => ({ value: ct.id.toString(), label: ct.name }))
                 )}
                 value={formData.containerTypeId}
                 onValueChange={(v) => handleInputChange("containerTypeId", v)}
@@ -155,16 +155,16 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
             </div>
             <div>
               <Label className="text-sm">Container No</Label>
-              <Input 
-                value={formData.containerNo} 
+              <Input
+                value={formData.containerNo}
                 onChange={(e) => handleInputChange("containerNo", e.target.value)}
                 placeholder="Container No"
               />
             </div>
             <div>
               <Label className="text-sm">No of Pcs</Label>
-              <Input 
-                value={formData.noOfPcs} 
+              <Input
+                value={formData.noOfPcs}
                 onChange={(e) => handleInputChange("noOfPcs", e.target.value)}
                 placeholder="No of pcs"
               />
@@ -173,7 +173,7 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
               <Label className="text-sm">Packages</Label>
               <SearchableSelect
                 options={Object.entries(packageTypesByCategory).flatMap(([category, types]) =>
-                  types.map(pt => ({ value: pt.id.toString(), label: `${category} > ${pt.name}` }))
+                  types.map(pt => ({ value: pt.id.toString(), label: pt.name }))
                 )}
                 value={formData.packageTypeId}
                 onValueChange={(v) => handleInputChange("packageTypeId", v)}

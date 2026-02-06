@@ -26,6 +26,7 @@ interface DocumentModalProps {
 export function DocumentModal({ open, onOpenChange, onSave }: DocumentModalProps) {
   const { toast } = useToast();
   const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([]);
+  const [loadingDocTypes, setLoadingDocTypes] = useState(false);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
@@ -39,6 +40,7 @@ export function DocumentModal({ open, onOpenChange, onSave }: DocumentModalProps
   });
 
   const loadDocumentTypes = useCallback(async () => {
+    setLoadingDocTypes(true);
     try {
       const response = await settingsApi.getAllDocumentTypes();
       if (response.data) {
@@ -53,6 +55,8 @@ export function DocumentModal({ open, onOpenChange, onSave }: DocumentModalProps
         description: "Failed to load document types",
         variant: "destructive",
       });
+    } finally {
+      setLoadingDocTypes(false);
     }
   }, [toast]);
 
@@ -190,9 +194,10 @@ export function DocumentModal({ open, onOpenChange, onSave }: DocumentModalProps
                 options={documentTypes.map(type => ({ value: type.id.toString(), label: type.name }))}
                 value={formData.documentTypeId?.toString() || ""}
                 onValueChange={(v) => handleInputChange("documentTypeId", v ? parseInt(v) : null)}
-                placeholder="Select type"
+                placeholder={loadingDocTypes ? "Loading..." : "Select type"}
                 searchPlaceholder="Search document types..."
                 triggerClassName="bg-background border-border"
+                emptyMessage={loadingDocTypes ? "Loading..." : "No document types available"}
               />
             </div>
             <div>

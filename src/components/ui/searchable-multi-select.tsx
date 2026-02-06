@@ -86,14 +86,16 @@ export function SearchableMultiSelect({
                   className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary text-primary-foreground rounded-md"
                 >
                   {option.label}
-                  <button
-                    type="button"
+                  <span
+                    role="button"
+                    tabIndex={0}
                     onClick={(e) => removeOption(option.value, e)}
-                    className="hover:bg-primary-foreground/20 rounded-full"
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); removeOption(option.value, e as unknown as React.MouseEvent); } }}
+                    className="hover:bg-primary-foreground/20 rounded-full cursor-pointer"
                     aria-label={`Remove ${option.label}`}
                   >
                     <X className="h-3 w-3" />
-                  </button>
+                  </span>
                 </span>
               ))
             )}

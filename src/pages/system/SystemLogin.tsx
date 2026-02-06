@@ -6,6 +6,7 @@ import { Label } from '../../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../../components/ui/card';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { Loader2, Shield } from 'lucide-react';
+import loginBg from '../../assets/login-bg.png';
 import { systemAdminAuthApi } from '../../services/api/systemAdmin';
 import { getAccessToken } from '../../services/api/base';
 
@@ -53,7 +54,7 @@ export default function SystemLogin() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-100">
+      <div className="flex h-screen items-center justify-center bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `url(${loginBg})`, backgroundColor: '#d5e3ed' }}>
         <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
       </div>
     );
@@ -64,7 +65,10 @@ export default function SystemLogin() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-purple-50 to-indigo-100 p-4">
+    <div
+      className="flex min-h-screen items-center justify-center p-4 bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: `url(${loginBg})`, backgroundColor: '#d5e3ed' }}
+    >
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-2">

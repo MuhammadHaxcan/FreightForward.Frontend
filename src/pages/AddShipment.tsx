@@ -33,20 +33,19 @@ import { CostingModal } from "@/components/shipments/CostingModal";
 import { DocumentModal } from "@/components/shipments/DocumentModal";
 import { InvoiceModal } from "@/components/shipments/InvoiceModal";
 import { PurchaseModal } from "@/components/shipments/PurchaseModal";
+import { StatusLogModal } from "@/components/shipments/StatusLogModal";
+import { StatusTimeline } from "@/components/shipments/StatusTimeline";
 import { DeleteConfirmationModal } from "@/components/ui/delete-confirmation-modal";
 import { toast } from "sonner";
 import { useCustomers } from "@/hooks/useCustomers";
 import {
-  PartyType,
   MasterType,
   settingsApi,
   shipmentApi,
   ShipmentDirection,
   ShipmentMode,
-  BLStatus,
   BLServiceType,
   FreightType,
-  Incoterms,
   CreateShipmentRequest,
   AddShipmentPartyRequest,
   AddShipmentContainerRequest,
@@ -57,8 +56,17 @@ import {
   ShipmentContainer,
   ShipmentCosting,
   ShipmentDocument,
+  ShipmentCargo,
+  ShipmentStatusLog,
+  AddShipmentCargoRequest,
+  AddShipmentDocumentRequest,
+  AddShipmentStatusLogRequest,
+  PackageType,
+  ShipmentStatus,
+  PaymentStatus,
+  fileApi,
 } from "@/services/api";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   useCreateShipment,
   useUpdateShipment,
@@ -72,130 +80,33 @@ import {
   useUpdateShipmentCosting,
   useDeleteShipmentCosting,
 } from "@/hooks/useShipments";
+import { useDeleteInvoice, useDeletePurchaseInvoice } from "@/hooks/useInvoices";
 import { useQuotationForShipment } from "@/hooks/useSales";
 
-// Map PartyType to category code for finding category ID
-const partyTypeToCategoryCode: Record<PartyType, string> = {
-  // Primary Party Types
-  Shipper: 'Shipper',
-  Consignee: 'Consignee',
-  Buyer: 'Buyer',
-  Supplier: 'Supplier',
-  Customer: 'Customer',
-  BookingParty: 'BookingParty',
-  NotifyParty: 'NotifyParty',
-  // Agents & Forwarders
-  Forwarder: 'Forwarder',
-  CoLoader: 'CoLoader',
-  Transporter: 'Transporter',
-  Courier: 'Courier',
-  ClearingAgent: 'ClearingAgent',
-  DeliveryAgent: 'DeliveryAgent',
-  OriginAgent: 'OriginAgent',
-  OverseasAgents: 'OverseasAgents',
-  // Carriers
-  ShippingLine: 'ShippingLine',
-  AirLine: 'AirLine',
-  // Facilities
-  Warehouse: 'Warehouse',
-  CFS: 'CFS',
-  Terminal: 'Terminal',
-  // Government & Financial
-  Customs: 'Customs',
-  Bank: 'Bank',
-  // Neutral Types
-  Neutral: 'Neutral',
-  ShipperNeutral: 'ShipperNeutral',
-  ConsigneeNeutral: 'ConsigneeNeutral',
-  BuyerNeutral: 'BuyerNeutral',
-  SupplierNeutral: 'SupplierNeutral',
-  NotifyPartyNeutral: 'NotifyPartyNeutral',
-  CustomerNeutral: 'CustomerNeutral',
+// Helper function to get payment status display and styling
+const getPaymentStatusDisplay = (status: PaymentStatus) => {
+  switch (status) {
+    case 'Pending':
+      return { label: 'Pending', className: 'bg-yellow-100 text-yellow-800' };
+    case 'PartiallyPaid':
+      return { label: 'Partially Paid', className: 'bg-orange-100 text-orange-800' };
+    case 'Paid':
+      return { label: 'Paid', className: 'bg-green-100 text-green-800' };
+    case 'Overdue':
+      return { label: 'Overdue', className: 'bg-red-100 text-red-800' };
+    case 'Closed':
+      return { label: 'Closed', className: 'bg-gray-100 text-gray-800' };
+    default:
+      return { label: status, className: 'bg-gray-100 text-gray-800' };
+  }
 };
-
-// Display labels for party types
-const partyTypeLabels: Record<PartyType, string> = {
-  // Primary Party Types
-  Shipper: 'Shipper',
-  Consignee: 'Consignee',
-  Buyer: 'Buyer',
-  Supplier: 'Supplier',
-  Customer: 'Customer',
-  BookingParty: 'Booking Party',
-  NotifyParty: 'Notify Party',
-  // Agents & Forwarders
-  Forwarder: 'Forwarder',
-  CoLoader: 'Co-loader',
-  Transporter: 'Transporter',
-  Courier: 'Courier',
-  ClearingAgent: 'Clearing Agent',
-  DeliveryAgent: 'Delivery Agent',
-  OriginAgent: 'Origin Agent',
-  OverseasAgents: 'Overseas Agents',
-  // Carriers
-  ShippingLine: 'Shipping Line',
-  AirLine: 'Air Line',
-  // Facilities
-  Warehouse: 'Warehouse',
-  CFS: 'CFS',
-  Terminal: 'Terminal',
-  // Government & Financial
-  Customs: 'Customs',
-  Bank: 'Bank',
-  // Neutral Types
-  Neutral: 'Neutral',
-  ShipperNeutral: 'Shipper (Neutral)',
-  ConsigneeNeutral: 'Consignee (Neutral)',
-  BuyerNeutral: 'Buyer (Neutral)',
-  SupplierNeutral: 'Supplier (Neutral)',
-  NotifyPartyNeutral: 'Notify Party (Neutral)',
-  CustomerNeutral: 'Customer (Neutral)',
-};
-
-// All available party types (grouped logically)
-const partyTypes: PartyType[] = [
-  // Primary Party Types
-  'Shipper',
-  'Consignee',
-  'Buyer',
-  'Supplier',
-  'Customer',
-  'BookingParty',
-  'NotifyParty',
-  // Agents & Forwarders
-  'Forwarder',
-  'CoLoader',
-  'Transporter',
-  'Courier',
-  'ClearingAgent',
-  'DeliveryAgent',
-  'OriginAgent',
-  'OverseasAgents',
-  // Carriers
-  'ShippingLine',
-  'AirLine',
-  // Facilities
-  'Warehouse',
-  'CFS',
-  'Terminal',
-  // Government & Financial
-  'Customs',
-  'Bank',
-  // Neutral Types
-  'Neutral',
-  'ShipperNeutral',
-  'ConsigneeNeutral',
-  'BuyerNeutral',
-  'SupplierNeutral',
-  'NotifyPartyNeutral',
-  'CustomerNeutral',
-];
 
 // Local party type for storing before API submission
 interface LocalParty {
   id: number;
   masterType: MasterType;
-  partyType: PartyType;
+  customerCategoryId?: number;
+  customerCategoryName?: string;
   customerId?: number;
   customerName: string;
   mobile?: string;
@@ -224,25 +135,6 @@ const mapMode = (mode: string): ShipmentMode => {
   return map[mode] || 'AirFreight';
 };
 
-const mapBLStatus = (status: string): BLStatus => {
-  const map: Record<string, BLStatus> = {
-    'HBL': 'HBL',
-    'MBL': 'MBL',
-    'HAWB': 'HAWB',
-    'MAWB': 'MAWB',
-    'EXPRESS': 'Express',
-    'Express': 'Express',
-  };
-  return map[status] || 'HBL';
-};
-
-const mapBLServiceType = (type: string): BLServiceType => {
-  const map: Record<string, BLServiceType> = {
-    'FCL/FCL': 'FCLFCL',
-    'LCL/LCL': 'LCLLCL',
-  };
-  return map[type] || 'LCLLCL';
-};
 
 const mapFreightType = (type: string): FreightType => {
   const map: Record<string, FreightType> = {
@@ -252,15 +144,10 @@ const mapFreightType = (type: string): FreightType => {
   return map[type] || 'Collect';
 };
 
-const mapIncoterms = (code: string): Incoterms | undefined => {
-  if (!code) return undefined;
-  const validCodes: Incoterms[] = ['EXW', 'FCA', 'FAS', 'FOB', 'CFR', 'CIF', 'CPT', 'CIP', 'DAP', 'DPU', 'DDP'];
-  return validCodes.includes(code as Incoterms) ? (code as Incoterms) : undefined;
-};
-
 const AddShipment = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("shipment-info");
 
   // Track if shipment has been saved (null = new shipment, number = saved shipment ID)
@@ -309,18 +196,17 @@ const AddShipment = () => {
     jobStatus: "Opened",
     direction: "Cross-Trade",
     mode: "Air Freight",
-    transportModeId: undefined as number | undefined,
-    incoterms: "",
+    incoTermId: "" as string,
     houseBLNo: "",
     houseBLDate: getTodayDateOnly(),
-    houseBLStatus: "HBL",
-    hblServiceType: "LCL/LCL",
+    houseBLStatus: "HAWB",
+    hblServiceType: "LCLLCL",
     hblNoBLIssued: "0",
     hblFreight: "Collect",
     mblNumber: "",
     mblDate: getTodayDateOnly(),
-    mblStatus: "HBL",
-    mblServiceType: "LCL/LCL",
+    mblStatus: "MAWB",
+    mblServiceType: "LCLLCL",
     mblNoBLIssued: "0",
     mblFreight: "Collect",
     placeOfBLIssue: "",
@@ -352,12 +238,16 @@ const AddShipment = () => {
   });
 
   const [parties, setParties] = useState<LocalParty[]>([]);
-  const [selectedPartyType, setSelectedPartyType] = useState<PartyType>('Shipper');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
   const [containers, setContainers] = useState<Array<Partial<ShipmentContainer> & { sNo?: number | string }>>([]);
   const [costing, setCosting] = useState<Array<Partial<ShipmentCosting>>>([]);
-  const [documents, setDocuments] = useState<Array<Partial<ShipmentDocument>>>([]);
-  const [shipmentStatus, setShipmentStatus] = useState({ date: getTodayDateOnly(), remarks: "" });
+  const [documents, setDocuments] = useState<ShipmentDocument[]>([]);
+  const [cargoDetails, setCargoDetails] = useState<ShipmentCargo[]>([]);
+  const [newCargoEntry, setNewCargoEntry] = useState({ quantity: "", packageTypeId: "", totalCBM: "", totalWeight: "", description: "" });
+  const [isSavingCargo, setIsSavingCargo] = useState(false);
+  const [statusLogs, setStatusLogs] = useState<ShipmentStatusLog[]>([]);
+  const [statusLogModalOpen, setStatusLogModalOpen] = useState(false);
 
   // Fetch customer category types
   const { data: categoryTypesResponse } = useQuery({
@@ -368,7 +258,7 @@ const AddShipment = () => {
   const categoryTypes = useMemo(() => categoryTypesResponse?.data ?? [], [categoryTypesResponse?.data]);
 
   // Fetch INCO terms
-  const { data: incoTermsResponse } = useQuery({
+  const { data: incoTermsResponse, isLoading: isLoadingIncoTerms } = useQuery({
     queryKey: ['incoTerms', 'all'],
     queryFn: () => settingsApi.getAllIncoTerms(),
     staleTime: 60 * 60 * 1000, // Cache for 1 hour (INCO terms rarely change)
@@ -376,20 +266,12 @@ const AddShipment = () => {
   const incoTerms = useMemo(() => incoTermsResponse?.data ?? [], [incoTermsResponse?.data]);
 
   // Fetch Network Partners
-  const { data: networkPartnersResponse } = useQuery({
+  const { data: networkPartnersResponse, isLoading: isLoadingNetworkPartners } = useQuery({
     queryKey: ['networkPartners', 'all'],
     queryFn: () => settingsApi.getAllNetworkPartners(),
     staleTime: 60 * 60 * 1000, // Cache for 1 hour
   });
   const networkPartners = useMemo(() => networkPartnersResponse?.data ?? [], [networkPartnersResponse?.data]);
-
-  // Fetch Transport Modes
-  const { data: transportModesResponse } = useQuery({
-    queryKey: ['transportModes', 'all'],
-    queryFn: () => settingsApi.getAllTransportModes(),
-    staleTime: 60 * 60 * 1000, // Cache for 1 hour
-  });
-  const transportModes = useMemo(() => transportModesResponse?.data ?? [], [transportModesResponse?.data]);
 
   // Fetch BL Types
   const { data: blTypesResponse } = useQuery({
@@ -406,6 +288,25 @@ const AddShipment = () => {
     staleTime: 60 * 60 * 1000, // Cache for 1 hour
   });
   const containerTypes = useMemo(() => containerTypesResponse?.data ?? [], [containerTypesResponse?.data]);
+
+  // Fetch Package Types for cargo dropdown
+  const { data: packageTypesResponse } = useQuery({
+    queryKey: ['packageTypes', 'all'],
+    queryFn: () => settingsApi.getAllPackageTypes(),
+    staleTime: 60 * 60 * 1000, // Cache for 1 hour
+  });
+  const packageTypes = useMemo(() => packageTypesResponse?.data ?? [], [packageTypesResponse?.data]);
+
+  // Group package types by category
+  const packageTypesByCategory = useMemo(() => {
+    const grouped: Record<string, PackageType[]> = {};
+    packageTypes.forEach(pt => {
+      const category = pt.category || 'Other';
+      if (!grouped[category]) grouped[category] = [];
+      grouped[category].push(pt);
+    });
+    return grouped;
+  }, [packageTypes]);
 
   // Fetch shipment invoices when we have a saved shipment ID
   const { data: shipmentInvoicesResponse } = useQuery({
@@ -426,25 +327,17 @@ const AddShipment = () => {
   }, [blTypes, formData.mode]);
 
   // Fetch Ports
-  const { data: portsResponse } = useQuery({
+  const { data: portsResponse, isLoading: isLoadingPorts } = useQuery({
     queryKey: ['ports', 'all'],
     queryFn: () => settingsApi.getAllPorts(),
     staleTime: 60 * 60 * 1000, // Cache for 1 hour
   });
   const ports = useMemo(() => portsResponse?.data ?? [], [portsResponse?.data]);
 
-  // Get the category ID for the selected party type
-  const selectedCategoryId = useMemo(() => {
-    const categoryCode = partyTypeToCategoryCode[selectedPartyType];
-    if (!categoryCode) return undefined;
-    const category = categoryTypes.find(c => c.code === categoryCode || c.name === categoryCode);
-    return category?.id;
-  }, [selectedPartyType, categoryTypes]);
-
   // Fetch customers filtered by the selected category ID
   const { data: customersData, isLoading: isLoadingCustomers } = useCustomers({
     pageSize: 100,
-    categoryId: selectedCategoryId,
+    categoryId: selectedCategoryId ? parseInt(selectedCategoryId) : undefined,
   });
 
   // Get the list of customers
@@ -459,7 +352,7 @@ const AddShipment = () => {
   // Reset selected customer when party type changes
   useEffect(() => {
     setSelectedCustomerId("");
-  }, [selectedPartyType]);
+  }, [selectedCategoryId]);
 
   // Update job number and sync data when shipment is saved and loaded
   useEffect(() => {
@@ -471,7 +364,8 @@ const AddShipment = () => {
         setParties(savedShipmentData.parties.map(p => ({
           id: p.id,
           masterType: p.masterType,
-          partyType: p.partyType,
+          customerCategoryId: p.customerCategoryId,
+          customerCategoryName: p.customerCategoryName,
           customerId: p.customerId,
           customerName: p.customerName,
           mobile: p.mobile,
@@ -524,6 +418,18 @@ const AddShipment = () => {
           purchaseInvoiced: c.purchaseInvoiced || false,
         })));
       }
+      // Sync cargo from saved data
+      if (savedShipmentData.cargos) {
+        setCargoDetails(savedShipmentData.cargos);
+      }
+      // Sync documents from saved data
+      if (savedShipmentData.documents) {
+        setDocuments(savedShipmentData.documents);
+      }
+      // Sync status logs from saved data
+      if (savedShipmentData.statusLogs) {
+        setStatusLogs(savedShipmentData.statusLogs);
+      }
     }
   }, [savedShipmentData]);
 
@@ -533,22 +439,24 @@ const AddShipment = () => {
       // Map quotation mode to shipment mode
       let shipmentMode = "Air Freight";
       const quotationMode = quotationForShipment.mode;
-      if (quotationMode === "FCLSeaFreight") {
+      if (quotationMode === "SeaFreightFCL") {
         shipmentMode = "Sea Freight FCL";
-      } else if (quotationMode === "LCLSeaFreight") {
+      } else if (quotationMode === "SeaFreightLCL") {
         shipmentMode = "Sea Freight LCL";
       } else if (quotationMode === "AirFreight") {
         shipmentMode = "Air Freight";
       }
 
-      // Map incoterm code
-      const incoTermCode = quotationForShipment.incoTermCode || "";
+      // Map incoterm from quotation
+      const incoTermId = quotationForShipment.incoTermCode
+        ? incoTerms.find(t => t.code === quotationForShipment.incoTermCode)?.id?.toString() || ""
+        : "";
 
       setFormData(prev => ({
         ...prev,
         direction: "Import", // Default to Import as per plan
         mode: shipmentMode,
-        incoterms: incoTermCode,
+        incoTermId,
         // Port of Loading → Load, Receipt, Place of Receipt
         portOfLoadingId: quotationForShipment.loadingPortId,
         portOfLoading: quotationForShipment.loadingPortName || "",
@@ -581,7 +489,7 @@ const AddShipment = () => {
           const partyData: AddShipmentPartyRequest = {
             shipmentId: savedShipmentId,
             masterType: 'Debtors',
-            partyType: 'Shipper',
+            customerCategoryId: categoryTypes.find(c => c.code === 'Shipper')?.id,
             customerId: quotationForShipment.customerId,
             customerName: quotationForShipment.customerName || '',
             mobile: '',
@@ -600,7 +508,7 @@ const AddShipment = () => {
           const contactPartyData: AddShipmentPartyRequest = {
             shipmentId: savedShipmentId,
             masterType: 'Debtors',
-            partyType: 'Customer',
+            customerCategoryId: categoryTypes.find(c => c.code === 'Customer')?.id,
             customerId: quotationForShipment.contactPersonId,
             customerName: quotationForShipment.contactPersonName || '',
             mobile: '',
@@ -619,7 +527,7 @@ const AddShipment = () => {
           const vendorPartyData: AddShipmentPartyRequest = {
             shipmentId: savedShipmentId,
             masterType: 'Creditors',
-            partyType: 'Supplier',
+            customerCategoryId: categoryTypes.find(c => c.code === 'Supplier')?.id,
             customerId: quotationForShipment.vendorId,
             customerName: quotationForShipment.vendorName || '',
             mobile: '',
@@ -716,13 +624,20 @@ const AddShipment = () => {
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
   const [editingContainer, setEditingContainer] = useState<(Partial<ShipmentContainer> & { sNo?: number | string }) | null>(null);
   const [editingCosting, setEditingCosting] = useState<Partial<ShipmentCosting> | null>(null);
+  const [editInvoiceId, setEditInvoiceId] = useState<number | null>(null);
+  const [editPurchaseInvoiceId, setEditPurchaseInvoiceId] = useState<number | null>(null);
+
+  // Invoice delete hooks
+  const deleteInvoiceMutation = useDeleteInvoice();
+  const deletePurchaseInvoiceMutation = useDeletePurchaseInvoice();
 
   // Delete confirmation modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteModalConfig, setDeleteModalConfig] = useState<{
-    type: 'party' | 'container' | 'costing' | 'document';
+    type: 'party' | 'container' | 'costing' | 'cargo' | 'document' | 'statusLog' | 'invoice' | 'purchaseInvoice';
     id: number;
     name?: string;
+    filePath?: string;
   } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -743,19 +658,21 @@ const AddShipment = () => {
       toast.error("Please save the shipment first");
       return;
     }
-    // Check if customer is already added with the SAME party type
+    // Check if customer is already added with the SAME category
+    const categoryId = selectedCategoryId ? parseInt(selectedCategoryId) : undefined;
     const existingParty = parties.find(
-      p => p.customerId === selectedCustomer.id && p.partyType === selectedPartyType
+      p => p.customerId === selectedCustomer.id && p.customerCategoryId === categoryId
     );
     if (existingParty) {
-      toast.error(`${selectedCustomer.name} is already added as ${partyTypeLabels[selectedPartyType]}`);
+      const partyLabel = categoryTypes.find(c => c.id.toString() === selectedCategoryId)?.name || "this category";
+      toast.error(`${selectedCustomer.name} is already added as ${partyLabel}`);
       return;
     }
 
     const partyData: AddShipmentPartyRequest = {
       shipmentId: savedShipmentId,
       masterType: selectedCustomer.masterType,
-      partyType: selectedPartyType,
+      customerCategoryId: categoryId,
       customerId: selectedCustomer.id,
       customerName: selectedCustomer.name,
       mobile: '',
@@ -924,14 +841,120 @@ const AddShipment = () => {
     setDeleteModalOpen(true);
   };
 
-  const handleSaveDocument = (doc: Partial<ShipmentDocument>) => {
-    setDocuments(prev => [...prev, doc]);
-    toast.success("Document added");
+  // Cargo handlers
+  const handleAddCargo = async () => {
+    if (!savedShipmentId) {
+      toast.error("Please save the shipment first");
+      return;
+    }
+    if (!newCargoEntry.quantity) {
+      toast.error("Quantity is required");
+      return;
+    }
+
+    setIsSavingCargo(true);
+    try {
+      const selectedPackageType = packageTypes.find(pt => pt.id.toString() === newCargoEntry.packageTypeId);
+      const request: AddShipmentCargoRequest = {
+        quantity: parseInt(newCargoEntry.quantity) || 0,
+        packageTypeId: newCargoEntry.packageTypeId ? parseInt(newCargoEntry.packageTypeId) : null,
+        totalCBM: newCargoEntry.totalCBM ? parseFloat(newCargoEntry.totalCBM) : null,
+        totalWeight: newCargoEntry.totalWeight ? parseFloat(newCargoEntry.totalWeight) : null,
+        description: newCargoEntry.description || undefined,
+      };
+
+      const response = await shipmentApi.addCargo(savedShipmentId, request);
+      if (response.data) {
+        const newCargo: ShipmentCargo = {
+          id: response.data,
+          quantity: request.quantity,
+          packageTypeId: request.packageTypeId || undefined,
+          packageTypeName: selectedPackageType?.name,
+          totalCBM: request.totalCBM || undefined,
+          totalWeight: request.totalWeight || undefined,
+          description: request.description,
+        };
+        setCargoDetails(prev => [...prev, newCargo]);
+        setNewCargoEntry({ quantity: "", packageTypeId: "", totalCBM: "", totalWeight: "", description: "" });
+        toast.success("Cargo added successfully");
+      }
+    } catch (error) {
+      toast.error("Failed to add cargo");
+    } finally {
+      setIsSavingCargo(false);
+    }
   };
 
-  const handleDeleteDocument = (docId: number, docType?: string) => {
-    setDeleteModalConfig({ type: 'document', id: docId, name: docType });
+  const handleDeleteCargo = (cargoId: number, description?: string) => {
+    if (!savedShipmentId) return;
+    setDeleteModalConfig({ type: 'cargo', id: cargoId, name: description || `Cargo #${cargoId}` });
     setDeleteModalOpen(true);
+  };
+
+  // Document handlers
+  const handleAddDocument = async (documentData: AddShipmentDocumentRequest) => {
+    if (!savedShipmentId) {
+      toast.error("Please save the shipment first");
+      return;
+    }
+
+    try {
+      const newDocumentId = await shipmentApi.addDocument(savedShipmentId, documentData);
+      if (newDocumentId.data) {
+        refetchShipment();
+        toast.success("Document added successfully");
+      }
+    } catch (error) {
+      console.error("Failed to add document:", error);
+      toast.error("Failed to add document");
+      throw error;
+    }
+  };
+
+  const handleDeleteDocument = (doc: ShipmentDocument) => {
+    setDeleteModalConfig({
+      type: 'document',
+      id: doc.id,
+      name: doc.documentNo,
+      filePath: doc.filePath,
+    });
+    setDeleteModalOpen(true);
+  };
+
+  // Status log handlers
+  const handleAddStatusLogFromModal = async (statusLogData: AddShipmentStatusLogRequest) => {
+    if (!savedShipmentId) {
+      toast.error("Please save the shipment first");
+      return;
+    }
+
+    try {
+      const response = await shipmentApi.addStatusLog(savedShipmentId, statusLogData);
+      if (response.data) {
+        refetchShipment();
+        toast.success("Status log added successfully");
+      }
+    } catch (error) {
+      console.error("Failed to add status log:", error);
+      toast.error("Failed to add status log");
+      throw error;
+    }
+  };
+
+  const handleDeleteStatusLog = (statusLog: ShipmentStatusLog) => {
+    setDeleteModalConfig({
+      type: 'statusLog',
+      id: statusLog.id,
+      name: statusLog.eventDescription || statusLog.remarks || 'Status Event',
+    });
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteStatusLogById = (statusLogId: number) => {
+    const statusLog = statusLogs.find(log => log.id === statusLogId);
+    if (statusLog) {
+      handleDeleteStatusLog(statusLog);
+    }
   };
 
   // Handle delete confirmation
@@ -965,13 +988,50 @@ const AddShipment = () => {
           break;
         case 'costing':
           if (savedShipmentId) {
-            await deleteCostingMutation.mutateAsync({ costingId: deleteModalConfig.id, shipmentId: savedShipmentId });
-            refetchShipment();
+            try {
+              await deleteCostingMutation.mutateAsync({ costingId: deleteModalConfig.id, shipmentId: savedShipmentId });
+              refetchShipment();
+            } catch (error: unknown) {
+              const message = error instanceof Error ? error.message : 'Failed to delete costing';
+              setWarningMessage(message);
+              setWarningModalOpen(true);
+              setDeleteModalOpen(false);
+              setDeleteModalConfig(null);
+              return;
+            }
           }
           break;
+        case 'cargo':
+          await shipmentApi.deleteCargo(deleteModalConfig.id);
+          setCargoDetails(prev => prev.filter(c => c.id !== deleteModalConfig.id));
+          toast.success("Cargo deleted successfully");
+          break;
         case 'document':
+          await shipmentApi.deleteDocument(deleteModalConfig.id);
+          if (deleteModalConfig.filePath) {
+            try {
+              await fileApi.delete(deleteModalConfig.filePath);
+            } catch (fileError) {
+              console.error("Failed to delete file:", fileError);
+            }
+          }
           setDocuments(prev => prev.filter(d => d.id !== deleteModalConfig.id));
-          toast.success("Document deleted");
+          toast.success("Document deleted successfully");
+          break;
+        case 'statusLog':
+          await shipmentApi.deleteStatusLog(deleteModalConfig.id);
+          setStatusLogs(prev => prev.filter(l => l.id !== deleteModalConfig.id));
+          toast.success("Status log deleted successfully");
+          break;
+        case 'invoice':
+          await deleteInvoiceMutation.mutateAsync(deleteModalConfig.id);
+          queryClient.invalidateQueries({ queryKey: ['shipmentInvoices', savedShipmentId] });
+          refetchShipment();
+          break;
+        case 'purchaseInvoice':
+          await deletePurchaseInvoiceMutation.mutateAsync(deleteModalConfig.id);
+          queryClient.invalidateQueries({ queryKey: ['shipmentInvoices', savedShipmentId] });
+          refetchShipment();
           break;
       }
       setDeleteModalOpen(false);
@@ -990,18 +1050,17 @@ const AddShipment = () => {
         jobDate: formData.jobDate,
         direction: mapDirection(formData.direction),
         mode: mapMode(formData.mode),
-        transportModeId: formData.transportModeId,
-        incoterms: mapIncoterms(formData.incoterms),
+        incoTermId: formData.incoTermId ? parseInt(formData.incoTermId) : undefined,
         hblNo: formData.houseBLNo || undefined,
         hblDate: formData.houseBLDate || undefined,
-        hblStatus: formData.houseBLStatus ? mapBLStatus(formData.houseBLStatus) : undefined,
-        hblServiceType: formData.hblServiceType ? mapBLServiceType(formData.hblServiceType) : undefined,
+        hblStatus: formData.houseBLStatus || undefined,
+        hblServiceType: (formData.hblServiceType || undefined) as BLServiceType | undefined,
         hblNoBLIssued: formData.hblNoBLIssued || undefined,
         hblFreight: formData.hblFreight ? mapFreightType(formData.hblFreight) : undefined,
         mblNo: formData.mblNumber || undefined,
         mblDate: formData.mblDate || undefined,
-        mblStatus: formData.mblStatus ? mapBLStatus(formData.mblStatus) : undefined,
-        mblServiceType: formData.mblServiceType ? mapBLServiceType(formData.mblServiceType) : undefined,
+        mblStatus: formData.mblStatus || undefined,
+        mblServiceType: (formData.mblServiceType || undefined) as BLServiceType | undefined,
         mblNoBLIssued: formData.mblNoBLIssued || undefined,
         mblFreight: formData.mblFreight ? mapFreightType(formData.mblFreight) : undefined,
         placeOfBLIssue: formData.placeOfBLIssue || undefined,
@@ -1188,23 +1247,22 @@ const AddShipment = () => {
                   <div>
                     <Label className="text-sm">Mode</Label>
                     <SearchableSelect
-                      options={
-                        transportModes.length > 0
-                          ? transportModes.map((mode) => ({ value: mode.name, label: mode.name }))
-                          : [
-                              { value: "Air Freight", label: "Air Freight" },
-                              { value: "Sea Freight FCL", label: "Sea Freight FCL" },
-                              { value: "Sea Freight LCL", label: "Sea Freight LCL" },
-                              { value: "Break-Bulk", label: "Break-Bulk" },
-                              { value: "RO-RO", label: "RO-RO" },
-                            ]
-                      }
+                      options={[
+                        { value: "Air Freight", label: "Air Freight" },
+                        { value: "Sea Freight FCL", label: "Sea Freight FCL" },
+                        { value: "Sea Freight LCL", label: "Sea Freight LCL" },
+                        { value: "Break-Bulk", label: "Break-Bulk" },
+                        { value: "RO-RO", label: "RO-RO" },
+                      ]}
                       value={formData.mode}
                       onValueChange={(v) => {
                         handleInputChange("mode", v);
-                        // Also update the transportModeId
-                        const selectedMode = transportModes.find(m => m.name === v);
-                        setFormData(prev => ({ ...prev, transportModeId: selectedMode?.id }));
+                        const isAir = v === 'Air Freight';
+                        setFormData(prev => ({
+                          ...prev,
+                          houseBLStatus: isAir ? "HAWB" : "HBL",
+                          mblStatus: isAir ? "MAWB" : "MBL",
+                        }));
                       }}
                       searchPlaceholder="Search modes..."
                     />
@@ -1213,14 +1271,14 @@ const AddShipment = () => {
                     <Label className="text-sm">INCO Terms</Label>
                     <SearchableSelect
                       options={incoTerms.map(term => ({
-                        value: term.code,
+                        value: term.id.toString(),
                         label: `${term.code} - ${term.name}`,
                       }))}
-                      value={formData.incoterms}
-                      onValueChange={(v) => handleInputChange("incoterms", v)}
+                      value={formData.incoTermId}
+                      onValueChange={(v) => handleInputChange("incoTermId", v)}
                       placeholder="Select"
                       searchPlaceholder="Search incoterms..."
-                      emptyMessage={incoTerms.length === 0 ? "Loading..." : "No incoterms found"}
+                      emptyMessage={isLoadingIncoTerms ? "Loading..." : "No incoterms found"}
                     />
                   </div>
                 </div>
@@ -1252,7 +1310,7 @@ const AddShipment = () => {
                                 .map(bt => ({ value: bt.code, label: `${bt.code} - ${bt.name}` }))
                             : [
                                 { value: "HBL", label: "HBL - House Bill of Lading" },
-                                { value: "Express", label: "Express Release" },
+                                { value: "EXPRESS", label: "Express Release" },
                               ]
                         }
                         value={formData.houseBLStatus}
@@ -1265,8 +1323,10 @@ const AddShipment = () => {
                       <Label className="text-sm">BL Service Type</Label>
                       <SearchableSelect
                         options={[
-                          { value: "LCL/LCL", label: "LCL/LCL" },
-                          { value: "FCL/FCL", label: "FCL/FCL" },
+                          { value: "FCLFCL", label: "FCL/FCL" },
+                          { value: "LCLLCL", label: "LCL/LCL" },
+                          { value: "LCLFCL", label: "LCL/FCL" },
+                          { value: "FCLLCL", label: "FCL/LCL" },
                         ]}
                         value={formData.hblServiceType}
                         onValueChange={(v) => handleInputChange("hblServiceType", v)}
@@ -1312,7 +1372,7 @@ const AddShipment = () => {
                                 .map(bt => ({ value: bt.code, label: `${bt.code} - ${bt.name}` }))
                             : [
                                 { value: "MBL", label: "MBL - Master Bill of Lading" },
-                                { value: "Express", label: "Express Release" },
+                                { value: "EXPRESS", label: "Express Release" },
                               ]
                         }
                         value={formData.mblStatus}
@@ -1325,8 +1385,10 @@ const AddShipment = () => {
                       <Label className="text-sm">BL Service Type</Label>
                       <SearchableSelect
                         options={[
-                          { value: "FCL/FCL", label: "FCL/FCL" },
-                          { value: "LCL/LCL", label: "LCL/LCL" },
+                          { value: "FCLFCL", label: "FCL/FCL" },
+                          { value: "LCLLCL", label: "LCL/LCL" },
+                          { value: "LCLFCL", label: "LCL/FCL" },
+                          { value: "FCLLCL", label: "FCL/LCL" },
                         ]}
                         value={formData.mblServiceType}
                         onValueChange={(v) => handleInputChange("mblServiceType", v)}
@@ -1375,7 +1437,7 @@ const AddShipment = () => {
                       onValueChange={(v) => setFormData(prev => ({ ...prev, networkPartnerId: v ? parseInt(v) : undefined }))}
                       placeholder="Select"
                       searchPlaceholder="Search partners..."
-                      emptyMessage={networkPartners.length === 0 ? "Loading..." : "No partners found"}
+                      emptyMessage={isLoadingNetworkPartners ? "Loading..." : "No partners found"}
                     />
                   </div>
                 </div>
@@ -1400,7 +1462,7 @@ const AddShipment = () => {
                         onValueChange={(v) => handleInputChange("placeOfReceipt", v)}
                         placeholder="Select"
                         searchPlaceholder="Search ports..."
-                        emptyMessage={ports.length === 0 ? "Loading..." : "No ports found"}
+                        emptyMessage={isLoadingPorts ? "Loading..." : "No ports found"}
                       />
                     </div>
                     <div>
@@ -1418,7 +1480,7 @@ const AddShipment = () => {
                         }}
                         placeholder="Select"
                         searchPlaceholder="Search ports..."
-                        emptyMessage={ports.length === 0 ? "Loading..." : "No ports found"}
+                        emptyMessage={isLoadingPorts ? "Loading..." : "No ports found"}
                       />
                     </div>
                     <div>
@@ -1436,7 +1498,7 @@ const AddShipment = () => {
                         }}
                         placeholder="Select"
                         searchPlaceholder="Search ports..."
-                        emptyMessage={ports.length === 0 ? "Loading..." : "No ports found"}
+                        emptyMessage={isLoadingPorts ? "Loading..." : "No ports found"}
                       />
                     </div>
                   </div>
@@ -1461,7 +1523,7 @@ const AddShipment = () => {
                         }}
                         placeholder="Select"
                         searchPlaceholder="Search ports..."
-                        emptyMessage={ports.length === 0 ? "Loading..." : "No ports found"}
+                        emptyMessage={isLoadingPorts ? "Loading..." : "No ports found"}
                       />
                     </div>
                     <div>
@@ -1479,7 +1541,7 @@ const AddShipment = () => {
                         }}
                         placeholder="Select"
                         searchPlaceholder="Search ports..."
-                        emptyMessage={ports.length === 0 ? "Loading..." : "No ports found"}
+                        emptyMessage={isLoadingPorts ? "Loading..." : "No ports found"}
                       />
                     </div>
                     <div>
@@ -1493,7 +1555,7 @@ const AddShipment = () => {
                         onValueChange={(v) => handleInputChange("placeOfDelivery", v)}
                         placeholder="Select"
                         searchPlaceholder="Search ports..."
-                        emptyMessage={ports.length === 0 ? "Loading..." : "No ports found"}
+                        emptyMessage={isLoadingPorts ? "Loading..." : "No ports found"}
                       />
                     </div>
                   </div>
@@ -1614,12 +1676,12 @@ const AddShipment = () => {
                 <div className="flex-1">
                   <Label className="text-sm text-red-500">* Customer Type</Label>
                   <SearchableSelect
-                    options={partyTypes.map(type => ({
-                      value: type,
-                      label: partyTypeLabels[type],
+                    options={categoryTypes.map(ct => ({
+                      value: ct.id.toString(),
+                      label: ct.name,
                     }))}
-                    value={selectedPartyType}
-                    onValueChange={(v) => setSelectedPartyType(v as PartyType)}
+                    value={selectedCategoryId}
+                    onValueChange={(v) => setSelectedCategoryId(v)}
                     searchPlaceholder="Search types..."
                   />
                 </div>
@@ -1682,7 +1744,7 @@ const AddShipment = () => {
                           }
                         >
                           <TableCell>{party.masterType}</TableCell>
-                          <TableCell className="text-emerald-600">{partyTypeLabels[party.partyType] || party.partyType}</TableCell>
+                          <TableCell className="text-emerald-600">{party.customerCategoryName || "-"}</TableCell>
                           <TableCell className="text-emerald-600">{party.customerName}</TableCell>
                           <TableCell>{party.mobile || "-"}</TableCell>
                           <TableCell>{party.phone || "-"}</TableCell>
@@ -1891,6 +1953,145 @@ const AddShipment = () => {
               </Table>
               </div>
 
+              {/* Invoices Section */}
+              {savedShipmentId && (
+                <div className="mt-6 space-y-4">
+                  <h4 className="text-emerald-600 font-semibold">Invoices</h4>
+                  <div className="grid grid-cols-2 gap-6">
+                    {/* Customer Invoices (Left) */}
+                    <div className="border border-border rounded-lg p-4">
+                      <h5 className="font-semibold mb-3 text-sm">Customer Invoices</h5>
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-table-header">
+                            <TableHead className="text-table-header-foreground text-xs">Bill To</TableHead>
+                            <TableHead className="text-table-header-foreground text-xs">P.Sale</TableHead>
+                            <TableHead className="text-table-header-foreground text-xs">Voucher Number</TableHead>
+                            <TableHead className="text-table-header-foreground text-xs">Status</TableHead>
+                            <TableHead className="text-table-header-foreground text-xs w-20">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {!shipmentInvoices?.customerInvoices?.length ? (
+                            <TableRow>
+                              <TableCell colSpan={5} className="text-center text-muted-foreground text-sm">No customer invoices</TableCell>
+                            </TableRow>
+                          ) : (
+                            shipmentInvoices.customerInvoices.map((inv, index) => {
+                              const statusDisplay = getPaymentStatusDisplay(inv.paymentStatus as PaymentStatus);
+                              return (
+                                <TableRow key={inv.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
+                                  <TableCell className="text-xs">{inv.partyName || "-"}</TableCell>
+                                  <TableCell className="text-xs">{inv.currencyCode} {inv.amount.toFixed(2)}</TableCell>
+                                  <TableCell className="text-xs">{inv.invoiceNo}</TableCell>
+                                  <TableCell className="text-xs">
+                                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${statusDisplay.className}`}>
+                                      {statusDisplay.label}
+                                    </span>
+                                  </TableCell>
+                                  <TableCell className="text-xs">
+                                    <div className="flex gap-1">
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        onClick={() => {
+                                          setEditInvoiceId(inv.id);
+                                          setInvoiceModalOpen(true);
+                                        }}
+                                      >
+                                        <Edit className="h-3.5 w-3.5 text-primary" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        onClick={() => {
+                                          setDeleteModalConfig({ type: 'invoice', id: inv.id, name: inv.invoiceNo });
+                                          setDeleteModalOpen(true);
+                                        }}
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    {/* Vendor Invoices (Right) */}
+                    <div className="border border-border rounded-lg p-4">
+                      <h5 className="font-semibold mb-3 text-sm">Vendor Invoices</h5>
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-table-header">
+                            <TableHead className="text-table-header-foreground text-xs">Vendor</TableHead>
+                            <TableHead className="text-table-header-foreground text-xs">P.Cost</TableHead>
+                            <TableHead className="text-table-header-foreground text-xs">Voucher Number</TableHead>
+                            <TableHead className="text-table-header-foreground text-xs">Status</TableHead>
+                            <TableHead className="text-table-header-foreground text-xs w-20">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {!shipmentInvoices?.vendorInvoices?.length ? (
+                            <TableRow>
+                              <TableCell colSpan={5} className="text-center text-muted-foreground text-sm">No vendor invoices</TableCell>
+                            </TableRow>
+                          ) : (
+                            shipmentInvoices.vendorInvoices.map((inv, index) => {
+                              const statusDisplay = getPaymentStatusDisplay(inv.paymentStatus as PaymentStatus);
+                              return (
+                                <TableRow key={inv.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
+                                  <TableCell className="text-xs">{inv.partyName || "-"}</TableCell>
+                                  <TableCell className="text-xs">{inv.currencyCode} {inv.amount.toFixed(2)}</TableCell>
+                                  <TableCell className="text-xs">{inv.purchaseNo}</TableCell>
+                                  <TableCell className="text-xs">
+                                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${statusDisplay.className}`}>
+                                      {statusDisplay.label}
+                                    </span>
+                                  </TableCell>
+                                  <TableCell className="text-xs">
+                                    <div className="flex gap-1">
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        onClick={() => {
+                                          setEditPurchaseInvoiceId(inv.id);
+                                          setPurchaseModalOpen(true);
+                                        }}
+                                      >
+                                        <Edit className="h-3.5 w-3.5 text-primary" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        onClick={() => {
+                                          setDeleteModalConfig({ type: 'purchaseInvoice', id: inv.id, name: inv.purchaseNo });
+                                          setDeleteModalOpen(true);
+                                        }}
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+
+                </div>
+              )}
+
               {/* Summary */}
               <div className="flex justify-center">
                 <div className="grid grid-cols-3 gap-8 bg-secondary/30 p-4 rounded-lg">
@@ -1910,96 +2111,6 @@ const AddShipment = () => {
                   </div>
                 </div>
               </div>
-
-              {/* Invoices Section */}
-              {savedShipmentId && (
-                <div className="mt-6 space-y-4">
-                  <h4 className="text-emerald-600 font-semibold">Invoices</h4>
-                  <div className="grid grid-cols-2 gap-6">
-                    {/* Customer Invoices (Left) */}
-                    <div className="border border-border rounded-lg p-4">
-                      <h5 className="font-semibold mb-3 text-sm">Customer Invoices</h5>
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-table-header">
-                            <TableHead className="text-table-header-foreground text-xs">Bill To</TableHead>
-                            <TableHead className="text-table-header-foreground text-xs">P.Sale</TableHead>
-                            <TableHead className="text-table-header-foreground text-xs">Voucher Number</TableHead>
-                            <TableHead className="text-table-header-foreground text-xs">Status</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {!shipmentInvoices?.customerInvoices?.length ? (
-                            <TableRow>
-                              <TableCell colSpan={4} className="text-center text-muted-foreground text-sm">No customer invoices</TableCell>
-                            </TableRow>
-                          ) : (
-                            shipmentInvoices.customerInvoices.map((inv, index) => (
-                              <TableRow key={inv.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
-                                <TableCell className="text-xs">{inv.partyName || "-"}</TableCell>
-                                <TableCell className="text-xs">{inv.currencyCode} {inv.amount.toFixed(2)}</TableCell>
-                                <TableCell className="text-xs">{inv.invoiceNo}</TableCell>
-                                <TableCell className="text-xs">{inv.paymentStatus}</TableCell>
-                              </TableRow>
-                            ))
-                          )}
-                        </TableBody>
-                      </Table>
-                    </div>
-
-                    {/* Vendor Invoices (Right) */}
-                    <div className="border border-border rounded-lg p-4">
-                      <h5 className="font-semibold mb-3 text-sm">Vendor Invoices</h5>
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-table-header">
-                            <TableHead className="text-table-header-foreground text-xs">Vendor</TableHead>
-                            <TableHead className="text-table-header-foreground text-xs">P.Cost</TableHead>
-                            <TableHead className="text-table-header-foreground text-xs">Voucher Number</TableHead>
-                            <TableHead className="text-table-header-foreground text-xs">Status</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {!shipmentInvoices?.vendorInvoices?.length ? (
-                            <TableRow>
-                              <TableCell colSpan={4} className="text-center text-muted-foreground text-sm">No vendor invoices</TableCell>
-                            </TableRow>
-                          ) : (
-                            shipmentInvoices.vendorInvoices.map((inv, index) => (
-                              <TableRow key={inv.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
-                                <TableCell className="text-xs">{inv.partyName || "-"}</TableCell>
-                                <TableCell className="text-xs">{inv.currencyCode} {inv.amount.toFixed(2)}</TableCell>
-                                <TableCell className="text-xs">{inv.purchaseNo}</TableCell>
-                                <TableCell className="text-xs">{inv.paymentStatus}</TableCell>
-                              </TableRow>
-                            ))
-                          )}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </div>
-
-                  {/* Summary */}
-                  <div className="flex justify-center">
-                    <div className="grid grid-cols-3 gap-8 bg-secondary/30 p-4 rounded-lg">
-                      <div className="text-center">
-                        <Label className="text-sm font-semibold">Total Sale</Label>
-                        <div className="text-emerald-600 font-semibold">[ AED {totalSale.toFixed(2)} ]</div>
-                      </div>
-                      <div className="text-center">
-                        <Label className="text-sm font-semibold">Total Cost</Label>
-                        <div className="text-foreground font-semibold">[ AED {totalCost.toFixed(2)} ]</div>
-                      </div>
-                      <div className="text-center">
-                        <Label className="text-sm font-semibold">Profit</Label>
-                        <div className={`font-semibold ${(totalSale - totalCost) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                          [ AED {(totalSale - totalCost).toFixed(2)} ]
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </TabsContent>
 
@@ -2007,42 +2118,121 @@ const AddShipment = () => {
           <TabsContent value="cargo-details" className="mt-0">
             <div className="bg-card border border-border rounded-lg p-6 space-y-6">
               <h3 className="text-emerald-600 font-semibold text-lg">Cargo Details</h3>
-              
-              <div className="grid grid-cols-5 gap-4">
+
+              <div className="grid grid-cols-6 gap-4">
                 <div>
-                  <Label className="text-sm">Quantity</Label>
-                  <Input placeholder="Quantity" />
-                </div>
-                <div>
-                  <Label className="text-sm">Load Type</Label>
-                  <SearchableSelect
-                    options={[
-                      { value: "FCL", label: "FCL" },
-                      { value: "LCL", label: "LCL" },
-                    ]}
-                    value=""
-                    onValueChange={() => {}}
-                    placeholder="Select"
+                  <Label className="text-sm font-semibold">Quantity *</Label>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={newCargoEntry.quantity}
+                    onChange={(e) => setNewCargoEntry(prev => ({ ...prev, quantity: e.target.value }))}
+                    className="bg-background border-border"
                   />
                 </div>
                 <div>
-                  <Label className="text-sm">Total CBM</Label>
-                  <Input placeholder="Total CBM" />
+                  <Label className="text-sm font-semibold">Package Type</Label>
+                  <SearchableSelect
+                    options={packageTypes.map(pt => ({ value: pt.id.toString(), label: pt.name }))}
+                    value={newCargoEntry.packageTypeId}
+                    onValueChange={(v) => setNewCargoEntry(prev => ({ ...prev, packageTypeId: v }))}
+                    placeholder="Select"
+                    searchPlaceholder="Search package types..."
+                    triggerClassName="bg-background border-border"
+                  />
                 </div>
                 <div>
-                  <Label className="text-sm">Total Weight</Label>
-                  <Input placeholder="Total Weight" />
+                  <Label className="text-sm font-semibold">Total CBM</Label>
+                  <Input
+                    type="number"
+                    step="0.001"
+                    placeholder="0.000"
+                    value={newCargoEntry.totalCBM}
+                    onChange={(e) => setNewCargoEntry(prev => ({ ...prev, totalCBM: e.target.value }))}
+                    className="bg-background border-border"
+                  />
                 </div>
                 <div>
-                  <Label className="text-sm">Description</Label>
-                  <Input placeholder="Description" />
+                  <Label className="text-sm font-semibold">Total Weight (KG)</Label>
+                  <Input
+                    type="number"
+                    step="0.001"
+                    placeholder="0.000"
+                    value={newCargoEntry.totalWeight}
+                    onChange={(e) => setNewCargoEntry(prev => ({ ...prev, totalWeight: e.target.value }))}
+                    className="bg-background border-border"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <Label className="text-sm font-semibold">Description</Label>
+                  <Textarea
+                    placeholder="Description"
+                    value={newCargoEntry.description}
+                    onChange={(e) => setNewCargoEntry(prev => ({ ...prev, description: e.target.value }))}
+                    className="bg-background border-border min-h-[38px] h-[38px]"
+                  />
                 </div>
               </div>
 
-              <Button className="btn-success">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Cargo
+              <Button
+                className="btn-success"
+                onClick={handleAddCargo}
+                disabled={isSavingCargo || !savedShipmentId}
+              >
+                {isSavingCargo ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Adding...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Cargo
+                  </>
+                )}
               </Button>
+
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-table-header">
+                    <TableHead className="text-table-header-foreground">S.No</TableHead>
+                    <TableHead className="text-table-header-foreground">Quantity</TableHead>
+                    <TableHead className="text-table-header-foreground">Package Type</TableHead>
+                    <TableHead className="text-table-header-foreground">Total CBM</TableHead>
+                    <TableHead className="text-table-header-foreground">Total Weight</TableHead>
+                    <TableHead className="text-table-header-foreground">Description</TableHead>
+                    <TableHead className="text-table-header-foreground">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {cargoDetails.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">No data available in table</TableCell>
+                    </TableRow>
+                  ) : (
+                    cargoDetails.map((cargo, index) => (
+                      <TableRow key={cargo.id || index} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell>{cargo.quantity}</TableCell>
+                        <TableCell>{cargo.packageTypeName || '-'}</TableCell>
+                        <TableCell>{cargo.totalCBM?.toFixed(3) || '0.000'}</TableCell>
+                        <TableCell>{cargo.totalWeight?.toFixed(3) || '0.000'}</TableCell>
+                        <TableCell>{cargo.description || '-'}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded"
+                            onClick={() => handleDeleteCargo(cargo.id, cargo.description)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
             </div>
           </TabsContent>
 
@@ -2051,9 +2241,10 @@ const AddShipment = () => {
             <div className="bg-card border border-border rounded-lg p-6 space-y-6">
               <div className="flex justify-between items-center">
                 <h3 className="text-emerald-600 font-semibold text-lg">Documents</h3>
-                <Button 
+                <Button
                   className="btn-success"
                   onClick={() => setDocumentModalOpen(true)}
+                  disabled={!savedShipmentId}
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Create
@@ -2067,27 +2258,44 @@ const AddShipment = () => {
                     <TableHead className="text-table-header-foreground">Document Type</TableHead>
                     <TableHead className="text-table-header-foreground">Document No</TableHead>
                     <TableHead className="text-table-header-foreground">Doc.Date</TableHead>
+                    <TableHead className="text-table-header-foreground">File</TableHead>
+                    <TableHead className="text-table-header-foreground">Remarks</TableHead>
                     <TableHead className="text-table-header-foreground">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {documents.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground">No documents</TableCell>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">No data available in table</TableCell>
                     </TableRow>
                   ) : (
                     documents.map((doc, index) => (
                       <TableRow key={doc.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
                         <TableCell>{index + 1}</TableCell>
-                        <TableCell>{doc.documentType}</TableCell>
+                        <TableCell>{doc.documentTypeName || '-'}</TableCell>
                         <TableCell>{doc.documentNo}</TableCell>
                         <TableCell>{doc.docDate}</TableCell>
                         <TableCell>
+                          {doc.filePath ? (
+                            <a
+                              href={fileApi.getDownloadUrl(doc.filePath)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-500 hover:underline"
+                            >
+                              {doc.originalFileName || 'Download'}
+                            </a>
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell>{doc.remarks || '-'}</TableCell>
+                        <TableCell>
                           <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8 btn-success rounded">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded" onClick={() => handleDeleteDocument(doc.id, doc.documentType)}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded"
+                              onClick={() => handleDeleteDocument(doc)}
+                            >
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -2103,31 +2311,55 @@ const AddShipment = () => {
           {/* Shipment Status Tab */}
           <TabsContent value="shipment-status" className="mt-0">
             <div className="bg-card border border-border rounded-lg p-6 space-y-6">
-              <div className="flex justify-between items-center">
-                <h3 className="text-emerald-600 font-semibold text-lg">Shipment Status</h3>
-                <Button className="btn-success">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create
+              {/* Master Status Section */}
+              <div className="flex justify-between items-center border-b border-border pb-4">
+                <div className="flex items-center gap-4">
+                  <Label className="text-sm font-semibold">Master Status:</Label>
+                  <SearchableSelect
+                    options={[
+                      { value: "Opened", label: "Opened" },
+                      { value: "Closed", label: "Closed" },
+                      { value: "Cancelled", label: "Cancelled" },
+                    ]}
+                    value={formData.jobStatus || 'Opened'}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, jobStatus: value }))}
+                    triggerClassName="w-[180px] bg-background border-border"
+                  />
+                </div>
+                <Button
+                  className="btn-success"
+                  onClick={handleSaveAndContinue}
+                  disabled={isSaving || !savedShipmentId}
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Status"
+                  )}
                 </Button>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm">Date</Label>
-                  <DateInput 
-                    value={shipmentStatus.date}
-                    onChange={(v) => setShipmentStatus(prev => ({ ...prev, date: v }))}
-                  />
-                </div>
-                <div>
-                  <Label className="text-sm">Text (Remarks)</Label>
-                  <Textarea 
-                    value={shipmentStatus.remarks}
-                    onChange={(e) => setShipmentStatus(prev => ({ ...prev, remarks: e.target.value }))}
-                    placeholder="Remarks"
-                  />
-                </div>
+              {/* Status History Header */}
+              <div className="flex justify-between items-center">
+                <h3 className="text-emerald-600 font-semibold text-lg">Status History / Tracking Events</h3>
+                <Button
+                  className="btn-success"
+                  onClick={() => setStatusLogModalOpen(true)}
+                  disabled={!savedShipmentId}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Event
+                </Button>
               </div>
+
+              {/* Status Timeline */}
+              <StatusTimeline
+                statusLogs={statusLogs}
+                onDelete={handleDeleteStatusLogById}
+              />
             </div>
           </TabsContent>
         </Tabs>
@@ -2156,32 +2388,45 @@ const AddShipment = () => {
       <DocumentModal
         open={documentModalOpen}
         onOpenChange={setDocumentModalOpen}
-        onSave={handleSaveDocument}
+        onSave={handleAddDocument}
+      />
+
+      <StatusLogModal
+        open={statusLogModalOpen}
+        onOpenChange={setStatusLogModalOpen}
+        onSave={handleAddStatusLogFromModal}
       />
 
       <InvoiceModal
         open={invoiceModalOpen}
-        onOpenChange={setInvoiceModalOpen}
+        onOpenChange={(open) => {
+          setInvoiceModalOpen(open);
+          if (!open) setEditInvoiceId(null);
+        }}
         shipmentId={savedShipmentId}
         chargesDetails={costing}
         parties={parties}
-        onSave={(invoice) => {
-          // Refetch shipment data to update saleInvoiced status on costings
+        editInvoiceId={editInvoiceId}
+        onSave={() => {
           refetchShipment();
+          queryClient.invalidateQueries({ queryKey: ['shipmentInvoices', savedShipmentId] });
         }}
       />
 
       <PurchaseModal
         open={purchaseModalOpen}
-        onOpenChange={setPurchaseModalOpen}
+        onOpenChange={(open) => {
+          setPurchaseModalOpen(open);
+          if (!open) setEditPurchaseInvoiceId(null);
+        }}
         shipmentId={savedShipmentId}
         jobNumber={savedJobNumber}
         chargesDetails={costing}
         parties={parties}
-        onSave={(purchase) => {
-          // Refetch shipment data to update purchaseInvoiced status on costings
+        editPurchaseInvoiceId={editPurchaseInvoiceId}
+        onSave={() => {
           refetchShipment();
-          // Toast is already shown by the mutation hook
+          queryClient.invalidateQueries({ queryKey: ['shipmentInvoices', savedShipmentId] });
         }}
       />
 
@@ -2196,7 +2441,11 @@ const AddShipment = () => {
           deleteModalConfig?.type === 'party' ? 'Delete Party' :
           deleteModalConfig?.type === 'container' ? 'Delete Container' :
           deleteModalConfig?.type === 'costing' ? 'Delete Costing' :
-          deleteModalConfig?.type === 'document' ? 'Delete Document' : 'Delete Item'
+          deleteModalConfig?.type === 'cargo' ? 'Delete Cargo' :
+          deleteModalConfig?.type === 'document' ? 'Delete Document' :
+          deleteModalConfig?.type === 'statusLog' ? 'Delete Status Event' :
+          deleteModalConfig?.type === 'invoice' ? 'Delete Invoice' :
+          deleteModalConfig?.type === 'purchaseInvoice' ? 'Delete Purchase Invoice' : 'Delete Item'
         }
         itemName={deleteModalConfig?.name}
         isLoading={isDeleting}

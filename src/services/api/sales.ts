@@ -1,8 +1,5 @@
 import { fetchApi, PaginatedList } from './base';
-
-// Sales Types
-export type ShippingMode = 'FCLSeaFreight' | 'LCLSeaFreight' | 'AirFreight';
-export type Incoterms = 'EXW' | 'FCA' | 'FAS' | 'FOB' | 'CFR' | 'CIF' | 'CPT' | 'CIP' | 'DAP' | 'DPU' | 'DDP';
+import type { ShipmentMode } from './shipment';
 export type LeadStatus = 'New' | 'Pending' | 'Converted';
 export type RateRequestStatus = 'Pending' | 'Sent' | 'Received';
 export type QuotationStatus = 'Pending' | 'Approved' | 'Rejected';
@@ -71,9 +68,8 @@ export interface Lead {
   // Existing fields for compatibility
   customerName: string;
   customerId?: number;
-  mode?: ShippingMode;
+  mode?: ShipmentMode;
   modeDisplay?: string;
-  incoterms?: Incoterms;
   polCountry?: string;
   podCountry?: string;
   quantity?: number;
@@ -131,9 +127,8 @@ export interface RateRequest {
   rateRequestNo: string;
   requestDate: string;
   leadId?: number;
-  mode: ShippingMode;
+  mode: ShipmentMode;
   modeDisplay: string;
-  incoterms: Incoterms;
   vendorName: string;
   vendorId?: number;
   polCountry?: string;
@@ -174,8 +169,7 @@ export interface RateRequest {
 
 export interface CreateRateRequestRequest {
   leadId?: number;
-  mode?: ShippingMode;
-  incoterms?: Incoterms;
+  mode?: ShipmentMode;
   vendorName: string;
   vendorId?: number;
   polCountry?: string;
@@ -195,8 +189,7 @@ export interface Quotation {
   quotationDate: string;
   customerName: string;
   customerId?: number;
-  incoterms: Incoterms;
-  mode: ShippingMode;
+  mode: ShipmentMode;
   modeDisplay: string;
   pol?: string;
   pod?: string;
@@ -287,8 +280,7 @@ export interface CreateQuotationRequest {
   rateRequestId?: number;
   customerId?: number;
   customerName: string;
-  incoterms?: Incoterms;
-  mode?: ShippingMode;
+  mode?: ShipmentMode;
   pol?: string;
   pod?: string;
   quoteExpiryDate?: string;
@@ -386,7 +378,7 @@ export interface QuotationForShipment {
   contactPersonName?: string;
 
   // Shipping Info
-  mode?: string;  // FCLSeaFreight, LCLSeaFreight, AirFreight
+  mode?: string;  // SeaFreightFCL, SeaFreightLCL, AirFreight, BreakBulk, RoRo
   incoTermCode?: string;
 
   // Ports

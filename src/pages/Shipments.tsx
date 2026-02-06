@@ -331,7 +331,7 @@ const Shipments = () => {
                       </TableCell>
                       <TableCell>{getDirectionBadge(shipment.direction)}</TableCell>
                       <TableCell>
-                        <span className="text-sm">{shipment.transportModeName || shipment.modeDisplay || "-"}</span>
+                        <span className="text-sm">{shipment.modeDisplay || "-"}</span>
                       </TableCell>
                       <TableCell className="text-emerald-600">{shipment.portOfLoadingName || "-"}</TableCell>
                       <TableCell>{shipment.portOfDischargeName || "-"}</TableCell>
