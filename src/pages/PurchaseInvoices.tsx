@@ -16,9 +16,11 @@ import {
 } from "@/components/ui/table";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { invoiceApi, customerApi, AccountPurchaseInvoice, Customer } from "@/services/api";
+import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 
 export default function PurchaseInvoices() {
   const navigate = useNavigate();
+  const baseCurrencyCode = useBaseCurrency();
   const [invoices, setInvoices] = useState<AccountPurchaseInvoice[]>([]);
   const [vendors, setVendors] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,8 +71,8 @@ export default function PurchaseInvoices() {
     fetchInvoices();
   };
 
-  const handleViewInvoice = (invoiceId: number) => {
-    navigate(`/accounts/purchase-invoices/${invoiceId}`);
+  const handleViewInvoice = (purchaseNo: string) => {
+    navigate(`/accounts/purchase-invoices/${encodeURIComponent(purchaseNo)}`);
   };
 
   const formatCurrency = (amount: number, currency: string) => {
@@ -159,7 +161,7 @@ export default function PurchaseInvoices() {
                     <TableCell>
                       <span
                         className="text-primary hover:underline cursor-pointer"
-                        onClick={() => handleViewInvoice(invoice.id)}
+                        onClick={() => handleViewInvoice(invoice.purchaseNo)}
                       >
                         {invoice.purchaseNo}
                       </span>
@@ -176,13 +178,13 @@ export default function PurchaseInvoices() {
                         {invoice.vendorName || "-"}
                       </span>
                     </TableCell>
-                    <TableCell>{formatCurrency(invoice.amount, invoice.currencyCode || "AED")}</TableCell>
+                    <TableCell>{formatCurrency(invoice.amount, invoice.currencyCode || baseCurrencyCode)}</TableCell>
                     <TableCell>{invoice.createdBy || "-"}</TableCell>
                     <TableCell>
                       <Button
                         size="sm"
                         className="btn-success"
-                        onClick={() => handleViewInvoice(invoice.id)}
+                        onClick={() => handleViewInvoice(invoice.purchaseNo)}
                       >
                         <Eye className="h-4 w-4 mr-1" />
                         View

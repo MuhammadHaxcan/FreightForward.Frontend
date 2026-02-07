@@ -20,8 +20,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Loader2, X, Plus } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { ShipmentParty, ShipmentCosting, CreateInvoiceItemRequest, UpdateInvoiceItemRequest, invoiceApi, customerApi, settingsApi, CurrencyType, AccountInvoiceDetail, shipmentApi, AddShipmentCostingRequest, UpdateShipmentCostingRequest } from "@/services/api";
+import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 import { useCreateInvoice, useUpdateInvoice } from "@/hooks/useInvoices";
 import { useAddShipmentCosting, useUpdateShipmentCosting } from "@/hooks/useShipments";
 import { useToast } from "@/hooks/use-toast";
@@ -44,7 +45,7 @@ interface InvoiceModalProps {
   shipmentId: number | null;
   chargesDetails: ShipmentCosting[];
   parties: ShipmentParty[];
-  onSave: (invoice: InvoiceSaveResult) => void;
+  onSave: (invoice: InvoiceSaveResult) => void | Promise<void>;
   editInvoiceId?: number | null;
 }
 
@@ -60,6 +61,7 @@ const deduplicateByCustomerId = (partyList: ShipmentParty[]): ShipmentParty[] =>
 };
 
 export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, parties, onSave, editInvoiceId }: InvoiceModalProps) {
+  const baseCurrencyCode = useBaseCurrency();
   const createInvoiceMutation = useCreateInvoice();
   const updateInvoiceMutation = useUpdateInvoice();
   const addCostingMutation = useAddShipmentCosting();
@@ -92,8 +94,8 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
     companyName: "",
     customerId: "",
     invoiceDate: getTodayDateOnly(),
-    currencyId: 1, // Default to AED (ID 1)
-    currencyCode: "AED",
+    currencyId: 1,
+    currencyCode: baseCurrencyCode,
     remarks: "",
     selectedCharges: [] as number[],
   });
@@ -108,7 +110,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
         customerId: "",
         invoiceDate: getTodayDateOnly(),
         currencyId: 1,
-        currencyCode: "AED",
+        currencyCode: baseCurrencyCode,
         remarks: "",
         selectedCharges: [],
       });
@@ -159,7 +161,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
                   customerId: matchingParty ? matchingParty.id.toString() : "",
                   invoiceDate: inv.invoiceDate,
                   currencyId: inv.currencyId || 1,
-                  currencyCode: currency?.code || "AED",
+                  currencyCode: currency?.code || baseCurrencyCode,
                   remarks: inv.remarks || "",
                   selectedCharges: costingIds,
                 });
@@ -219,7 +221,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
             setFormData(prev => ({
               ...prev,
               currencyId: custCurrencyId,
-              currencyCode: currency?.code || "AED",
+              currencyCode: currency?.code || baseCurrencyCode,
             }));
           }
         });
@@ -392,10 +394,6 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
     }));
   };
 
-  const handleSubmit = () => {
-    // Filter and load selected charges
-  };
-
   const isSaving = createInvoiceMutation.isPending || updateInvoiceMutation.isPending;
 
   const handleSave = async () => {
@@ -453,7 +451,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
           },
         });
 
-        onSave({
+        await onSave({
           invoiceId: formData.invoiceId,
           companyName: formData.companyName,
           customerId: formData.customerId,
@@ -498,7 +496,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
           items,
         });
 
-        onSave({
+        await onSave({
           invoiceId: formData.invoiceId,
           companyName: formData.companyName,
           customerId: formData.customerId,
@@ -529,15 +527,9 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
     return sum + convertToCustomerCurrency(saleFCY, c.saleCurrencyId || 1, parseFloat(c.saleExRate || 1));
   }, 0);
   const totalTax = selectedChargesData.reduce((sum, c) => {
-    const taxAmount = parseFloat(c.saleTaxAmount || 0);
-    return sum + convertToCustomerCurrency(taxAmount, c.saleCurrencyId || 1, parseFloat(c.saleExRate || 1));
-  }, 0);
-  const totalCost = selectedChargesData.reduce((sum, c) => {
-    const costFCY = parseFloat(c.costFCY || 0);
-    return sum + convertToCustomerCurrency(costFCY, c.costCurrencyId || 1, parseFloat(c.costExRate || 1));
+    return sum + parseFloat(c.saleTaxAmount || 0);
   }, 0);
   const totalWithTax = totalSale + totalTax;
-  const profit = totalSale - totalCost;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -604,16 +596,6 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
                   readOnly
                 />
               </div>
-              {!isEditMode && (
-                <Button
-                  size="sm"
-                  onClick={handleSubmit}
-                  className="btn-success h-9"
-                >
-                  <Search className="h-4 w-4 mr-1" />
-                  Submit
-                </Button>
-              )}
             </div>
           </div>
 
@@ -743,7 +725,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
 
           {/* Totals */}
           <div className="flex justify-end">
-            <div className="grid grid-cols-5 gap-4 bg-secondary/30 p-3 rounded-lg">
+            <div className="grid grid-cols-3 gap-4 bg-secondary/30 p-3 rounded-lg">
               <div>
                 <Label className="text-xs font-semibold">Sub Total</Label>
                 <div className="text-foreground font-semibold text-sm">{formData.currencyCode} {totalSale.toFixed(2)}</div>
@@ -755,16 +737,6 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
               <div>
                 <Label className="text-xs font-semibold">Total Sale</Label>
                 <div className="text-primary font-semibold text-sm">{formData.currencyCode} {totalWithTax.toFixed(2)}</div>
-              </div>
-              <div>
-                <Label className="text-xs font-semibold">Total Cost</Label>
-                <div className="text-foreground font-semibold text-sm">{formData.currencyCode} {totalCost.toFixed(2)}</div>
-              </div>
-              <div>
-                <Label className="text-xs font-semibold">Profit (GP)</Label>
-                <div className={`font-semibold text-sm ${profit >= 0 ? 'text-primary' : 'text-destructive'}`}>
-                  {formData.currencyCode} {profit.toFixed(2)}
-                </div>
               </div>
             </div>
           </div>

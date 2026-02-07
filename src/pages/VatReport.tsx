@@ -19,8 +19,10 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { invoiceApi, customerApi, Customer, VatReportItem, VatReportTotals } from "@/services/api";
 import { DateRange } from "react-day-picker";
+import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 
 export default function VatReport() {
+  const baseCurrencyCode = useBaseCurrency();
   const [items, setItems] = useState<VatReportItem[]>([]);
   const [totals, setTotals] = useState<VatReportTotals>({
     totalAmount: 0,
@@ -204,10 +206,10 @@ export default function VatReport() {
                 <TableHead className="text-table-header-foreground font-semibold">Customer</TableHead>
                 <TableHead className="text-table-header-foreground font-semibold">Curr Unit</TableHead>
                 <TableHead className="text-table-header-foreground font-semibold text-right">Amount</TableHead>
-                <TableHead className="text-table-header-foreground font-semibold text-right">Non-Taxable Sale(AED)</TableHead>
-                <TableHead className="text-table-header-foreground font-semibold text-right">Taxable Sale(AED)</TableHead>
-                <TableHead className="text-table-header-foreground font-semibold text-right">Tax (5%)(AED)</TableHead>
-                <TableHead className="text-table-header-foreground font-semibold text-right">Total Invoice(AED)</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold text-right">{`Non-Taxable Sale(${baseCurrencyCode})`}</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold text-right">{`Taxable Sale(${baseCurrencyCode})`}</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold text-right">{`Tax (5%)(${baseCurrencyCode})`}</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold text-right">{`Total Invoice(${baseCurrencyCode})`}</TableHead>
                 <TableHead className="text-table-header-foreground font-semibold">Remarks</TableHead>
               </TableRow>
             </TableHeader>

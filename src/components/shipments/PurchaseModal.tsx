@@ -20,8 +20,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Loader2, X, Plus } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { ShipmentParty, ShipmentCosting, CreatePurchaseInvoiceItemRequest, UpdatePurchaseInvoiceItemRequest, invoiceApi, customerApi, settingsApi, CurrencyType, AccountPurchaseInvoiceDetail, shipmentApi, AddShipmentCostingRequest, UpdateShipmentCostingRequest } from "@/services/api";
+import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 import { useCreatePurchaseInvoice, useUpdatePurchaseInvoice } from "@/hooks/useInvoices";
 import { useAddShipmentCosting, useUpdateShipmentCosting } from "@/hooks/useShipments";
 import { useToast } from "@/hooks/use-toast";
@@ -48,7 +49,7 @@ interface PurchaseModalProps {
   jobNumber?: string;
   chargesDetails: ShipmentCosting[];
   parties: ShipmentParty[];
-  onSave: (purchase: PurchaseSaveResult) => void;
+  onSave: (purchase: PurchaseSaveResult) => void | Promise<void>;
   editPurchaseInvoiceId?: number | null;
 }
 
@@ -64,6 +65,7 @@ const deduplicateByCustomerId = (partyList: ShipmentParty[]): ShipmentParty[] =>
 };
 
 export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, chargesDetails, parties, onSave, editPurchaseInvoiceId }: PurchaseModalProps) {
+  const baseCurrencyCode = useBaseCurrency();
   const createPurchaseInvoiceMutation = useCreatePurchaseInvoice();
   const updatePurchaseInvoiceMutation = useUpdatePurchaseInvoice();
   const addCostingMutation = useAddShipmentCosting();
@@ -98,8 +100,8 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
     invoiceDate: getTodayDateOnly(),
     invoiceNo: "",
     vDate: getTodayDateOnly(),
-    currencyId: 1, // Default to AED (ID 1)
-    currencyCode: "AED",
+    currencyId: 1,
+    currencyCode: baseCurrencyCode,
     remarks: "",
     selectedCharges: [] as number[],
   });
@@ -115,7 +117,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
         invoiceNo: "",
         vDate: getTodayDateOnly(),
         currencyId: 1,
-        currencyCode: "AED",
+        currencyCode: baseCurrencyCode,
         remarks: "",
         selectedCharges: [],
       });
@@ -168,7 +170,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
                   invoiceNo: inv.vendorInvoiceNo || "",
                   vDate: inv.vendorInvoiceDate || getTodayDateOnly(),
                   currencyId: inv.currencyId || 1,
-                  currencyCode: currency?.code || "AED",
+                  currencyCode: currency?.code || baseCurrencyCode,
                   remarks: inv.remarks || "",
                   selectedCharges: costingIds,
                 });
@@ -228,7 +230,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
             setFormData(prev => ({
               ...prev,
               currencyId: custCurrencyId,
-              currencyCode: currency?.code || "AED",
+              currencyCode: currency?.code || baseCurrencyCode,
             }));
           }
         });
@@ -401,10 +403,6 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
     }));
   };
 
-  const handleSubmit = () => {
-    // Filter and load selected charges
-  };
-
   const isSaving = createPurchaseInvoiceMutation.isPending || updatePurchaseInvoiceMutation.isPending;
 
   const handleSave = async () => {
@@ -454,7 +452,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
           },
         });
 
-        onSave({
+        await onSave({
           purchaseId: formData.purchaseId,
           companyName: formData.companyName,
           customerId: formData.customerId,
@@ -503,7 +501,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
           items,
         });
 
-        onSave({
+        await onSave({
           purchaseId: formData.purchaseId,
           companyName: formData.companyName,
           customerId: formData.customerId,
@@ -523,11 +521,23 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
 
   const selectedChargesData = localCostings.filter(c => formData.selectedCharges.includes(c.id));
 
-  const totalSale = selectedChargesData.reduce((sum, c) => sum + parseFloat(c.saleLCY || 0), 0);
-  const totalCost = selectedChargesData.reduce((sum, c) => sum + parseFloat(c.costLCY || 0), 0);
-  const totalTax = selectedChargesData.reduce((sum, c) => sum + parseFloat(c.costTaxAmount || 0), 0);
+  // Convert totals to vendor currency
+  const convertToVendorCurrency = (amount: number, chargeCurrencyId: number, chargeRoe: number) => {
+    if (chargeCurrencyId === formData.currencyId) return amount;
+    const vendorCurrency = currencies.find(c => c.id === formData.currencyId);
+    const vendorRoe = vendorCurrency?.roe || 1;
+    const exRate = chargeRoe / vendorRoe;
+    return amount * exRate;
+  };
+
+  const totalCost = selectedChargesData.reduce((sum, c) => {
+    const costFCY = parseFloat(c.costFCY || 0);
+    return sum + convertToVendorCurrency(costFCY, c.costCurrencyId || 1, parseFloat(c.costExRate || 1));
+  }, 0);
+  const totalTax = selectedChargesData.reduce((sum, c) => {
+    return sum + parseFloat(c.costTaxAmount || 0);
+  }, 0);
   const totalWithTax = totalCost + totalTax;
-  const profit = totalSale - totalCost;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -623,16 +633,6 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
                   placeholder="Remarks"
                 />
               </div>
-              {!isEditMode && (
-                <Button
-                  size="sm"
-                  onClick={handleSubmit}
-                  className="btn-success h-9"
-                >
-                  <Search className="h-4 w-4 mr-1" />
-                  Submit
-                </Button>
-              )}
             </div>
           </div>
 
@@ -762,28 +762,18 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
 
           {/* Totals */}
           <div className="flex justify-end">
-            <div className="grid grid-cols-5 gap-4 bg-secondary/30 p-3 rounded-lg">
+            <div className="grid grid-cols-3 gap-4 bg-secondary/30 p-3 rounded-lg">
               <div>
                 <Label className="text-xs font-semibold">Sub Total</Label>
-                <div className="text-foreground font-semibold text-sm">AED {totalCost.toFixed(2)}</div>
+                <div className="text-foreground font-semibold text-sm">{formData.currencyCode} {totalCost.toFixed(2)}</div>
               </div>
               <div>
                 <Label className="text-xs font-semibold">VAT</Label>
-                <div className="text-foreground font-semibold text-sm">AED {totalTax.toFixed(2)}</div>
+                <div className="text-foreground font-semibold text-sm">{formData.currencyCode} {totalTax.toFixed(2)}</div>
               </div>
               <div>
                 <Label className="text-xs font-semibold">Total Cost</Label>
-                <div className="text-destructive font-semibold text-sm">AED {totalWithTax.toFixed(2)}</div>
-              </div>
-              <div>
-                <Label className="text-xs font-semibold">Total Sale</Label>
-                <div className="text-primary font-semibold text-sm">AED {totalSale.toFixed(2)}</div>
-              </div>
-              <div>
-                <Label className="text-xs font-semibold">Profit (GP)</Label>
-                <div className={`font-semibold text-sm ${profit >= 0 ? 'text-primary' : 'text-destructive'}`}>
-                  AED {profit.toFixed(2)}
-                </div>
+                <div className="text-destructive font-semibold text-sm">{formData.currencyCode} {totalWithTax.toFixed(2)}</div>
               </div>
             </div>
           </div>

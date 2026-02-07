@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer } from "lucide-react";
+import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 
 interface ChargeItem {
   description: string;
@@ -141,6 +142,7 @@ for (let i = 3; i <= 7; i++) {
 export default function QuotationView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const baseCurrencyCode = useBaseCurrency();
 
   const quotation = id ? mockQuotationData[id] : null;
 
@@ -159,16 +161,16 @@ export default function QuotationView() {
   }
 
   const calculateTotal = () => {
-    // For simplicity, we'll show the AED total (would need currency conversion in real app)
+    // For simplicity, we'll show the base currency total (would need currency conversion in real app)
     let total = 0;
     quotation.charges.forEach(charge => {
       const amount = parseFloat(charge.totalAmount) || 0;
-      if (charge.currency === "AED") {
+      if (charge.currency === baseCurrencyCode) {
         total += amount;
       } else if (charge.currency === "USD") {
-        total += amount * 3.67; // USD to AED conversion
+        total += amount * 3.67; // USD to base currency conversion
       } else if (charge.currency === "EUR") {
-        total += amount * 4.02; // EUR to AED conversion
+        total += amount * 4.02; // EUR to base currency conversion
       }
     });
     return total.toFixed(2);
@@ -320,7 +322,7 @@ export default function QuotationView() {
                   <tr className="bg-green-100">
                     <td colSpan={4}></td>
                     <td className="p-2 text-right font-bold">Esti.Total</td>
-                    <td className="p-2 text-right font-bold">AED {calculateTotal()}</td>
+                    <td className="p-2 text-right font-bold">{baseCurrencyCode} {calculateTotal()}</td>
                   </tr>
                 </tbody>
               </table>

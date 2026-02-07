@@ -13,10 +13,12 @@ import {
 } from "@/components/ui/table";
 import { ArrowLeft, Printer, Loader2 } from "lucide-react";
 import { costSheetApi } from "@/services/api";
+import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 
 export const CostSheetDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const baseCurrencyCode = useBaseCurrency();
   const shipmentId = parseInt(id || "0", 10);
 
   // Fetch cost sheet detail
@@ -154,7 +156,7 @@ export const CostSheetDetail = () => {
                   detail.billToItems.map((billTo, index) => (
                     <TableRow key={index}>
                       <TableCell className="text-xs">{billTo.customerName}</TableCell>
-                      <TableCell className="text-xs text-emerald-600">AED {billTo.pSale.toFixed(2)}</TableCell>
+                      <TableCell className="text-xs text-emerald-600">{baseCurrencyCode} {billTo.pSale.toFixed(2)}</TableCell>
                       <TableCell className="text-xs">
                         {billTo.invoices.map(inv => inv.invoiceNo).join(", ")}
                       </TableCell>
@@ -188,7 +190,7 @@ export const CostSheetDetail = () => {
                   detail.vendorItems.map((vendor, index) => (
                     <TableRow key={index}>
                       <TableCell className="text-xs">{vendor.vendorName}</TableCell>
-                      <TableCell className="text-xs text-red-600">AED {vendor.pCost.toFixed(2)}</TableCell>
+                      <TableCell className="text-xs text-red-600">{baseCurrencyCode} {vendor.pCost.toFixed(2)}</TableCell>
                       <TableCell className="text-xs">
                         {vendor.purchaseInvoices.map(pi => pi.purchaseNo).join(", ")}
                       </TableCell>
@@ -206,16 +208,16 @@ export const CostSheetDetail = () => {
           <div className="grid grid-cols-3 gap-0 border rounded-lg overflow-hidden">
             <div className="border-r p-4 text-center min-w-[180px]">
               <div className="text-sm font-semibold">Total Sale</div>
-              <div className="text-emerald-600 font-semibold">[ AED {detail.totalSaleLCY.toFixed(2)}]</div>
+              <div className="text-emerald-600 font-semibold">[ {baseCurrencyCode} {detail.totalSaleLCY.toFixed(2)}]</div>
             </div>
             <div className="border-r p-4 text-center min-w-[180px]">
               <div className="text-sm font-semibold">Total Cost</div>
-              <div className="text-red-600 font-semibold">[ AED {detail.totalCostLCY.toFixed(2)}]</div>
+              <div className="text-red-600 font-semibold">[ {baseCurrencyCode} {detail.totalCostLCY.toFixed(2)}]</div>
             </div>
             <div className="p-4 text-center min-w-[180px]">
               <div className="text-sm font-semibold">Profit</div>
               <div className={`font-semibold ${detail.profit >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-                AED {detail.profit.toFixed(2)}
+                {baseCurrencyCode} {detail.profit.toFixed(2)}
               </div>
             </div>
           </div>

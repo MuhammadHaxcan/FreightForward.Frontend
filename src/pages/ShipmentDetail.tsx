@@ -79,6 +79,7 @@ import {
   PaymentStatus,
 } from "@/services/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 
 // Helper function to get payment status display and styling
 const getPaymentStatusDisplay = (status: PaymentStatus) => {
@@ -187,6 +188,7 @@ const ShipmentDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const shipmentId = parseInt(id || '0');
+  const baseCurrencyCode = useBaseCurrency();
 
   const queryClient = useQueryClient();
 
@@ -1831,7 +1833,11 @@ const ShipmentDetail = () => {
                               <TableRow key={inv.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
                                 <TableCell className="text-xs">{inv.partyName || "-"}</TableCell>
                                 <TableCell className="text-xs">{inv.currencyCode} {inv.amount.toFixed(2)}</TableCell>
-                                <TableCell className="text-xs">{inv.invoiceNo}</TableCell>
+                                <TableCell className="text-xs">
+                                  <a href={`/accounts/invoices/${encodeURIComponent(inv.invoiceNo)}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                    {inv.invoiceNo}
+                                  </a>
+                                </TableCell>
                                 <TableCell className="text-xs">
                                   <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${statusDisplay.className}`}>
                                     {statusDisplay.label}
@@ -1896,7 +1902,11 @@ const ShipmentDetail = () => {
                               <TableRow key={inv.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
                                 <TableCell className="text-xs">{inv.partyName || "-"}</TableCell>
                                 <TableCell className="text-xs">{inv.currencyCode} {inv.amount.toFixed(2)}</TableCell>
-                                <TableCell className="text-xs">{inv.purchaseNo}</TableCell>
+                                <TableCell className="text-xs">
+                                  <a href={`/accounts/purchase-invoices/${encodeURIComponent(inv.purchaseNo)}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                    {inv.purchaseNo}
+                                  </a>
+                                </TableCell>
                                 <TableCell className="text-xs">
                                   <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${statusDisplay.className}`}>
                                     {statusDisplay.label}
@@ -1943,16 +1953,16 @@ const ShipmentDetail = () => {
                 <div className="grid grid-cols-3 gap-8 bg-secondary/30 p-4 rounded-lg">
                   <div className="text-center">
                     <Label className="text-sm font-semibold">Total Sale</Label>
-                    <div className="text-emerald-600 font-semibold">[ AED {totalSale.toFixed(2)} ]</div>
+                    <div className="text-emerald-600 font-semibold">[ {baseCurrencyCode} {totalSale.toFixed(2)} ]</div>
                   </div>
                   <div className="text-center">
                     <Label className="text-sm font-semibold">Total Cost</Label>
-                    <div className="text-foreground font-semibold">[ AED {totalCost.toFixed(2)} ]</div>
+                    <div className="text-foreground font-semibold">[ {baseCurrencyCode} {totalCost.toFixed(2)} ]</div>
                   </div>
                   <div className="text-center">
                     <Label className="text-sm font-semibold">Profit</Label>
                     <div className={`font-semibold ${(totalSale - totalCost) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                      [ AED {(totalSale - totalCost).toFixed(2)} ]
+                      [ {baseCurrencyCode} {(totalSale - totalCost).toFixed(2)} ]
                     </div>
                   </div>
                 </div>
@@ -2263,9 +2273,9 @@ const ShipmentDetail = () => {
         chargesDetails={costings}
         parties={parties}
         editInvoiceId={editInvoiceId}
-        onSave={() => {
-          refetchShipment();
-          queryClient.invalidateQueries({ queryKey: ['shipment-invoices', shipmentId] });
+        onSave={async () => {
+          await queryClient.invalidateQueries({ queryKey: ['shipment-invoices', shipmentId] });
+          await refetchShipment();
         }}
       />
 
@@ -2280,9 +2290,9 @@ const ShipmentDetail = () => {
         chargesDetails={costings}
         parties={parties}
         editPurchaseInvoiceId={editPurchaseInvoiceId}
-        onSave={() => {
-          refetchShipment();
-          queryClient.invalidateQueries({ queryKey: ['shipment-invoices', shipmentId] });
+        onSave={async () => {
+          await queryClient.invalidateQueries({ queryKey: ['shipment-invoices', shipmentId] });
+          await refetchShipment();
         }}
       />
 
@@ -2311,6 +2321,7 @@ const ShipmentDetail = () => {
           deleteModalConfig?.type === 'costing' ? 'Delete Costing' :
           deleteModalConfig?.type === 'cargo' ? 'Delete Cargo' :
           deleteModalConfig?.type === 'document' ? 'Delete Document' :
+          deleteModalConfig?.type === 'statusLog' ? 'Delete Status Event' :
           deleteModalConfig?.type === 'invoice' ? 'Delete Invoice' :
           deleteModalConfig?.type === 'purchaseInvoice' ? 'Delete Purchase Invoice' : 'Delete Item'
         }

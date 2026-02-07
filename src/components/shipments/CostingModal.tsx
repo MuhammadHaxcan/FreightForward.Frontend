@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { ShipmentParty, ShipmentCosting, settingsApi } from "@/services/api";
 import { useCurrencyTypes } from "@/hooks/useSettings";
+import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 
@@ -40,10 +41,9 @@ interface CostingModalProps {
 const ppccOptions = ["Prepaid", "Postpaid"];
 const taxOptions = ["0%", "5%", "10%", "15%"];
 
-// Default local currency (UAE)
-const LOCAL_CURRENCY = "AED";
-
 export function CostingModal({ open, onOpenChange, parties, costing, onSave, defaultBillToCustomerId, defaultVendorCustomerId, defaultActiveTab }: CostingModalProps) {
+  const baseCurrencyCode = useBaseCurrency();
+  const LOCAL_CURRENCY = baseCurrencyCode;
   const [activeTab, setActiveTab] = useState(defaultActiveTab || "cost");
 
   // Fetch currency types from settings

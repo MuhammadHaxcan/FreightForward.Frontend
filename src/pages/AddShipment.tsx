@@ -82,6 +82,7 @@ import {
 } from "@/hooks/useShipments";
 import { useDeleteInvoice, useDeletePurchaseInvoice } from "@/hooks/useInvoices";
 import { useQuotationForShipment } from "@/hooks/useSales";
+import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 
 // Helper function to get payment status display and styling
 const getPaymentStatusDisplay = (status: PaymentStatus) => {
@@ -148,6 +149,7 @@ const AddShipment = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const baseCurrencyCode = useBaseCurrency();
   const [activeTab, setActiveTab] = useState("shipment-info");
 
   // Track if shipment has been saved (null = new shipment, number = saved shipment ID)
@@ -310,7 +312,7 @@ const AddShipment = () => {
 
   // Fetch shipment invoices when we have a saved shipment ID
   const { data: shipmentInvoicesResponse } = useQuery({
-    queryKey: ['shipmentInvoices', savedShipmentId],
+    queryKey: ['shipment-invoices', savedShipmentId],
     queryFn: () => shipmentApi.getInvoices(savedShipmentId!),
     enabled: !!savedShipmentId,
     staleTime: 30 * 1000, // Cache for 30 seconds
@@ -623,6 +625,7 @@ const AddShipment = () => {
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
   const [editingContainer, setEditingContainer] = useState<(Partial<ShipmentContainer> & { sNo?: number | string }) | null>(null);
+  const [editingContainerIndex, setEditingContainerIndex] = useState<number | null>(null);
   const [editingCosting, setEditingCosting] = useState<Partial<ShipmentCosting> | null>(null);
   const [editInvoiceId, setEditInvoiceId] = useState<number | null>(null);
   const [editPurchaseInvoiceId, setEditPurchaseInvoiceId] = useState<number | null>(null);
@@ -734,15 +737,18 @@ const AddShipment = () => {
 
         await addContainerMutation.mutateAsync({ shipmentId: savedShipmentId, data: containerData });
       }
-      refetchShipment();
+      setContainerModalOpen(false);
       setEditingContainer(null);
+      setEditingContainerIndex(null);
+      refetchShipment();
     } catch (error) {
       // Error is handled by mutation
     }
   };
 
-  const handleEditContainer = (container: Partial<ShipmentContainer> & { sNo?: number | string }) => {
+  const handleEditContainer = (container: Partial<ShipmentContainer> & { sNo?: number | string }, index: number) => {
     setEditingContainer(container);
+    setEditingContainerIndex(index);
     setContainerModalOpen(true);
   };
 
@@ -759,19 +765,22 @@ const AddShipment = () => {
     }
 
     try {
+      const saleLCY = parseFloat(cost.saleLCY) || 0;
+      const costLCY = parseFloat(cost.costLCY) || 0;
+
       if (editingCosting) {
         // Update existing costing
         const costingData: UpdateShipmentCostingRequest = {
           id: editingCosting.id,
           shipmentId: savedShipmentId,
           description: cost.description,
-          remarks: cost.remarks || undefined,
+          remarks: cost.remarks,
           saleQty: parseFloat(cost.saleQty) || 0,
           saleUnit: parseFloat(cost.saleUnit) || 0,
           saleCurrencyId: cost.saleCurrencyId,
           saleExRate: parseFloat(cost.saleExRate) || 1,
           saleFCY: parseFloat(cost.saleFCY) || 0,
-          saleLCY: parseFloat(cost.saleLCY) || 0,
+          saleLCY,
           saleTaxPercentage: parseFloat(cost.saleTaxPercentage) || 0,
           saleTaxAmount: parseFloat(cost.saleTaxAmount) || 0,
           costQty: parseFloat(cost.costQty) || 0,
@@ -779,15 +788,16 @@ const AddShipment = () => {
           costCurrencyId: cost.costCurrencyId,
           costExRate: parseFloat(cost.costExRate) || 1,
           costFCY: parseFloat(cost.costFCY) || 0,
-          costLCY: parseFloat(cost.costLCY) || 0,
+          costLCY,
           costTaxPercentage: parseFloat(cost.costTaxPercentage) || 0,
           costTaxAmount: parseFloat(cost.costTaxAmount) || 0,
           unitId: cost.unitId,
-          gp: parseFloat(cost.gp) || 0,
-          billToCustomerId: cost.billToCustomerId || undefined,
-          vendorCustomerId: cost.vendorCustomerId || undefined,
+          gp: saleLCY - costLCY,
+          billToCustomerId: cost.billToCustomerId,
+          vendorCustomerId: cost.vendorCustomerId,
           costReferenceNo: cost.costReferenceNo || undefined,
           costDate: cost.costDate || undefined,
+          ppcc: cost.ppcc || undefined,
         };
 
         await updateCostingMutation.mutateAsync({ shipmentId: savedShipmentId, costingId: editingCosting.id, data: costingData });
@@ -796,13 +806,13 @@ const AddShipment = () => {
         const costingData: AddShipmentCostingRequest = {
           shipmentId: savedShipmentId,
           description: cost.description,
-          remarks: cost.remarks || undefined,
+          remarks: cost.remarks,
           saleQty: parseFloat(cost.saleQty) || 0,
           saleUnit: parseFloat(cost.saleUnit) || 0,
           saleCurrencyId: cost.saleCurrencyId,
           saleExRate: parseFloat(cost.saleExRate) || 1,
           saleFCY: parseFloat(cost.saleFCY) || 0,
-          saleLCY: parseFloat(cost.saleLCY) || 0,
+          saleLCY,
           saleTaxPercentage: parseFloat(cost.saleTaxPercentage) || 0,
           saleTaxAmount: parseFloat(cost.saleTaxAmount) || 0,
           costQty: parseFloat(cost.costQty) || 0,
@@ -810,21 +820,23 @@ const AddShipment = () => {
           costCurrencyId: cost.costCurrencyId,
           costExRate: parseFloat(cost.costExRate) || 1,
           costFCY: parseFloat(cost.costFCY) || 0,
-          costLCY: parseFloat(cost.costLCY) || 0,
+          costLCY,
           costTaxPercentage: parseFloat(cost.costTaxPercentage) || 0,
           costTaxAmount: parseFloat(cost.costTaxAmount) || 0,
           unitId: cost.unitId,
-          gp: parseFloat(cost.gp) || 0,
-          billToCustomerId: cost.billToCustomerId || undefined,
-          vendorCustomerId: cost.vendorCustomerId || undefined,
+          gp: saleLCY - costLCY,
+          billToCustomerId: cost.billToCustomerId,
+          vendorCustomerId: cost.vendorCustomerId,
           costReferenceNo: cost.costReferenceNo || undefined,
           costDate: cost.costDate || undefined,
+          ppcc: cost.ppcc || undefined,
         };
 
         await addCostingMutation.mutateAsync({ shipmentId: savedShipmentId, data: costingData });
       }
-      refetchShipment();
+      setCostingModalOpen(false);
       setEditingCosting(null);
+      refetchShipment();
     } catch (error) {
       // Error is handled by mutation
     }
@@ -1025,12 +1037,12 @@ const AddShipment = () => {
           break;
         case 'invoice':
           await deleteInvoiceMutation.mutateAsync(deleteModalConfig.id);
-          queryClient.invalidateQueries({ queryKey: ['shipmentInvoices', savedShipmentId] });
+          queryClient.invalidateQueries({ queryKey: ['shipment-invoices', savedShipmentId] });
           refetchShipment();
           break;
         case 'purchaseInvoice':
           await deletePurchaseInvoiceMutation.mutateAsync(deleteModalConfig.id);
-          queryClient.invalidateQueries({ queryKey: ['shipmentInvoices', savedShipmentId] });
+          queryClient.invalidateQueries({ queryKey: ['shipment-invoices', savedShipmentId] });
           refetchShipment();
           break;
       }
@@ -1043,11 +1055,12 @@ const AddShipment = () => {
     }
   };
 
-  const handleSaveAndContinue = async () => {
+  const handleSaveShipment = async (navigateToTab?: string) => {
     setIsSaving(true);
     try {
       const shipmentData = {
         jobDate: formData.jobDate,
+        jobStatus: (formData.jobStatus || 'Opened') as ShipmentStatus,
         direction: mapDirection(formData.direction),
         mode: mapMode(formData.mode),
         incoTermId: formData.incoTermId ? parseInt(formData.incoTermId) : undefined,
@@ -1093,7 +1106,6 @@ const AddShipment = () => {
           id: savedShipmentId,
           data: {
             id: savedShipmentId,
-            jobStatus: 'Opened',
             ...shipmentData,
           },
         });
@@ -1103,14 +1115,17 @@ const AddShipment = () => {
         setSavedShipmentId(newShipmentId);
       }
 
-      // Move to the next tab after successful save
-      setActiveTab("parties");
+      if (navigateToTab) {
+        setActiveTab(navigateToTab);
+      }
     } catch (error) {
       // Error is handled by mutation
     } finally {
       setIsSaving(false);
     }
   };
+
+  const handleSaveAndContinue = () => handleSaveShipment("parties");
 
   const totalContainerQty = containers.reduce((sum, c) => sum + (c.noOfPcs || 0), 0);
   const containerSummary = containers.length > 0
@@ -1420,7 +1435,7 @@ const AddShipment = () => {
                   </div>
                   <div>
                     <Label className="text-sm">Carrier</Label>
-                    <Input value={formData.carrier} onChange={(e) => handleInputChange("carrier", e.target.value)} />
+                    <Input value={formData.carrier} onChange={(e) => handleInputChange("carrier", e.target.value)} placeholder="Carrier" />
                   </div>
                   <div>
                     <Label className="text-sm">Free Time</Label>
@@ -1567,11 +1582,11 @@ const AddShipment = () => {
                   <div className="grid grid-cols-5 gap-4">
                     <div>
                       <Label className="text-sm">Vessel</Label>
-                      <Input value={formData.vessel} onChange={(e) => handleInputChange("vessel", e.target.value)} placeholder="OCL France" />
+                      <Input value={formData.vessel} onChange={(e) => handleInputChange("vessel", e.target.value)} placeholder="Vessel Name" />
                     </div>
                     <div>
                       <Label className="text-sm">Voyage</Label>
-                      <Input value={formData.voyage} onChange={(e) => handleInputChange("voyage", e.target.value)} placeholder="78465F1" />
+                      <Input value={formData.voyage} onChange={(e) => handleInputChange("voyage", e.target.value)} placeholder="Voyage No" />
                     </div>
                     <div>
                       <Label className="text-sm">ETD</Label>
@@ -1601,7 +1616,7 @@ const AddShipment = () => {
                         <Input
                           value={formData.secondLegVesselName}
                           onChange={(e) => handleInputChange("secondLegVesselName", e.target.value)}
-                          placeholder="OCL France"
+                          placeholder="Vessel Name"
                         />
                       </div>
                       <div>
@@ -1609,7 +1624,7 @@ const AddShipment = () => {
                         <Input
                           value={formData.secondLegVoyage}
                           onChange={(e) => handleInputChange("secondLegVoyage", e.target.value)}
-                          placeholder="78465F1"
+                          placeholder="Voyage No"
                         />
                       </div>
                       <div>
@@ -1706,8 +1721,9 @@ const AddShipment = () => {
                 <Button
                   className="btn-success whitespace-nowrap"
                   onClick={handleAddParty}
-                  disabled={!selectedCustomer}
+                  disabled={!selectedCustomer || addPartyMutation.isPending}
                 >
+                  {addPartyMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   Add Party
                 </Button>
               </div>
@@ -1750,7 +1766,13 @@ const AddShipment = () => {
                           <TableCell>{party.phone || "-"}</TableCell>
                           <TableCell className="text-emerald-600">{party.email || "-"}</TableCell>
                           <TableCell>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded" onClick={() => handleDeleteParty(party.id, party.customerName)}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded"
+                              onClick={() => handleDeleteParty(party.id, party.customerName)}
+                              disabled={deletePartyMutation.isPending}
+                            >
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </TableCell>
@@ -1800,7 +1822,7 @@ const AddShipment = () => {
                 <TableBody>
                   {containers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center text-muted-foreground">No containers added</TableCell>
+                      <TableCell colSpan={9} className="text-center text-muted-foreground py-8">No containers</TableCell>
                     </TableRow>
                   ) : (
                     containers.map((container, index) => (
@@ -1815,7 +1837,7 @@ const AddShipment = () => {
                         <TableCell className="text-emerald-600">{(container.volume || 0).toFixed(3)}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8 btn-success rounded" onClick={() => handleEditContainer(container)}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 btn-success rounded" onClick={() => handleEditContainer(container, index)}>
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button variant="ghost" size="icon" className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded" onClick={() => handleDeleteContainer(container.id, container.containerNumber)}>
@@ -1839,27 +1861,30 @@ const AddShipment = () => {
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
-                    className="bg-modal-header hover:bg-modal-header/80 text-modal-header-foreground border-modal-header"
+                    size="sm"
+                    className="btn-success h-9 px-4"
                     onClick={() => {
                       setEditingCosting(null);
                       setCostingModalOpen(true);
                     }}
                   >
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className="h-4 w-4 mr-1.5" />
                     Create
                   </Button>
-                  <Button 
-                    className="btn-success"
+                  <Button
+                    size="sm"
+                    className="btn-success h-9 px-4"
                     onClick={() => setInvoiceModalOpen(true)}
                   >
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className="h-4 w-4 mr-1.5" />
                     Generate Invoice
                   </Button>
-                  <Button 
-                    className="btn-success"
+                  <Button
+                    size="sm"
+                    className="btn-success h-9 px-4"
                     onClick={() => setPurchaseModalOpen(true)}
                   >
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className="h-4 w-4 mr-1.5" />
                     Book Purchase Invoice
                   </Button>
                 </div>
@@ -1889,18 +1914,18 @@ const AddShipment = () => {
                   <TableRow className="bg-table-header">
                     <TableHead className="text-table-header-foreground">S.No</TableHead>
                     <TableHead className="text-table-header-foreground">Description</TableHead>
-                    <TableHead className="text-table-header-foreground">Sale Qty</TableHead>
+                    <TableHead className="text-table-header-foreground">Sale Quantity</TableHead>
                     <TableHead className="text-table-header-foreground">Sale Unit</TableHead>
                     <TableHead className="text-table-header-foreground">Currency</TableHead>
                     <TableHead className="text-table-header-foreground">Ex.Rate</TableHead>
                     <TableHead className="text-table-header-foreground">FCY Amount</TableHead>
                     <TableHead className="text-table-header-foreground">LCY Amount</TableHead>
-                    <TableHead className="text-table-header-foreground">Cost Qty</TableHead>
+                    <TableHead className="text-table-header-foreground">Cost Quantity</TableHead>
                     <TableHead className="text-table-header-foreground">Cost/Unit</TableHead>
                     <TableHead className="text-table-header-foreground">Currency</TableHead>
                     <TableHead className="text-table-header-foreground">Ex.Rate</TableHead>
-                    <TableHead className="text-table-header-foreground">FCY</TableHead>
-                    <TableHead className="text-table-header-foreground">LCY</TableHead>
+                    <TableHead className="text-table-header-foreground">FCY Amount</TableHead>
+                    <TableHead className="text-table-header-foreground">LCY Amount</TableHead>
                     <TableHead className="text-table-header-foreground">Unit</TableHead>
                     <TableHead className="text-table-header-foreground">GP</TableHead>
                     <TableHead className="text-table-header-foreground">Action</TableHead>
@@ -1925,16 +1950,16 @@ const AddShipment = () => {
                           <TableCell className={saleHighlight}>{cost.saleUnit}</TableCell>
                           <TableCell className={saleHighlight}>{cost.saleCurrencyCode}</TableCell>
                           <TableCell className={saleHighlight}>{cost.saleExRate}</TableCell>
-                          <TableCell className={saleHighlight}>{cost.saleFCY}</TableCell>
-                          <TableCell className={saleHighlight}>{cost.saleLCY}</TableCell>
+                          <TableCell className={saleHighlight}>{cost.saleFCY?.toFixed(2)}</TableCell>
+                          <TableCell className={`${saleHighlight} text-emerald-600`}>{cost.saleLCY?.toFixed(2)}</TableCell>
                           <TableCell className={costHighlight}>{cost.costQty}</TableCell>
                           <TableCell className={costHighlight}>{cost.costUnit}</TableCell>
                           <TableCell className={costHighlight}>{cost.costCurrencyCode}</TableCell>
                           <TableCell className={costHighlight}>{cost.costExRate}</TableCell>
-                          <TableCell className={costHighlight}>{cost.costFCY}</TableCell>
-                          <TableCell className={costHighlight}>{cost.costLCY}</TableCell>
+                          <TableCell className={costHighlight}>{cost.costFCY?.toFixed(2)}</TableCell>
+                          <TableCell className={costHighlight}>{cost.costLCY?.toFixed(2)}</TableCell>
                           <TableCell>{cost.unitName}</TableCell>
-                          <TableCell>{cost.gp}</TableCell>
+                          <TableCell className="text-emerald-600 font-semibold">{cost.gp?.toFixed(2)}</TableCell>
                           <TableCell>
                             <div className="flex gap-1">
                               <Button variant="ghost" size="icon" className="h-8 w-8 btn-success rounded" onClick={() => handleEditCosting(cost)}>
@@ -1983,7 +2008,11 @@ const AddShipment = () => {
                                 <TableRow key={inv.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
                                   <TableCell className="text-xs">{inv.partyName || "-"}</TableCell>
                                   <TableCell className="text-xs">{inv.currencyCode} {inv.amount.toFixed(2)}</TableCell>
-                                  <TableCell className="text-xs">{inv.invoiceNo}</TableCell>
+                                  <TableCell className="text-xs">
+                                    <a href={`/accounts/invoices/${encodeURIComponent(inv.invoiceNo)}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                      {inv.invoiceNo}
+                                    </a>
+                                  </TableCell>
                                   <TableCell className="text-xs">
                                     <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${statusDisplay.className}`}>
                                       {statusDisplay.label}
@@ -2048,7 +2077,11 @@ const AddShipment = () => {
                                 <TableRow key={inv.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
                                   <TableCell className="text-xs">{inv.partyName || "-"}</TableCell>
                                   <TableCell className="text-xs">{inv.currencyCode} {inv.amount.toFixed(2)}</TableCell>
-                                  <TableCell className="text-xs">{inv.purchaseNo}</TableCell>
+                                  <TableCell className="text-xs">
+                                    <a href={`/accounts/purchase-invoices/${encodeURIComponent(inv.purchaseNo)}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                      {inv.purchaseNo}
+                                    </a>
+                                  </TableCell>
                                   <TableCell className="text-xs">
                                     <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${statusDisplay.className}`}>
                                       {statusDisplay.label}
@@ -2097,16 +2130,16 @@ const AddShipment = () => {
                 <div className="grid grid-cols-3 gap-8 bg-secondary/30 p-4 rounded-lg">
                   <div className="text-center">
                     <Label className="text-sm font-semibold">Total Sale</Label>
-                    <div className="text-emerald-600 font-semibold">[ AED {totalSale.toFixed(2)} ]</div>
+                    <div className="text-emerald-600 font-semibold">[ {baseCurrencyCode} {totalSale.toFixed(2)} ]</div>
                   </div>
                   <div className="text-center">
                     <Label className="text-sm font-semibold">Total Cost</Label>
-                    <div className="text-foreground font-semibold">[ AED {totalCost.toFixed(2)} ]</div>
+                    <div className="text-foreground font-semibold">[ {baseCurrencyCode} {totalCost.toFixed(2)} ]</div>
                   </div>
                   <div className="text-center">
                     <Label className="text-sm font-semibold">Profit</Label>
                     <div className={`font-semibold ${(totalSale - totalCost) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                      [ AED {(totalSale - totalCost).toFixed(2)} ]
+                      [ {baseCurrencyCode} {(totalSale - totalCost).toFixed(2)} ]
                     </div>
                   </div>
                 </div>
@@ -2124,21 +2157,24 @@ const AddShipment = () => {
                   <Label className="text-sm font-semibold">Quantity *</Label>
                   <Input
                     type="number"
-                    placeholder="0"
+                    placeholder="Enter quantity"
                     value={newCargoEntry.quantity}
                     onChange={(e) => setNewCargoEntry(prev => ({ ...prev, quantity: e.target.value }))}
-                    className="bg-background border-border"
                   />
                 </div>
                 <div>
                   <Label className="text-sm font-semibold">Package Type</Label>
                   <SearchableSelect
-                    options={packageTypes.map(pt => ({ value: pt.id.toString(), label: pt.name }))}
+                    options={Object.entries(packageTypesByCategory).flatMap(([category, types]) =>
+                      types.map(pt => ({
+                        value: pt.id.toString(),
+                        label: `${pt.code} - ${pt.name}`,
+                      }))
+                    )}
                     value={newCargoEntry.packageTypeId}
                     onValueChange={(v) => setNewCargoEntry(prev => ({ ...prev, packageTypeId: v }))}
-                    placeholder="Select"
+                    placeholder="Select package type"
                     searchPlaceholder="Search package types..."
-                    triggerClassName="bg-background border-border"
                   />
                 </div>
                 <div>
@@ -2207,7 +2243,7 @@ const AddShipment = () => {
                 <TableBody>
                   {cargoDetails.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">No data available in table</TableCell>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">No cargo details</TableCell>
                     </TableRow>
                   ) : (
                     cargoDetails.map((cargo, index) => (
@@ -2328,7 +2364,7 @@ const AddShipment = () => {
                 </div>
                 <Button
                   className="btn-success"
-                  onClick={handleSaveAndContinue}
+                  onClick={() => handleSaveShipment()}
                   disabled={isSaving || !savedShipmentId}
                 >
                   {isSaving ? (
@@ -2368,10 +2404,16 @@ const AddShipment = () => {
       {/* Modals */}
       <ContainerModal
         open={containerModalOpen}
-        onOpenChange={setContainerModalOpen}
+        onOpenChange={(open) => {
+          setContainerModalOpen(open);
+          if (!open) {
+            setEditingContainer(null);
+            setEditingContainerIndex(null);
+          }
+        }}
         container={editingContainer}
         onSave={handleSaveContainer}
-        nextSNo={containers.length + 1}
+        nextSNo={editingContainerIndex !== null ? editingContainerIndex + 1 : containers.length + 1}
       />
 
       <CostingModal
@@ -2407,9 +2449,9 @@ const AddShipment = () => {
         chargesDetails={costing}
         parties={parties}
         editInvoiceId={editInvoiceId}
-        onSave={() => {
-          refetchShipment();
-          queryClient.invalidateQueries({ queryKey: ['shipmentInvoices', savedShipmentId] });
+        onSave={async () => {
+          await queryClient.invalidateQueries({ queryKey: ['shipment-invoices', savedShipmentId] });
+          await refetchShipment();
         }}
       />
 
@@ -2424,9 +2466,9 @@ const AddShipment = () => {
         chargesDetails={costing}
         parties={parties}
         editPurchaseInvoiceId={editPurchaseInvoiceId}
-        onSave={() => {
-          refetchShipment();
-          queryClient.invalidateQueries({ queryKey: ['shipmentInvoices', savedShipmentId] });
+        onSave={async () => {
+          await queryClient.invalidateQueries({ queryKey: ['shipment-invoices', savedShipmentId] });
+          await refetchShipment();
         }}
       />
 

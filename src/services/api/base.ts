@@ -122,7 +122,7 @@ export async function fetchApi<T>(
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);
       return {
-        error: errorData?.error || errorData?.message || `HTTP error! status: ${response.status}`,
+        error: typeof errorData === 'string' ? errorData : (errorData?.error || errorData?.message || `HTTP error! status: ${response.status}`),
         errors: errorData?.errors || [],
       };
     }

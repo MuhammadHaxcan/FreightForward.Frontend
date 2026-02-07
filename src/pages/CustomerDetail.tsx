@@ -16,6 +16,7 @@ import { customerApi, settingsApi, CustomerCategoryType, CurrencyType, Invoice a
 import { getPaymentVouchers, PaymentVoucher } from "@/services/api/payment";
 import { invoiceApi, AccountPurchaseInvoice } from "@/services/api/invoice";
 import { useToast } from "@/hooks/use-toast";
+import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 import { format } from "date-fns";
 
 interface Contact {
@@ -87,6 +88,7 @@ const CustomerDetail = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const baseCurrencyCode = useBaseCurrency();
   const isViewMode = searchParams.get("mode") === "view";
   const isEditMode = !!id;
 
@@ -589,7 +591,7 @@ const CustomerDetail = () => {
   const [accountDetails, setAccountDetails] = useState({
     acName: "",
     bankAcNo: "",
-    currency: "AED",
+    currency: baseCurrencyCode,
     type: "Credit",
     notes: "",
     swiftCode: "",
@@ -611,7 +613,7 @@ const CustomerDetail = () => {
     invoiceDate: null as Date | null,
     amount: "",
     narration: "",
-    currency: "AED"
+    currency: baseCurrencyCode
   });
 
   // Credit Note form

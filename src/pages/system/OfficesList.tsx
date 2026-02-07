@@ -9,9 +9,9 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert';
-import { Loader2, Plus, Building2, Power, PowerOff, Trash2, Copy, Check, Database, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Loader2, Plus, Building2, Power, PowerOff, Trash2, Copy, Check, Database, CheckCircle2, AlertCircle, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
-import type { CreateOfficeRequest, OfficeCreatedResponse, OfficeListItem, MigrationsInfo } from '../../types/auth';
+import type { CreateOfficeRequest, UpdateOfficeRequest, OfficeCreatedResponse, OfficeListItem, MigrationsInfo } from '../../types/auth';
 import SystemLayout from '../../components/system/SystemLayout';
 
 export default function OfficesList() {
@@ -19,6 +19,22 @@ export default function OfficesList() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [createdOffice, setCreatedOffice] = useState<OfficeCreatedResponse | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  // Edit dialog state
+  const [editingOffice, setEditingOffice] = useState<OfficeListItem | null>(null);
+  const [editFormData, setEditFormData] = useState<UpdateOfficeRequest>({
+    name: '',
+    location: '',
+    phone: '',
+    email: '',
+    jobPrefix: 'JAE',
+    invoicePrefix: 'INVAE',
+    purchaseInvoicePrefix: 'PVAE',
+    receiptVoucherPrefix: 'RVAE',
+    paymentVoucherPrefix: 'PVAE',
+    creditNotePrefix: 'CNAE',
+  });
+  const [editFormError, setEditFormError] = useState('');
 
   // Migrations dialog state
   const [migrationsDialogOffice, setMigrationsDialogOffice] = useState<OfficeListItem | null>(null);
@@ -32,6 +48,12 @@ export default function OfficesList() {
     location: '',
     phone: '',
     email: '',
+    jobPrefix: 'JAE',
+    invoicePrefix: 'INVAE',
+    purchaseInvoicePrefix: 'PVAE',
+    receiptVoucherPrefix: 'RVAE',
+    paymentVoucherPrefix: 'PVAE',
+    creditNotePrefix: 'CNAE',
   });
   const [formError, setFormError] = useState('');
 
@@ -53,7 +75,7 @@ export default function OfficesList() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['offices'] });
       setCreatedOffice(data!);
-      setFormData({ name: '', slug: '', location: '', phone: '', email: '' });
+      setFormData({ name: '', slug: '', location: '', phone: '', email: '', jobPrefix: 'JAE', invoicePrefix: 'INVAE', purchaseInvoicePrefix: 'PVAE', receiptVoucherPrefix: 'RVAE', paymentVoucherPrefix: 'PVAE', creditNotePrefix: 'CNAE' });
     },
     onError: (error: Error) => {
       setFormError(error.message);
@@ -104,6 +126,54 @@ export default function OfficesList() {
       toast.error(error.message || 'Failed to apply migrations');
     },
   });
+
+  const updateOfficeMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: UpdateOfficeRequest }) => {
+      const result = await officesApi.update(id, data);
+      if (result.error) throw new Error(result.error);
+      return result.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['offices'] });
+      toast.success('Office updated successfully');
+      setEditingOffice(null);
+    },
+    onError: (error: Error) => {
+      setEditFormError(error.message);
+    },
+  });
+
+  const openEditDialog = async (office: OfficeListItem) => {
+    setEditFormError('');
+    // Fetch full office details to get phone/email
+    const result = await officesApi.getById(office.id);
+    if (result.error || !result.data) {
+      toast.error(result.error || 'Failed to load office details');
+      return;
+    }
+    const full = result.data;
+    setEditFormData({
+      name: full.name,
+      location: full.location || '',
+      phone: full.phone || '',
+      email: full.email || '',
+      jobPrefix: full.jobPrefix,
+      invoicePrefix: full.invoicePrefix,
+      purchaseInvoicePrefix: full.purchaseInvoicePrefix,
+      receiptVoucherPrefix: full.receiptVoucherPrefix,
+      paymentVoucherPrefix: full.paymentVoucherPrefix,
+      creditNotePrefix: full.creditNotePrefix,
+    });
+    setEditingOffice(office);
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditFormError('');
+    if (editingOffice) {
+      updateOfficeMutation.mutate({ id: editingOffice.id, data: editFormData });
+    }
+  };
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -324,6 +394,35 @@ export default function OfficesList() {
                           />
                         </div>
                       </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-semibold">Document Prefixes</Label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <Label htmlFor="jobPrefix" className="text-xs text-muted-foreground">Job Prefix</Label>
+                            <Input id="jobPrefix" value={formData.jobPrefix} onChange={(e) => setFormData({ ...formData, jobPrefix: e.target.value })} placeholder="JAE" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label htmlFor="invoicePrefix" className="text-xs text-muted-foreground">Invoice Prefix</Label>
+                            <Input id="invoicePrefix" value={formData.invoicePrefix} onChange={(e) => setFormData({ ...formData, invoicePrefix: e.target.value })} placeholder="INVAE" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label htmlFor="purchaseInvoicePrefix" className="text-xs text-muted-foreground">Purchase Invoice Prefix</Label>
+                            <Input id="purchaseInvoicePrefix" value={formData.purchaseInvoicePrefix} onChange={(e) => setFormData({ ...formData, purchaseInvoicePrefix: e.target.value })} placeholder="PVAE" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label htmlFor="receiptVoucherPrefix" className="text-xs text-muted-foreground">Receipt Voucher Prefix</Label>
+                            <Input id="receiptVoucherPrefix" value={formData.receiptVoucherPrefix} onChange={(e) => setFormData({ ...formData, receiptVoucherPrefix: e.target.value })} placeholder="RVAE" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label htmlFor="paymentVoucherPrefix" className="text-xs text-muted-foreground">Payment Voucher Prefix</Label>
+                            <Input id="paymentVoucherPrefix" value={formData.paymentVoucherPrefix} onChange={(e) => setFormData({ ...formData, paymentVoucherPrefix: e.target.value })} placeholder="PVAE" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label htmlFor="creditNotePrefix" className="text-xs text-muted-foreground">Credit Note Prefix</Label>
+                            <Input id="creditNotePrefix" value={formData.creditNotePrefix} onChange={(e) => setFormData({ ...formData, creditNotePrefix: e.target.value })} placeholder="CNAE" />
+                          </div>
+                        </div>
+                      </div>
                     </div>
                     <DialogFooter>
                       <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
@@ -441,6 +540,107 @@ export default function OfficesList() {
           </DialogContent>
         </Dialog>
 
+        {/* Edit Office Dialog */}
+        <Dialog open={!!editingOffice} onOpenChange={(open) => !open && setEditingOffice(null)}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Edit Office</DialogTitle>
+              <DialogDescription>
+                Update office details and document prefixes
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleEditSubmit}>
+              <div className="space-y-4 py-4">
+                {editFormError && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{editFormError}</AlertDescription>
+                  </Alert>
+                )}
+                <div className="space-y-2">
+                  <Label htmlFor="edit-name">Office Name</Label>
+                  <Input
+                    id="edit-name"
+                    value={editFormData.name}
+                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-location">Location (Optional)</Label>
+                  <Input
+                    id="edit-location"
+                    value={editFormData.location || ''}
+                    onChange={(e) => setEditFormData({ ...editFormData, location: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-phone">Phone (Optional)</Label>
+                    <Input
+                      id="edit-phone"
+                      value={editFormData.phone || ''}
+                      onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-email">Email (Optional)</Label>
+                    <Input
+                      id="edit-email"
+                      type="email"
+                      value={editFormData.email || ''}
+                      onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold">Document Prefixes</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="edit-jobPrefix" className="text-xs text-muted-foreground">Job Prefix</Label>
+                      <Input id="edit-jobPrefix" value={editFormData.jobPrefix} onChange={(e) => setEditFormData({ ...editFormData, jobPrefix: e.target.value })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="edit-invoicePrefix" className="text-xs text-muted-foreground">Invoice Prefix</Label>
+                      <Input id="edit-invoicePrefix" value={editFormData.invoicePrefix} onChange={(e) => setEditFormData({ ...editFormData, invoicePrefix: e.target.value })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="edit-purchaseInvoicePrefix" className="text-xs text-muted-foreground">Purchase Invoice Prefix</Label>
+                      <Input id="edit-purchaseInvoicePrefix" value={editFormData.purchaseInvoicePrefix} onChange={(e) => setEditFormData({ ...editFormData, purchaseInvoicePrefix: e.target.value })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="edit-receiptVoucherPrefix" className="text-xs text-muted-foreground">Receipt Voucher Prefix</Label>
+                      <Input id="edit-receiptVoucherPrefix" value={editFormData.receiptVoucherPrefix} onChange={(e) => setEditFormData({ ...editFormData, receiptVoucherPrefix: e.target.value })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="edit-paymentVoucherPrefix" className="text-xs text-muted-foreground">Payment Voucher Prefix</Label>
+                      <Input id="edit-paymentVoucherPrefix" value={editFormData.paymentVoucherPrefix} onChange={(e) => setEditFormData({ ...editFormData, paymentVoucherPrefix: e.target.value })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="edit-creditNotePrefix" className="text-xs text-muted-foreground">Credit Note Prefix</Label>
+                      <Input id="edit-creditNotePrefix" value={editFormData.creditNotePrefix} onChange={(e) => setEditFormData({ ...editFormData, creditNotePrefix: e.target.value })} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setEditingOffice(null)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={updateOfficeMutation.isPending}>
+                  {updateOfficeMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -507,6 +707,14 @@ export default function OfficesList() {
                               <Power className="h-4 w-4 text-green-600" />
                             </Button>
                           )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            title="Edit Office"
+                            onClick={() => openEditDialog(office)}
+                          >
+                            <Pencil className="h-4 w-4 text-gray-600" />
+                          </Button>
                           <Button
                             size="sm"
                             variant="ghost"

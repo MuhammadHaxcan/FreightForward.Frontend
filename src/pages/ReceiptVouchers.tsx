@@ -21,9 +21,11 @@ import { UpdateReceiptModal } from "@/components/receipts/UpdateReceiptModal";
 import { ReceiptDetailsModal } from "@/components/receipts/ReceiptDetailsModal";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import { toast } from "sonner";
+import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 
 export default function ReceiptVouchers() {
   const navigate = useNavigate();
+  const baseCurrencyCode = useBaseCurrency();
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -244,7 +246,7 @@ export default function ReceiptVouchers() {
                     <TableCell className="max-w-xs truncate" title={receipt.narration || ""}>
                       {receipt.narration || "-"}
                     </TableCell>
-                    <TableCell>{formatCurrency(receipt.amount, receipt.currencyCode || "AED")}</TableCell>
+                    <TableCell>{formatCurrency(receipt.amount, receipt.currencyCode || baseCurrencyCode)}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <Button

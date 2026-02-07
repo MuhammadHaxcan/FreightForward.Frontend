@@ -81,8 +81,8 @@ export default function Invoices() {
     // fetchInvoices will be called by the useEffect when pageNumber changes
   };
 
-  const handleViewInvoice = (invoiceId: number) => {
-    navigate(`/accounts/invoices/${invoiceId}`);
+  const handleViewInvoice = (invoiceNo: string) => {
+    navigate(`/accounts/invoices/${encodeURIComponent(invoiceNo)}`);
   };
 
   const formatCurrency = (amount: number, currency: string) => {
@@ -258,7 +258,7 @@ export default function Invoices() {
                     <Button
                       size="sm"
                       className="btn-success"
-                      onClick={() => handleViewInvoice(invoice.id)}
+                      onClick={() => handleViewInvoice(invoice.invoiceNo)}
                     >
                       <Eye className="h-4 w-4 mr-1" />
                       View

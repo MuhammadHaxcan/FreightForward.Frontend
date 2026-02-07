@@ -26,7 +26,7 @@ export default function InvoiceView() {
       if (!id) return;
       setLoading(true);
       try {
-        const response = await invoiceApi.getById(parseInt(id));
+        const response = await invoiceApi.getByIdentifier(id);
         if (response.data) {
           setInvoice(response.data);
         }
@@ -40,13 +40,13 @@ export default function InvoiceView() {
   }, [id]);
 
   const handleTaxInvoice = () => {
-    if (!id) return;
-    window.open(`/accounts/invoices/${id}/print?type=tax`, '_blank');
+    if (!invoice) return;
+    window.open(`/accounts/invoices/${encodeURIComponent(invoice.invoiceNo)}/print?type=tax`, '_blank');
   };
 
   const handleNonTaxInvoice = () => {
-    if (!id) return;
-    window.open(`/accounts/invoices/${id}/print?type=nontax`, '_blank');
+    if (!invoice) return;
+    window.open(`/accounts/invoices/${encodeURIComponent(invoice.invoiceNo)}/print?type=nontax`, '_blank');
   };
 
   const handleDownload = async () => {
@@ -129,7 +129,7 @@ export default function InvoiceView() {
             <Mail className="h-4 w-4 mr-2" />
             Send Email
           </Button>
-          <Button className="btn-success" onClick={() => navigate(`/accounts/invoices/${id}/edit`)}>
+          <Button className="btn-success" onClick={() => navigate(`/accounts/invoices/${encodeURIComponent(invoice.invoiceNo)}/edit`)}>
             <Pencil className="h-4 w-4 mr-2" />
             Edit
           </Button>

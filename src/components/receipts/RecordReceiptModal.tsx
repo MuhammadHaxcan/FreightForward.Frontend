@@ -35,6 +35,7 @@ import {
   type CurrencyType,
   type CreateReceiptRequest,
 } from "@/services/api";
+import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 import { toast } from "sonner";
 
 interface RecordReceiptModalProps {
@@ -58,6 +59,7 @@ export function RecordReceiptModal({
   onOpenChange,
   onSuccess,
 }: RecordReceiptModalProps) {
+  const baseCurrencyCode = useBaseCurrency();
   const [loading, setLoading] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [banks, setBanks] = useState<Bank[]>([]);
@@ -205,7 +207,7 @@ export function RecordReceiptModal({
           totalAmount: invoice.totalAmount,
           pendingAmount: invoice.pendingAmount,
           payingAmount: invoice.pendingAmount, // Default to full pending amount
-          currency: invoice.currencyCode || "AED",
+          currency: invoice.currencyCode || baseCurrencyCode,
           currencyId: invoice.currencyId,
         },
       ]);
@@ -341,7 +343,7 @@ export function RecordReceiptModal({
                   .filter(inv => !selectedInvoices.some(si => si.invoiceId === inv.id))
                   .map((invoice) => ({
                     value: invoice.id.toString(),
-                    label: `${invoice.invoiceNo} - Pending: ${invoice.currencyCode || "AED"} ${invoice.pendingAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                    label: `${invoice.invoiceNo} - Pending: ${invoice.currencyCode || baseCurrencyCode} ${invoice.pendingAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
                   }))}
                 value=""
                 onValueChange={(v) => {
@@ -502,10 +504,10 @@ export function RecordReceiptModal({
                   <TableRow key={inv.invoiceId}>
                     <TableCell>{inv.invoiceNo}</TableCell>
                     <TableCell>
-                      {inv.currency || "AED"} {inv.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {inv.currency || baseCurrencyCode} {inv.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell>
-                      {inv.currency || "AED"} {inv.pendingAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {inv.currency || baseCurrencyCode} {inv.pendingAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell>
                       <Input

@@ -14,10 +14,12 @@ import {
 import { MainLayout } from "@/components/layout/MainLayout";
 import { receiptApi, ReceiptDetail } from "@/services/api";
 import { API_BASE_URL, fetchBlob } from "@/services/api/base";
+import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 
 export default function ReceiptView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const baseCurrencyCode = useBaseCurrency();
   const [receipt, setReceipt] = useState<ReceiptDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -173,7 +175,7 @@ export default function ReceiptView() {
                     {formatDate(receipt.chequeDate) || "---"}
                   </TableCell>
                   <TableCell>{receipt.bankName || "-"}</TableCell>
-                  <TableCell>{receipt.currencyCode || "AED"}</TableCell>
+                  <TableCell>{receipt.currencyCode || baseCurrencyCode}</TableCell>
                   <TableCell className="text-right">{receipt.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</TableCell>
                 </TableRow>
               </TableBody>
@@ -205,7 +207,7 @@ export default function ReceiptView() {
                         <TableCell>{inv.invoiceNo || "-"}</TableCell>
                         <TableCell>{inv.jobNo || "-"}</TableCell>
                         <TableCell>{inv.hblNo || "-"}</TableCell>
-                        <TableCell>{inv.currencyCode || "AED"}</TableCell>
+                        <TableCell>{inv.currencyCode || baseCurrencyCode}</TableCell>
                         <TableCell className="text-right">
                           {inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                         </TableCell>

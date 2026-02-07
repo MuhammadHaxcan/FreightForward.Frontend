@@ -47,6 +47,7 @@ import {
   companyApi,
   bankApi,
   fileApi,
+  settingsApi,
 } from "@/services/api";
 import { toast } from "sonner";
 import { CurrencyRateHistoryModal } from "@/components/settings/CurrencyRateHistoryModal";
@@ -102,6 +103,7 @@ const Settings = () => {
   const [companyLoading, setCompanyLoading] = useState(true);
   const [companySaving, setCompanySaving] = useState(false);
   const [allBanks, setAllBanks] = useState<Bank[]>([]);
+  const [allCurrencies, setAllCurrencies] = useState<CurrencyType[]>([]);
   const [companyProfile, setCompanyProfile] = useState({
     name: "",
     companyType: "",
@@ -120,6 +122,7 @@ const Settings = () => {
     logoPath: "",
     sealPath: "",
     bankId: null as number | null,
+    baseCurrencyId: null as number | null,
   });
 
   // Form states
@@ -472,12 +475,16 @@ const Settings = () => {
     const loadCompanyData = async () => {
       setCompanyLoading(true);
       try {
-        const [companyRes, bankRes] = await Promise.all([
+        const [companyRes, bankRes, currencyRes] = await Promise.all([
           companyApi.getAll({ pageNumber: 1, pageSize: 1 }),
           bankApi.getAll({ pageNumber: 1, pageSize: 100 }),
+          settingsApi.getAllCurrencyTypes(),
         ]);
         if (bankRes.data) {
           setAllBanks(bankRes.data.items);
+        }
+        if (currencyRes.data) {
+          setAllCurrencies(currencyRes.data);
         }
         if (companyRes.data && companyRes.data.items.length > 0) {
           const c = companyRes.data.items[0];
@@ -500,6 +507,7 @@ const Settings = () => {
             logoPath: c.logoPath || "",
             sealPath: c.sealPath || "",
             bankId: c.bankId ?? null,
+            baseCurrencyId: c.baseCurrencyId ?? null,
           });
         }
       } catch (err) {
@@ -546,6 +554,7 @@ const Settings = () => {
         logoPath: companyProfile.logoPath || undefined,
         sealPath: companyProfile.sealPath || undefined,
         bankId: companyProfile.bankId ?? undefined,
+        baseCurrencyId: companyProfile.baseCurrencyId ?? undefined,
       };
       if (companyId) {
         const res = await companyApi.update(companyId, { ...payload, id: companyId });
@@ -1339,6 +1348,16 @@ const Settings = () => {
                           onValueChange={(val) => setCompanyProfile({ ...companyProfile, bankId: val ? parseInt(val) : null })}
                           placeholder="Select Bank"
                           searchPlaceholder="Search banks..."
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">Base Currency (LCY)</label>
+                        <SearchableSelect
+                          options={allCurrencies.map((c) => ({ value: c.id.toString(), label: `${c.code} - ${c.name}` }))}
+                          value={companyProfile.baseCurrencyId?.toString() ?? ""}
+                          onValueChange={(val) => setCompanyProfile({ ...companyProfile, baseCurrencyId: val ? parseInt(val) : null })}
+                          placeholder="Select Base Currency"
+                          searchPlaceholder="Search currencies..."
                         />
                       </div>
                     </div>

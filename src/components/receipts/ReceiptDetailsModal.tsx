@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { receiptApi, ReceiptDetail, ReceiptInvoice } from "@/services/api";
+import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 import { formatDate } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 
@@ -25,6 +26,7 @@ interface ReceiptDetailsModalProps {
 }
 
 export function ReceiptDetailsModal({ open, onOpenChange, receiptId }: ReceiptDetailsModalProps) {
+  const baseCurrencyCode = useBaseCurrency();
   const [loading, setLoading] = useState(false);
   const [receipt, setReceipt] = useState<ReceiptDetail | null>(null);
 
@@ -88,16 +90,16 @@ export function ReceiptDetailsModal({ open, onOpenChange, receiptId }: ReceiptDe
                           </span>
                         </TableCell>
                         <TableCell>
-                          {formatCurrency(invoice.invoiceAmount, invoice.currencyCode || "AED")}
+                          {formatCurrency(invoice.invoiceAmount, invoice.currencyCode || baseCurrencyCode)}
                         </TableCell>
                         <TableCell className="bg-green-100 dark:bg-green-900/30">
-                          {formatCurrency(invoice.amount, invoice.currencyCode || "AED")}
+                          {formatCurrency(invoice.amount, invoice.currencyCode || baseCurrencyCode)}
                         </TableCell>
                         <TableCell>
-                          {formatCurrency(invoice.totalReceived, invoice.currencyCode || "AED")}
+                          {formatCurrency(invoice.totalReceived, invoice.currencyCode || baseCurrencyCode)}
                         </TableCell>
                         <TableCell>
-                          {formatCurrency(invoice.balance, invoice.currencyCode || "AED")}
+                          {formatCurrency(invoice.balance, invoice.currencyCode || baseCurrencyCode)}
                         </TableCell>
                         <TableCell>
                           {formatDate(receipt.receiptDate)}

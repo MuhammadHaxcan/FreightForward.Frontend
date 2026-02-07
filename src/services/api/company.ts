@@ -21,6 +21,9 @@ export interface Company {
   sealPath?: string;
   bankId?: number;
   bankName?: string;
+  baseCurrencyId?: number;
+  baseCurrencyCode?: string;
+  baseCurrencyName?: string;
   createdAt: string;
 }
 
@@ -42,6 +45,7 @@ export interface CreateCompanyRequest {
   logoPath?: string;
   sealPath?: string;
   bankId?: number;
+  baseCurrencyId?: number;
 }
 
 export interface UpdateCompanyRequest extends CreateCompanyRequest {

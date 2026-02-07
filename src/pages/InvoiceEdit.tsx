@@ -19,7 +19,7 @@ export default function InvoiceEdit() {
       if (!id) return;
       setLoading(true);
       try {
-        const invoiceResponse = await invoiceApi.getById(parseInt(id));
+        const invoiceResponse = await invoiceApi.getByIdentifier(id);
         if (invoiceResponse.data) {
           setInvoice(invoiceResponse.data);
 
@@ -50,12 +50,14 @@ export default function InvoiceEdit() {
   const handleModalClose = (open: boolean) => {
     setModalOpen(open);
     if (!open) {
-      navigate(`/accounts/invoices/${id}`);
+      const invoiceNo = invoice?.invoiceNo;
+      navigate(invoiceNo ? `/accounts/invoices/${encodeURIComponent(invoiceNo)}` : `/accounts/invoices/${id}`);
     }
   };
 
   const handleSave = () => {
-    navigate(`/accounts/invoices/${id}`);
+    const invoiceNo = invoice?.invoiceNo;
+    navigate(invoiceNo ? `/accounts/invoices/${encodeURIComponent(invoiceNo)}` : `/accounts/invoices/${id}`);
   };
 
   if (loading) {
@@ -88,7 +90,7 @@ export default function InvoiceEdit() {
       <MainLayout>
         <div className="p-6 flex flex-col items-center justify-center min-h-[400px]">
           <div className="text-lg mb-4">No shipment linked to this invoice</div>
-          <Button onClick={() => navigate(`/accounts/invoices/${id}`)}>
+          <Button onClick={() => navigate(invoice?.invoiceNo ? `/accounts/invoices/${encodeURIComponent(invoice.invoiceNo)}` : `/accounts/invoices/${id}`)}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Invoice
           </Button>

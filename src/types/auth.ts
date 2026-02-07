@@ -191,6 +191,12 @@ export interface Office {
   location?: string;
   phone?: string;
   email?: string;
+  jobPrefix: string;
+  invoicePrefix: string;
+  purchaseInvoicePrefix: string;
+  receiptVoucherPrefix: string;
+  paymentVoucherPrefix: string;
+  creditNotePrefix: string;
   isActive: boolean;
   createdAt: string;
   updatedAt?: string;
@@ -203,6 +209,12 @@ export interface OfficeListItem {
   name: string;
   slug: string;
   location?: string;
+  jobPrefix: string;
+  invoicePrefix: string;
+  purchaseInvoicePrefix: string;
+  receiptVoucherPrefix: string;
+  paymentVoucherPrefix: string;
+  creditNotePrefix: string;
   isActive: boolean;
   createdAt: string;
 }
@@ -213,6 +225,12 @@ export interface CreateOfficeRequest {
   location?: string;
   phone?: string;
   email?: string;
+  jobPrefix: string;
+  invoicePrefix: string;
+  purchaseInvoicePrefix: string;
+  receiptVoucherPrefix: string;
+  paymentVoucherPrefix: string;
+  creditNotePrefix: string;
 }
 
 export interface UpdateOfficeRequest {
@@ -220,6 +238,12 @@ export interface UpdateOfficeRequest {
   location?: string;
   phone?: string;
   email?: string;
+  jobPrefix: string;
+  invoicePrefix: string;
+  purchaseInvoicePrefix: string;
+  receiptVoucherPrefix: string;
+  paymentVoucherPrefix: string;
+  creditNotePrefix: string;
 }
 
 export interface OfficeAdminCredentials {

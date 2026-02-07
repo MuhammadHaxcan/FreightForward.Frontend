@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { Eye, Printer, Loader2 } from "lucide-react";
 import { costSheetApi, CostSheetSummaryDto } from "@/services/api";
+import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 
 // Helper to get first day of current year
 const getFirstDayOfYear = () => {
@@ -42,6 +43,7 @@ const formatMode = (mode?: string) => {
 
 export const CostSheet = () => {
   const navigate = useNavigate();
+  const baseCurrencyCode = useBaseCurrency();
   const [fromDate, setFromDate] = useState(getFirstDayOfYear());
   const [toDate, setToDate] = useState(getTodayDate());
 
@@ -111,7 +113,7 @@ export const CostSheet = () => {
           <span>
             Showing {costSheetData.length} shipments
           </span>
-          <span>Amount in AED</span>
+          <span>{`Amount in ${baseCurrencyCode}`}</span>
         </div>
 
         {/* Table */}
@@ -155,13 +157,13 @@ export const CostSheet = () => {
                       <TableCell className="text-xs">{formatMode(item.mode)}</TableCell>
                       <TableCell className="text-xs">{item.salesPerson || "-"}</TableCell>
                       <TableCell className="text-xs text-right">
-                        {item.totalSaleLCY > 0 ? `AED ${item.totalSaleLCY.toFixed(2)}` : ""}
+                        {item.totalSaleLCY > 0 ? `${baseCurrencyCode} ${item.totalSaleLCY.toFixed(2)}` : ""}
                       </TableCell>
                       <TableCell className="text-xs text-right">
-                        {item.totalCostLCY > 0 ? `AED ${item.totalCostLCY.toFixed(2)}` : ""}
+                        {item.totalCostLCY > 0 ? `${baseCurrencyCode} ${item.totalCostLCY.toFixed(2)}` : ""}
                       </TableCell>
                       <TableCell className={`text-xs text-right font-medium ${item.gp >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-                        AED {item.gp.toFixed(2)}
+                        {baseCurrencyCode} {item.gp.toFixed(2)}
                       </TableCell>
                       <TableCell>
                         <Button
@@ -178,10 +180,10 @@ export const CostSheet = () => {
                   {/* Totals Row */}
                   <TableRow className="bg-muted/50 font-semibold">
                     <TableCell colSpan={6} className="text-right text-xs">Totals:</TableCell>
-                    <TableCell className="text-xs text-right">AED {totalSale.toFixed(2)}</TableCell>
-                    <TableCell className="text-xs text-right">AED {totalCost.toFixed(2)}</TableCell>
+                    <TableCell className="text-xs text-right">{baseCurrencyCode} {totalSale.toFixed(2)}</TableCell>
+                    <TableCell className="text-xs text-right">{baseCurrencyCode} {totalCost.toFixed(2)}</TableCell>
                     <TableCell className={`text-xs text-right ${totalGP >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-                      AED {totalGP.toFixed(2)}
+                      {baseCurrencyCode} {totalGP.toFixed(2)}
                     </TableCell>
                     <TableCell></TableCell>
                   </TableRow>

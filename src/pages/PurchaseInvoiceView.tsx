@@ -14,10 +14,12 @@ import {
 import { MainLayout } from "@/components/layout/MainLayout";
 import { invoiceApi, AccountPurchaseInvoiceDetail } from "@/services/api";
 import { API_BASE_URL, fetchBlob } from "@/services/api/base";
+import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 
 export default function PurchaseInvoiceView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const baseCurrencyCode = useBaseCurrency();
   const [invoice, setInvoice] = useState<AccountPurchaseInvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -26,7 +28,7 @@ export default function PurchaseInvoiceView() {
       if (!id) return;
       setLoading(true);
       try {
-        const response = await invoiceApi.getPurchaseInvoiceById(parseInt(id));
+        const response = await invoiceApi.getPurchaseInvoiceByIdentifier(id);
         if (response.data) {
           setInvoice(response.data);
         }
@@ -40,8 +42,8 @@ export default function PurchaseInvoiceView() {
   }, [id]);
 
   const handlePrint = () => {
-    if (!id) return;
-    window.open(`/accounts/purchase-invoices/${id}/print`, '_blank');
+    if (!invoice) return;
+    window.open(`/accounts/purchase-invoices/${encodeURIComponent(invoice.purchaseNo)}/print`, '_blank');
   };
 
   const handleDownload = async () => {
@@ -110,7 +112,7 @@ export default function PurchaseInvoiceView() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          <Button className="bg-amber-500 hover:bg-amber-600 text-white" onClick={() => navigate(`/accounts/purchase-invoices/${id}/edit`)}>
+          <Button className="bg-amber-500 hover:bg-amber-600 text-white" onClick={() => navigate(`/accounts/purchase-invoices/${invoice ? encodeURIComponent(invoice.purchaseNo) : id}/edit`)}>
             <Edit className="h-4 w-4 mr-2" />
             Edit
           </Button>
@@ -168,7 +170,7 @@ export default function PurchaseInvoiceView() {
                   <TableRow key={item.id || index}>
                     <TableCell className="text-blue-600">{item.chargeDetails}</TableCell>
                     <TableCell className="text-center">{(item.noOfUnit ?? 0).toFixed(0)}</TableCell>
-                    <TableCell className="text-center">{item.currencyCode || "AED"}</TableCell>
+                    <TableCell className="text-center">{item.currencyCode || baseCurrencyCode}</TableCell>
                     <TableCell className="text-right">{(item.costPerUnit ?? 0).toFixed(2)}</TableCell>
                     <TableCell className="text-right">{(item.exRate ?? 1).toFixed(2)}</TableCell>
                     <TableCell className="text-right">{(item.noOfUnit ?? 0).toFixed(3)}</TableCell>
@@ -194,19 +196,19 @@ export default function PurchaseInvoiceView() {
               <div className="bg-amber-50 dark:bg-amber-900/20 p-2 mb-2">
                 <div className="flex justify-between">
                   <span>Sub Total</span>
-                  <span className="font-semibold">{formatCurrency(subTotal, invoice.currencyCode || "AED")}</span>
+                  <span className="font-semibold">{formatCurrency(subTotal, invoice.currencyCode || baseCurrencyCode)}</span>
                 </div>
               </div>
               <div className="px-2 py-1">
                 <div className="flex justify-between">
                   <span>Total Tax</span>
-                  <span>{formatCurrency(totalTax, invoice.currencyCode || "AED")}</span>
+                  <span>{formatCurrency(totalTax, invoice.currencyCode || baseCurrencyCode)}</span>
                 </div>
               </div>
               <div className="bg-amber-50 dark:bg-amber-900/20 p-2 mt-2">
                 <div className="flex justify-between font-bold">
                   <span>Total</span>
-                  <span>{formatCurrency(total, invoice.currencyCode || "AED")}</span>
+                  <span>{formatCurrency(total, invoice.currencyCode || baseCurrencyCode)}</span>
                 </div>
               </div>
             </div>

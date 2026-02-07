@@ -11,6 +11,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { customerApi, settingsApi, CustomerCategoryType, CurrencyType } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
+import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 
 interface Contact {
   id: number;
@@ -40,6 +41,7 @@ const NeutralDetail = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const baseCurrencyCode = useBaseCurrency();
   const isViewMode = searchParams.get("mode") === "view";
   const isEditMode = !!id;
 
@@ -66,7 +68,7 @@ const NeutralDetail = () => {
     address: "",
     status: "Active",
     carrierCode: "",
-    baseCurrency: "AED",
+    baseCurrency: baseCurrencyCode,
   });
 
   // Load category types and customer data
@@ -106,7 +108,7 @@ const NeutralDetail = () => {
               address: customer.address || "",
               status: customer.status || "Active",
               carrierCode: customer.carrierCode || "",
-              baseCurrency: customer.baseCurrency || "AED",
+              baseCurrency: customer.baseCurrency || baseCurrencyCode,
             });
             // Load contacts
             if (customer.contacts) {
@@ -229,7 +231,7 @@ const NeutralDetail = () => {
   const [accountDetails, setAccountDetails] = useState({
     acName: "",
     bankAcNo: "",
-    currency: "AED",
+    currency: baseCurrencyCode,
     type: "Credit",
     notes: "",
     swiftCode: "",

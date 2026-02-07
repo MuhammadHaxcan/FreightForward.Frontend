@@ -282,6 +282,7 @@ export const invoiceApi = {
     return fetchApi<PaginatedList<AccountInvoice>>(`/invoices?${query}`);
   },
   getById: (id: number) => fetchApi<AccountInvoiceDetail>(`/invoices/${id}`),
+  getByIdentifier: (identifier: string) => fetchApi<AccountInvoiceDetail>(`/invoices/${encodeURIComponent(identifier)}`),
   getNextInvoiceNumber: async () => {
     try {
       const response = await fetchBlob(`${API_BASE_URL}/invoices/next-number`);
@@ -340,6 +341,7 @@ export const invoiceApi = {
     return fetchApi<PaginatedList<AccountPurchaseInvoice>>(`/invoices/purchases?${query}`);
   },
   getPurchaseInvoiceById: (id: number) => fetchApi<AccountPurchaseInvoiceDetail>(`/invoices/purchases/${id}`),
+  getPurchaseInvoiceByIdentifier: (identifier: string) => fetchApi<AccountPurchaseInvoiceDetail>(`/invoices/purchases/${encodeURIComponent(identifier)}`),
   getVatReport: (params?: {
     pageNumber?: number; pageSize?: number;
     customerId?: number; fromDate?: string; toDate?: string;

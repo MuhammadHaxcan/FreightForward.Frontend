@@ -12,6 +12,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { DateInput } from "@/components/ui/date-input";
 import { format } from "date-fns";
 import { useExpenseTypesByDirection, useAllCurrencyTypes } from "@/hooks/useSettings";
+import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 import { Expense as ApiExpense, Bank } from "@/services/api";
 import { Loader2 } from "lucide-react";
 
@@ -74,6 +75,7 @@ export function ExpenseModal({
   banks,
   isSubmitting = false,
 }: ExpenseModalProps) {
+  const baseCurrencyCode = useBaseCurrency();
   const [formData, setFormData] = useState({
     date: format(new Date(), "yyyy-MM-dd"),
     paymentType: "" as "" | "Inwards" | "Outwards",
@@ -82,7 +84,7 @@ export function ExpenseModal({
     bankId: undefined as number | undefined,
     description: "",
     receipt: "---",
-    currencyCode: "AED",
+    currencyCode: baseCurrencyCode,
     amount: 0,
     chequeNumber: "",
     chequeDate: "",
@@ -114,7 +116,7 @@ export function ExpenseModal({
         bankId: bankId,
         description: expense.description || "",
         receipt: expense.receiptRef || "---",
-        currencyCode: expense.currencyCode || "AED",
+        currencyCode: expense.currencyCode || baseCurrencyCode,
         amount: expense.amount,
         chequeNumber: expense.chequeNumber || "",
         chequeDate: expense.chequeDate || "",
@@ -128,7 +130,7 @@ export function ExpenseModal({
         bankId: undefined,
         description: "",
         receipt: "---",
-        currencyCode: "AED",
+        currencyCode: baseCurrencyCode,
         amount: 0,
         chequeNumber: "",
         chequeDate: "",
