@@ -461,16 +461,16 @@ const AddShipment = () => {
         incoTermId,
         // Port of Loading → Load, Receipt, Place of Receipt
         portOfLoadingId: quotationForShipment.loadingPortId,
-        portOfLoading: quotationForShipment.loadingPortName || "",
+        portOfLoading: quotationForShipment.loadingPortId?.toString() || "",
         portOfReceiptId: quotationForShipment.loadingPortId,
-        portOfReceipt: quotationForShipment.loadingPortName || "",
-        placeOfReceipt: quotationForShipment.loadingPortName || "",
+        portOfReceipt: quotationForShipment.loadingPortId?.toString() || "",
+        placeOfReceipt: quotationForShipment.loadingPortId?.toString() || "",
         // Port of Discharge → Discharge, Final Destination, Place of Delivery
         portOfDischargeId: quotationForShipment.destinationPortId,
-        portOfDischarge: quotationForShipment.destinationPortName || "",
+        portOfDischarge: quotationForShipment.destinationPortId?.toString() || "",
         portOfFinalDestinationId: quotationForShipment.destinationPortId,
-        portOfFinalDestination: quotationForShipment.destinationPortName || "",
-        placeOfDelivery: quotationForShipment.destinationPortName || "",
+        portOfFinalDestination: quotationForShipment.destinationPortId?.toString() || "",
+        placeOfDelivery: quotationForShipment.destinationPortId?.toString() || "",
         notes: quotationForShipment.notes || "",
         internalNotes: quotationForShipment.notesForBooking || "",
       }));
@@ -1470,8 +1470,8 @@ const AddShipment = () => {
                       <Label className="text-sm">Place of Receipt</Label>
                       <SearchableSelect
                         options={ports.map(port => ({
-                          value: port.name,
-                          label: `${port.name}${port.code ? ` (${port.code})` : ''} - ${port.country}`,
+                          value: port.id.toString(),
+                          label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
                         }))}
                         value={formData.placeOfReceipt}
                         onValueChange={(v) => handleInputChange("placeOfReceipt", v)}
@@ -1484,13 +1484,13 @@ const AddShipment = () => {
                       <Label className="text-sm">Port of Receipt</Label>
                       <SearchableSelect
                         options={ports.map(port => ({
-                          value: port.name,
-                          label: `${port.name}${port.code ? ` (${port.code})` : ''} - ${port.country}`,
+                          value: port.id.toString(),
+                          label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
                         }))}
                         value={formData.portOfReceipt}
                         onValueChange={(v) => {
                           handleInputChange("portOfReceipt", v);
-                          const selectedPort = ports.find(p => p.name === v);
+                          const selectedPort = ports.find(p => p.id.toString() === v);
                           setFormData(prev => ({ ...prev, portOfReceiptId: selectedPort?.id }));
                         }}
                         placeholder="Select"
@@ -1502,13 +1502,13 @@ const AddShipment = () => {
                       <Label className="text-sm">Port of Loading</Label>
                       <SearchableSelect
                         options={ports.map(port => ({
-                          value: port.name,
-                          label: `${port.name}${port.code ? ` (${port.code})` : ''} - ${port.country}`,
+                          value: port.id.toString(),
+                          label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
                         }))}
                         value={formData.portOfLoading}
                         onValueChange={(v) => {
                           handleInputChange("portOfLoading", v);
-                          const selectedPort = ports.find(p => p.name === v);
+                          const selectedPort = ports.find(p => p.id.toString() === v);
                           setFormData(prev => ({ ...prev, portOfLoadingId: selectedPort?.id }));
                         }}
                         placeholder="Select"
@@ -1527,13 +1527,13 @@ const AddShipment = () => {
                       <Label className="text-sm">Port of Discharge</Label>
                       <SearchableSelect
                         options={ports.map(port => ({
-                          value: port.name,
-                          label: `${port.name}${port.code ? ` (${port.code})` : ''} - ${port.country}`,
+                          value: port.id.toString(),
+                          label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
                         }))}
                         value={formData.portOfDischarge}
                         onValueChange={(v) => {
                           handleInputChange("portOfDischarge", v);
-                          const selectedPort = ports.find(p => p.name === v);
+                          const selectedPort = ports.find(p => p.id.toString() === v);
                           setFormData(prev => ({ ...prev, portOfDischargeId: selectedPort?.id }));
                         }}
                         placeholder="Select"
@@ -1545,13 +1545,13 @@ const AddShipment = () => {
                       <Label className="text-sm">Port of Final Destination</Label>
                       <SearchableSelect
                         options={ports.map(port => ({
-                          value: port.name,
-                          label: `${port.name}${port.code ? ` (${port.code})` : ''} - ${port.country}`,
+                          value: port.id.toString(),
+                          label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
                         }))}
                         value={formData.portOfFinalDestination}
                         onValueChange={(v) => {
                           handleInputChange("portOfFinalDestination", v);
-                          const selectedPort = ports.find(p => p.name === v);
+                          const selectedPort = ports.find(p => p.id.toString() === v);
                           setFormData(prev => ({ ...prev, portOfFinalDestinationId: selectedPort?.id }));
                         }}
                         placeholder="Select"
@@ -1563,8 +1563,8 @@ const AddShipment = () => {
                       <Label className="text-sm">Place of Delivery</Label>
                       <SearchableSelect
                         options={ports.map(port => ({
-                          value: port.name,
-                          label: `${port.name}${port.code ? ` (${port.code})` : ''} - ${port.country}`,
+                          value: port.id.toString(),
+                          label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
                         }))}
                         value={formData.placeOfDelivery}
                         onValueChange={(v) => handleInputChange("placeOfDelivery", v)}

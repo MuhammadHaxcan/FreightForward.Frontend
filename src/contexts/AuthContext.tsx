@@ -152,6 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         contactNumber: authData.user.contactNumber,
         companyName: authData.user.companyName,
         forcePasswordChange: authData.user.forcePasswordChange,
+        baseCurrencySet: authData.user.baseCurrencySet,
         profilePictureUrl: authData.user.profilePictureUrl,
         roles: authData.user.roles.map(r => r.name),
         permissions: authData.user.permissions,

@@ -136,7 +136,11 @@ const Settings = () => {
   });
 
   const [portForm, setPortForm] = useState({
-    name: "",
+    seaPortName: "",
+    seaPortCode: "",
+    airPortName: "",
+    airPortCode: "",
+    city: "",
     country: "",
   });
 
@@ -261,7 +265,11 @@ const Settings = () => {
   const handleAddPort = () => {
     createPortMutation.mutate(
       {
-        name: portForm.name,
+        seaPortName: portForm.seaPortName,
+        seaPortCode: portForm.seaPortCode || undefined,
+        airPortName: portForm.airPortName,
+        airPortCode: portForm.airPortCode || undefined,
+        city: portForm.city,
         country: portForm.country,
       },
       {
@@ -280,7 +288,11 @@ const Settings = () => {
         id: editPort.id,
         data: {
           id: editPort.id,
-          name: editPort.name,
+          seaPortName: editPort.seaPortName,
+          seaPortCode: editPort.seaPortCode || undefined,
+          airPortName: editPort.airPortName,
+          airPortCode: editPort.airPortCode || undefined,
+          city: editPort.city,
           country: editPort.country,
         },
       },
@@ -432,7 +444,7 @@ const Settings = () => {
   };
 
   const resetPortForm = () => {
-    setPortForm({ name: "", country: "" });
+    setPortForm({ seaPortName: "", seaPortCode: "", airPortName: "", airPortCode: "", city: "", country: "" });
   };
 
   const resetChargeForm = () => {
@@ -813,7 +825,9 @@ const Settings = () => {
                     <thead>
                       <tr className="bg-table-header text-table-header-foreground">
                         <th className="px-4 py-3 text-left text-sm font-semibold">Action</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold">Name</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Sea Port</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Air Port</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">City</th>
                         <th className="px-4 py-3 text-left text-sm font-semibold">Country</th>
                       </tr>
                     </thead>
@@ -848,13 +862,15 @@ const Settings = () => {
                               </PermissionGate>
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-sm text-primary font-medium">{port.name}</td>
+                          <td className="px-4 py-3 text-sm text-primary font-medium">{port.seaPortName}{port.seaPortCode ? ` (${port.seaPortCode})` : ''}</td>
+                          <td className="px-4 py-3 text-sm text-primary font-medium">{port.airPortName}{port.airPortCode ? ` (${port.airPortCode})` : ''}</td>
+                          <td className="px-4 py-3 text-sm text-primary">{port.city}</td>
                           <td className="px-4 py-3 text-sm text-primary">{port.country}</td>
                         </tr>
                       ))}
                       {portData?.items.length === 0 && (
                         <tr>
-                          <td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">
+                          <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
                             No ports found
                           </td>
                         </tr>
@@ -1350,16 +1366,6 @@ const Settings = () => {
                           searchPlaceholder="Search banks..."
                         />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-foreground mb-1">Base Currency (LCY)</label>
-                        <SearchableSelect
-                          options={allCurrencies.map((c) => ({ value: c.id.toString(), label: `${c.code} - ${c.name}` }))}
-                          value={companyProfile.baseCurrencyId?.toString() ?? ""}
-                          onValueChange={(val) => setCompanyProfile({ ...companyProfile, baseCurrencyId: val ? parseInt(val) : null })}
-                          placeholder="Select Base Currency"
-                          searchPlaceholder="Search currencies..."
-                        />
-                      </div>
                     </div>
                   </div>
 
@@ -1641,28 +1647,66 @@ const Settings = () => {
 
       {/* Add Port Modal */}
       <Dialog open={addPortModalOpen} onOpenChange={(open) => { setAddPortModalOpen(open); if (!open) resetPortForm(); }}>
-        <DialogContent className="sm:max-w-md bg-card">
+        <DialogContent className="sm:max-w-lg bg-card">
           <DialogHeader>
             <DialogTitle className="text-lg font-semibold"><span className="font-bold">Add New</span> Port</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Port Name</label>
-              <Input
-                placeholder="Ports Name"
-                value={portForm.name}
-                onChange={(e) => setPortForm({ ...portForm, name: e.target.value })}
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Sea Port Name</label>
+                <Input
+                  placeholder="Sea Port Name"
+                  value={portForm.seaPortName}
+                  onChange={(e) => setPortForm({ ...portForm, seaPortName: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Sea Port Code</label>
+                <Input
+                  placeholder="Sea Port Code"
+                  value={portForm.seaPortCode}
+                  onChange={(e) => setPortForm({ ...portForm, seaPortCode: e.target.value })}
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Country</label>
-              <SearchableSelect
-                options={countries.map((country) => ({ value: country, label: country }))}
-                value={portForm.country}
-                onValueChange={(value) => setPortForm({ ...portForm, country: value })}
-                placeholder="Select Country"
-                searchPlaceholder="Search countries..."
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Air Port Name</label>
+                <Input
+                  placeholder="Air Port Name"
+                  value={portForm.airPortName}
+                  onChange={(e) => setPortForm({ ...portForm, airPortName: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Air Port Code</label>
+                <Input
+                  placeholder="Air Port Code"
+                  value={portForm.airPortCode}
+                  onChange={(e) => setPortForm({ ...portForm, airPortCode: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">City</label>
+                <Input
+                  placeholder="City"
+                  value={portForm.city}
+                  onChange={(e) => setPortForm({ ...portForm, city: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Country</label>
+                <SearchableSelect
+                  options={countries.map((country) => ({ value: country, label: country }))}
+                  value={portForm.country}
+                  onValueChange={(value) => setPortForm({ ...portForm, country: value })}
+                  placeholder="Select Country"
+                  searchPlaceholder="Search countries..."
+                />
+              </div>
             </div>
             <div className="flex justify-end gap-3 pt-4">
               <Button variant="outline" onClick={() => setAddPortModalOpen(false)}>Cancel</Button>
@@ -1681,25 +1725,47 @@ const Settings = () => {
 
       {/* Edit Port Modal */}
       <Dialog open={editPortModalOpen} onOpenChange={setEditPortModalOpen}>
-        <DialogContent className="sm:max-w-md bg-card">
+        <DialogContent className="sm:max-w-lg bg-card">
           <DialogHeader>
             <DialogTitle className="text-lg font-semibold">Edit Port</DialogTitle>
           </DialogHeader>
           {editPort && (
             <div className="space-y-4 py-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Port Name</label>
-                <Input value={editPort.name} onChange={(e) => setEditPort({ ...editPort, name: e.target.value })} />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">Sea Port Name</label>
+                  <Input value={editPort.seaPortName} onChange={(e) => setEditPort({ ...editPort, seaPortName: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">Sea Port Code</label>
+                  <Input value={editPort.seaPortCode || ""} onChange={(e) => setEditPort({ ...editPort, seaPortCode: e.target.value })} />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Country</label>
-                <SearchableSelect
-                  options={countries.map((country) => ({ value: country, label: country }))}
-                  value={editPort.country}
-                  onValueChange={(value) => setEditPort({ ...editPort, country: value })}
-                  placeholder="Select Country"
-                  searchPlaceholder="Search countries..."
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">Air Port Name</label>
+                  <Input value={editPort.airPortName} onChange={(e) => setEditPort({ ...editPort, airPortName: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">Air Port Code</label>
+                  <Input value={editPort.airPortCode || ""} onChange={(e) => setEditPort({ ...editPort, airPortCode: e.target.value })} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">City</label>
+                  <Input value={editPort.city} onChange={(e) => setEditPort({ ...editPort, city: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">Country</label>
+                  <SearchableSelect
+                    options={countries.map((country) => ({ value: country, label: country }))}
+                    value={editPort.country}
+                    onValueChange={(value) => setEditPort({ ...editPort, country: value })}
+                    placeholder="Select Country"
+                    searchPlaceholder="Search countries..."
+                  />
+                </div>
               </div>
               <div className="flex justify-end gap-3 pt-4">
                 <Button variant="outline" onClick={() => setEditPortModalOpen(false)}>Cancel</Button>

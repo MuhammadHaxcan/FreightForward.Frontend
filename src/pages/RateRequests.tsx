@@ -517,7 +517,7 @@ export default function RateRequests() {
                   <SearchableSelect
                     options={ports?.map((port) => ({
                       value: port.id.toString(),
-                      label: port.name,
+                      label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
                     })) || []}
                     value={selectedRequest?.destinationPortId?.toString() || ""}
                     onValueChange={() => {}}
@@ -543,7 +543,7 @@ export default function RateRequests() {
                   <SearchableSelect
                     options={ports?.map((port) => ({
                       value: port.id.toString(),
-                      label: port.name,
+                      label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
                     })) || []}
                     value={selectedRequest?.loadingPortId?.toString() || ""}
                     onValueChange={() => {}}

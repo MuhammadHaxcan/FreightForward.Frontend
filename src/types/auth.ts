@@ -12,6 +12,7 @@ export interface User {
   companyName?: string;
   isActive: boolean;
   forcePasswordChange: boolean;
+  baseCurrencySet?: boolean;
   lastLoginAt?: string;
   createdAt: string;
   profilePictureUrl?: string;
@@ -70,6 +71,7 @@ export interface CurrentUser {
   contactNumber?: string;
   companyName?: string;
   forcePasswordChange: boolean;
+  baseCurrencySet?: boolean;
   profilePictureUrl?: string;
   roles: string[];
   permissions: string[];
@@ -136,6 +138,7 @@ export interface UpdateRoleRequest {
 export interface ChangePasswordRequest {
   currentPassword: string;
   newPassword: string;
+  baseCurrencyId?: number;
 }
 
 export interface UpdateProfileRequest {

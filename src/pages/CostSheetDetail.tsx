@@ -112,13 +112,13 @@ export const CostSheetDetail = () => {
                   <TableCell className="text-xs">{costing.description}</TableCell>
                   <TableCell className="text-xs">{costing.saleQty.toFixed(3)}</TableCell>
                   <TableCell className="text-xs">{costing.saleUnit.toFixed(2)}</TableCell>
-                  <TableCell className="text-xs">{costing.saleCurrency}</TableCell>
+                  <TableCell className="text-xs">{costing.saleCurrencyCode}</TableCell>
                   <TableCell className="text-xs">{costing.saleExRate.toFixed(3)}</TableCell>
                   <TableCell className="text-xs">{costing.saleFCY.toFixed(2)}</TableCell>
                   <TableCell className="text-xs">{costing.saleLCY.toFixed(2)}</TableCell>
                   <TableCell className="text-xs">{costing.costQty.toFixed(3)}</TableCell>
                   <TableCell className="text-xs">{costing.costUnit.toFixed(2)}</TableCell>
-                  <TableCell className="text-xs">{costing.costCurrency}</TableCell>
+                  <TableCell className="text-xs">{costing.costCurrencyCode}</TableCell>
                   <TableCell className="text-xs">{costing.costExRate.toFixed(3)}</TableCell>
                   <TableCell className="text-xs">{costing.costFCY.toFixed(2)}</TableCell>
                   <TableCell className="text-xs">{costing.costLCY.toFixed(2)}</TableCell>

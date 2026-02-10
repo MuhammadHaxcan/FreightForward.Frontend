@@ -29,9 +29,12 @@ export interface CurrencyRateHistory {
 
 export interface Port {
   id: number;
-  name: string;
+  seaPortName: string;
+  seaPortCode?: string;
+  airPortName: string;
+  airPortCode?: string;
+  city: string;
   country: string;
-  code?: string;
 }
 
 export interface ChargeItem {
@@ -136,9 +139,12 @@ export interface UpdateCurrencyTypeRequest extends CreateCurrencyTypeRequest {
 }
 
 export interface CreatePortRequest {
-  name: string;
+  seaPortName: string;
+  seaPortCode?: string;
+  airPortName: string;
+  airPortCode?: string;
+  city: string;
   country: string;
-  code?: string;
 }
 
 export interface UpdatePortRequest extends CreatePortRequest {

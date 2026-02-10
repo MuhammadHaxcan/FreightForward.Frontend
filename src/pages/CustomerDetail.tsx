@@ -1009,7 +1009,7 @@ const CustomerDetail = () => {
             options={currencyTypes.map(c => ({ value: c.code, label: c.code }))}
             value={accountDetails.currency}
             onValueChange={v => setAccountDetails({...accountDetails, currency: v})}
-            disabled={isViewMode}
+            disabled={isViewMode || (isEditMode && !!accountDetails.currency)}
             searchPlaceholder="Search currencies..."
           />
         </div>

@@ -959,7 +959,7 @@ export default function Quotations() {
                     disabled={isReadOnly}
                     options={ports?.map((port) => ({
                       value: port.id.toString(),
-                      label: port.name,
+                      label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
                     })) || []}
                     value={formData.loadingPortId?.toString() || ""}
                     onValueChange={(value) =>
@@ -975,7 +975,7 @@ export default function Quotations() {
                     disabled={isReadOnly}
                     options={ports?.map((port) => ({
                       value: port.id.toString(),
-                      label: port.name,
+                      label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
                     })) || []}
                     value={formData.destinationPortId?.toString() || ""}
                     onValueChange={(value) =>

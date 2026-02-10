@@ -1,19 +1,23 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
 import { authApi } from '../services/api/auth';
+import { settingsApi } from '../services/api/settings';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Alert, AlertDescription } from '../components/ui/alert';
-import { Loader2, KeyRound, Eye, EyeOff } from 'lucide-react';
+import { Loader2, KeyRound, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ChangePassword() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [baseCurrencyId, setBaseCurrencyId] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -22,6 +26,17 @@ export default function ChangePassword() {
 
   const { user, refreshUser, logout } = useAuth();
   const navigate = useNavigate();
+
+  const needsCurrencySetup = user?.forcePasswordChange === true && user?.baseCurrencySet === false;
+
+  const { data: currencies, isLoading: currenciesLoading } = useQuery({
+    queryKey: ['allCurrencyTypes'],
+    queryFn: async () => {
+      const result = await settingsApi.getAllCurrencyTypes();
+      return result.data || [];
+    },
+    enabled: needsCurrencySetup,
+  });
 
   const validatePassword = (password: string): string | null => {
     if (password.length < 8) {
@@ -63,11 +78,17 @@ export default function ChangePassword() {
       return;
     }
 
+    if (needsCurrencySetup && !baseCurrencyId) {
+      setError('Please select a base currency');
+      return;
+    }
+
     setIsSubmitting(true);
 
     const result = await authApi.changePassword({
       currentPassword,
       newPassword,
+      ...(needsCurrencySetup && baseCurrencyId ? { baseCurrencyId: parseInt(baseCurrencyId) } : {}),
     });
 
     if (result.error) {
@@ -76,7 +97,7 @@ export default function ChangePassword() {
       return;
     }
 
-    toast.success('Password changed successfully');
+    toast.success(needsCurrencySetup ? 'Initial setup completed successfully' : 'Password changed successfully');
 
     // Refresh user to update forcePasswordChange flag
     await refreshUser();
@@ -98,11 +119,15 @@ export default function ChangePassword() {
               <KeyRound className="h-8 w-8 text-white" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">Change Password</CardTitle>
+          <CardTitle className="text-2xl font-bold">
+            {needsCurrencySetup ? 'Initial Setup' : 'Change Password'}
+          </CardTitle>
           <CardDescription>
-            {user?.forcePasswordChange
-              ? 'You must change your password before continuing'
-              : 'Update your account password'}
+            {needsCurrencySetup
+              ? 'Set your password and base currency to get started'
+              : user?.forcePasswordChange
+                ? 'You must change your password before continuing'
+                : 'Update your account password'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -194,6 +219,26 @@ export default function ChangePassword() {
               </ul>
             </div>
 
+            {needsCurrencySetup && (
+              <div className="space-y-2">
+                <Label>Base Currency (LCY)</Label>
+                <SearchableSelect
+                  options={(currencies || []).map((c) => ({ value: c.id.toString(), label: `${c.code} - ${c.name}` }))}
+                  value={baseCurrencyId}
+                  onValueChange={(val) => setBaseCurrencyId(val)}
+                  placeholder={currenciesLoading ? "Loading..." : "Select Base Currency"}
+                  searchPlaceholder="Search currencies..."
+                  emptyMessage={currenciesLoading ? "Loading..." : "No currencies found"}
+                />
+                <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 p-2.5">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                  <p className="text-xs text-amber-700">
+                    This cannot be changed later. Choose carefully.
+                  </p>
+                </div>
+              </div>
+            )}
+
             <Button
               type="submit"
               className="w-full"
@@ -202,10 +247,10 @@ export default function ChangePassword() {
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Changing Password...
+                  {needsCurrencySetup ? 'Completing Setup...' : 'Changing Password...'}
                 </>
               ) : (
-                'Change Password'
+                needsCurrencySetup ? 'Complete Setup' : 'Change Password'
               )}
             </Button>
 

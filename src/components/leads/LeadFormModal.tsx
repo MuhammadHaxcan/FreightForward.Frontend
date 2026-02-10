@@ -494,7 +494,7 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
                       <SearchableSelect
                         options={pickupPorts.map((port) => ({
                           value: port.id.toString(),
-                          label: `${port.name} (${port.country})`,
+                          label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
                         }))}
                         value={formData.loadingPortId?.toString() || ""}
                         onValueChange={(value) => updateField("loadingPortId", parseInt(value))}
@@ -542,7 +542,7 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
                       <SearchableSelect
                         options={deliveryPorts.map((port) => ({
                           value: port.id.toString(),
-                          label: `${port.name} (${port.country})`,
+                          label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
                         }))}
                         value={formData.destinationPortId?.toString() || ""}
                         onValueChange={(value) =>

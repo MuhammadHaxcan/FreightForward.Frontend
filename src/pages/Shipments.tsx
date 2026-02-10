@@ -261,13 +261,10 @@ const Shipments = () => {
                   <TableHead className="text-table-header-foreground font-semibold">Job Number</TableHead>
                   <TableHead className="text-table-header-foreground font-semibold">Document No</TableHead>
                   <TableHead className="text-table-header-foreground font-semibold">Customer</TableHead>
-                  <TableHead className="text-table-header-foreground font-semibold">Direction</TableHead>
-                  <TableHead className="text-table-header-foreground font-semibold">Mode</TableHead>
+                  <TableHead className="text-table-header-foreground font-semibold">Direction/Mode</TableHead>
                   <TableHead className="text-table-header-foreground font-semibold">POL</TableHead>
                   <TableHead className="text-table-header-foreground font-semibold">POD</TableHead>
-                  <TableHead className="text-table-header-foreground font-semibold">Departure/Arrival</TableHead>
-                  <TableHead className="text-table-header-foreground font-semibold">Carrier</TableHead>
-                  <TableHead className="text-table-header-foreground font-semibold">Vessel</TableHead>
+                  <TableHead className="text-table-header-foreground font-semibold">Carrier/Vessel</TableHead>
                   <TableHead className="text-table-header-foreground font-semibold">Latest Event</TableHead>
                   <TableHead className="text-table-header-foreground font-semibold">Status</TableHead>
                 </TableRow>
@@ -329,20 +326,30 @@ const Shipments = () => {
                       <TableCell className="max-w-[200px]">
                         <span className="text-emerald-600">{shipment.customerName || "-"}</span>
                       </TableCell>
-                      <TableCell>{getDirectionBadge(shipment.direction)}</TableCell>
                       <TableCell>
-                        <span className="text-sm">{shipment.modeDisplay || "-"}</span>
-                      </TableCell>
-                      <TableCell className="text-emerald-600">{shipment.portOfLoadingName || "-"}</TableCell>
-                      <TableCell>{shipment.portOfDischargeName || "-"}</TableCell>
-                      <TableCell>
-                        <div className="space-y-1 text-sm">
-                          <div>ETD - {formatDate(shipment.etd, "dd/MM/yyyy")}</div>
-                          <div>ETA - {formatDate(shipment.eta, "dd/MM/yyyy")}</div>
+                        <div className="space-y-1">
+                          {getDirectionBadge(shipment.direction)}
+                          <span className="text-sm block">{shipment.modeDisplay || "-"}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-emerald-600">{shipment.carrier || "-"}</TableCell>
-                      <TableCell>{shipment.vessel || "-"}</TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <span className="text-emerald-600">{shipment.portOfLoadingName || "-"}</span>
+                          <div className="text-xs text-muted-foreground">ETD: {formatDate(shipment.etd, "dd/MM/yyyy")}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <span>{shipment.portOfDischargeName || "-"}</span>
+                          <div className="text-xs text-muted-foreground">ETA: {formatDate(shipment.eta, "dd/MM/yyyy")}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1 text-sm">
+                          <div className="text-emerald-600">{shipment.carrier || "-"}</div>
+                          <div>{shipment.vessel || "-"}</div>
+                        </div>
+                      </TableCell>
                       <TableCell>
                         {shipment.latestEvent ? (
                           <div className="space-y-0.5 text-sm max-w-[200px]">
