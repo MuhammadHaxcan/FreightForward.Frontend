@@ -13,7 +13,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { getTodayDateOnly } from "@/lib/utils";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { settingsApi, DocumentType } from "@/services/api/settings";
-import { fileApi, AddShipmentDocumentRequest, FileUploadResponse } from "@/services/api/shipment";
+import { fileApi, AddShipmentDocumentRequest, ShipmentDocument, FileUploadResponse } from "@/services/api/shipment";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, X } from "lucide-react";
 
@@ -21,9 +21,11 @@ interface DocumentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (document: AddShipmentDocumentRequest) => Promise<void>;
+  document?: ShipmentDocument | null;
+  mode?: "add" | "edit";
 }
 
-export function DocumentModal({ open, onOpenChange, onSave }: DocumentModalProps) {
+export function DocumentModal({ open, onOpenChange, onSave, document: editDocument, mode = "add" }: DocumentModalProps) {
   const { toast } = useToast();
   const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([]);
   const [loadingDocTypes, setLoadingDocTypes] = useState(false);
@@ -38,6 +40,11 @@ export function DocumentModal({ open, onOpenChange, onSave }: DocumentModalProps
     uploadedFileName: "",
     originalFileName: "",
   });
+
+  // Track the original file path in edit mode so we don't delete it on close
+  const [originalFilePath, setOriginalFilePath] = useState("");
+
+  const isEdit = mode === "edit";
 
   const loadDocumentTypes = useCallback(async () => {
     setLoadingDocTypes(true);
@@ -60,22 +67,35 @@ export function DocumentModal({ open, onOpenChange, onSave }: DocumentModalProps
     }
   }, [toast]);
 
-  // Load document types when modal opens
+  // Load document types and populate form when modal opens
   useEffect(() => {
     if (open) {
       loadDocumentTypes();
-      // Reset form when opening
-      setFormData({
-        documentTypeId: null,
-        documentNo: "",
-        docDate: getTodayDateOnly(),
-        remarks: "",
-        file: null,
-        uploadedFileName: "",
-        originalFileName: "",
-      });
+      if (isEdit && editDocument) {
+        setFormData({
+          documentTypeId: editDocument.documentTypeId || null,
+          documentNo: editDocument.documentNo || "",
+          docDate: editDocument.docDate || getTodayDateOnly(),
+          remarks: editDocument.remarks || "",
+          file: null,
+          uploadedFileName: editDocument.filePath || "",
+          originalFileName: editDocument.originalFileName || "",
+        });
+        setOriginalFilePath(editDocument.filePath || "");
+      } else {
+        setFormData({
+          documentTypeId: null,
+          documentNo: "",
+          docDate: getTodayDateOnly(),
+          remarks: "",
+          file: null,
+          uploadedFileName: "",
+          originalFileName: "",
+        });
+        setOriginalFilePath("");
+      }
     }
-  }, [open, loadDocumentTypes]);
+  }, [open, loadDocumentTypes, isEdit, editDocument]);
 
   const handleInputChange = (field: string, value: string | number | null) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -114,7 +134,8 @@ export function DocumentModal({ open, onOpenChange, onSave }: DocumentModalProps
   };
 
   const handleRemoveFile = async () => {
-    if (formData.uploadedFileName) {
+    // Only delete from server if it's a newly uploaded file (not the original)
+    if (formData.uploadedFileName && formData.uploadedFileName !== originalFilePath) {
       try {
         await fileApi.delete(formData.uploadedFileName);
       } catch (error) {
@@ -156,7 +177,7 @@ export function DocumentModal({ open, onOpenChange, onSave }: DocumentModalProps
       console.error("Failed to save document:", error);
       toast({
         title: "Error",
-        description: "Failed to save document",
+        description: `Failed to ${isEdit ? "update" : "save"} document`,
         variant: "destructive",
       });
     } finally {
@@ -165,8 +186,8 @@ export function DocumentModal({ open, onOpenChange, onSave }: DocumentModalProps
   };
 
   const handleClose = async () => {
-    // If file was uploaded but not saved, delete it
-    if (formData.uploadedFileName) {
+    // If a new file was uploaded but not saved, delete it
+    if (formData.uploadedFileName && formData.uploadedFileName !== originalFilePath) {
       try {
         await fileApi.delete(formData.uploadedFileName);
       } catch (error) {
@@ -176,12 +197,14 @@ export function DocumentModal({ open, onOpenChange, onSave }: DocumentModalProps
     onOpenChange(false);
   };
 
+  const displayFileName = formData.file?.name || formData.originalFileName;
+
   return (
     <Dialog open={open} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-w-lg bg-card border border-border p-0">
+      <DialogContent className="max-w-3xl bg-card border border-border p-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-lg font-semibold">
-            Add Document
+            {isEdit ? "Edit Document" : "Add Document"}
           </DialogTitle>
         </DialogHeader>
 
@@ -245,9 +268,9 @@ export function DocumentModal({ open, onOpenChange, onSave }: DocumentModalProps
                 onChange={handleFileChange}
                 className="hidden"
               />
-              {formData.file && (
+              {displayFileName && (
                 <div className="flex items-center gap-2 bg-muted px-3 py-1 rounded">
-                  <span className="text-sm text-foreground">{formData.file.name}</span>
+                  <span className="text-sm text-foreground">{displayFileName}</span>
                   <button
                     type="button"
                     onClick={handleRemoveFile}
@@ -289,10 +312,10 @@ export function DocumentModal({ open, onOpenChange, onSave }: DocumentModalProps
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Adding...
+                  {isEdit ? "Updating..." : "Adding..."}
                 </>
               ) : (
-                "Add"
+                isEdit ? "Update" : "Add"
               )}
             </Button>
           </div>

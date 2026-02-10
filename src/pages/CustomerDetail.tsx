@@ -243,6 +243,28 @@ const CustomerDetail = () => {
                 enableRateRequest: c.enableRateRequest,
               })));
             }
+            // Load account details
+            if (customer.accountDetail) {
+              const ad = customer.accountDetail;
+              const acCurrency = ad.currencyId && currencyResponse.data
+                ? currencyResponse.data.find(c => c.id === ad.currencyId)
+                : null;
+              setAccountDetails({
+                acName: ad.acName || "",
+                bankAcNo: ad.bankAcNo || "",
+                currency: acCurrency?.code || accountDetails.currency || baseCurrencyCode,
+                type: ad.type || "Credit",
+                notes: ad.notes || "",
+                swiftCode: ad.swiftCode || "",
+                acType: ad.acType || "",
+                approvedCreditDays: ad.approvedCreditDays?.toString() || "0",
+                alertCreditDays: ad.alertCreditDays?.toString() || "0",
+                cc: ad.cc || "",
+                approvedCreditAmount: ad.approvedCreditAmount?.toString() || "0.00",
+                alertCreditAmount: ad.alertCreditAmount?.toString() || "0.00",
+                bcc: ad.bcc || "",
+              });
+            }
           }
         }
       } catch (error) {
@@ -665,11 +687,123 @@ const CustomerDetail = () => {
     }
   };
 
-  const handleSaveContact = () => {
-    if (contactForm.name) {
+  const handleSaveContact = async () => {
+    if (!contactForm.name) return;
+
+    if (!id) {
+      // For new customer (not yet saved), just add locally
       setContacts([...contacts, { ...contactForm, id: Date.now() } as Contact]);
       setContactForm({});
       setContactModalOpen(false);
+      return;
+    }
+
+    try {
+      const response = await customerApi.createContact(parseInt(id), {
+        customerId: parseInt(id),
+        name: contactForm.name,
+        email: contactForm.email || undefined,
+        mobile: contactForm.mobile || undefined,
+        position: contactForm.position || undefined,
+        phone: contactForm.phone || undefined,
+        designation: contactForm.designation || undefined,
+        department: contactForm.department || undefined,
+        directTel: contactForm.directTel || undefined,
+        whatsapp: contactForm.whatsapp || undefined,
+        skype: contactForm.skype || undefined,
+        enableRateRequest: contactForm.enableRateRequest || false,
+      });
+      if (response.error) throw new Error(response.error);
+
+      // Refetch customer data to get updated contacts
+      const customerResponse = await customerApi.getById(parseInt(id));
+      if (customerResponse.data?.contacts) {
+        setContacts(customerResponse.data.contacts.map(c => ({
+          id: c.id,
+          name: c.name,
+          email: c.email || "",
+          mobile: c.mobile || "",
+          position: c.position || "",
+          phone: c.phone || "",
+          designation: c.designation || "",
+          department: c.department || "",
+          directTel: c.directTel || "",
+          whatsapp: c.whatsapp || "",
+          skype: c.skype || "",
+          enableRateRequest: c.enableRateRequest,
+        })));
+      }
+
+      toast({ title: "Success", description: "Contact added successfully" });
+      setContactForm({});
+      setContactModalOpen(false);
+    } catch (error) {
+      console.error("Error saving contact:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to add contact",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteContact = async (contactId: number) => {
+    if (!id) {
+      setContacts(contacts.filter(c => c.id !== contactId));
+      return;
+    }
+
+    try {
+      const response = await customerApi.deleteContact(contactId);
+      if (response.error) throw new Error(response.error);
+
+      setContacts(contacts.filter(c => c.id !== contactId));
+      toast({ title: "Success", description: "Contact deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting contact:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete contact",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSaveAccountDetails = async () => {
+    if (!id) return;
+
+    setSaving(true);
+    try {
+      const selectedCurrency = currencyTypes.find(c => c.code === accountDetails.currency);
+      const data = {
+        acName: accountDetails.acName || undefined,
+        bankAcNo: accountDetails.bankAcNo || undefined,
+        currencyId: selectedCurrency?.id || undefined,
+        type: accountDetails.type || undefined,
+        notes: accountDetails.notes || undefined,
+        swiftCode: accountDetails.swiftCode || undefined,
+        acType: accountDetails.acType || undefined,
+        approvedCreditDays: accountDetails.approvedCreditDays ? parseInt(accountDetails.approvedCreditDays) : undefined,
+        alertCreditDays: accountDetails.alertCreditDays ? parseInt(accountDetails.alertCreditDays) : undefined,
+        approvedCreditAmount: accountDetails.approvedCreditAmount ? parseFloat(accountDetails.approvedCreditAmount) : undefined,
+        alertCreditAmount: accountDetails.alertCreditAmount ? parseFloat(accountDetails.alertCreditAmount) : undefined,
+        cc: accountDetails.cc || undefined,
+        bcc: accountDetails.bcc || undefined,
+      };
+
+      const response = await customerApi.updateAccountDetail(parseInt(id), data);
+      if (response.error) throw new Error(response.error);
+
+      toast({ title: "Success", description: "Account details saved successfully" });
+    } catch (error) {
+      console.error("Error saving account details:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save account details",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -836,7 +970,7 @@ const CustomerDetail = () => {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
                         <Button size="icon" variant="ghost" className="h-8 w-8"><Pencil size={16} /></Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive"><Trash2 size={16} /></Button>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => handleDeleteContact(contact.id)}><Trash2 size={16} /></Button>
                       </div>
                     </td>
                   </tr>
@@ -934,6 +1068,14 @@ const CustomerDetail = () => {
           <Input value={accountDetails.bcc} onChange={e => setAccountDetails({...accountDetails, bcc: e.target.value})} disabled={isViewMode} placeholder="BCC" />
         </div>
       </div>
+
+      {!isViewMode && isEditMode && (
+        <div className="flex justify-end pt-4">
+          <Button className="btn-success" onClick={handleSaveAccountDetails} disabled={saving}>
+            {saving ? "Saving..." : "Save Account Details"}
+          </Button>
+        </div>
+      )}
     </div>
   );
 

@@ -220,6 +220,7 @@ export default function RateRequests() {
                   <TableHead className="text-table-header-foreground w-12">Select</TableHead>
                   <TableHead className="text-table-header-foreground">Action</TableHead>
                   <TableHead className="text-table-header-foreground">Rate request No.</TableHead>
+                  <TableHead className="text-table-header-foreground">Lead No.</TableHead>
                   <TableHead className="text-table-header-foreground">Date</TableHead>
                   <TableHead className="text-table-header-foreground">Customer Name</TableHead>
                   <TableHead className="text-table-header-foreground">Freight Mode</TableHead>
@@ -234,7 +235,7 @@ export default function RateRequests() {
               <TableBody>
                 {rateRequests.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
                       No rate requests found
                     </TableCell>
                   </TableRow>
@@ -295,6 +296,7 @@ export default function RateRequests() {
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">{request.rateRequestNo}</TableCell>
+                      <TableCell className="text-green-600">{request.leadNo || "-"}</TableCell>
                       <TableCell>{formatDate(request.requestDate, "dd-MM-yyyy")}</TableCell>
                       <TableCell className="text-green-600">{request.fullName || "-"}</TableCell>
                       <TableCell>{request.freightMode || "-"}</TableCell>
@@ -357,37 +359,6 @@ export default function RateRequests() {
               {modalMode === "edit" ? "Edit rate request details" : "Fill in the rate request details"}
             </DialogDescription>
           </DialogHeader>
-
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-2 mb-4">
-            <Button
-              variant="outline"
-              className="bg-yellow-500 hover:bg-yellow-600 text-white border-yellow-500"
-              onClick={() => setIsModalOpen(false)}
-            >
-              Back
-            </Button>
-            {modalMode === "edit" && (
-              <Button className="bg-blue-500 hover:bg-blue-600 text-white">
-                Update
-              </Button>
-            )}
-            {modalMode === "edit" && selectedRequest?.status === "Received" && (
-              <Button
-                className="btn-success"
-                onClick={() => {
-                  setIsModalOpen(false);
-                  if (selectedRequest) handleConvertToQuotation(selectedRequest);
-                }}
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                Convert to Quotation
-              </Button>
-            )}
-            <Button className="bg-modal-header hover:bg-modal-header/80 text-modal-header-foreground">
-              Send Rate Request
-            </Button>
-          </div>
 
           <div className="space-y-6">
             {/* General Details */}

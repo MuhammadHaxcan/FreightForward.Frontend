@@ -491,6 +491,11 @@ export const shipmentApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  updateDocument: (documentId: number, data: AddShipmentDocumentRequest) =>
+    fetchApi<void>(`/shipments/documents/${documentId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
   deleteDocument: (documentId: number) => fetchApi<void>(`/shipments/documents/${documentId}`, { method: 'DELETE' }),
 
   // Status Logs

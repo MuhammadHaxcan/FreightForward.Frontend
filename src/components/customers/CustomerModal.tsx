@@ -280,6 +280,7 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
                 onValueChange={(value) => setFormData({ ...formData, currencyId: value })}
                 placeholder="Select"
                 triggerClassName="bg-muted/50"
+                disabled={mode === "edit"}
               />
             </div>
 

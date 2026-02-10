@@ -48,7 +48,7 @@ export function SearchableSelect({
   }, [options, search]);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(v) => { if (!disabled) setOpen(v); }}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"

@@ -216,6 +216,8 @@ const ShipmentDetail = () => {
   const [isSavingCargo, setIsSavingCargo] = useState(false);
   const [documents, setDocuments] = useState<ShipmentDocument[]>([]);
   const [documentModalOpen, setDocumentModalOpen] = useState(false);
+  const [documentModalMode, setDocumentModalMode] = useState<"add" | "edit">("add");
+  const [editingDocument, setEditingDocument] = useState<ShipmentDocument | null>(null);
   const [statusLogs, setStatusLogs] = useState<ShipmentStatusLog[]>([]);
   const [statusLogModalOpen, setStatusLogModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -752,25 +754,37 @@ const ShipmentDetail = () => {
     }
   };
 
-  // Handle add document
-  const handleAddDocument = async (documentData: AddShipmentDocumentRequest) => {
+  // Handle add/update document
+  const handleSaveDocument = async (documentData: AddShipmentDocumentRequest) => {
     if (!shipmentId) {
       toast.error("Please save the shipment first");
       return;
     }
 
     try {
-      const newDocumentId = await shipmentApi.addDocument(shipmentId, documentData);
-      if (newDocumentId.data) {
-        // Refetch shipment to get updated documents with type names
+      if (documentModalMode === "edit" && editingDocument) {
+        const result = await shipmentApi.updateDocument(editingDocument.id, documentData);
+        if (result.error) throw new Error(result.error);
         refetchShipment();
-        toast.success("Document added successfully");
+        toast.success("Document updated successfully");
+      } else {
+        const newDocumentId = await shipmentApi.addDocument(shipmentId, documentData);
+        if (newDocumentId.data) {
+          refetchShipment();
+          toast.success("Document added successfully");
+        }
       }
     } catch (error) {
-      console.error("Failed to add document:", error);
-      toast.error("Failed to add document");
+      console.error("Failed to save document:", error);
+      toast.error(documentModalMode === "edit" ? "Failed to update document" : "Failed to add document");
       throw error;
     }
+  };
+
+  const handleEditDocument = (doc: ShipmentDocument) => {
+    setEditingDocument(doc);
+    setDocumentModalMode("edit");
+    setDocumentModalOpen(true);
   };
 
   // Handle delete document
@@ -2094,7 +2108,11 @@ const ShipmentDetail = () => {
                 <h3 className="text-emerald-600 font-semibold text-lg">Documents</h3>
                 <Button
                   className="btn-success"
-                  onClick={() => setDocumentModalOpen(true)}
+                  onClick={() => {
+                    setEditingDocument(null);
+                    setDocumentModalMode("add");
+                    setDocumentModalOpen(true);
+                  }}
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Create
@@ -2160,6 +2178,14 @@ const ShipmentDetail = () => {
                         <TableCell>{doc.remarks || '-'}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 btn-success rounded"
+                              onClick={() => handleEditDocument(doc)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="icon"
@@ -2299,7 +2325,9 @@ const ShipmentDetail = () => {
       <DocumentModal
         open={documentModalOpen}
         onOpenChange={setDocumentModalOpen}
-        onSave={handleAddDocument}
+        onSave={handleSaveDocument}
+        document={editingDocument}
+        mode={documentModalMode}
       />
 
       <StatusLogModal

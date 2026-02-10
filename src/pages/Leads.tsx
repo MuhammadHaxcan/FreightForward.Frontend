@@ -172,6 +172,7 @@ export default function Leads() {
                   <TableHead className="text-table-header-foreground w-12"></TableHead>
                   <TableHead className="text-table-header-foreground">Action</TableHead>
                   <TableHead className="text-table-header-foreground">Lead No.</TableHead>
+                  <TableHead className="text-table-header-foreground">Lead Type</TableHead>
                   <TableHead className="text-table-header-foreground">Date</TableHead>
                   <TableHead className="text-table-header-foreground">Customer Name</TableHead>
                   <TableHead className="text-table-header-foreground">Freight Mode</TableHead>
@@ -186,7 +187,7 @@ export default function Leads() {
               <TableBody>
                 {leads.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
                       No leads found
                     </TableCell>
                   </TableRow>
@@ -212,6 +213,11 @@ export default function Leads() {
                         </PermissionGate>
                       </TableCell>
                       <TableCell className="font-medium">{lead.leadNo}</TableCell>
+                      <TableCell>
+                        <Badge className={lead.leadType === "PortalLead" ? "bg-purple-500 text-white" : "bg-sky-500 text-white"}>
+                          {lead.leadType === "PortalLead" ? "Portal Lead" : "Manual Lead"}
+                        </Badge>
+                      </TableCell>
                       <TableCell>{formatDate(lead.leadDate, "dd-MM-yyyy")}</TableCell>
                       <TableCell className="text-green-600">{lead.fullName || lead.customerName}</TableCell>
                       <TableCell>{lead.freightMode || "-"}</TableCell>

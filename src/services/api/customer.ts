@@ -52,14 +52,19 @@ export interface CustomerContact {
 
 export interface CustomerAccountDetail {
   id: number;
-  taxIdType?: string;
-  taxId?: string;
-  bankName?: string;
-  accountName?: string;
-  accountNumber?: string;
+  acName?: string;
+  bankAcNo?: string;
+  currencyId?: number;
+  type?: string;
+  notes?: string;
   swiftCode?: string;
-  creditLimit?: number;
-  creditDays?: number;
+  acType?: string;
+  approvedCreditDays?: number;
+  alertCreditDays?: number;
+  approvedCreditAmount?: number;
+  alertCreditAmount?: number;
+  cc?: string;
+  bcc?: string;
 }
 
 export interface InvoiceReceipt {
@@ -276,6 +281,20 @@ export const customerApi = {
   createContact: (customerId: number, data: CreateCustomerContactRequest) =>
     fetchApi<number>(`/customers/${customerId}/contacts`, {
       method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateContact: (contactId: number, data: CreateCustomerContactRequest) =>
+    fetchApi<void>(`/customers/contacts/${contactId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deleteContact: (contactId: number) =>
+    fetchApi<void>(`/customers/contacts/${contactId}`, { method: 'DELETE' }),
+
+  // Account Details
+  updateAccountDetail: (customerId: number, data: Omit<CustomerAccountDetail, 'id'>) =>
+    fetchApi<void>(`/customers/${customerId}/account-detail`, {
+      method: 'PUT',
       body: JSON.stringify(data),
     }),
 

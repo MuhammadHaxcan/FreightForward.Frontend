@@ -66,7 +66,7 @@ export function BoxPalletRowModal({
     const height = formData.height || 0;
     const volume = length * width * height;
     const totalVolume =
-      formData.measurementType === "PerUnit"
+      formData.measurementType === "Total"
         ? volume * formData.quantity
         : volume;
     setFormData((prev) => ({ ...prev, volume: totalVolume }));

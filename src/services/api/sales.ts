@@ -9,6 +9,7 @@ export type FreightMode = 'SeaFreight' | 'AirFreight' | 'LandFreight';
 export type UnitOfMeasurement = 'KG' | 'LB';
 export type ShippingType = 'FTL' | 'LTL';
 export type MeasurementType = 'Total' | 'PerUnit';
+export type LeadType = 'ManualLead' | 'PortalLead';
 
 // LeadDetail item (for Equipment and BoxPallet)
 export interface LeadDetailItem {
@@ -76,6 +77,7 @@ export interface Lead {
   weight?: number;
   weightUnit?: string;
   leadStatus: LeadStatus;
+  leadType: LeadType;
   status?: string;
   createdAt: string;
 }
@@ -96,6 +98,7 @@ export interface CreateLeadDetailRequest {
 }
 
 export interface CreateLeadRequest {
+  leadType?: LeadType;
   customerId?: number;
   fullName: string;
   email: string;
@@ -127,6 +130,7 @@ export interface RateRequest {
   rateRequestNo: string;
   requestDate: string;
   leadId?: number;
+  leadNo?: string;
   mode: ShipmentMode;
   modeDisplay: string;
   vendorName: string;
@@ -470,6 +474,8 @@ export const quotationApi = {
     fetchApi<number>('/sales/quotations', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: number, data: UpdateQuotationRequest) =>
     fetchApi<void>(`/sales/quotations/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) =>
+    fetchApi<void>(`/sales/quotations/${id}`, { method: 'DELETE' }),
   approve: (id: number) =>
     fetchApi<{ bookingNo: string }>(`/sales/quotations/${id}/approve`, { method: 'POST' }),
 };

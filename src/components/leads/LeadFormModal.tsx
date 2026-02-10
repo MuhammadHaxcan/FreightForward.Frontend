@@ -246,6 +246,7 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
     }
 
     const request: CreateLeadRequest = {
+      leadType: 'ManualLead',
       customerId: formData.customerId,
       fullName: formData.fullName,
       email: formData.email,

@@ -41,6 +41,7 @@ import {
   useQuotation,
   useCreateQuotation,
   useUpdateQuotation,
+  useDeleteQuotation,
   useRateRequestForConversion,
   useApproveQuotation,
 } from "@/hooks/useSales";
@@ -126,6 +127,8 @@ export default function Quotations() {
   const [quotationToApprove, setQuotationToApprove] = useState<Quotation | null>(null);
   const [convertModalOpen, setConvertModalOpen] = useState(false);
   const [quotationToConvert, setQuotationToConvert] = useState<Quotation | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [quotationToDelete, setQuotationToDelete] = useState<Quotation | null>(null);
 
   // Get rateRequestId from location state (when coming from Rate Requests)
   const rateRequestIdFromState = (location.state as { rateRequestId?: number })?.rateRequestId;
@@ -190,6 +193,7 @@ export default function Quotations() {
   // Mutations
   const createMutation = useCreateQuotation();
   const updateMutation = useUpdateQuotation();
+  const deleteMutation = useDeleteQuotation();
   const approveMutation = useApproveQuotation();
 
   const quotations = data?.items || [];
@@ -744,6 +748,10 @@ export default function Quotations() {
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded"
+                                  onClick={() => {
+                                    setQuotationToDelete(quotation);
+                                    setDeleteModalOpen(true);
+                                  }}
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -811,29 +819,6 @@ export default function Quotations() {
           </DialogHeader>
 
           <div className="space-y-6">
-            {/* Header with Back and Update buttons for edit/view mode */}
-            {(modalMode === "edit" || modalMode === "view") && (
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  className="bg-yellow-500 hover:bg-yellow-600 text-white border-yellow-500"
-                  onClick={closeModal}
-                >
-                  Back
-                </Button>
-                {modalMode === "edit" && (
-                  <Button
-                    className="bg-blue-500 hover:bg-blue-600 text-white"
-                    onClick={handleSave}
-                    disabled={updateMutation.isPending}
-                  >
-                    {updateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                    Update
-                  </Button>
-                )}
-              </div>
-            )}
-
             {/* Quotation Details */}
             <div className="border border-border rounded-lg p-4">
               <h3 className="text-primary font-semibold mb-4">Quotation</h3>
@@ -1575,6 +1560,68 @@ export default function Quotations() {
             >
               Yes, Convert
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Quotation Confirmation Modal */}
+      <AlertDialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {quotationToDelete?.quotationStatus === "Approved"
+                ? "Cannot Delete Quotation"
+                : "Delete Quotation"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {quotationToDelete?.quotationStatus === "Approved" ? (
+                <>
+                  This quotation has been approved and cannot be deleted.
+                  {quotationToDelete && (
+                    <span className="block mt-2 font-medium text-foreground">
+                      Quotation No: {quotationToDelete.quotationNo}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <>
+                  Are you sure you want to delete this quotation? This action cannot be undone.
+                  {quotationToDelete && (
+                    <span className="block mt-2 font-medium text-foreground">
+                      Quotation No: {quotationToDelete.quotationNo}
+                    </span>
+                  )}
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setDeleteModalOpen(false);
+                setQuotationToDelete(null);
+              }}
+            >
+              {quotationToDelete?.quotationStatus === "Approved" ? "OK" : "Cancel"}
+            </AlertDialogCancel>
+            {quotationToDelete?.quotationStatus !== "Approved" && (
+              <AlertDialogAction
+                className="bg-red-500 hover:bg-red-600 text-white"
+                onClick={async () => {
+                  if (quotationToDelete) {
+                    await deleteMutation.mutateAsync(quotationToDelete.id);
+                    setDeleteModalOpen(false);
+                    setQuotationToDelete(null);
+                  }
+                }}
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : null}
+                Yes, Delete
+              </AlertDialogAction>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

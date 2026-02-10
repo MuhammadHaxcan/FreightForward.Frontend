@@ -228,6 +228,27 @@ export function useUpdateQuotation() {
   });
 }
 
+export function useDeleteQuotation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const response = await quotationApi.delete(id);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quotations'] });
+      toast.success('Quotation deleted successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to delete quotation');
+    },
+  });
+}
+
 // Rate Request for Conversion
 export function useRateRequestForConversion(id: number) {
   return useQuery({
