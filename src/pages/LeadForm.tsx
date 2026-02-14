@@ -1,11 +1,6 @@
 import { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { useNavigate, useParams } from "react-router-dom";
+import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,10 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { DateInput } from "@/components/ui/date-input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Ship, Plane, Truck, Package, Container } from "lucide-react";
+import { Loader2, Ship, Plane, Truck, Package, Container, ArrowLeft } from "lucide-react";
 import {
-  Lead,
   CreateLeadRequest,
   UpdateLeadRequest,
   FreightMode,
@@ -35,8 +28,8 @@ import {
   useAllContainerTypes,
   useAllPackageTypes,
 } from "@/hooks/useSettings";
-import { EquipmentGrid } from "./EquipmentGrid";
-import { BoxPalletsGrid } from "./BoxPalletsGrid";
+import { EquipmentGrid } from "@/components/leads/EquipmentGrid";
+import { BoxPalletsGrid } from "@/components/leads/BoxPalletsGrid";
 
 const PRODUCT_TYPES = [
   "AGRICULTURE & FOOD",
@@ -47,12 +40,6 @@ const PRODUCT_TYPES = [
   "AUTOMOTIVE",
   "PHARMACEUTICALS",
 ];
-
-interface LeadFormModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  leadId: number | null;
-}
 
 interface FormData {
   customerId?: number;
@@ -101,7 +88,11 @@ const initialFormData: FormData = {
   incoTermId: undefined,
 };
 
-export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps) {
+export default function LeadForm() {
+  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const leadId = id ? parseInt(id) : null;
+
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const createLead = useCreateLead();
   const updateLead = useUpdateLead();
@@ -138,12 +129,6 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
   );
 
   useEffect(() => {
-    if (!open) {
-      // Reset form when modal closes
-      setFormData(initialFormData);
-      return;
-    }
-
     if (leadId && lead) {
       // Separate lead details into equipments and boxPallets
       const equipments: LeadDetailItem[] = [];
@@ -195,7 +180,7 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
       // Creating new lead
       setFormData(initialFormData);
     }
-  }, [leadId, lead, open]);
+  }, [leadId, lead]);
 
   const updateField = <K extends keyof FormData>(field: K, value: FormData[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -279,7 +264,7 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
       } else {
         await createLead.mutateAsync(request);
       }
-      onOpenChange(false);
+      navigate("/sales/leads");
     } catch {
       // Error handling is done in the hook
     }
@@ -294,22 +279,25 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] p-0">
-        <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
-          <DialogTitle className="text-white text-lg font-semibold">
+    <MainLayout>
+      <div className="p-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="icon" onClick={() => navigate("/sales/leads")}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-2xl font-semibold text-foreground">
             {isEditing ? "Edit Lead" : "Generate Lead"}
-          </DialogTitle>
-        </DialogHeader>
+          </h1>
+        </div>
 
-        <ScrollArea className="max-h-[calc(90vh-140px)] px-6 pt-4">
-          {isEditing && isLeadLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <span className="ml-2 text-muted-foreground">Loading lead data...</span>
-            </div>
-          ) : (
-          <div className="space-y-6 py-4">
+        {isEditing && isLeadLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <span className="ml-2 text-muted-foreground">Loading lead data...</span>
+          </div>
+        ) : (
+          <div className="space-y-6">
             {/* Section 1: Contact Information */}
             <Card>
               <CardHeader className="pb-4">
@@ -656,24 +644,24 @@ export function LeadFormModal({ open, onOpenChange, leadId }: LeadFormModalProps
                 </div>
               </CardContent>
             </Card>
-          </div>
-          )}
-        </ScrollArea>
 
-        <DialogFooter className="px-6 py-4 border-t">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={!isFormValid() || isSaving || (isEditing && isLeadLoading)}
-            className="btn-success"
-          >
-            {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {isEditing ? "Update" : "Save"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            {/* Footer buttons */}
+            <div className="flex justify-end gap-2 pb-6">
+              <Button variant="outline" onClick={() => navigate("/sales/leads")}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={!isFormValid() || isSaving || (isEditing && isLeadLoading)}
+                className="btn-success"
+              >
+                {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {isEditing ? "Update" : "Save"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </MainLayout>
   );
 }

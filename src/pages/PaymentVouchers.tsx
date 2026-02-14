@@ -131,7 +131,7 @@ export default function PaymentVouchers() {
             }}
             placeholder="10"
             searchPlaceholder="Search..."
-            triggerClassName="w-20"
+            triggerClassName="w-[90px]"
           />
           <span className="text-sm text-muted-foreground">entries</span>
         </div>

@@ -191,7 +191,7 @@ export default function Invoices() {
             ]}
             value={pageSize.toString()}
             onValueChange={(v) => setPageSize(parseInt(v))}
-            triggerClassName="w-20"
+            triggerClassName="w-[90px]"
           />
           <span className="text-sm">entries</span>
         </div>

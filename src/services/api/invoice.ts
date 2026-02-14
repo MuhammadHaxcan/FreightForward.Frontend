@@ -262,6 +262,49 @@ export interface VatReportResult {
   totals: VatReportTotals;
 }
 
+// Account Receivable Summary Types
+export interface AccountReceivableSummaryItem {
+  customerId: number;
+  customerName: string;
+  currencyCode: string;
+  totalInvoiced: number;
+  totalReceived: number;
+  balance: number;
+}
+
+export interface AccountReceivableCurrencyTotal {
+  currencyCode: string;
+  totalInvoiced: number;
+  totalReceived: number;
+  balance: number;
+}
+
+export interface AccountReceivableSummaryResult {
+  items: PaginatedList<AccountReceivableSummaryItem>;
+  totals: AccountReceivableCurrencyTotal[];
+}
+
+export interface AccountPayableSummaryItem {
+  vendorId: number;
+  vendorName: string;
+  currencyCode: string;
+  totalAmount: number;
+  totalPaid: number;
+  balance: number;
+}
+
+export interface AccountPayableCurrencyTotal {
+  currencyCode: string;
+  totalAmount: number;
+  totalPaid: number;
+  balance: number;
+}
+
+export interface AccountPayableSummaryResult {
+  items: PaginatedList<AccountPayableSummaryItem>;
+  totals: AccountPayableCurrencyTotal[];
+}
+
 // Invoice API
 export const invoiceApi = {
   getAll: (params?: {
@@ -355,6 +398,34 @@ export const invoiceApi = {
     if (params?.toDate) query.append('toDate', params.toDate);
     if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
     return fetchApi<VatReportResult>(`/invoices/vat-report?${query}`);
+  },
+  getAccountReceivableSummary: (params?: {
+    pageNumber?: number; pageSize?: number;
+    customerId?: number; fromDate?: string; toDate?: string;
+    searchTerm?: string;
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.customerId) query.append('customerId', params.customerId.toString());
+    if (params?.fromDate) query.append('fromDate', params.fromDate);
+    if (params?.toDate) query.append('toDate', params.toDate);
+    if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
+    return fetchApi<AccountReceivableSummaryResult>(`/invoices/account-receivable-summary?${query}`);
+  },
+  getAccountPayableSummary: (params?: {
+    pageNumber?: number; pageSize?: number;
+    vendorId?: number; fromDate?: string; toDate?: string;
+    searchTerm?: string;
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.vendorId) query.append('vendorId', params.vendorId.toString());
+    if (params?.fromDate) query.append('fromDate', params.fromDate);
+    if (params?.toDate) query.append('toDate', params.toDate);
+    if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
+    return fetchApi<AccountPayableSummaryResult>(`/invoices/account-payable-summary?${query}`);
   },
 };
 

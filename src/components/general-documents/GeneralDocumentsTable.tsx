@@ -15,8 +15,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { GeneralDocumentModal } from "./GeneralDocumentModal";
 import { useGeneralDocuments, useDeleteGeneralDocument } from "@/hooks/useGeneralDocuments";
-import { useCompanies } from "@/hooks/useCompanies";
 import { GeneralDocument, fileApi } from "@/services/api";
+import { getAccessToken, isDevAuthDisabled, attemptTokenRefresh } from "@/services/api/base";
+import { toast } from "sonner";
 
 export function GeneralDocumentsTable() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -30,9 +31,6 @@ export function GeneralDocumentsTable() {
     pageSize: parseInt(entriesPerPage),
     searchTerm: searchTerm || undefined,
   });
-
-  const { data: companiesData } = useCompanies({ pageNumber: 1, pageSize: 1 });
-  const companyName = companiesData?.items?.[0]?.name || "";
 
   const deleteMutation = useDeleteGeneralDocument();
 
@@ -50,6 +48,39 @@ export function GeneralDocumentsTable() {
   const documents = data?.items || [];
   const totalCount = data?.totalCount || 0;
   const totalPages = data?.totalPages || 1;
+
+  const handleDownload = async (filePath: string, originalFileName?: string) => {
+    try {
+      const makeRequest = async (token: string | null) => {
+        const headers: HeadersInit = {};
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+        return fetch(fileApi.getDownloadUrl(filePath), { headers });
+      };
+
+      let response = await makeRequest(isDevAuthDisabled() ? null : getAccessToken());
+
+      if (response.status === 401 && !isDevAuthDisabled()) {
+        const refreshed = await attemptTokenRefresh();
+        if (refreshed) {
+          response = await makeRequest(getAccessToken());
+        }
+      }
+
+      if (!response.ok) throw new Error("Download failed");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = originalFileName || filePath;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Failed to download file");
+    }
+  };
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -86,7 +117,7 @@ export function GeneralDocumentsTable() {
                 setEntriesPerPage(value);
                 setCurrentPage(1);
               }}
-              triggerClassName="w-20 h-9"
+              triggerClassName="w-[90px] h-9"
             />
             <span className="text-sm text-muted-foreground">entries</span>
           </div>
@@ -118,7 +149,6 @@ export function GeneralDocumentsTable() {
             <table className="w-full">
               <thead>
                 <tr className="bg-table-header text-table-header-foreground">
-                  <th className="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap">Branch</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap">Document Name</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap">Document</th>
                   <th className="px-3 py-3 text-left text-xs font-semibold whitespace-nowrap">Remarks</th>
@@ -129,7 +159,7 @@ export function GeneralDocumentsTable() {
               <tbody>
                 {documents.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-3 py-8 text-center text-muted-foreground">
+                    <td colSpan={5} className="px-3 py-8 text-center text-muted-foreground">
                       No documents found
                     </td>
                   </tr>
@@ -141,23 +171,18 @@ export function GeneralDocumentsTable() {
                         index % 2 === 0 ? "bg-card" : "bg-secondary/30"
                       }`}
                     >
-                      <td className="px-3 py-2.5 text-sm text-foreground whitespace-nowrap">
-                        {companyName || "-"}
-                      </td>
                       <td className="px-3 py-2.5 text-sm text-primary font-medium whitespace-nowrap">
                         {doc.documentName}
                       </td>
                       <td className="px-3 py-2.5 text-sm whitespace-nowrap">
                         {doc.filePath ? (
-                          <a
-                            href={fileApi.getDownloadUrl(doc.filePath)}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <button
+                            onClick={() => handleDownload(doc.filePath!, doc.originalFileName)}
                             className="text-primary hover:text-primary/80 transition-colors"
                             title={doc.originalFileName || "Download"}
                           >
                             <Download size={16} />
-                          </a>
+                          </button>
                         ) : (
                           <span className="text-muted-foreground">-</span>
                         )}
@@ -229,7 +254,6 @@ export function GeneralDocumentsTable() {
       <GeneralDocumentModal
         open={isAddModalOpen}
         onOpenChange={(open) => setIsAddModalOpen(open)}
-        companyName={companyName}
       />
 
       {/* Delete Confirmation */}

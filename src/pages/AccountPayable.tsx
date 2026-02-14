@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { formatDate, formatDateToISO, formatDateForDisplay } from "@/lib/utils";
-import { Search, Calendar } from "lucide-react";
+import { formatDateToISO, formatDateForDisplay } from "@/lib/utils";
+import { Search, Calendar, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -17,52 +17,44 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { invoiceApi, customerApi, Customer, VatReportItem, VatReportTotals } from "@/services/api";
+import { invoiceApi, customerApi, Customer, AccountPayableSummaryItem, AccountPayableCurrencyTotal } from "@/services/api";
 import { DateRange } from "react-day-picker";
-import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 
-export default function VatReport() {
-  const baseCurrencyCode = useBaseCurrency();
-  const [items, setItems] = useState<VatReportItem[]>([]);
-  const [totals, setTotals] = useState<VatReportTotals>({
-    totalAmount: 0,
-    totalNonTaxableSale: 0,
-    totalTaxableSale: 0,
-    totalTaxAmount: 0,
-    totalInvoiceAmount: 0,
-  });
-  const [customers, setCustomers] = useState<Customer[]>([]);
+export default function AccountPayable() {
+  const [items, setItems] = useState<AccountPayableSummaryItem[]>([]);
+  const [totals, setTotals] = useState<AccountPayableCurrencyTotal[]>([]);
+  const [vendors, setVendors] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCustomer, setSelectedCustomer] = useState<string>("all");
+  const [selectedVendor, setSelectedVendor] = useState<string>("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
     to: new Date(),
   });
   const [pageNumber, setPageNumber] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(25);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
 
-  // Fetch customers for filter
+  // Fetch vendors for filter
   useEffect(() => {
-    const fetchCustomers = async () => {
-      const response = await customerApi.getAll({ pageSize: 1000, masterType: 'Debtors' });
+    const fetchVendors = async () => {
+      const response = await customerApi.getAll({ pageSize: 1000, masterType: 'Creditors' });
       if (response.data) {
-        setCustomers(response.data.items);
+        setVendors(response.data.items);
       }
     };
-    fetchCustomers();
+    fetchVendors();
   }, []);
 
-  // Fetch VAT report data
-  const fetchVatReport = async () => {
+  // Fetch account payable data
+  const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await invoiceApi.getVatReport({
+      const response = await invoiceApi.getAccountPayableSummary({
         pageNumber,
         pageSize,
-        customerId: selectedCustomer !== "all" ? parseInt(selectedCustomer) : undefined,
+        vendorId: selectedVendor !== "all" ? parseInt(selectedVendor) : undefined,
         fromDate: dateRange?.from ? formatDateToISO(dateRange.from) : undefined,
         toDate: dateRange?.to ? formatDateToISO(dateRange.to) : undefined,
         searchTerm: searchTerm || undefined,
@@ -74,19 +66,28 @@ export default function VatReport() {
         setTotals(response.data.totals);
       }
     } catch (error) {
-      toast.error("Failed to load VAT report");
+      toast.error("Failed to load account payable data");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchVatReport();
+    fetchData();
   }, [pageNumber, pageSize]);
 
   const handleSearch = () => {
     setPageNumber(1);
-    fetchVatReport();
+    fetchData();
+  };
+
+  const handlePrint = () => {
+    const params = new URLSearchParams();
+    if (dateRange?.from) params.append('fromDate', formatDateToISO(dateRange.from));
+    if (dateRange?.to) params.append('toDate', formatDateToISO(dateRange.to));
+    if (selectedVendor !== "all") params.append('vendorId', selectedVendor);
+    if (searchTerm) params.append('searchTerm', searchTerm);
+    window.open(`/accounts/account-payable/print?${params.toString()}`, '_blank');
   };
 
   const formatAmount = (amount: number) => {
@@ -99,25 +100,25 @@ export default function VatReport() {
   return (
     <MainLayout>
       <div className="p-6 space-y-4">
-        <h1 className="text-2xl font-semibold">VAT Report</h1>
+        <h1 className="text-2xl font-semibold">All Accounts Payable</h1>
 
         {/* Filters */}
         <div className="bg-muted/30 border rounded-lg p-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-green-600">Customers</label>
+              <label className="text-sm font-medium text-green-600">Vendors</label>
               <SearchableSelect
                 options={[
                   { value: "all", label: "Select All" },
-                  ...customers.map((customer) => ({
-                    value: customer.id.toString(),
-                    label: customer.name,
+                  ...vendors.map((vendor) => ({
+                    value: vendor.id.toString(),
+                    label: vendor.name,
                   })),
                 ]}
-                value={selectedCustomer}
-                onValueChange={setSelectedCustomer}
+                value={selectedVendor}
+                onValueChange={setSelectedVendor}
                 placeholder="Select All"
-                searchPlaceholder="Search customers..."
+                searchPlaceholder="Search vendors..."
               />
             </div>
 
@@ -157,9 +158,14 @@ export default function VatReport() {
               </Popover>
             </div>
 
-            <div className="flex items-end">
+            <div className="flex items-end gap-2">
               <Button onClick={handleSearch} className="bg-primary text-primary-foreground">
+                <Search className="mr-2 h-4 w-4" />
                 Search
+              </Button>
+              <Button onClick={handlePrint} variant="outline" className="bg-yellow-400 hover:bg-yellow-500 text-black border-yellow-400">
+                <Printer className="mr-2 h-4 w-4" />
+                Print
               </Button>
             </div>
           </div>
@@ -194,53 +200,37 @@ export default function VatReport() {
           </div>
         </div>
 
-        {/* VAT Report Table */}
+        {/* Account Payable Table */}
         <div className="border rounded-lg overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow className="bg-table-header">
-                <TableHead className="text-table-header-foreground font-semibold">Job No.</TableHead>
-                <TableHead className="text-table-header-foreground font-semibold">Bill of Lading No.</TableHead>
-                <TableHead className="text-table-header-foreground font-semibold">Invoice No.</TableHead>
-                <TableHead className="text-table-header-foreground font-semibold">Invoice Date</TableHead>
-                <TableHead className="text-table-header-foreground font-semibold">Customer</TableHead>
-                <TableHead className="text-table-header-foreground font-semibold">Curr Unit</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold">Vendor</TableHead>
                 <TableHead className="text-table-header-foreground font-semibold text-right">Amount</TableHead>
-                <TableHead className="text-table-header-foreground font-semibold text-right">{`Non-Taxable Sale(${baseCurrencyCode})`}</TableHead>
-                <TableHead className="text-table-header-foreground font-semibold text-right">{`Taxable Sale(${baseCurrencyCode})`}</TableHead>
-                <TableHead className="text-table-header-foreground font-semibold text-right">{`Tax (5%)(${baseCurrencyCode})`}</TableHead>
-                <TableHead className="text-table-header-foreground font-semibold text-right">{`Total Invoice(${baseCurrencyCode})`}</TableHead>
-                <TableHead className="text-table-header-foreground font-semibold">Remarks</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold text-right">Paid</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold text-right">Balance</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={12} className="text-center py-8">
+                  <TableCell colSpan={4} className="text-center py-8">
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={12} className="text-center py-8">
+                  <TableCell colSpan={4} className="text-center py-8">
                     No records found
                   </TableCell>
                 </TableRow>
               ) : (
                 items.map((item) => (
-                  <TableRow key={item.id} className="hover:bg-muted/50">
-                    <TableCell>{item.jobNo || "-"}</TableCell>
-                    <TableCell>{item.hblNo || "-"}</TableCell>
-                    <TableCell>{item.invoiceNo}</TableCell>
-                    <TableCell>{formatDate(item.invoiceDate)}</TableCell>
-                    <TableCell>{item.customerName || "-"}</TableCell>
-                    <TableCell>{item.currencyCode || "-"}</TableCell>
-                    <TableCell className="text-right">{formatAmount(item.amount)}</TableCell>
-                    <TableCell className="text-right">{formatAmount(item.nonTaxableSale)}</TableCell>
-                    <TableCell className="text-right">{formatAmount(item.taxableSale)}</TableCell>
-                    <TableCell className="text-right">{formatAmount(item.taxAmount)}</TableCell>
-                    <TableCell className="text-right">{formatAmount(item.totalInvoice)}</TableCell>
-                    <TableCell>{item.remarks || "-"}</TableCell>
+                  <TableRow key={`${item.vendorId}-${item.currencyCode}`} className="hover:bg-muted/50">
+                    <TableCell className="text-green-600 font-medium">{item.vendorName}</TableCell>
+                    <TableCell className="text-right">{item.currencyCode} {formatAmount(item.totalAmount)}</TableCell>
+                    <TableCell className="text-right">{item.currencyCode} {formatAmount(item.totalPaid)}</TableCell>
+                    <TableCell className="text-right font-bold text-red-600">{item.currencyCode} {formatAmount(item.balance)}</TableCell>
                   </TableRow>
                 ))
               )}
@@ -248,13 +238,16 @@ export default function VatReport() {
             {!loading && items.length > 0 && (
               <TableFooter>
                 <TableRow className="font-bold">
-                  <TableCell colSpan={6} className="text-right">Totals:</TableCell>
-                  <TableCell className="text-right">{formatAmount(totals.totalAmount)}</TableCell>
-                  <TableCell className="text-right">{formatAmount(totals.totalNonTaxableSale)}</TableCell>
-                  <TableCell className="text-right">{formatAmount(totals.totalTaxableSale)}</TableCell>
-                  <TableCell className="text-right">{formatAmount(totals.totalTaxAmount)}</TableCell>
-                  <TableCell className="text-right">{formatAmount(totals.totalInvoiceAmount)}</TableCell>
+                  <TableCell className="text-right font-bold">TOTAL OF PAYABLE</TableCell>
                   <TableCell></TableCell>
+                  <TableCell></TableCell>
+                  <TableCell className="text-right">
+                    {totals.map((t) => (
+                      <div key={t.currencyCode} className="font-bold">
+                        {t.currencyCode} {formatAmount(t.balance)}
+                      </div>
+                    ))}
+                  </TableCell>
                 </TableRow>
               </TableFooter>
             )}
@@ -321,8 +314,6 @@ export default function VatReport() {
             </Button>
           </div>
         </div>
-
-
       </div>
     </MainLayout>
   );

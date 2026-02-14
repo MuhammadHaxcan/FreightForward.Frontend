@@ -87,7 +87,7 @@ export function CompaniesTable() {
                 setEntriesPerPage(value);
                 setCurrentPage(1);
               }}
-              triggerClassName="w-20 h-9"
+              triggerClassName="w-[90px] h-9"
             />
             <span className="text-sm text-muted-foreground">entries</span>
           </div>

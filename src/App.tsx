@@ -22,6 +22,7 @@ const Companies = lazy(() => import("./pages/Companies"));
 const Shipments = lazy(() => import("./pages/Shipments"));
 const ShipmentDetail = lazy(() => import("./pages/ShipmentDetail"));
 const AddShipment = lazy(() => import("./pages/AddShipment"));
+const BillOfLadingViewer = lazy(() => import("./pages/BillOfLadingViewer"));
 const MasterCustomers = lazy(() => import("./pages/MasterCustomers"));
 const CustomerDetail = lazy(() => import("./pages/CustomerDetail"));
 const NeutralDetail = lazy(() => import("./pages/NeutralDetail"));
@@ -30,6 +31,7 @@ const PermissionRoles = lazy(() => import("./pages/PermissionRoles"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Banks = lazy(() => import("./pages/Banks"));
 const Leads = lazy(() => import("./pages/Leads"));
+const LeadForm = lazy(() => import("./pages/LeadForm"));
 const RateRequests = lazy(() => import("./pages/RateRequests"));
 const Quotations = lazy(() => import("./pages/Quotations"));
 const QuotationView = lazy(() => import("./pages/QuotationView"));
@@ -55,6 +57,10 @@ const CostSheetDetail = lazy(() => import("./pages/CostSheetDetail"));
 const CostSheetPrintView = lazy(() => import("./pages/CostSheetPrintView"));
 const CostSheetDetailPrintView = lazy(() => import("./pages/CostSheetDetailPrintView"));
 const VatReport = lazy(() => import("./pages/VatReport"));
+const AccountReceivable = lazy(() => import("./pages/AccountReceivable"));
+const AccountReceivablePrintView = lazy(() => import("./pages/AccountReceivablePrintView"));
+const AccountPayable = lazy(() => import("./pages/AccountPayable"));
+const AccountPayablePrintView = lazy(() => import("./pages/AccountPayablePrintView"));
 const ChangePassword = lazy(() => import("./pages/ChangePassword"));
 const Profile = lazy(() => import("./pages/Profile"));
 const GeneralDocuments = lazy(() => import("./pages/GeneralDocuments"));
@@ -132,6 +138,11 @@ const AppRoutes = () => (
           <ShipmentDetail />
         </ProtectedRoute>
       } />
+      <Route path="/shipments/bill-of-lading" element={
+        <ProtectedRoute permission="bl_view">
+          <BillOfLadingViewer />
+        </ProtectedRoute>
+      } />
       <Route path="/master-customers" element={
         <ProtectedRoute permission="cust_view">
           <MasterCustomers />
@@ -155,6 +166,16 @@ const AppRoutes = () => (
       <Route path="/sales/leads" element={
         <ProtectedRoute permission="leads_view">
           <Leads />
+        </ProtectedRoute>
+      } />
+      <Route path="/sales/leads/new" element={
+        <ProtectedRoute permission="leads_add">
+          <LeadForm />
+        </ProtectedRoute>
+      } />
+      <Route path="/sales/leads/:id/edit" element={
+        <ProtectedRoute permission="leads_edit">
+          <LeadForm />
         </ProtectedRoute>
       } />
       <Route path="/sales/rate-requests" element={
@@ -275,6 +296,26 @@ const AppRoutes = () => (
       <Route path="/accounts/vat-report" element={
         <ProtectedRoute permission="invoice_view">
           <VatReport />
+        </ProtectedRoute>
+      } />
+      <Route path="/accounts/account-receivable" element={
+        <ProtectedRoute permission="accrec_view">
+          <AccountReceivable />
+        </ProtectedRoute>
+      } />
+      <Route path="/accounts/account-receivable/print" element={
+        <ProtectedRoute permission="accrec_view">
+          <AccountReceivablePrintView />
+        </ProtectedRoute>
+      } />
+      <Route path="/accounts/account-payable" element={
+        <ProtectedRoute permission="accpay_view">
+          <AccountPayable />
+        </ProtectedRoute>
+      } />
+      <Route path="/accounts/account-payable/print" element={
+        <ProtectedRoute permission="accpay_view">
+          <AccountPayablePrintView />
         </ProtectedRoute>
       } />
       <Route path="/users" element={

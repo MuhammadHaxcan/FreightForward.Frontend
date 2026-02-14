@@ -15,10 +15,9 @@ import { Loader2 } from "lucide-react";
 interface GeneralDocumentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  companyName: string;
 }
 
-export function GeneralDocumentModal({ open, onOpenChange, companyName }: GeneralDocumentModalProps) {
+export function GeneralDocumentModal({ open, onOpenChange }: GeneralDocumentModalProps) {
   const [documentName, setDocumentName] = useState("");
   const [remarks, setRemarks] = useState("");
   const [uploadedFilePath, setUploadedFilePath] = useState<string | null>(null);
@@ -35,7 +34,7 @@ export function GeneralDocumentModal({ open, onOpenChange, companyName }: Genera
 
     setIsUploading(true);
     try {
-      const result = await fileApi.upload(file);
+      const result = await fileApi.upload(file, "documents/office");
       setUploadedFilePath(result.fileName);
       setOriginalFileName(file.name);
     } catch {
@@ -95,14 +94,6 @@ export function GeneralDocumentModal({ open, onOpenChange, companyName }: Genera
         </DialogHeader>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <Label className="form-label">Branch</Label>
-            <Input
-              value={companyName}
-              className="form-input bg-muted"
-              readOnly
-            />
-          </div>
-          <div>
             <Label className="form-label">Document Name *</Label>
             <Input
               placeholder="Document Name"
@@ -117,12 +108,12 @@ export function GeneralDocumentModal({ open, onOpenChange, companyName }: Genera
             <Input
               ref={fileInputRef}
               type="file"
-              accept="image/gif,image/png,image/jpg,image/jpeg"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.txt,.zip"
               onChange={handleFileChange}
-              className="form-input"
+              className="w-full border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all duration-200 p-0 file:mr-4 file:py-2 file:px-4 file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground file:cursor-pointer cursor-pointer leading-[38px]"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Upload files only: gif, png, jpg, jpeg
+              Supported: PDF, DOC, DOCX, XLS, XLSX, PNG, JPG, GIF, TXT, ZIP
             </p>
             {originalFileName && (
               <p className="text-xs text-primary mt-1">{originalFileName}</p>

@@ -620,7 +620,7 @@ export default function Quotations() {
                     }}
                     placeholder="10"
                     searchPlaceholder="Search..."
-                    triggerClassName="w-20"
+                    triggerClassName="w-[90px]"
                   />
                   <span className="text-sm text-muted-foreground">entries</span>
                 </div>
@@ -808,17 +808,17 @@ export default function Quotations() {
 
       {/* Add/Edit/View Quotation Modal */}
       <Dialog open={isModalOpen} onOpenChange={(open) => !open && closeModal()}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-primary text-xl">{getModalTitle()}</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto p-0 bg-card">
+          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+            <DialogTitle className="text-white text-xl">{getModalTitle()}</DialogTitle>
+            <DialogDescription className="text-white/70">
               {modalMode === "view"
                 ? "View quotation details"
                 : "Fill in the quotation details below"}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6">
+          <div className="p-6 space-y-6">
             {/* Quotation Details */}
             <div className="border border-border rounded-lg p-4">
               <h3 className="text-primary font-semibold mb-4">Quotation</h3>

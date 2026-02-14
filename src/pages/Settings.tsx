@@ -825,10 +825,10 @@ const Settings = () => {
                     <thead>
                       <tr className="bg-table-header text-table-header-foreground">
                         <th className="px-4 py-3 text-left text-sm font-semibold">Action</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold">Sea Port</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold">Air Port</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold">City</th>
                         <th className="px-4 py-3 text-left text-sm font-semibold">Country</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">City</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Air Port</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Sea Port</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -862,10 +862,10 @@ const Settings = () => {
                               </PermissionGate>
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-sm text-primary font-medium">{port.seaPortName}{port.seaPortCode ? ` (${port.seaPortCode})` : ''}</td>
-                          <td className="px-4 py-3 text-sm text-primary font-medium">{port.airPortName}{port.airPortCode ? ` (${port.airPortCode})` : ''}</td>
-                          <td className="px-4 py-3 text-sm text-primary">{port.city}</td>
                           <td className="px-4 py-3 text-sm text-primary">{port.country}</td>
+                          <td className="px-4 py-3 text-sm text-primary">{port.city}</td>
+                          <td className="px-4 py-3 text-sm text-primary font-medium">{port.airPortName}{port.airPortCode ? ` (${port.airPortCode})` : ''}</td>
+                          <td className="px-4 py-3 text-sm text-primary font-medium">{port.seaPortName}{port.seaPortCode ? ` (${port.seaPortCode})` : ''}</td>
                         </tr>
                       ))}
                       {portData?.items.length === 0 && (
@@ -1525,11 +1525,11 @@ const Settings = () => {
 
       {/* Add Currency Modal */}
       <Dialog open={addCurrencyModalOpen} onOpenChange={(open) => { setAddCurrencyModalOpen(open); if (!open) resetCurrencyForm(); }}>
-        <DialogContent className="sm:max-w-md bg-card">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold"><span className="font-bold">Add New</span> Currency Type</DialogTitle>
+        <DialogContent className="sm:max-w-md bg-card p-0">
+          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+            <DialogTitle className="text-white text-lg font-semibold"><span className="font-bold">Add New</span> Currency Type</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="p-6 space-y-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Currency Name</label>
               <Input
@@ -1599,12 +1599,12 @@ const Settings = () => {
 
       {/* Edit Currency Modal */}
       <Dialog open={editCurrencyModalOpen} onOpenChange={setEditCurrencyModalOpen}>
-        <DialogContent className="sm:max-w-md bg-card">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold">Edit Currency Type</DialogTitle>
+        <DialogContent className="sm:max-w-md bg-card p-0">
+          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+            <DialogTitle className="text-white text-lg font-semibold">Edit Currency Type</DialogTitle>
           </DialogHeader>
           {editCurrency && (
-            <div className="space-y-4 py-4">
+            <div className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Currency Name</label>
                 <Input value={editCurrency.name} onChange={(e) => setEditCurrency({ ...editCurrency, name: e.target.value })} />
@@ -1647,11 +1647,11 @@ const Settings = () => {
 
       {/* Add Port Modal */}
       <Dialog open={addPortModalOpen} onOpenChange={(open) => { setAddPortModalOpen(open); if (!open) resetPortForm(); }}>
-        <DialogContent className="sm:max-w-lg bg-card">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold"><span className="font-bold">Add New</span> Port</DialogTitle>
+        <DialogContent className="sm:max-w-lg bg-card p-0">
+          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+            <DialogTitle className="text-white text-lg font-semibold"><span className="font-bold">Add New</span> Port</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="p-6 space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Sea Port Name</label>
@@ -1725,12 +1725,12 @@ const Settings = () => {
 
       {/* Edit Port Modal */}
       <Dialog open={editPortModalOpen} onOpenChange={setEditPortModalOpen}>
-        <DialogContent className="sm:max-w-lg bg-card">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold">Edit Port</DialogTitle>
+        <DialogContent className="sm:max-w-lg bg-card p-0">
+          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+            <DialogTitle className="text-white text-lg font-semibold">Edit Port</DialogTitle>
           </DialogHeader>
           {editPort && (
-            <div className="space-y-4 py-4">
+            <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1">Sea Port Name</label>
@@ -1785,11 +1785,11 @@ const Settings = () => {
 
       {/* Add Charge Modal */}
       <Dialog open={addChargeModalOpen} onOpenChange={(open) => { setAddChargeModalOpen(open); if (!open) resetChargeForm(); }}>
-        <DialogContent className="sm:max-w-md bg-card">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold"><span className="font-bold">Add New</span> Charge</DialogTitle>
+        <DialogContent className="sm:max-w-md bg-card p-0">
+          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+            <DialogTitle className="text-white text-lg font-semibold"><span className="font-bold">Add New</span> Charge</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="p-6 space-y-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Charge</label>
               <Input
@@ -1815,12 +1815,12 @@ const Settings = () => {
 
       {/* Edit Charge Modal */}
       <Dialog open={editChargeModalOpen} onOpenChange={setEditChargeModalOpen}>
-        <DialogContent className="sm:max-w-md bg-card">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold">Edit Charge Item</DialogTitle>
+        <DialogContent className="sm:max-w-md bg-card p-0">
+          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+            <DialogTitle className="text-white text-lg font-semibold">Edit Charge Item</DialogTitle>
           </DialogHeader>
           {editCharge && (
-            <div className="space-y-4 py-4">
+            <div className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Charge Name</label>
                 <Input value={editCharge.name} onChange={(e) => setEditCharge({ ...editCharge, name: e.target.value })} />
@@ -1843,11 +1843,11 @@ const Settings = () => {
 
       {/* Add Expense Modal */}
       <Dialog open={addExpenseModalOpen} onOpenChange={(open) => { setAddExpenseModalOpen(open); if (!open) resetExpenseForm(); }}>
-        <DialogContent className="sm:max-w-md bg-card">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold"><span className="font-bold">Add New</span> Expense</DialogTitle>
+        <DialogContent className="sm:max-w-md bg-card p-0">
+          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+            <DialogTitle className="text-white text-lg font-semibold"><span className="font-bold">Add New</span> Expense</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="p-6 space-y-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Category</label>
               <SearchableSelect
@@ -1886,12 +1886,12 @@ const Settings = () => {
 
       {/* Edit Expense Modal */}
       <Dialog open={editExpenseModalOpen} onOpenChange={setEditExpenseModalOpen}>
-        <DialogContent className="sm:max-w-md bg-card">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold">Edit Expense Item</DialogTitle>
+        <DialogContent className="sm:max-w-md bg-card p-0">
+          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+            <DialogTitle className="text-white text-lg font-semibold">Edit Expense Item</DialogTitle>
           </DialogHeader>
           {editExpense && (
-            <div className="space-y-4 py-4">
+            <div className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Category</label>
                 <SearchableSelect
@@ -1927,11 +1927,11 @@ const Settings = () => {
 
       {/* Add Bank Modal */}
       <Dialog open={addBankModalOpen} onOpenChange={(open) => { setAddBankModalOpen(open); if (!open) resetBankForm(); }}>
-        <DialogContent className="sm:max-w-md bg-card">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold"><span className="font-bold">Add New</span> Bank</DialogTitle>
+        <DialogContent className="sm:max-w-md bg-card p-0">
+          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+            <DialogTitle className="text-white text-lg font-semibold"><span className="font-bold">Add New</span> Bank</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="p-6 space-y-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Bank Name *</label>
               <Input
@@ -1997,12 +1997,12 @@ const Settings = () => {
 
       {/* Edit Bank Modal */}
       <Dialog open={editBankModalOpen} onOpenChange={setEditBankModalOpen}>
-        <DialogContent className="sm:max-w-md bg-card">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold">Edit Bank</DialogTitle>
+        <DialogContent className="sm:max-w-md bg-card p-0">
+          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+            <DialogTitle className="text-white text-lg font-semibold">Edit Bank</DialogTitle>
           </DialogHeader>
           {editBank && (
-            <div className="space-y-4 py-4">
+            <div className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Bank Name *</label>
                 <Input value={editBank.bankName} onChange={(e) => setEditBank({ ...editBank, bankName: e.target.value })} />

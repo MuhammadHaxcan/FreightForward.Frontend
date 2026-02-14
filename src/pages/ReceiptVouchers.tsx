@@ -167,7 +167,7 @@ export default function ReceiptVouchers() {
               ]}
               value={pageSize.toString()}
               onValueChange={(v) => { setPageSize(parseInt(v)); setPageNumber(1); }}
-              triggerClassName="w-20"
+              triggerClassName="w-[90px]"
             />
             <span className="text-sm">entries</span>
           </div>

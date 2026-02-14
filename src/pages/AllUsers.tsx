@@ -360,14 +360,14 @@ const AllUsers = () => {
 
       {/* Add/Edit Employee Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
+        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto p-0 bg-card">
+          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+            <DialogTitle className="text-white">
               {modalMode === "add" ? "Add New" : "Edit"} Employee
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-6 py-4">
+          <div className="p-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">First Name <span className="text-destructive">*</span></Label>
@@ -445,45 +445,46 @@ const AllUsers = () => {
                 searchPlaceholder="Search roles..."
               />
             </div>
-          </div>
 
-          <div className="flex justify-end gap-2 pt-4 border-t border-border">
-            <Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
-            <Button
-              className="btn-success"
-              onClick={handleSave}
-              disabled={createUserMutation.isPending || updateUserMutation.isPending}
-            >
-              {(createUserMutation.isPending || updateUserMutation.isPending) ? "Saving..." : "Save"}
-            </Button>
+
+            <div className="flex justify-end gap-2 pt-4 border-t border-border">
+              <Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
+              <Button
+                className="btn-success"
+                onClick={handleSave}
+                disabled={createUserMutation.isPending || updateUserMutation.isPending}
+              >
+                {(createUserMutation.isPending || updateUserMutation.isPending) ? "Saving..." : "Save"}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent className="sm:max-w-[400px] p-0 bg-card">
+          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+            <DialogTitle className="text-white">Confirm Delete</DialogTitle>
           </DialogHeader>
-          <div className="py-4">
+          <div className="p-6 space-y-4">
             <p className="text-sm text-muted-foreground">
               Are you sure you want to delete user{" "}
               <span className="font-medium text-foreground">{userToDelete?.fullName}</span>?
               This action cannot be undone.
             </p>
-          </div>
-          <div className="flex justify-end gap-2 pt-4 border-t border-border">
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmDelete}
-              disabled={deleteUserMutation.isPending}
-            >
-              {deleteUserMutation.isPending ? "Deleting..." : "Delete"}
-            </Button>
+            <div className="flex justify-end gap-2 pt-4 border-t border-border">
+              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmDelete}
+                disabled={deleteUserMutation.isPending}
+              >
+                {deleteUserMutation.isPending ? "Deleting..." : "Delete"}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

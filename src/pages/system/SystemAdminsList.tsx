@@ -144,15 +144,15 @@ export default function SystemAdminsList() {
                 Add Admin
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>Create System Admin</DialogTitle>
-                <DialogDescription>
+            <DialogContent className="sm:max-w-[425px] p-0 bg-card">
+              <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+                <DialogTitle className="text-white">Create System Admin</DialogTitle>
+                <DialogDescription className="text-white/70">
                   Add a new system administrator account
                 </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleCreateSubmit}>
-                <div className="space-y-4 py-4">
+                <div className="p-6 space-y-4">
                   {formError && (
                     <Alert variant="destructive">
                       <AlertDescription>{formError}</AlertDescription>
@@ -200,21 +200,23 @@ export default function SystemAdminsList() {
                     />
                   </div>
                 </div>
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={createAdminMutation.isPending}>
-                    {createAdminMutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating...
-                      </>
-                    ) : (
-                      'Create Admin'
-                    )}
-                  </Button>
-                </DialogFooter>
+                <div className="px-6 pb-6">
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={createAdminMutation.isPending}>
+                      {createAdminMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        'Create Admin'
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </div>
               </form>
             </DialogContent>
           </Dialog>
@@ -222,15 +224,15 @@ export default function SystemAdminsList() {
 
         {/* Edit Dialog */}
         <Dialog open={!!editingAdmin} onOpenChange={(open) => !open && setEditingAdmin(null)}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Edit System Admin</DialogTitle>
-              <DialogDescription>
+          <DialogContent className="sm:max-w-[425px] p-0 bg-card">
+            <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+              <DialogTitle className="text-white">Edit System Admin</DialogTitle>
+              <DialogDescription className="text-white/70">
                 Update administrator account details
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleUpdateSubmit}>
-              <div className="space-y-4 py-4">
+              <div className="p-6 space-y-4">
                 {formError && (
                   <Alert variant="destructive">
                     <AlertDescription>{formError}</AlertDescription>
@@ -285,21 +287,23 @@ export default function SystemAdminsList() {
                   />
                 </div>
               </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setEditingAdmin(null)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={updateAdminMutation.isPending}>
-                  {updateAdminMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Changes'
-                  )}
-                </Button>
-              </DialogFooter>
+              <div className="px-6 pb-6">
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setEditingAdmin(null)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={updateAdminMutation.isPending}>
+                    {updateAdminMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      'Save Changes'
+                    )}
+                  </Button>
+                </DialogFooter>
+              </div>
             </form>
           </DialogContent>
         </Dialog>

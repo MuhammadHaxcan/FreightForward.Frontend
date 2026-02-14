@@ -457,7 +457,7 @@ const PermissionRoles = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-primary">
+          <p className="text-sm text-muted-foreground">
             Showing {roles.length > 0 ? ((currentPage - 1) * parseInt(entriesPerPage)) + 1 : 0} to{" "}
             {Math.min(currentPage * parseInt(entriesPerPage), totalCount)} of {totalCount} entries
           </p>
@@ -498,12 +498,12 @@ const PermissionRoles = () => {
 
       {/* Add/Edit Role Modal */}
       <Dialog open={roleModalOpen} onOpenChange={(open) => !open && closeModal()}>
-        <DialogContent className="sm:max-w-[900px] max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingRole ? "Edit Role" : "Set New Role"}</DialogTitle>
+        <DialogContent className="sm:max-w-[900px] max-h-[85vh] overflow-y-auto p-0 bg-card">
+          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+            <DialogTitle className="text-white">{editingRole ? "Edit Role" : "Set New Role"}</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="p-6 space-y-4">
             {/* Form Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -539,27 +539,28 @@ const PermissionRoles = () => {
                 {renderPermissionColumn(column3)}
               </div>
             </div>
-          </div>
 
-          <div className="flex justify-end gap-2 pt-4 border-t border-border">
-            <Button variant="outline" onClick={closeModal} disabled={isSaving}>
-              Cancel
-            </Button>
-            <Button className="btn-success" onClick={handleSaveRole} disabled={isSaving}>
-              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {editingRole ? "Update" : "Save"}
-            </Button>
+
+            <div className="flex justify-end gap-2 pt-4 border-t border-border">
+              <Button variant="outline" onClick={closeModal} disabled={isSaving}>
+                Cancel
+              </Button>
+              <Button className="btn-success" onClick={handleSaveRole} disabled={isSaving}>
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {editingRole ? "Update" : "Save"}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent className="sm:max-w-[400px] p-0 bg-card">
+          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+            <DialogTitle className="text-white">Confirm Delete</DialogTitle>
           </DialogHeader>
-          <div className="py-4">
+          <div className="p-6 space-y-4">
             <p className="text-sm text-muted-foreground">
               Are you sure you want to delete the role "{roleToDelete?.name}"? This action cannot be undone.
             </p>
@@ -568,23 +569,23 @@ const PermissionRoles = () => {
                 Warning: This role is assigned to {roleToDelete.userCount} user(s).
               </p>
             )}
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setDeleteConfirmOpen(false)}
-              disabled={deleteRoleMutation.isPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmDelete}
-              disabled={deleteRoleMutation.isPending}
-            >
-              {deleteRoleMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Delete
-            </Button>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setDeleteConfirmOpen(false)}
+                disabled={deleteRoleMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmDelete}
+                disabled={deleteRoleMutation.isPending}
+              >
+                {deleteRoleMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Delete
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

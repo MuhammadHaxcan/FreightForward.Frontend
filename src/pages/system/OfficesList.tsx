@@ -244,19 +244,19 @@ export default function OfficesList() {
                 Create Office
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="sm:max-w-[500px] p-0 bg-card">
               {createdOffice ? (
                 <>
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2 text-green-600">
+                  <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+                    <DialogTitle className="text-white flex items-center gap-2">
                       <Check className="h-5 w-5" />
                       Office Created Successfully
                     </DialogTitle>
-                    <DialogDescription>
+                    <DialogDescription className="text-white/70">
                       Save these credentials - the password cannot be retrieved later
                     </DialogDescription>
                   </DialogHeader>
-                  <div className="space-y-4 py-4">
+                  <div className="p-6 space-y-4">
                     <Alert>
                       <AlertTitle>Office Details</AlertTitle>
                       <AlertDescription className="mt-2 space-y-2">
@@ -321,20 +321,22 @@ export default function OfficesList() {
                       </AlertDescription>
                     </Alert>
                   </div>
-                  <DialogFooter>
-                    <Button onClick={closeCreatedDialog}>Done</Button>
-                  </DialogFooter>
+                  <div className="px-6 pb-6">
+                    <DialogFooter>
+                      <Button onClick={closeCreatedDialog}>Done</Button>
+                    </DialogFooter>
+                  </div>
                 </>
               ) : (
                 <>
-                  <DialogHeader>
-                    <DialogTitle>Create New Office</DialogTitle>
-                    <DialogDescription>
+                  <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+                    <DialogTitle className="text-white">Create New Office</DialogTitle>
+                    <DialogDescription className="text-white/70">
                       Create a new office with its own isolated data
                     </DialogDescription>
                   </DialogHeader>
                   <form onSubmit={handleCreateSubmit}>
-                    <div className="space-y-4 py-4">
+                    <div className="p-6 space-y-4">
                       {formError && (
                         <Alert variant="destructive">
                           <AlertDescription>{formError}</AlertDescription>
@@ -424,21 +426,23 @@ export default function OfficesList() {
                         </div>
                       </div>
                     </div>
-                    <DialogFooter>
-                      <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                        Cancel
-                      </Button>
-                      <Button type="submit" disabled={createOfficeMutation.isPending}>
-                        {createOfficeMutation.isPending ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Creating...
-                          </>
-                        ) : (
-                          'Create Office'
-                        )}
-                      </Button>
-                    </DialogFooter>
+                    <div className="px-6 pb-6">
+                      <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                          Cancel
+                        </Button>
+                        <Button type="submit" disabled={createOfficeMutation.isPending}>
+                          {createOfficeMutation.isPending ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Creating...
+                            </>
+                          ) : (
+                            'Create Office'
+                          )}
+                        </Button>
+                      </DialogFooter>
+                    </div>
                   </form>
                 </>
               )}
@@ -448,18 +452,18 @@ export default function OfficesList() {
 
         {/* Migrations Dialog */}
         <Dialog open={!!migrationsDialogOffice} onOpenChange={(open) => !open && closeMigrationsDialog()}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
+          <DialogContent className="sm:max-w-[600px] p-0 bg-card">
+            <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+              <DialogTitle className="text-white flex items-center gap-2">
                 <Database className="h-5 w-5" />
                 Database Migrations - {migrationsDialogOffice?.name}
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="text-white/70">
                 View and apply database schema updates for this office
               </DialogDescription>
             </DialogHeader>
 
-            <div className="py-4">
+            <div className="p-6">
               {migrationsLoading ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-8 w-8 animate-spin" />
@@ -514,43 +518,45 @@ export default function OfficesList() {
               ) : null}
             </div>
 
-            <DialogFooter>
-              <Button variant="outline" onClick={closeMigrationsDialog}>
-                Close
-              </Button>
-              {migrationsInfo?.hasPendingMigrations && (
-                <Button
-                  onClick={() => migrationsDialogOffice && applyMigrationsMutation.mutate(migrationsDialogOffice.id)}
-                  disabled={applyMigrationsMutation.isPending}
-                >
-                  {applyMigrationsMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Applying...
-                    </>
-                  ) : (
-                    <>
-                      <Database className="mr-2 h-4 w-4" />
-                      Apply {migrationsInfo.pendingMigrations.length} Migration(s)
-                    </>
-                  )}
+            <div className="px-6 pb-6">
+              <DialogFooter>
+                <Button variant="outline" onClick={closeMigrationsDialog}>
+                  Close
                 </Button>
-              )}
-            </DialogFooter>
+                {migrationsInfo?.hasPendingMigrations && (
+                  <Button
+                    onClick={() => migrationsDialogOffice && applyMigrationsMutation.mutate(migrationsDialogOffice.id)}
+                    disabled={applyMigrationsMutation.isPending}
+                  >
+                    {applyMigrationsMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Applying...
+                      </>
+                    ) : (
+                      <>
+                        <Database className="mr-2 h-4 w-4" />
+                        Apply {migrationsInfo.pendingMigrations.length} Migration(s)
+                      </>
+                    )}
+                  </Button>
+                )}
+              </DialogFooter>
+            </div>
           </DialogContent>
         </Dialog>
 
         {/* Edit Office Dialog */}
         <Dialog open={!!editingOffice} onOpenChange={(open) => !open && setEditingOffice(null)}>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Edit Office</DialogTitle>
-              <DialogDescription>
+          <DialogContent className="sm:max-w-[500px] p-0 bg-card">
+            <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+              <DialogTitle className="text-white">Edit Office</DialogTitle>
+              <DialogDescription className="text-white/70">
                 Update office details and document prefixes
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleEditSubmit}>
-              <div className="space-y-4 py-4">
+              <div className="p-6 space-y-4">
                 {editFormError && (
                   <Alert variant="destructive">
                     <AlertDescription>{editFormError}</AlertDescription>
@@ -622,21 +628,23 @@ export default function OfficesList() {
                   </div>
                 </div>
               </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setEditingOffice(null)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={updateOfficeMutation.isPending}>
-                  {updateOfficeMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Changes'
-                  )}
-                </Button>
-              </DialogFooter>
+              <div className="px-6 pb-6">
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setEditingOffice(null)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={updateOfficeMutation.isPending}>
+                    {updateOfficeMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      'Save Changes'
+                    )}
+                  </Button>
+                </DialogFooter>
+              </div>
             </form>
           </DialogContent>
         </Dialog>

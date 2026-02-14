@@ -4,7 +4,7 @@
 import { bankApi as _bankApi } from './bank';
 import { companyApi as _companyApi } from './company';
 import { customerApi as _customerApi } from './customer';
-import { leadApi as _leadApi, rateRequestApi as _rateRequestApi, quotationApi as _quotationApi } from './sales';
+import { portalLeadApi as _portalLeadApi, leadApi as _leadApi, rateRequestApi as _rateRequestApi, quotationApi as _quotationApi } from './sales';
 import { shipmentApi as _shipmentApi, fileApi as _fileApi } from './shipment';
 import { settingsApi as _settingsApi } from './settings';
 import { invoiceApi as _invoiceApi, receiptApi as _receiptApi } from './invoice';
@@ -48,9 +48,14 @@ export {
 
 // Sales
 export {
+  portalLeadApi,
   leadApi,
   rateRequestApi,
   quotationApi,
+  type PortalLeadStatus,
+  type PortalLead,
+  type PortalLeadDetail,
+  type AcceptPortalLeadResponse,
   type LeadStatus,
   type RateRequestStatus,
   type QuotationStatus,
@@ -164,6 +169,12 @@ export {
   type VatReportItem,
   type VatReportTotals,
   type VatReportResult,
+  type AccountReceivableSummaryItem,
+  type AccountReceivableCurrencyTotal,
+  type AccountReceivableSummaryResult,
+  type AccountPayableSummaryItem,
+  type AccountPayableCurrencyTotal,
+  type AccountPayableSummaryResult,
 } from './invoice';
 
 // Cost Sheet
@@ -207,6 +218,7 @@ export const api = {
   banks: _bankApi,
   companies: _companyApi,
   customers: _customerApi,
+  portalLeads: _portalLeadApi,
   leads: _leadApi,
   rateRequests: _rateRequestApi,
   quotations: _quotationApi,

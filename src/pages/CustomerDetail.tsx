@@ -1786,7 +1786,7 @@ const CustomerDetail = () => {
             ]}
             value={pvPageSize.toString()}
             onValueChange={(v) => { setPvPageSize(parseInt(v)); setPvPageNumber(1); }}
-            triggerClassName="w-20"
+            triggerClassName="w-[90px]"
           />
         </div>
       </div>
@@ -1862,7 +1862,7 @@ const CustomerDetail = () => {
             ]}
             value={piPageSize.toString()}
             onValueChange={(v) => { setPiPageSize(parseInt(v)); setPiPageNumber(1); }}
-            triggerClassName="w-20"
+            triggerClassName="w-[90px]"
           />
         </div>
       </div>
@@ -1987,12 +1987,12 @@ const CustomerDetail = () => {
 
       {/* Contact Modal */}
       <Dialog open={contactModalOpen} onOpenChange={setContactModalOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Add new contact</DialogTitle>
-            <p className="text-xs text-primary">{profileData.name}</p>
+        <DialogContent className="max-w-lg p-0 bg-card">
+          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+            <DialogTitle className="text-white">Add new contact</DialogTitle>
+            <p className="text-xs text-white/80">{profileData.name}</p>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-4">
+          <div className="p-6 grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="text-sm">Name</Label>
               <Input value={contactForm.name || ""} onChange={e => setContactForm({...contactForm, name: e.target.value})} />
@@ -2029,22 +2029,22 @@ const CustomerDetail = () => {
               <input type="checkbox" id="enableRate" checked={contactForm.enableRateRequest || false} onChange={e => setContactForm({...contactForm, enableRateRequest: e.target.checked})} />
               <Label htmlFor="enableRate" className="text-sm">Enable Rate Request</Label>
             </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setContactModalOpen(false)}>Cancel</Button>
-            <Button className="btn-success" onClick={handleSaveContact}>Save</Button>
+            <div className="col-span-2 flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setContactModalOpen(false)}>Cancel</Button>
+              <Button className="btn-success" onClick={handleSaveContact}>Save</Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Opening Balance Modal */}
       <Dialog open={openingBalanceModalOpen} onOpenChange={setOpeningBalanceModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add Opening Balance</DialogTitle>
-            <p className="text-xs text-primary">{profileData.name}</p>
+        <DialogContent className="max-w-md p-0 bg-card">
+          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+            <DialogTitle className="text-white">Add Opening Balance</DialogTitle>
+            <p className="text-xs text-white/80">{profileData.name}</p>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="p-6 space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">Invoice ID</Label>
@@ -2083,23 +2083,23 @@ const CustomerDetail = () => {
                 searchPlaceholder="Search currencies..."
               />
             </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setOpeningBalanceModalOpen(false)}>Cancel</Button>
-            <Button className="btn-success" onClick={() => setOpeningBalanceModalOpen(false)}>Save</Button>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setOpeningBalanceModalOpen(false)}>Cancel</Button>
+              <Button className="btn-success" onClick={() => setOpeningBalanceModalOpen(false)}>Save</Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Credit Note Modal */}
       <Dialog open={creditNoteModalOpen} onOpenChange={setCreditNoteModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-xl">Add New Credit Note</DialogTitle>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 bg-card">
+          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+            <DialogTitle className="text-white text-xl">Add New Credit Note</DialogTitle>
           </DialogHeader>
 
           {/* Credit Note Section */}
-          <div className="space-y-4">
+          <div className="p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-primary">Credit Note</h3>
               <Button className="btn-success">Save</Button>
@@ -2265,18 +2265,20 @@ const CustomerDetail = () => {
           </div>
 
           {/* Additional Contents */}
-          <div className="space-y-2 mt-6">
-            <Label className="text-sm">Additional Contents</Label>
-            <Textarea 
-              className="min-h-[100px]" 
-              value={additionalContents} 
-              onChange={e => setAdditionalContents(e.target.value)} 
-            />
-          </div>
+          <div className="px-6 pb-6 space-y-4">
+            <div className="space-y-2">
+              <Label className="text-sm">Additional Contents</Label>
+              <Textarea
+                className="min-h-[100px]"
+                value={additionalContents}
+                onChange={e => setAdditionalContents(e.target.value)}
+              />
+            </div>
 
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setCreditNoteModalOpen(false)}>Cancel</Button>
-            <Button className="btn-success" onClick={() => setCreditNoteModalOpen(false)}>Save</Button>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setCreditNoteModalOpen(false)}>Cancel</Button>
+              <Button className="btn-success" onClick={() => setCreditNoteModalOpen(false)}>Save</Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

@@ -111,7 +111,7 @@ export default function PurchaseInvoices() {
               onValueChange={(v) => { setPageSize(parseInt(v)); setPageNumber(1); }}
               placeholder="10"
               searchPlaceholder="Search..."
-              triggerClassName="w-20"
+              triggerClassName="w-[90px]"
             />
             <span className="text-sm">entries</span>
           </div>

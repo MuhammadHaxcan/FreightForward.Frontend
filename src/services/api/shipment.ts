@@ -515,16 +515,20 @@ export const shipmentApi = {
 import { API_BASE_URL } from './base';
 
 export const fileApi = {
-  upload: async (file: File): Promise<FileUploadResponse> => {
+  upload: async (file: File, subfolder?: string): Promise<FileUploadResponse> => {
     const formData = new FormData();
     formData.append('file', file);
+
+    const uploadUrl = subfolder
+      ? `${API_BASE_URL}/files/upload?subfolder=${encodeURIComponent(subfolder)}`
+      : `${API_BASE_URL}/files/upload`;
 
     const makeRequest = async (token: string | null) => {
       const headers: HeadersInit = {};
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
-      return fetch(`${API_BASE_URL}/files/upload`, {
+      return fetch(uploadUrl, {
         method: 'POST',
         headers,
         body: formData,
@@ -549,7 +553,9 @@ export const fileApi = {
   },
 
   getDownloadUrl: (fileName: string): string => {
-    return `${API_BASE_URL}/files/${encodeURIComponent(fileName)}`;
+    // fileName may contain subdirectory path (e.g. "documents/office/guid_file.pdf")
+    const encodedPath = fileName.split('/').map(encodeURIComponent).join('/');
+    return `${API_BASE_URL}/files/${encodedPath}`;
   },
 
   delete: async (fileName: string): Promise<void> => {
@@ -558,7 +564,8 @@ export const fileApi = {
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
-      return fetch(`${API_BASE_URL}/files/${encodeURIComponent(fileName)}`, {
+      const encodedPath = fileName.split('/').map(encodeURIComponent).join('/');
+      return fetch(`${API_BASE_URL}/files/${encodedPath}`, {
         method: 'DELETE',
         headers,
       });

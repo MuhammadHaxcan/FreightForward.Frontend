@@ -43,6 +43,7 @@ const DEV_USER: CurrentUser = {
     'receipt_view', 'receipt_add', 'receipt_edit', 'receipt_delete',
     'paymentvoucher_view', 'paymentvoucher_add', 'paymentvoucher_edit', 'paymentvoucher_delete',
     'creditnote_view', 'creditnote_add', 'creditnote_edit', 'creditnote_delete',
+    'accrec_view',
     'user_view', 'user_add', 'user_edit', 'user_delete',
     'role_view', 'role_add', 'role_edit', 'role_delete',
     'banks_view', 'banks_add', 'banks_edit', 'banks_delete',

@@ -277,7 +277,7 @@ export default function DailyExpenses() {
                   setPageSize(parseInt(v));
                   setPageNumber(1);
                 }}
-                triggerClassName="w-20"
+                triggerClassName="w-[90px]"
               />
               <span className="text-sm text-muted-foreground">entries</span>
             </div>
@@ -445,12 +445,12 @@ export default function DailyExpenses() {
       />
 
       <Dialog open={!!viewingExpense} onOpenChange={() => setViewingExpense(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Expense Details</DialogTitle>
+        <DialogContent className="max-w-lg p-0 bg-card">
+          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+            <DialogTitle className="text-white">Expense Details</DialogTitle>
           </DialogHeader>
           {viewingExpense && (
-            <div className="space-y-3">
+            <div className="p-6 space-y-3">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div><span className="font-medium text-muted-foreground">Date:</span> <span>{formatDate(viewingExpense.expenseDate)}</span></div>
                 <div><span className="font-medium text-muted-foreground">Payment Type:</span> <span>{viewingExpense.paymentType}</span></div>

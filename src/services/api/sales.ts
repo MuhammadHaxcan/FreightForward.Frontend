@@ -29,6 +29,50 @@ export interface LeadDetailItem {
   weight: number;
 }
 
+// Portal Lead types (from master schema)
+export type PortalLeadStatus = 'Available' | 'Accepted';
+
+export interface PortalLead {
+  id: number;
+  leadNo: string;
+  leadDate: string;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  freightMode: string;
+  shippingType: string;
+  pickupCountryName?: string;
+  deliveryCountryName?: string;
+  loadingPortName?: string;
+  destinationPortName?: string;
+  incoTermCode?: string;
+  portalLeadStatus: PortalLeadStatus;
+  acceptedByOfficeName?: string;
+  createdAt: string;
+}
+
+export interface PortalLeadDetail extends PortalLead {
+  unitOfMeasurement: string;
+  pickupCountryId?: number;
+  loadingPortId?: number;
+  pickupAddress?: string;
+  deliveryCountryId?: number;
+  destinationPortId?: number;
+  deliveryAddress?: string;
+  goodsReadyDate?: string;
+  customerReferenceNo?: string;
+  hsCode?: string;
+  productType?: string;
+  productDescription?: string;
+  incoTermId?: number;
+  details: LeadDetailItem[];
+}
+
+export interface AcceptPortalLeadResponse {
+  localLeadId: number;
+  leadNo: string;
+}
+
 export interface Lead {
   id: number;
   leadNo: string;
@@ -78,6 +122,7 @@ export interface Lead {
   weightUnit?: string;
   leadStatus: LeadStatus;
   leadType: LeadType;
+  portalLeadId?: number;
   status?: string;
   createdAt: string;
 }
@@ -411,6 +456,25 @@ export interface QuotationForShipment {
 }
 
 // Sales APIs
+export const portalLeadApi = {
+  getAll: (params?: {
+    pageNumber?: number;
+    pageSize?: number;
+    searchTerm?: string;
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
+    return fetchApi<PaginatedList<PortalLead>>(`/sales/portal-leads?${query}`);
+  },
+  getById: (id: number) => fetchApi<PortalLeadDetail>(`/sales/portal-leads/${id}`),
+  accept: (id: number) =>
+    fetchApi<AcceptPortalLeadResponse>(`/sales/portal-leads/${id}/accept`, { method: 'POST' }),
+  revert: (id: number) =>
+    fetchApi<{ message: string }>(`/sales/portal-leads/${id}/revert`, { method: 'POST' }),
+};
+
 export const leadApi = {
   getAll: (params?: {
     pageNumber?: number;

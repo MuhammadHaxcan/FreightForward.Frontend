@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -569,11 +570,11 @@ const NeutralDetail = () => {
 
       {/* Contact Modal */}
       <Dialog open={contactModalOpen} onOpenChange={setContactModalOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Add new contact</DialogTitle>
+        <DialogContent className="max-w-2xl p-0 bg-card">
+          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+            <DialogTitle className="text-white">Add new contact</DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-4">
+          <div className="p-6 grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Name</Label>
               <Input value={contactForm.name || ""} onChange={e => setContactForm({...contactForm, name: e.target.value})} />
@@ -614,10 +615,10 @@ const NeutralDetail = () => {
               <Label>Skype</Label>
               <Input value={contactForm.skype || ""} onChange={e => setContactForm({...contactForm, skype: e.target.value})} />
             </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setContactModalOpen(false)}>Cancel</Button>
-            <Button className="btn-success" onClick={handleSaveContact}>Save</Button>
+            <div className="col-span-2 flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setContactModalOpen(false)}>Cancel</Button>
+              <Button className="btn-success" onClick={handleSaveContact}>Save</Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

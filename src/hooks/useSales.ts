@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
+  portalLeadApi,
   leadApi,
   rateRequestApi,
   quotationApi,
@@ -14,6 +15,82 @@ import {
   QuotationStatus,
 } from '@/services/api';
 import { toast } from 'sonner';
+
+// Portal Leads (shared across all offices)
+export function usePortalLeads(params?: {
+  pageNumber?: number;
+  pageSize?: number;
+  searchTerm?: string;
+}) {
+  return useQuery({
+    queryKey: ['portalLeads', params],
+    queryFn: async () => {
+      const response = await portalLeadApi.getAll(params);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+  });
+}
+
+export function usePortalLead(id: number) {
+  return useQuery({
+    queryKey: ['portalLeads', id],
+    queryFn: async () => {
+      const response = await portalLeadApi.getById(id);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+    enabled: id > 0,
+  });
+}
+
+export function useAcceptPortalLead() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const response = await portalLeadApi.accept(id);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['portalLeads'] });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast.success(`Lead accepted! Local Lead No: ${data.leadNo}`);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to accept portal lead');
+    },
+  });
+}
+
+export function useRevertPortalLead() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const response = await portalLeadApi.revert(id);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['portalLeads'] });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast.success('Portal lead reverted successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to revert portal lead');
+    },
+  });
+}
 
 // Leads
 export function useLeads(params?: {

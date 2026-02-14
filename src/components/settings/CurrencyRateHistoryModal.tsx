@@ -39,13 +39,13 @@ export function CurrencyRateHistoryModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg bg-card">
-        <DialogHeader>
-          <DialogTitle className="text-lg font-semibold">
+      <DialogContent className="sm:max-w-lg bg-card p-0">
+        <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+          <DialogTitle className="text-white text-lg font-semibold">
             Rate History - {currencyName} ({currencyCode})
           </DialogTitle>
         </DialogHeader>
-        <div className="py-4">
+        <div className="p-6">
           {isLoading ? (
             <div className="flex justify-center items-center p-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
