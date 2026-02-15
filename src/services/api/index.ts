@@ -7,7 +7,7 @@ import { customerApi as _customerApi } from './customer';
 import { portalLeadApi as _portalLeadApi, leadApi as _leadApi, rateRequestApi as _rateRequestApi, quotationApi as _quotationApi } from './sales';
 import { shipmentApi as _shipmentApi, fileApi as _fileApi } from './shipment';
 import { settingsApi as _settingsApi } from './settings';
-import { invoiceApi as _invoiceApi, receiptApi as _receiptApi } from './invoice';
+import { invoiceApi as _invoiceApi, receiptApi as _receiptApi, creditNoteApi as _creditNoteApi } from './invoice';
 import { costSheetApi as _costSheetApi } from './costSheet';
 import { expenseApi as _expenseApi } from './expense';
 import { dashboardApi as _dashboardApi } from './dashboard';
@@ -144,6 +144,7 @@ export {
 export {
   invoiceApi,
   receiptApi,
+  creditNoteApi,
   type PaymentMode,
   type CreateInvoiceItemRequest,
   type CreateInvoiceRequest,
@@ -175,6 +176,13 @@ export {
   type AccountPayableSummaryItem,
   type AccountPayableCurrencyTotal,
   type AccountPayableSummaryResult,
+  type AccountCreditNote,
+  type AccountCreditNoteDetail,
+  type AccountCreditNoteLine,
+  type CreditNoteInvoiceDto,
+  type CreditNoteInvoiceRequest,
+  type CreateAccountCreditNoteRequest,
+  type UpdateAccountCreditNoteRequest,
 } from './invoice';
 
 // Cost Sheet
@@ -225,6 +233,7 @@ export const api = {
   shipments: _shipmentApi,
   invoices: _invoiceApi,
   receipts: _receiptApi,
+  creditNotes: _creditNoteApi,
   settings: _settingsApi,
   costSheet: _costSheetApi,
   expenses: _expenseApi,

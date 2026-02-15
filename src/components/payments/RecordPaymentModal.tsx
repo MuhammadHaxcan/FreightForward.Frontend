@@ -211,8 +211,17 @@ export function RecordPaymentModal({
           currencyCode: invoice.currencyCode || "",
         },
       ]);
+      // Update form currency to match the invoice's currency
+      if (invoice.currencyId) {
+        setCurrencyId(invoice.currencyId);
+      }
     } else {
-      setSelectedInvoices(selectedInvoices.filter(si => si.purchaseInvoiceId !== invoice.id));
+      const remaining = selectedInvoices.filter(si => si.purchaseInvoiceId !== invoice.id);
+      setSelectedInvoices(remaining);
+      // If there are remaining invoices, use the first one's currency
+      if (remaining.length > 0) {
+        setCurrencyId(remaining[0].currencyId);
+      }
     }
   };
 

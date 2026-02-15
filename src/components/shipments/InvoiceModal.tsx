@@ -418,8 +418,9 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
       // Update existing invoice
       const items: UpdateInvoiceItemRequest[] = selectedCharges.map(charge => {
         const saleFCY = parseFloat(charge.saleFCY || 0);
-        const saleExRate = parseFloat(charge.saleExRate || 1);
-        const localAmount = saleFCY * saleExRate;
+        const exRate = getInvoiceExRate(charge.saleCurrencyId || 1);
+        const localAmount = saleFCY * exRate;
+        const taxAmount = (parseFloat(charge.saleTaxAmount) || 0) * exRate;
 
         return {
           id: existingItemIds.get(charge.id) || undefined,
@@ -430,10 +431,10 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
           quantity: parseFloat(charge.saleQty) || 1,
           salePerUnit: parseFloat(charge.saleUnit) || 0,
           fcyAmount: saleFCY,
-          exRate: saleExRate,
+          exRate: exRate,
           localAmount: localAmount,
           taxPercentage: parseFloat(charge.saleTaxPercentage) || 0,
-          taxAmount: parseFloat(charge.saleTaxAmount) || 0,
+          taxAmount: taxAmount,
         };
       });
 
@@ -467,8 +468,9 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
       // Create new invoice
       const items: CreateInvoiceItemRequest[] = selectedCharges.map(charge => {
         const saleFCY = parseFloat(charge.saleFCY || 0);
-        const saleExRate = parseFloat(charge.saleExRate || 1);
-        const localAmount = saleFCY * saleExRate;
+        const exRate = getInvoiceExRate(charge.saleCurrencyId || 1);
+        const localAmount = saleFCY * exRate;
+        const taxAmount = (parseFloat(charge.saleTaxAmount) || 0) * exRate;
 
         return {
           shipmentCostingId: charge.id,
@@ -478,10 +480,10 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
           salePerUnit: parseFloat(charge.saleUnit) || 0,
           currencyId: charge.saleCurrencyId || 1,
           fcyAmount: saleFCY,
-          exRate: saleExRate,
+          exRate: exRate,
           localAmount: localAmount,
           taxPercentage: parseFloat(charge.saleTaxPercentage) || 0,
-          taxAmount: parseFloat(charge.saleTaxAmount) || 0,
+          taxAmount: taxAmount,
         };
       });
 
@@ -513,21 +515,28 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
 
   const selectedChargesData = localCostings.filter(c => formData.selectedCharges.includes(c.id));
 
-  // Convert totals to customer currency
-  const convertToCustomerCurrency = (amount: number, chargeCurrencyId: number, chargeRoe: number) => {
-    if (chargeCurrencyId === formData.currencyId) return amount;
-    const customerCurrency = currencies.find(c => c.id === formData.currencyId);
-    const customerRoe = customerCurrency?.roe || 1;
-    const exRate = chargeRoe / customerRoe;
-    return amount * exRate;
+  // Get cross rate to convert from charge currency to invoice base currency
+  // ROE = how many base units per 1 unit of this currency (e.g. AED=1, PKR=0.013)
+  // To convert chargeAmount → invoiceCurrency: chargeROE / invoiceROE
+  const getInvoiceExRate = (chargeCurrencyId: number): number => {
+    if (chargeCurrencyId === formData.currencyId) return 1;
+    const chargeCurrency = currencies.find(c => c.id === chargeCurrencyId);
+    const invoiceCurrency = currencies.find(c => c.id === formData.currencyId);
+    if (!chargeCurrency || !invoiceCurrency) return 1;
+    const invoiceRoe = invoiceCurrency.roe || 1;
+    if (invoiceRoe === 0) return 1;
+    return (chargeCurrency.roe || 1) / invoiceRoe;
   };
 
   const totalSale = selectedChargesData.reduce((sum, c) => {
-    const saleFCY = parseFloat(c.saleFCY || 0);
-    return sum + convertToCustomerCurrency(saleFCY, c.saleCurrencyId || 1, parseFloat(c.saleExRate || 1));
+    const fcy = parseFloat(c.saleFCY || 0);
+    const exRate = getInvoiceExRate(c.saleCurrencyId || 1);
+    return sum + fcy * exRate;
   }, 0);
   const totalTax = selectedChargesData.reduce((sum, c) => {
-    return sum + parseFloat(c.saleTaxAmount || 0);
+    const tax = parseFloat(c.saleTaxAmount || 0);
+    const exRate = getInvoiceExRate(c.saleCurrencyId || 1);
+    return sum + tax * exRate;
   }, 0);
   const totalWithTax = totalSale + totalTax;
 
@@ -651,8 +660,8 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
                       <TableCell className="text-xs py-2">{charge.saleUnit}</TableCell>
                       <TableCell className="text-xs py-2">{currencies.find(c => c.id === charge.saleCurrencyId)?.code || charge.saleCurrencyCode || ""}</TableCell>
                       <TableCell className="text-xs py-2">{charge.saleFCY}</TableCell>
-                      <TableCell className="text-xs py-2">{charge.saleExRate}</TableCell>
-                      <TableCell className="text-xs py-2">{charge.saleLCY}</TableCell>
+                      <TableCell className="text-xs py-2">{getInvoiceExRate(charge.saleCurrencyId || 1).toFixed(3)}</TableCell>
+                      <TableCell className="text-xs py-2">{(parseFloat(charge.saleFCY || 0) * getInvoiceExRate(charge.saleCurrencyId || 1)).toFixed(2)}</TableCell>
                     </TableRow>
                   ))
                 )}
@@ -727,7 +736,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
           <div className="flex justify-end">
             <div className="grid grid-cols-3 gap-4 bg-secondary/30 p-3 rounded-lg">
               <div>
-                <Label className="text-xs font-semibold">Sub Total</Label>
+                <Label className="text-xs font-semibold">Total Sale</Label>
                 <div className="text-foreground font-semibold text-sm">{formData.currencyCode} {totalSale.toFixed(2)}</div>
               </div>
               <div>
@@ -735,7 +744,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
                 <div className="text-foreground font-semibold text-sm">{formData.currencyCode} {totalTax.toFixed(2)}</div>
               </div>
               <div>
-                <Label className="text-xs font-semibold">Total Sale</Label>
+                <Label className="text-xs font-semibold">Sub Total</Label>
                 <div className="text-primary font-semibold text-sm">{formData.currencyCode} {totalWithTax.toFixed(2)}</div>
               </div>
             </div>

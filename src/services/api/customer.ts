@@ -109,6 +109,7 @@ export interface CreditNote {
   jobNumber?: string;
   creditNoteDate: string;
   referenceNo?: string;
+  totalAmount: number;
   addedBy?: string;
   status?: string;
   details: CreditNoteDetail[];
@@ -162,6 +163,7 @@ export interface StatementEntry {
   date: string;
   invoiceNo: string;
   receiptNo: string;
+  creditNoteNo: string;
   description: string;
   jobNo: string;
   blAwbNo: string;

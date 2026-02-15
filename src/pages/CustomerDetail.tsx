@@ -14,7 +14,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { formatDate, cn } from "@/lib/utils";
 import { customerApi, settingsApi, CustomerCategoryType, CurrencyType, Invoice as ApiInvoice, AccountReceivable as ApiAccountReceivable, AccountPayable as ApiAccountPayable, PaymentStatus, Receipt as ApiReceipt, CustomerStatement } from "@/services/api";
 import { getPaymentVouchers, PaymentVoucher } from "@/services/api/payment";
-import { invoiceApi, AccountPurchaseInvoice } from "@/services/api/invoice";
+import { invoiceApi, AccountPurchaseInvoice, creditNoteApi, UnpaidInvoice } from "@/services/api/invoice";
 import { useToast } from "@/hooks/use-toast";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 import { format } from "date-fns";
@@ -38,14 +38,7 @@ interface Contact {
 // AccountReceivable interface is imported from API as ApiAccountReceivable
 // Receipt interface is imported from API as ApiReceipt
 
-interface CreditNote {
-  id: number;
-  customer: string;
-  date: string;
-  referenceNo: string;
-  addedBy: string;
-  status: string;
-}
+// CreditNote type imported from API (customer.ts)
 
 // StatementEntry imported from API as part of CustomerStatement
 
@@ -504,6 +497,96 @@ const CustomerDetail = () => {
     }
   }, [activeTab, id, dateRange]);
 
+  // Credit Notes
+  const [creditNotes, setCreditNotes] = useState<import("@/services/api/customer").CreditNote[]>([]);
+  const [cnLoading, setCnLoading] = useState(false);
+  const [cnPageNumber, setCnPageNumber] = useState(1);
+  const [cnPageSize, setCnPageSize] = useState(10);
+  const [cnTotalCount, setCnTotalCount] = useState(0);
+  const [cnTotalPages, setCnTotalPages] = useState(0);
+
+  // Fetch credit notes when tab is active
+  const fetchCreditNotes = async () => {
+    if (!id) return;
+    setCnLoading(true);
+    try {
+      const response = await customerApi.getCreditNotes(parseInt(id), { pageNumber: cnPageNumber, pageSize: cnPageSize });
+      if (response.data) {
+        setCreditNotes(response.data.items);
+        setCnTotalCount(response.data.totalCount);
+        setCnTotalPages(response.data.totalPages);
+      }
+    } catch (error) {
+      console.error("Error fetching credit notes:", error);
+    } finally {
+      setCnLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "credit-notes" && id) {
+      fetchCreditNotes();
+    }
+  }, [activeTab, id, cnPageNumber, cnPageSize]);
+
+  // Fetch charge items for credit note modal
+  useEffect(() => {
+    if (creditNoteModalOpen && chargeItemsList.length === 0) {
+      settingsApi.getAllChargeItems().then(res => {
+        if (res.data) setChargeItemsList(res.data);
+      });
+    }
+  }, [creditNoteModalOpen]);
+
+  // Save credit note handler
+  const handleSaveCreditNote = async () => {
+    if (!id || !creditNoteForm.creditNoteDate) {
+      toast({ title: "Error", description: "Please fill in required fields", variant: "destructive" });
+      return;
+    }
+    setCnSaving(true);
+    try {
+      const response = await creditNoteApi.create({
+        customerId: parseInt(id),
+        creditNoteDate: format(creditNoteForm.creditNoteDate, "yyyy-MM-dd"),
+        jobNumber: creditNoteForm.jobNumber || undefined,
+        referenceNo: creditNoteForm.referenceNo || undefined,
+        email: creditNoteForm.email || undefined,
+        additionalContents: additionalContents || undefined,
+        status: creditNoteForm.status || "Active",
+        details: chargeDetails.map(d => ({
+          chargeDetails: d.chargeDetails || undefined,
+          bases: d.bases || undefined,
+          currencyId: d.currencyId,
+          rate: parseFloat(d.rate) || 0,
+          roe: parseFloat(d.roe) || 1,
+          quantity: parseFloat(d.quantity) || 0,
+          amount: parseFloat(d.amount) || 0,
+        })),
+        invoices: cnSelectedInvoices.map(inv => ({
+          invoiceId: inv.invoiceId,
+          amount: inv.allocatedAmount,
+          currencyId: inv.currencyId,
+        })),
+      });
+      if (response.error) {
+        toast({ title: "Error", description: response.error, variant: "destructive" });
+      } else {
+        toast({ title: "Success", description: "Credit note created successfully" });
+        setCreditNoteModalOpen(false);
+        setChargeDetails([]);
+        setAdditionalContents("");
+        setCnSelectedInvoices([]);
+        setCreditNoteForm({ jobNumber: "", email: "", creditNoteDate: new Date(), referenceNo: "", status: "Active" });
+        fetchCreditNotes();
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to create credit note", variant: "destructive" });
+    } finally {
+      setCnSaving(false);
+    }
+  };
+
   // Helper function to get payment status display and styling
   const getPaymentStatusDisplay = (status: PaymentStatus) => {
     switch (status) {
@@ -626,9 +709,6 @@ const CustomerDetail = () => {
     bcc: "",
   });
 
-  // Credit Notes
-  const [creditNotes] = useState<CreditNote[]>([]);
-
   // Opening Balance form
   const [openingBalanceForm, setOpeningBalanceForm] = useState({
     invoiceId: "INVAE251869",
@@ -641,10 +721,8 @@ const CustomerDetail = () => {
   // Credit Note form
   const [creditNoteForm, setCreditNoteForm] = useState({
     jobNumber: "",
-    creditNoteNo: "CNAE251001",
-    customerName: profileData.name,
-    email: "123@test.com",
-    invoiceDate: new Date(2025, 11, 25) as Date | null,
+    email: "",
+    creditNoteDate: new Date() as Date | null,
     referenceNo: "",
     status: "Active",
   });
@@ -654,7 +732,7 @@ const CustomerDetail = () => {
     id: number;
     chargeDetails: string;
     bases: string;
-    currency: string;
+    currencyId?: number;
     rate: string;
     roe: string;
     quantity: string;
@@ -664,13 +742,29 @@ const CustomerDetail = () => {
   const [newCharge, setNewCharge] = useState<Partial<ChargeDetail>>({
     chargeDetails: "",
     bases: "",
-    currency: "",
+    currencyId: undefined,
     rate: "1",
-    roe: "ROE",
+    roe: "1",
     quantity: "",
     amount: ""
   });
   const [additionalContents, setAdditionalContents] = useState("");
+  const [cnSaving, setCnSaving] = useState(false);
+  const [chargeItemsList, setChargeItemsList] = useState<import("@/services/api").ChargeItem[]>([]);
+
+  // Invoice allocation state for credit notes
+  const [cnUnpaidInvoices, setCnUnpaidInvoices] = useState<UnpaidInvoice[]>([]);
+  const [cnSelectedInvoices, setCnSelectedInvoices] = useState<{
+    invoiceId: number;
+    invoiceNo: string;
+    invoiceDate?: string;
+    jobNo?: string;
+    hblNo?: string;
+    currencyId?: number;
+    currencyCode?: string;
+    pendingAmount: number;
+    allocatedAmount: number;
+  }[]>([]);
 
   const handleAddCharge = () => {
     if (newCharge.chargeDetails) {
@@ -678,9 +772,9 @@ const CustomerDetail = () => {
       setNewCharge({
         chargeDetails: "",
         bases: "",
-        currency: "",
+        currencyId: undefined,
         rate: "1",
-        roe: "ROE",
+        roe: "1",
         quantity: "",
         amount: ""
       });
@@ -1416,10 +1510,10 @@ const CustomerDetail = () => {
                       <td className="px-4 py-3 text-sm text-primary">{ar.invoiceNo}</td>
                       <td className="px-4 py-3 text-sm">{ar.customerRef || "-"}</td>
                       <td className="px-4 py-3 text-sm">{ar.jobHblNo || "-"}</td>
-                      <td className="px-4 py-3 text-sm">{ar.currency} {ar.debit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className="px-4 py-3 text-sm">{ar.currencyCode} {ar.debit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                       <td className="px-4 py-3 text-sm">
                         <span className={balanceColorClass}>
-                          {ar.currency} {ar.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {ar.currencyCode} {ar.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm">
@@ -1631,62 +1725,95 @@ const CustomerDetail = () => {
     );
   };
 
-  const renderCreditNotesTab = () => (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-primary">Credit Notes</h2>
-        {!isViewMode && (
-          <Button className="btn-success gap-2" onClick={() => setCreditNoteModalOpen(true)}>
-            <Plus size={16} /> Credit Notes
-          </Button>
-        )}
-      </div>
+  const renderCreditNotesTab = () => {
+    const cnStartEntry = cnTotalCount > 0 ? (cnPageNumber - 1) * cnPageSize + 1 : 0;
+    const cnEndEntry = Math.min(cnPageNumber * cnPageSize, cnTotalCount);
 
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Show:</span>
-          <SearchableSelect
-            options={[{ value: "10", label: "10" }]}
-            value="10"
-            onValueChange={() => {}}
-            triggerClassName="w-[90px] h-8"
-          />
-          <span className="text-sm text-muted-foreground">entries</span>
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-primary">Credit Notes</h2>
+          {!isViewMode && (
+            <Button className="btn-success gap-2" onClick={async () => {
+              setCreditNoteModalOpen(true);
+              setCnSelectedInvoices([]);
+              if (id) {
+                const res = await creditNoteApi.getUnpaidInvoices(parseInt(id));
+                if (res.data) setCnUnpaidInvoices(res.data);
+              }
+            }}>
+              <Plus size={16} /> Credit Notes
+            </Button>
+          )}
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Search:</span>
-          <Input className="w-[200px] h-8" />
-        </div>
-      </div>
 
-      <div className="bg-card rounded-lg border border-border overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="bg-table-header text-table-header-foreground">
-              <th className="px-4 py-3 text-left text-sm font-semibold">#</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Customer</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Date</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Reference #</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Added By</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {creditNotes.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">No data available in table</td></tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">Showing 0 to 0 of 0 entries</p>
-        <div className="flex items-center gap-1">
-          <Button variant="outline" size="sm">Previous</Button>
-          <Button variant="outline" size="sm">Next</Button>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Show:</span>
+            <SearchableSelect
+              options={[
+                { value: "10", label: "10" },
+                { value: "25", label: "25" },
+                { value: "50", label: "50" },
+              ]}
+              value={cnPageSize.toString()}
+              onValueChange={(v) => { setCnPageSize(parseInt(v)); setCnPageNumber(1); }}
+              triggerClassName="w-[90px] h-8"
+            />
+            <span className="text-sm text-muted-foreground">entries</span>
+          </div>
+        </div>
+
+        <div className="bg-card rounded-lg border border-border overflow-hidden">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-table-header text-table-header-foreground">
+                <th className="px-4 py-3 text-left text-sm font-semibold">Credit Note #</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Date</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Job #</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Reference #</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Total</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Added By</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Status</th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cnLoading ? (
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">Loading...</td></tr>
+              ) : creditNotes.length === 0 ? (
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">No credit notes found</td></tr>
+              ) : (
+                creditNotes.map((cn, i) => (
+                  <tr key={cn.id} className={`border-b border-border ${i % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
+                    <td className="px-4 py-3 text-sm text-primary font-medium">{cn.creditNoteNo}</td>
+                    <td className="px-4 py-3 text-sm">{formatDate(cn.creditNoteDate)}</td>
+                    <td className="px-4 py-3 text-sm">{cn.jobNumber || "-"}</td>
+                    <td className="px-4 py-3 text-sm">{cn.referenceNo || "-"}</td>
+                    <td className="px-4 py-3 text-sm">{cn.totalAmount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || "0.00"}</td>
+                    <td className="px-4 py-3 text-sm">{cn.addedBy || "-"}</td>
+                    <td className="px-4 py-3 text-sm">{cn.status || "-"}</td>
+                    <td className="px-4 py-3">
+                      <Button size="sm" className="btn-success" onClick={() => navigate(`/accounts/credit-notes/${cn.id}`)}>
+                        View
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">Showing {cnStartEntry} to {cnEndEntry} of {cnTotalCount} entries</p>
+          <div className="flex items-center gap-1">
+            <Button variant="outline" size="sm" disabled={cnPageNumber === 1} onClick={() => setCnPageNumber(p => p - 1)}>Previous</Button>
+            <Button variant="outline" size="sm" disabled={cnPageNumber === cnTotalPages || cnTotalPages === 0} onClick={() => setCnPageNumber(p => p + 1)}>Next</Button>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const handlePrintStatement = () => {
     if (!id) return;
@@ -1741,7 +1868,7 @@ const CustomerDetail = () => {
                   {statementData.entries.map((entry, i) => (
                     <tr key={i} className={`border-b border-border ${i % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
                       <td className="px-4 py-3 text-sm">{formatDate(entry.date)}</td>
-                      <td className="px-4 py-3 text-sm text-primary">{entry.invoiceNo || "-"}</td>
+                      <td className="px-4 py-3 text-sm text-primary">{entry.invoiceNo || entry.creditNoteNo || "-"}</td>
                       <td className="px-4 py-3 text-sm text-primary">{entry.receiptNo || "-"}</td>
                       <td className="px-4 py-3 text-sm text-amber-600 max-w-[200px] truncate" title={entry.description}>{entry.description || "-"}</td>
                       <td className="px-4 py-3 text-sm">{entry.jobNo || "-"}</td>
@@ -2102,40 +2229,16 @@ const CustomerDetail = () => {
           <div className="p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-primary">Credit Note</h3>
-              <Button className="btn-success">Save</Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">Job Number</Label>
-                <SearchableSelect
-                  options={[
-                    { value: "25UAE1582", label: "25UAE1582" },
-                    { value: "25UAE1583", label: "25UAE1583" },
-                  ]}
-                  value={creditNoteForm.jobNumber}
-                  onValueChange={v => setCreditNoteForm({...creditNoteForm, jobNumber: v})}
-                  placeholder="Select One"
-                  triggerClassName="bg-background"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm">*Credit Note #</Label>
-                <Input value={creditNoteForm.creditNoteNo} onChange={e => setCreditNoteForm({...creditNoteForm, creditNoteNo: e.target.value})} className="bg-muted/50" />
+                <Input value={creditNoteForm.jobNumber} onChange={e => setCreditNoteForm({...creditNoteForm, jobNumber: e.target.value})} placeholder="Enter job number" />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Customer Name</Label>
-                <SearchableSelect
-                  options={[
-                    { value: profileData.name, label: profileData.name },
-                    { value: "EES FREIGHT SERVICES PTE LTD", label: "EES FREIGHT SERVICES PTE LTD" },
-                  ]}
-                  value={creditNoteForm.customerName}
-                  onValueChange={v => setCreditNoteForm({...creditNoteForm, customerName: v})}
-                  placeholder="Select customer"
-                  triggerClassName="bg-background"
-                  searchPlaceholder="Search customers..."
-                />
+                <Input value={profileData.name} disabled className="bg-muted/50" />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Email</Label>
@@ -2145,16 +2248,16 @@ const CustomerDetail = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label className="text-sm">*Invoice Date</Label>
+                <Label className="text-sm">*Credit Note Date</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start text-left font-normal">
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {creditNoteForm.invoiceDate ? format(creditNoteForm.invoiceDate, "dd-MM-yyyy") : "Select date"}
+                      {creditNoteForm.creditNoteDate ? format(creditNoteForm.creditNoteDate, "dd-MM-yyyy") : "Select date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0 bg-popover z-50">
-                    <Calendar mode="single" selected={creditNoteForm.invoiceDate || undefined} onSelect={(d) => setCreditNoteForm({...creditNoteForm, invoiceDate: d || null})} />
+                    <Calendar mode="single" selected={creditNoteForm.creditNoteDate || undefined} onSelect={(d) => setCreditNoteForm({...creditNoteForm, creditNoteDate: d || null})} />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -2178,9 +2281,9 @@ const CustomerDetail = () => {
           </div>
 
           {/* Charges Details Section */}
-          <div className="space-y-4 mt-6">
+          <div className="px-6 space-y-4">
             <h3 className="text-lg font-semibold text-primary">Charges Details</h3>
-            
+
             <div className="bg-card rounded-lg border border-border overflow-hidden">
               <table className="w-full">
                 <thead>
@@ -2200,7 +2303,7 @@ const CustomerDetail = () => {
                     <tr key={charge.id} className={`border-b border-border ${i % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
                       <td className="px-3 py-2 text-sm">{charge.chargeDetails}</td>
                       <td className="px-3 py-2 text-sm">{charge.bases}</td>
-                      <td className="px-3 py-2 text-sm">{charge.currency}</td>
+                      <td className="px-3 py-2 text-sm">{currencyTypes.find(c => c.id === charge.currencyId)?.code || "-"}</td>
                       <td className="px-3 py-2 text-sm">{charge.rate}</td>
                       <td className="px-3 py-2 text-sm">{charge.roe}</td>
                       <td className="px-3 py-2 text-sm">{charge.quantity}</td>
@@ -2216,12 +2319,7 @@ const CustomerDetail = () => {
                   <tr className="bg-card">
                     <td className="px-3 py-2">
                       <SearchableSelect
-                        options={[
-                          { value: "Freight Charges", label: "Freight Charges" },
-                          { value: "Handling Charges", label: "Handling Charges" },
-                          { value: "Documentation", label: "Documentation" },
-                          { value: "THC", label: "THC" },
-                        ]}
+                        options={chargeItemsList.map(ci => ({ value: ci.name, label: ci.name }))}
                         value={newCharge.chargeDetails || ""}
                         onValueChange={v => setNewCharge({...newCharge, chargeDetails: v})}
                         placeholder="Select"
@@ -2229,29 +2327,29 @@ const CustomerDetail = () => {
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <Input className="h-8 text-xs" placeholder="Bases" value={newCharge.bases} onChange={e => setNewCharge({...newCharge, bases: e.target.value})} />
+                      <Input className="h-8 text-xs" placeholder="Bases" value={newCharge.bases || ""} onChange={e => setNewCharge({...newCharge, bases: e.target.value})} />
                     </td>
                     <td className="px-3 py-2">
                       <SearchableSelect
-                        options={currencyTypes.map(c => ({ value: c.code, label: c.code }))}
-                        value={newCharge.currency || ""}
-                        onValueChange={v => setNewCharge({...newCharge, currency: v})}
+                        options={currencyTypes.map(c => ({ value: c.id.toString(), label: c.code }))}
+                        value={newCharge.currencyId?.toString() || ""}
+                        onValueChange={v => setNewCharge({...newCharge, currencyId: parseInt(v)})}
                         placeholder="Select"
                         triggerClassName="h-8 text-xs bg-background"
                         searchPlaceholder="Search currencies..."
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <Input className="h-8 text-xs" placeholder="1" value={newCharge.rate} onChange={e => setNewCharge({...newCharge, rate: e.target.value})} />
+                      <Input className="h-8 text-xs" placeholder="1" value={newCharge.rate || ""} onChange={e => setNewCharge({...newCharge, rate: e.target.value})} />
                     </td>
                     <td className="px-3 py-2">
-                      <Input className="h-8 text-xs" placeholder="ROE" value={newCharge.roe} onChange={e => setNewCharge({...newCharge, roe: e.target.value})} />
+                      <Input className="h-8 text-xs" placeholder="1" value={newCharge.roe || ""} onChange={e => setNewCharge({...newCharge, roe: e.target.value})} />
                     </td>
                     <td className="px-3 py-2">
-                      <Input className="h-8 text-xs" placeholder="Quantity" value={newCharge.quantity} onChange={e => setNewCharge({...newCharge, quantity: e.target.value})} />
+                      <Input className="h-8 text-xs" placeholder="Quantity" value={newCharge.quantity || ""} onChange={e => setNewCharge({...newCharge, quantity: e.target.value})} />
                     </td>
                     <td className="px-3 py-2">
-                      <Input className="h-8 text-xs" placeholder="Amount" value={newCharge.amount} onChange={e => setNewCharge({...newCharge, amount: e.target.value})} />
+                      <Input className="h-8 text-xs" placeholder="Amount" value={newCharge.amount || ""} onChange={e => setNewCharge({...newCharge, amount: e.target.value})} />
                     </td>
                     <td className="px-3 py-2">
                       <Button size="sm" className="btn-success h-8 px-3 gap-1" onClick={handleAddCharge}>
@@ -2262,6 +2360,125 @@ const CustomerDetail = () => {
                 </tbody>
               </table>
             </div>
+          </div>
+
+          {/* Apply to Invoices */}
+          <div className="px-6 space-y-4">
+            <h3 className="text-lg font-semibold text-primary">Apply to Invoices</h3>
+
+            {/* Selected invoices chips */}
+            {cnSelectedInvoices.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {cnSelectedInvoices.map(inv => (
+                  <span
+                    key={inv.invoiceId}
+                    className="inline-flex items-center gap-1 bg-primary/10 text-primary px-2 py-1 rounded-md text-xs"
+                  >
+                    {inv.invoiceNo}
+                    <button
+                      type="button"
+                      onClick={() => setCnSelectedInvoices(cnSelectedInvoices.filter(si => si.invoiceId !== inv.invoiceId))}
+                      className="text-primary/50 hover:text-primary"
+                    >
+                      <Trash2 size={10} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Invoice picker */}
+            <div className="max-w-md">
+              <SearchableSelect
+                options={cnUnpaidInvoices
+                  .filter(ui => !cnSelectedInvoices.some(si => si.invoiceId === ui.id))
+                  .map(ui => ({
+                    value: ui.id.toString(),
+                    label: `${ui.invoiceNo} - Pending: ${ui.currencyCode || ''} ${ui.pendingAmount.toFixed(2)}`,
+                  }))}
+                value=""
+                onValueChange={(v) => {
+                  const inv = cnUnpaidInvoices.find(ui => ui.id === parseInt(v));
+                  if (inv) {
+                    setCnSelectedInvoices([...cnSelectedInvoices, {
+                      invoiceId: inv.id,
+                      invoiceNo: inv.invoiceNo,
+                      invoiceDate: inv.invoiceDate,
+                      jobNo: inv.jobNo,
+                      hblNo: inv.hblNo,
+                      currencyId: inv.currencyId,
+                      currencyCode: inv.currencyCode,
+                      pendingAmount: inv.pendingAmount,
+                      allocatedAmount: inv.pendingAmount,
+                    }]);
+                  }
+                }}
+                placeholder="Select invoice to apply..."
+                searchPlaceholder="Search invoices..."
+                emptyMessage="No unpaid invoices"
+              />
+            </div>
+
+            {/* Selected invoices table */}
+            {cnSelectedInvoices.length > 0 && (
+              <>
+                <div className="bg-card rounded-lg border border-border overflow-hidden">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-table-header text-table-header-foreground">
+                        <th className="px-3 py-2 text-left text-sm font-semibold">Invoice No</th>
+                        <th className="px-3 py-2 text-left text-sm font-semibold">Date</th>
+                        <th className="px-3 py-2 text-left text-sm font-semibold">Job No</th>
+                        <th className="px-3 py-2 text-left text-sm font-semibold">Currency</th>
+                        <th className="px-3 py-2 text-right text-sm font-semibold">Pending</th>
+                        <th className="px-3 py-2 text-right text-sm font-semibold">Allocating</th>
+                        <th className="px-3 py-2 text-sm font-semibold"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cnSelectedInvoices.map((inv, i) => (
+                        <tr key={inv.invoiceId} className={`border-b border-border ${i % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
+                          <td className="px-3 py-2 text-sm text-blue-600">{inv.invoiceNo}</td>
+                          <td className="px-3 py-2 text-sm">{inv.invoiceDate ? new Date(inv.invoiceDate).toLocaleDateString() : '-'}</td>
+                          <td className="px-3 py-2 text-sm">{inv.jobNo || '-'}</td>
+                          <td className="px-3 py-2 text-sm">{inv.currencyCode || '-'}</td>
+                          <td className="px-3 py-2 text-sm text-right">{inv.pendingAmount.toFixed(2)}</td>
+                          <td className="px-3 py-2">
+                            <Input
+                              type="number"
+                              className="h-8 text-xs text-right w-28 ml-auto"
+                              value={inv.allocatedAmount}
+                              min={0}
+                              max={inv.pendingAmount}
+                              onChange={e => {
+                                const val = Math.min(parseFloat(e.target.value) || 0, inv.pendingAmount);
+                                setCnSelectedInvoices(cnSelectedInvoices.map(si =>
+                                  si.invoiceId === inv.invoiceId ? { ...si, allocatedAmount: val } : si
+                                ));
+                              }}
+                            />
+                          </td>
+                          <td className="px-3 py-2">
+                            <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => setCnSelectedInvoices(cnSelectedInvoices.filter(si => si.invoiceId !== inv.invoiceId))}>
+                              <Trash2 size={14} />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="flex justify-end">
+                  <div className="text-sm">
+                    <span className="font-semibold">Total Allocated: </span>
+                    <span className="font-bold">{cnSelectedInvoices.reduce((sum, inv) => sum + inv.allocatedAmount, 0).toFixed(2)}</span>
+                    <span className="text-muted-foreground ml-2">
+                      / Credit Note Total: {chargeDetails.reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Additional Contents */}
@@ -2277,7 +2494,9 @@ const CustomerDetail = () => {
 
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setCreditNoteModalOpen(false)}>Cancel</Button>
-              <Button className="btn-success" onClick={() => setCreditNoteModalOpen(false)}>Save</Button>
+              <Button className="btn-success" onClick={handleSaveCreditNote} disabled={cnSaving}>
+                {cnSaving ? "Saving..." : "Save"}
+              </Button>
             </div>
           </div>
         </DialogContent>

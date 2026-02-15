@@ -208,19 +208,20 @@ export default function AccountReceivable() {
                 <TableHead className="text-table-header-foreground font-semibold">Customer</TableHead>
                 <TableHead className="text-table-header-foreground font-semibold text-right">Invoiced</TableHead>
                 <TableHead className="text-table-header-foreground font-semibold text-right">Received</TableHead>
+                <TableHead className="text-table-header-foreground font-semibold text-right">Credit Notes</TableHead>
                 <TableHead className="text-table-header-foreground font-semibold text-right">Balance</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8">
+                  <TableCell colSpan={5} className="text-center py-8">
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8">
+                  <TableCell colSpan={5} className="text-center py-8">
                     No records found
                   </TableCell>
                 </TableRow>
@@ -230,6 +231,7 @@ export default function AccountReceivable() {
                     <TableCell className="text-green-600 font-medium">{item.customerName}</TableCell>
                     <TableCell className="text-right">{item.currencyCode} {formatAmount(item.totalInvoiced)}</TableCell>
                     <TableCell className="text-right">{item.currencyCode} {formatAmount(item.totalReceived)}</TableCell>
+                    <TableCell className="text-right text-orange-600">{item.currencyCode} {formatAmount(item.totalCreditNotes)}</TableCell>
                     <TableCell className="text-right font-bold text-red-600">{item.currencyCode} {formatAmount(item.balance)}</TableCell>
                   </TableRow>
                 ))
@@ -239,6 +241,7 @@ export default function AccountReceivable() {
               <TableFooter>
                 <TableRow className="font-bold">
                   <TableCell className="text-right font-bold">TOTAL OF RECEIVABLE</TableCell>
+                  <TableCell></TableCell>
                   <TableCell></TableCell>
                   <TableCell></TableCell>
                   <TableCell className="text-right">

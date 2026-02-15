@@ -269,6 +269,7 @@ export interface AccountReceivableSummaryItem {
   currencyCode: string;
   totalInvoiced: number;
   totalReceived: number;
+  totalCreditNotes: number;
   balance: number;
 }
 
@@ -276,6 +277,7 @@ export interface AccountReceivableCurrencyTotal {
   currencyCode: string;
   totalInvoiced: number;
   totalReceived: number;
+  totalCreditNotes: number;
   balance: number;
 }
 
@@ -548,4 +550,133 @@ export const receiptApi = {
     fetchApi<void>(`/invoices/receipts/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: number) =>
     fetchApi<void>(`/invoices/receipts/${id}`, { method: 'DELETE' }),
+};
+
+// Credit Note Types (standalone, from /invoices/credit-notes endpoints)
+export interface AccountCreditNote {
+  id: number;
+  creditNoteNo: string;
+  creditNoteDate: string;
+  customerId: number;
+  customerName?: string;
+  jobNumber?: string;
+  referenceNo?: string;
+  email?: string;
+  additionalContents?: string;
+  totalAmount: number;
+  addedBy?: string;
+  status?: string;
+  createdAt: string;
+}
+
+export interface CreditNoteInvoiceDto {
+  id: number;
+  invoiceId: number;
+  invoiceNo?: string;
+  invoiceDate?: string;
+  jobNo?: string;
+  hblNo?: string;
+  currencyId?: number;
+  currencyCode?: string;
+  amount: number;
+  exRate: number;
+  amountLCY: number;
+  invoiceAmount: number;
+  totalAllocated: number;
+  balance: number;
+}
+
+export interface AccountCreditNoteDetail extends AccountCreditNote {
+  details: AccountCreditNoteLine[];
+  invoices: CreditNoteInvoiceDto[];
+}
+
+export interface AccountCreditNoteLine {
+  id: number;
+  chargeItemId?: number;
+  costingUnitId?: number;
+  chargeDetails?: string;
+  bases?: string;
+  currencyId?: number;
+  currencyCode?: string;
+  rate: number;
+  roe: number;
+  quantity: number;
+  amount: number;
+}
+
+export interface CreditNoteInvoiceRequest {
+  invoiceId: number;
+  amount: number;
+  currencyId?: number;
+}
+
+export interface CreateAccountCreditNoteRequest {
+  creditNoteDate: string;
+  customerId: number;
+  jobNumber?: string;
+  referenceNo?: string;
+  email?: string;
+  additionalContents?: string;
+  status?: string;
+  details: {
+    chargeDetails?: string;
+    bases?: string;
+    currencyId?: number;
+    rate: number;
+    roe: number;
+    quantity: number;
+    amount: number;
+  }[];
+  invoices?: CreditNoteInvoiceRequest[];
+}
+
+export interface UpdateAccountCreditNoteRequest {
+  creditNoteDate: string;
+  customerId: number;
+  jobNumber?: string;
+  referenceNo?: string;
+  email?: string;
+  additionalContents?: string;
+  status?: string;
+  details: {
+    id?: number;
+    chargeDetails?: string;
+    bases?: string;
+    currencyId?: number;
+    rate: number;
+    roe: number;
+    quantity: number;
+    amount: number;
+  }[];
+  invoices?: CreditNoteInvoiceRequest[];
+}
+
+// Credit Note API
+export const creditNoteApi = {
+  getAll: (params?: {
+    pageNumber?: number;
+    pageSize?: number;
+    customerId?: number;
+    searchTerm?: string;
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.customerId) query.append('customerId', params.customerId.toString());
+    if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
+    return fetchApi<PaginatedList<AccountCreditNote>>(`/invoices/credit-notes?${query}`);
+  },
+  getById: (id: number) => fetchApi<AccountCreditNoteDetail>(`/invoices/credit-notes/${id}`),
+  getUnpaidInvoices: (customerId: number, excludeCreditNoteId?: number) => {
+    const query = new URLSearchParams();
+    if (excludeCreditNoteId) query.append('excludeCreditNoteId', excludeCreditNoteId.toString());
+    return fetchApi<UnpaidInvoice[]>(`/invoices/credit-notes/customer/${customerId}/unpaid-invoices?${query}`);
+  },
+  create: (data: CreateAccountCreditNoteRequest) =>
+    fetchApi<number>('/invoices/credit-notes', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: UpdateAccountCreditNoteRequest) =>
+    fetchApi<void>(`/invoices/credit-notes/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) =>
+    fetchApi<void>(`/invoices/credit-notes/${id}`, { method: 'DELETE' }),
 };

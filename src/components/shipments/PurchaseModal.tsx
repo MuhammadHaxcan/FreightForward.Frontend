@@ -422,20 +422,24 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
         .filter((charge, index, self) =>
           index === self.findIndex(c => c.id === charge.id)
         )
-        .map(charge => ({
-          id: existingItemIds.get(charge.id) || undefined,
-          shipmentCostingId: charge.id,
-          chargeDetails: charge.description || '',
-          ppcc: charge.ppcc || 'PP',
-          currencyId: charge.costCurrencyId || 1,
-          noOfUnit: parseFloat(charge.costQty) || 1,
-          costPerUnit: parseFloat(charge.costUnit) || 0,
-          fcyAmount: parseFloat(charge.costFCY) || 0,
-          exRate: parseFloat(charge.costExRate) || 1,
-          localAmount: parseFloat(charge.costLCY) || 0,
-          taxPercentage: parseFloat(charge.costTaxPercentage) || 0,
-          taxAmount: parseFloat(charge.costTaxAmount) || 0,
-        }));
+        .map(charge => {
+          const costFCY = parseFloat(charge.costFCY) || 0;
+          const exRate = getInvoiceExRate(charge.costCurrencyId || 1);
+          return {
+            id: existingItemIds.get(charge.id) || undefined,
+            shipmentCostingId: charge.id,
+            chargeDetails: charge.description || '',
+            ppcc: charge.ppcc || 'PP',
+            currencyId: charge.costCurrencyId || 1,
+            noOfUnit: parseFloat(charge.costQty) || 1,
+            costPerUnit: parseFloat(charge.costUnit) || 0,
+            fcyAmount: costFCY,
+            exRate: exRate,
+            localAmount: costFCY * exRate,
+            taxPercentage: parseFloat(charge.costTaxPercentage) || 0,
+            taxAmount: (parseFloat(charge.costTaxAmount) || 0) * exRate,
+          };
+        });
 
       try {
         await updatePurchaseInvoiceMutation.mutateAsync({
@@ -474,19 +478,23 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
         .filter((charge, index, self) =>
           index === self.findIndex(c => c.id === charge.id)
         )
-        .map(charge => ({
-          shipmentCostingId: charge.id,
-          chargeDetails: charge.description || '',
-          noOfUnit: parseFloat(charge.costQty) || 1,
-          ppcc: charge.ppcc || 'PP',
-          costPerUnit: parseFloat(charge.costUnit) || 0,
-          currencyId: charge.costCurrencyId || 1,
-          fcyAmount: parseFloat(charge.costFCY) || 0,
-          exRate: parseFloat(charge.costExRate) || 1,
-          localAmount: parseFloat(charge.costLCY) || 0,
-          taxPercentage: parseFloat(charge.costTaxPercentage) || 0,
-          taxAmount: parseFloat(charge.costTaxAmount) || 0,
-        }));
+        .map(charge => {
+          const costFCY = parseFloat(charge.costFCY) || 0;
+          const exRate = getInvoiceExRate(charge.costCurrencyId || 1);
+          return {
+            shipmentCostingId: charge.id,
+            chargeDetails: charge.description || '',
+            noOfUnit: parseFloat(charge.costQty) || 1,
+            ppcc: charge.ppcc || 'PP',
+            costPerUnit: parseFloat(charge.costUnit) || 0,
+            currencyId: charge.costCurrencyId || 1,
+            fcyAmount: costFCY,
+            exRate: exRate,
+            localAmount: costFCY * exRate,
+            taxPercentage: parseFloat(charge.costTaxPercentage) || 0,
+            taxAmount: (parseFloat(charge.costTaxAmount) || 0) * exRate,
+          };
+        });
 
       try {
         await createPurchaseInvoiceMutation.mutateAsync({
@@ -521,21 +529,28 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
 
   const selectedChargesData = localCostings.filter(c => formData.selectedCharges.includes(c.id));
 
-  // Convert totals to vendor currency
-  const convertToVendorCurrency = (amount: number, chargeCurrencyId: number, chargeRoe: number) => {
-    if (chargeCurrencyId === formData.currencyId) return amount;
-    const vendorCurrency = currencies.find(c => c.id === formData.currencyId);
-    const vendorRoe = vendorCurrency?.roe || 1;
-    const exRate = chargeRoe / vendorRoe;
-    return amount * exRate;
+  // Get cross rate to convert from charge currency to invoice base currency
+  // ROE = how many base units per 1 unit of this currency (e.g. AED=1, PKR=0.013)
+  // To convert chargeAmount → invoiceCurrency: chargeROE / invoiceROE
+  const getInvoiceExRate = (chargeCurrencyId: number): number => {
+    if (chargeCurrencyId === formData.currencyId) return 1;
+    const chargeCurrency = currencies.find(c => c.id === chargeCurrencyId);
+    const invoiceCurrency = currencies.find(c => c.id === formData.currencyId);
+    if (!chargeCurrency || !invoiceCurrency) return 1;
+    const invoiceRoe = invoiceCurrency.roe || 1;
+    if (invoiceRoe === 0) return 1;
+    return (chargeCurrency.roe || 1) / invoiceRoe;
   };
 
   const totalCost = selectedChargesData.reduce((sum, c) => {
-    const costFCY = parseFloat(c.costFCY || 0);
-    return sum + convertToVendorCurrency(costFCY, c.costCurrencyId || 1, parseFloat(c.costExRate || 1));
+    const fcy = parseFloat(c.costFCY || 0);
+    const exRate = getInvoiceExRate(c.costCurrencyId || 1);
+    return sum + fcy * exRate;
   }, 0);
   const totalTax = selectedChargesData.reduce((sum, c) => {
-    return sum + parseFloat(c.costTaxAmount || 0);
+    const tax = parseFloat(c.costTaxAmount || 0);
+    const exRate = getInvoiceExRate(c.costCurrencyId || 1);
+    return sum + tax * exRate;
   }, 0);
   const totalWithTax = totalCost + totalTax;
 
@@ -688,8 +703,8 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
                       <TableCell className="text-xs py-2">{charge.costUnit}</TableCell>
                       <TableCell className="text-xs py-2">{currencies.find(c => c.id === charge.costCurrencyId)?.code || charge.costCurrencyCode || ""}</TableCell>
                       <TableCell className="text-xs py-2">{charge.costFCY}</TableCell>
-                      <TableCell className="text-xs py-2">{charge.costExRate}</TableCell>
-                      <TableCell className="text-xs py-2">{charge.costLCY}</TableCell>
+                      <TableCell className="text-xs py-2">{getInvoiceExRate(charge.costCurrencyId || 1).toFixed(3)}</TableCell>
+                      <TableCell className="text-xs py-2">{(parseFloat(charge.costFCY || 0) * getInvoiceExRate(charge.costCurrencyId || 1)).toFixed(2)}</TableCell>
                     </TableRow>
                   ))
                 )}
@@ -764,7 +779,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
           <div className="flex justify-end">
             <div className="grid grid-cols-3 gap-4 bg-secondary/30 p-3 rounded-lg">
               <div>
-                <Label className="text-xs font-semibold">Sub Total</Label>
+                <Label className="text-xs font-semibold">Total Cost</Label>
                 <div className="text-foreground font-semibold text-sm">{formData.currencyCode} {totalCost.toFixed(2)}</div>
               </div>
               <div>
@@ -772,8 +787,8 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
                 <div className="text-foreground font-semibold text-sm">{formData.currencyCode} {totalTax.toFixed(2)}</div>
               </div>
               <div>
-                <Label className="text-xs font-semibold">Total Cost</Label>
-                <div className="text-destructive font-semibold text-sm">{formData.currencyCode} {totalWithTax.toFixed(2)}</div>
+                <Label className="text-xs font-semibold">Sub Total</Label>
+                <div className="text-primary font-semibold text-sm">{formData.currencyCode} {totalWithTax.toFixed(2)}</div>
               </div>
             </div>
           </div>

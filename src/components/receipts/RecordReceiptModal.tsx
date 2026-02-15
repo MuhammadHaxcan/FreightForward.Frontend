@@ -73,7 +73,7 @@ export function RecordReceiptModal({
   const [selectedInvoices, setSelectedInvoices] = useState<SelectedInvoice[]>([]);
   const [paymentMode, setPaymentMode] = useState<PaymentMode>("Cash");
   const [receiptDate, setReceiptDate] = useState(format(new Date(), "yyyy-MM-dd"));
-  const [currency, setCurrency] = useState<Currency>("USD");
+  const [currency, setCurrency] = useState<Currency>(baseCurrencyCode as Currency);
   const [bankId, setBankId] = useState<number | null>(null);
   const [chequeNo, setChequeNo] = useState("");
   const [chequeDate, setChequeDate] = useState("");
@@ -189,7 +189,7 @@ export function RecordReceiptModal({
     setSelectedInvoices([]);
     setPaymentMode("Cash");
     setReceiptDate(format(new Date(), "yyyy-MM-dd"));
-    setCurrency("USD");
+    setCurrency(baseCurrencyCode as Currency);
     setBankId(null);
     setChequeNo("");
     setChequeDate("");
@@ -199,6 +199,7 @@ export function RecordReceiptModal({
 
   const handleInvoiceSelect = (invoice: UnpaidInvoice, isSelected: boolean) => {
     if (isSelected) {
+      const invoiceCurrency = invoice.currencyCode || baseCurrencyCode;
       setSelectedInvoices([
         ...selectedInvoices,
         {
@@ -207,12 +208,19 @@ export function RecordReceiptModal({
           totalAmount: invoice.totalAmount,
           pendingAmount: invoice.pendingAmount,
           payingAmount: invoice.pendingAmount, // Default to full pending amount
-          currency: invoice.currencyCode || baseCurrencyCode,
+          currency: invoiceCurrency,
           currencyId: invoice.currencyId,
         },
       ]);
+      // Update form currency to match the invoice's currency
+      setCurrency(invoiceCurrency as Currency);
     } else {
-      setSelectedInvoices(selectedInvoices.filter(si => si.invoiceId !== invoice.id));
+      const remaining = selectedInvoices.filter(si => si.invoiceId !== invoice.id);
+      setSelectedInvoices(remaining);
+      // If there are remaining invoices, use the first one's currency; otherwise reset
+      if (remaining.length > 0) {
+        setCurrency(remaining[0].currency);
+      }
     }
   };
 

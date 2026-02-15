@@ -73,6 +73,7 @@ const allSidebarItems: SidebarItem[] = [
       { title: "Daily Expenses", path: "/accounts/daily-expenses", permission: "expense_view" },
       { title: "Cost Sheet", path: "/accounts/cost-sheet", permission: "ship_view" },
       { title: "VAT Report", path: "/accounts/vat-report", permission: "invoice_view" },
+      { title: "Credit Notes", path: "/accounts/credit-notes", permission: "creditnote_view" },
       { title: "Account Receivable", path: "/accounts/account-receivable", permission: "accrec_view" },
       { title: "Account Payable", path: "/accounts/account-payable", permission: "accpay_view" },
     ]
@@ -277,7 +278,7 @@ export function Sidebar() {
       )}
 
       {/* Navigation */}
-      <nav className="flex-1 py-4 overflow-y-auto">
+      <nav className="flex-1 py-4 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <ul className="space-y-1 px-2">
           {sidebarItems.map((item) => {
             const isActive = isMenuActive(item);

@@ -229,19 +229,19 @@ export default function InvoiceView() {
             <div className="w-80">
               <div className="bg-amber-50 dark:bg-amber-900/20 p-2 mb-2">
                 <div className="flex justify-between">
-                  <span>Sub Total</span>
+                  <span>Total Sale</span>
                   <span className="font-semibold">{formatCurrency(subTotal, invoice.currencyCode || '')}</span>
                 </div>
               </div>
               <div className="px-2 py-1">
                 <div className="flex justify-between">
-                  <span>Total Tax</span>
+                  <span>VAT</span>
                   <span>{formatCurrency(totalTax, invoice.currencyCode || '')}</span>
                 </div>
               </div>
               <div className="bg-amber-50 dark:bg-amber-900/20 p-2 mt-2">
                 <div className="flex justify-between font-bold">
-                  <span>Total</span>
+                  <span>Sub Total</span>
                   <span>{formatCurrency(total, invoice.currencyCode || '')}</span>
                 </div>
               </div>

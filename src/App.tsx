@@ -61,6 +61,10 @@ const AccountReceivable = lazy(() => import("./pages/AccountReceivable"));
 const AccountReceivablePrintView = lazy(() => import("./pages/AccountReceivablePrintView"));
 const AccountPayable = lazy(() => import("./pages/AccountPayable"));
 const AccountPayablePrintView = lazy(() => import("./pages/AccountPayablePrintView"));
+const CreditNotes = lazy(() => import("./pages/CreditNotes"));
+const CreditNoteView = lazy(() => import("./pages/CreditNoteView"));
+const CreditNoteEdit = lazy(() => import("./pages/CreditNoteEdit"));
+const CreditNotePrintView = lazy(() => import("./pages/CreditNotePrintView"));
 const ChangePassword = lazy(() => import("./pages/ChangePassword"));
 const Profile = lazy(() => import("./pages/Profile"));
 const GeneralDocuments = lazy(() => import("./pages/GeneralDocuments"));
@@ -316,6 +320,26 @@ const AppRoutes = () => (
       <Route path="/accounts/account-payable/print" element={
         <ProtectedRoute permission="accpay_view">
           <AccountPayablePrintView />
+        </ProtectedRoute>
+      } />
+      <Route path="/accounts/credit-notes" element={
+        <ProtectedRoute permission="creditnote_view">
+          <CreditNotes />
+        </ProtectedRoute>
+      } />
+      <Route path="/accounts/credit-notes/:id" element={
+        <ProtectedRoute permission="creditnote_view">
+          <CreditNoteView />
+        </ProtectedRoute>
+      } />
+      <Route path="/accounts/credit-notes/:id/edit" element={
+        <ProtectedRoute permission="creditnote_edit">
+          <CreditNoteEdit />
+        </ProtectedRoute>
+      } />
+      <Route path="/accounts/credit-notes/:id/print" element={
+        <ProtectedRoute permission="creditnote_view">
+          <CreditNotePrintView />
         </ProtectedRoute>
       } />
       <Route path="/users" element={
