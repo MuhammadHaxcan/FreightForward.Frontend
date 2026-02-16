@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { customerApi, CreateCustomerRequest, UpdateCustomerRequest, MasterType } from '@/services/api';
 import { toast } from 'sonner';
+import { useState, useEffect } from 'react';
 
 export function useCustomers(params?: {
   pageNumber?: number;
@@ -182,6 +183,30 @@ export function useAllDebtors() {
       return response.data!.items;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes - dropdown data changes less frequently
+  });
+}
+
+// Check for similar customer names (debounced)
+export function useSimilarCustomerCheck(name: string, excludeId?: number) {
+  const [debouncedName, setDebouncedName] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedName(name), 500);
+    return () => clearTimeout(timer);
+  }, [name]);
+
+  return useQuery({
+    queryKey: ['customers', 'similar', debouncedName, excludeId],
+    queryFn: async () => {
+      const response = await customerApi.checkSimilarNames(debouncedName, excludeId);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+    enabled: debouncedName.trim().length >= 3,
+    staleTime: 60 * 1000,
+    retry: false,
   });
 }
 

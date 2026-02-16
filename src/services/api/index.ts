@@ -44,6 +44,7 @@ export {
     type UpdateCustomerRequest,
     type CreateCustomerContactRequest,
     type CreateCreditNoteRequest,
+    type SimilarCustomer,
 } from './customer';
 
 // Sales

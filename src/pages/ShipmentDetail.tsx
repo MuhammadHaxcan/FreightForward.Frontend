@@ -17,7 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Edit, Trash2, Plus, Loader2, AlertTriangle } from "lucide-react";
+import { Edit, Trash2, Plus, Loader2, AlertTriangle, Eye } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -79,7 +79,6 @@ import {
   PaymentStatus,
 } from "@/services/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 
 // Helper function to get payment status display and styling
 const getPaymentStatusDisplay = (status: PaymentStatus) => {
@@ -188,7 +187,6 @@ const ShipmentDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const shipmentId = parseInt(id || '0');
-  const baseCurrencyCode = useBaseCurrency();
 
   const queryClient = useQueryClient();
 
@@ -894,10 +892,6 @@ const ShipmentDetail = () => {
       setIsSaving(false);
     }
   };
-
-  // Calculate totals for costings
-  const totalSale = costings.reduce((sum, c) => sum + (c.saleLCY || 0), 0);
-  const totalCost = costings.reduce((sum, c) => sum + (c.costLCY || 0), 0);
 
   return (
     <MainLayout>
@@ -1692,7 +1686,6 @@ const ShipmentDetail = () => {
                 <h3 className="text-emerald-600 font-semibold text-lg">Costing</h3>
                 <div className="flex gap-2">
                   <Button
-                    variant="outline"
                     size="sm"
                     className="btn-success h-9 px-4"
                     onClick={() => {
@@ -1770,8 +1763,9 @@ const ShipmentDetail = () => {
                       </TableRow>
                     ) : (
                       costings.map((cost, index) => {
-                        const saleHighlight = cost.saleInvoiced ? "bg-emerald-100 dark:bg-emerald-900/30" : "";
-                        const costHighlight = cost.purchaseInvoiced ? "bg-orange-100 dark:bg-orange-900/30" : "";
+                        const bothInvoiced = cost.saleInvoiced && cost.purchaseInvoiced;
+                        const saleHighlight = bothInvoiced ? "bg-violet-100 dark:bg-violet-900/30" : cost.saleInvoiced ? "bg-emerald-100 dark:bg-emerald-900/30" : "";
+                        const costHighlight = bothInvoiced ? "bg-violet-100 dark:bg-violet-900/30" : cost.purchaseInvoiced ? "bg-orange-100 dark:bg-orange-900/30" : "";
                         return (
                         <TableRow key={cost.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
                           <TableCell>{index + 1}</TableCell>
@@ -1795,10 +1789,10 @@ const ShipmentDetail = () => {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 btn-success rounded"
+                                className={`h-8 w-8 rounded ${cost.saleInvoiced && cost.purchaseInvoiced ? "bg-slate-500 hover:bg-slate-600 text-white" : "btn-success"}`}
                                 onClick={() => handleEditCosting(cost)}
                               >
-                                <Edit className="h-4 w-4" />
+                                {cost.saleInvoiced && cost.purchaseInvoiced ? <Eye className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
                               </Button>
                               <Button
                                 variant="ghost"
@@ -1962,25 +1956,6 @@ const ShipmentDetail = () => {
                 </div>
               </div>
 
-              {/* Summary */}
-              <div className="flex justify-center">
-                <div className="grid grid-cols-3 gap-8 bg-secondary/30 p-4 rounded-lg">
-                  <div className="text-center">
-                    <Label className="text-sm font-semibold">Total Sale</Label>
-                    <div className="text-emerald-600 font-semibold">[ {baseCurrencyCode} {totalSale.toFixed(2)} ]</div>
-                  </div>
-                  <div className="text-center">
-                    <Label className="text-sm font-semibold">Total Cost</Label>
-                    <div className="text-foreground font-semibold">[ {baseCurrencyCode} {totalCost.toFixed(2)} ]</div>
-                  </div>
-                  <div className="text-center">
-                    <Label className="text-sm font-semibold">Profit</Label>
-                    <div className={`font-semibold ${(totalSale - totalCost) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                      [ {baseCurrencyCode} {(totalSale - totalCost).toFixed(2)} ]
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           </TabsContent>
 

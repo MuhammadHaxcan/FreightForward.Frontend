@@ -1,5 +1,5 @@
 import { MainLayout } from "@/components/layout/MainLayout";
-import { Plus, Pencil, Eye, Trash2, Loader2 } from "lucide-react";
+import { Plus, Pencil, Eye, Trash2, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -13,11 +13,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { CustomerModal } from "@/components/customers/CustomerModal";
 import { useCustomers, useDeleteCustomer } from "@/hooks/useCustomers";
-import { Customer } from "@/services/api";
+import { Customer, MasterType } from "@/services/api";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 
 const MasterCustomers = () => {
@@ -27,13 +27,25 @@ const MasterCustomers = () => {
   const [modalMode, setModalMode] = useState<"add" | "edit">("add");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [masterTypeFilter, setMasterTypeFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
+
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setCurrentPage(1);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   const { data, isLoading, error } = useCustomers({
     pageNumber: currentPage,
     pageSize: parseInt(entriesPerPage),
-    searchTerm: searchTerm || undefined,
+    searchTerm: debouncedSearchTerm || undefined,
+    masterType: (masterTypeFilter || undefined) as MasterType | undefined,
   });
 
   const deleteMutation = useDeleteCustomer();
@@ -120,16 +132,41 @@ const MasterCustomers = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Search:</span>
-              <Input
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
+              <span className="text-sm text-muted-foreground">Master Type:</span>
+              <SearchableSelect
+                options={[
+                  { value: "all", label: "All" },
+                  { value: "Debtors", label: "Debtors" },
+                  { value: "Creditors", label: "Creditors" },
+                  { value: "Neutral", label: "Neutral" },
+                ]}
+                value={masterTypeFilter || "all"}
+                onValueChange={(value) => {
+                  setMasterTypeFilter(value === "all" ? "" : value);
                   setCurrentPage(1);
                 }}
-                className="w-[200px] h-8"
-                placeholder=""
+                triggerClassName="w-[120px] h-8"
               />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Search:</span>
+              <div className="relative">
+                <Input
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-[250px] h-8 pr-8"
+                  placeholder="Name, code or email..."
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>

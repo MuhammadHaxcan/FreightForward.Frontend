@@ -18,7 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Edit, Trash2, Plus, Loader2, AlertTriangle } from "lucide-react";
+import { Edit, Trash2, Plus, Loader2, AlertTriangle, Eye } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -82,7 +82,6 @@ import {
 } from "@/hooks/useShipments";
 import { useDeleteInvoice, useDeletePurchaseInvoice } from "@/hooks/useInvoices";
 import { useQuotationForShipment } from "@/hooks/useSales";
-import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 
 // Helper function to get payment status display and styling
 const getPaymentStatusDisplay = (status: PaymentStatus) => {
@@ -149,7 +148,6 @@ const AddShipment = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const baseCurrencyCode = useBaseCurrency();
   const [activeTab, setActiveTab] = useState("shipment-info");
 
   // Track if shipment has been saved (null = new shipment, number = saved shipment ID)
@@ -396,26 +394,36 @@ const AddShipment = () => {
         setCosting(savedShipmentData.costings.map(c => ({
           id: c.id,
           description: c.description,
-          chargeDescription: c.description, // Same as description for display
+          chargeDescription: c.description,
           remarks: c.remarks || "",
+          ppcc: c.ppcc,
           saleQty: c.saleQty,
           saleUnit: c.saleUnit,
-          saleCurrency: c.saleCurrency,
+          saleCurrencyCode: c.saleCurrencyCode,
+          saleCurrencyId: c.saleCurrencyId,
           saleExRate: c.saleExRate,
           saleFCY: c.saleFCY,
           saleLCY: c.saleLCY,
+          saleTaxPercentage: c.saleTaxPercentage,
+          saleTaxAmount: c.saleTaxAmount,
           costQty: c.costQty,
           costUnit: c.costUnit,
-          costCurrency: c.costCurrency,
+          costCurrencyCode: c.costCurrencyCode,
+          costCurrencyId: c.costCurrencyId,
           costExRate: c.costExRate,
           costFCY: c.costFCY,
           costLCY: c.costLCY,
+          costTaxPercentage: c.costTaxPercentage,
+          costTaxAmount: c.costTaxAmount,
+          unitId: c.unitId,
           unitName: c.unitName,
           gp: c.gp,
           billToCustomerId: c.billToCustomerId,
           billToName: c.billToName,
           vendorCustomerId: c.vendorCustomerId,
           vendorName: c.vendorName,
+          costReferenceNo: c.costReferenceNo,
+          costDate: c.costDate,
           saleInvoiced: c.saleInvoiced || false,
           purchaseInvoiced: c.purchaseInvoiced || false,
         })));
@@ -1143,9 +1151,6 @@ const AddShipment = () => {
       })()
     : "No containers";
 
-  const totalSale = costing.reduce((sum, c) => sum + parseFloat(c.saleLCY || 0), 0);
-  const totalCost = costing.reduce((sum, c) => sum + parseFloat(c.costLCY || 0), 0);
-
   return (
     <MainLayout>
       <div className="p-6 space-y-4">
@@ -1860,7 +1865,6 @@ const AddShipment = () => {
                 <h3 className="text-emerald-600 font-semibold text-lg">Costing</h3>
                 <div className="flex gap-2">
                   <Button
-                    variant="outline"
                     size="sm"
                     className="btn-success h-9 px-4"
                     onClick={() => {
@@ -1939,8 +1943,9 @@ const AddShipment = () => {
                   ) : (
                     costing.map((cost, index) => {
                       // Column-level highlighting based on invoice status
-                      const saleHighlight = cost.saleInvoiced ? "bg-emerald-100 dark:bg-emerald-900/30" : "";
-                      const costHighlight = cost.purchaseInvoiced ? "bg-orange-100 dark:bg-orange-900/30" : "";
+                      const bothInvoiced = cost.saleInvoiced && cost.purchaseInvoiced;
+                      const saleHighlight = bothInvoiced ? "bg-violet-100 dark:bg-violet-900/30" : cost.saleInvoiced ? "bg-emerald-100 dark:bg-emerald-900/30" : "";
+                      const costHighlight = bothInvoiced ? "bg-violet-100 dark:bg-violet-900/30" : cost.purchaseInvoiced ? "bg-orange-100 dark:bg-orange-900/30" : "";
 
                       return (
                         <TableRow key={cost.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
@@ -1962,8 +1967,8 @@ const AddShipment = () => {
                           <TableCell className="text-emerald-600 font-semibold">{cost.gp?.toFixed(2)}</TableCell>
                           <TableCell>
                             <div className="flex gap-1">
-                              <Button variant="ghost" size="icon" className="h-8 w-8 btn-success rounded" onClick={() => handleEditCosting(cost)}>
-                                <Edit className="h-4 w-4" />
+                              <Button variant="ghost" size="icon" className={`h-8 w-8 rounded ${cost.saleInvoiced && cost.purchaseInvoiced ? "bg-slate-500 hover:bg-slate-600 text-white" : "btn-success"}`} onClick={() => handleEditCosting(cost)}>
+                                {cost.saleInvoiced && cost.purchaseInvoiced ? <Eye className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
                               </Button>
                               <Button variant="ghost" size="icon" className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded" onClick={() => handleDeleteCosting(cost.id, cost.description)}>
                                 <Trash2 className="h-4 w-4" />
@@ -2125,25 +2130,6 @@ const AddShipment = () => {
                 </div>
               )}
 
-              {/* Summary */}
-              <div className="flex justify-center">
-                <div className="grid grid-cols-3 gap-8 bg-secondary/30 p-4 rounded-lg">
-                  <div className="text-center">
-                    <Label className="text-sm font-semibold">Total Sale</Label>
-                    <div className="text-emerald-600 font-semibold">[ {baseCurrencyCode} {totalSale.toFixed(2)} ]</div>
-                  </div>
-                  <div className="text-center">
-                    <Label className="text-sm font-semibold">Total Cost</Label>
-                    <div className="text-foreground font-semibold">[ {baseCurrencyCode} {totalCost.toFixed(2)} ]</div>
-                  </div>
-                  <div className="text-center">
-                    <Label className="text-sm font-semibold">Profit</Label>
-                    <div className={`font-semibold ${(totalSale - totalCost) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                      [ {baseCurrencyCode} {(totalSale - totalCost).toFixed(2)} ]
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           </TabsContent>
 

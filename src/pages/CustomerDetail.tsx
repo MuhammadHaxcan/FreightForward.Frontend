@@ -546,6 +546,21 @@ const CustomerDetail = () => {
     }
     setCnSaving(true);
     try {
+      // Auto-add pending charge if filled but not explicitly added
+      let allCharges = [...chargeDetails];
+      if (newCharge.chargeDetails && newCharge.amount) {
+        allCharges.push({ ...newCharge, id: Date.now() } as ChargeDetail);
+      }
+
+      // Validate: total allocated cannot exceed total charges
+      const totalCharges = allCharges.reduce((sum, d) => sum + (parseFloat(d.amount as any) || 0), 0);
+      const totalAllocated = cnSelectedInvoices.reduce((sum, inv) => sum + inv.allocatedAmount, 0);
+      if (totalAllocated > totalCharges) {
+        toast({ title: "Error", description: "Allocated amount cannot exceed credit note total", variant: "destructive" });
+        setCnSaving(false);
+        return;
+      }
+
       const response = await creditNoteApi.create({
         customerId: parseInt(id),
         creditNoteDate: format(creditNoteForm.creditNoteDate, "yyyy-MM-dd"),
@@ -554,14 +569,14 @@ const CustomerDetail = () => {
         email: creditNoteForm.email || undefined,
         additionalContents: additionalContents || undefined,
         status: creditNoteForm.status || "Active",
-        details: chargeDetails.map(d => ({
+        details: allCharges.map(d => ({
           chargeDetails: d.chargeDetails || undefined,
           bases: d.bases || undefined,
           currencyId: d.currencyId,
-          rate: parseFloat(d.rate) || 0,
-          roe: parseFloat(d.roe) || 1,
-          quantity: parseFloat(d.quantity) || 0,
-          amount: parseFloat(d.amount) || 0,
+          rate: parseFloat(d.rate as any) || 0,
+          roe: parseFloat(d.roe as any) || 1,
+          quantity: parseFloat(d.quantity as any) || 0,
+          amount: parseFloat(d.amount as any) || 0,
         })),
         invoices: cnSelectedInvoices.map(inv => ({
           invoiceId: inv.invoiceId,
@@ -1228,8 +1243,8 @@ const CustomerDetail = () => {
                   <tr key={r.id} className={`border-b border-border ${i % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
                     <td className="px-4 py-3 text-sm">{formatDate(r.receiptDate)}</td>
                     <td className="px-4 py-3 text-sm text-primary">{r.receiptNo}</td>
-                    <td className="px-4 py-3 text-sm">{r.type || "Bank"}</td>
-                    <td className="px-4 py-3 text-sm">{r.currency} {r.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td className="px-4 py-3 text-sm">{r.type}</td>
+                    <td className="px-4 py-3 text-sm">{r.currencyCode} {r.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     <td className="px-4 py-3 text-sm">{r.narration || "-"}</td>
                   </tr>
                 ))
@@ -1377,7 +1392,7 @@ const CustomerDetail = () => {
                         {inv.receipts && inv.receipts.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
                             {inv.receipts.map((r) => (
-                              <span key={r.receiptId} className="text-primary text-xs underline cursor-pointer" title={`${r.currency} ${r.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })} on ${formatDate(r.receiptDate)}`}>
+                              <span key={r.receiptId} className="text-primary text-xs underline cursor-pointer" title={`${r.currencyCode} ${r.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })} on ${formatDate(r.receiptDate)}`}>
                                 {r.receiptNo}
                               </span>
                             ))}
@@ -1590,7 +1605,7 @@ const CustomerDetail = () => {
 
     return (
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-primary">Account Payable (Unpaid Purchase Invoices)</h2>
+        <h2 className="text-xl font-semibold text-primary">Account Payable</h2>
 
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
@@ -1651,10 +1666,10 @@ const CustomerDetail = () => {
                       <td className="px-4 py-3 text-sm text-primary">{ap.purchaseInvoiceNo}</td>
                       <td className="px-4 py-3 text-sm">{ap.vendorInvoiceNo || "-"}</td>
                       <td className="px-4 py-3 text-sm">{ap.jobHblNo || "-"}</td>
-                      <td className="px-4 py-3 text-sm">{ap.currency} {ap.credit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      <td className="px-4 py-3 text-sm">{ap.currencyCode} {ap.credit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                       <td className="px-4 py-3 text-sm">
                         <span className={balanceColorClass}>
-                          {ap.currency} {ap.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {ap.currencyCode} {ap.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm">
@@ -1949,7 +1964,7 @@ const CustomerDetail = () => {
                     <span className="text-sm text-gray-600">{pv.purchaseInvoiceCount} invoice(s)</span>
                   </td>
                   <td className="px-4 py-3 text-right font-medium">
-                    {pv.currency} {pv.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    {pv.currencyCode} {pv.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </td>
                   <td className="px-4 py-3 text-gray-600 max-w-[200px] truncate">{pv.narration || '-'}</td>
                 </tr>
@@ -2019,17 +2034,17 @@ const CustomerDetail = () => {
                   <td className="px-4 py-3">{pi.vendorInvoiceNo || '-'}</td>
                   <td className="px-4 py-3">{pi.jobNo || '-'}</td>
                   <td className="px-4 py-3 text-right font-medium">
-                    {pi.currency} {pi.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    {pi.currencyCode} {pi.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={cn(
-                      "px-2 py-1 text-xs rounded-full",
-                      pi.paymentStatus === "Paid" ? "bg-green-100 text-green-800" :
-                      pi.paymentStatus === "PartiallyPaid" ? "bg-orange-100 text-orange-800" :
-                      "bg-yellow-100 text-yellow-800"
-                    )}>
-                      {pi.paymentStatus === "PartiallyPaid" ? "Partial" : pi.paymentStatus}
-                    </span>
+                    {(() => {
+                      const statusDisplay = getPaymentStatusDisplay(pi.paymentStatus);
+                      return (
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${statusDisplay.className}`}>
+                          {statusDisplay.label}
+                        </span>
+                      );
+                    })()}
                   </td>
                 </tr>
               ))

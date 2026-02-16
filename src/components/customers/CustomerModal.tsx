@@ -4,9 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { SearchableMultiSelect } from "@/components/ui/searchable-multi-select";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useCreateCustomer, useUpdateCustomer } from "@/hooks/useCustomers";
+import { useCreateCustomer, useUpdateCustomer, useSimilarCustomerCheck } from "@/hooks/useCustomers";
 import { Customer, customerApi, settingsApi, NextCustomerCodes, CurrencyType, CustomerCategoryType } from "@/services/api";
 import { useQuery } from "@tanstack/react-query";
 
@@ -35,6 +35,22 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
 
   const createMutation = useCreateCustomer();
   const updateMutation = useUpdateCustomer();
+
+  // Check for similar customer names
+  const { data: similarCustomers } = useSimilarCustomerCheck(
+    formData.name,
+    mode === "edit" ? customer?.id : undefined
+  );
+
+  // Check for exact duplicate (same name + same master type)
+  const hasExactDuplicate = useMemo(() => {
+    if (!similarCustomers || !formData.masterType || !formData.name.trim()) return false;
+    return similarCustomers.some(
+      (c) =>
+        c.name.trim().toLowerCase() === formData.name.trim().toLowerCase() &&
+        c.masterTypeDisplay === formData.masterType
+    );
+  }, [similarCustomers, formData.name, formData.masterType]);
 
   // Fetch currencies from API
   const { data: currenciesResponse } = useQuery({
@@ -180,8 +196,26 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Name"
-                className="bg-muted/50"
+                className={`bg-muted/50 ${hasExactDuplicate ? "border-destructive" : ""}`}
               />
+              {hasExactDuplicate && (
+                <p className="text-xs text-destructive">
+                  A customer with this exact name and master type already exists.
+                </p>
+              )}
+              {similarCustomers && similarCustomers.length > 0 && (
+                <div className="flex gap-2 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 p-2 text-xs">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-amber-800 dark:text-amber-400">Similar customers found:</p>
+                    <ul className="mt-1 space-y-0.5 text-amber-700 dark:text-amber-500">
+                      {similarCustomers.map((c) => (
+                        <li key={c.id}>{c.code} — {c.name} ({c.masterTypeDisplay})</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -303,7 +337,7 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
             Cancel
           </Button>
-          <Button className="btn-success" onClick={handleSubmit} disabled={isLoading}>
+          <Button className="btn-success" onClick={handleSubmit} disabled={isLoading || hasExactDuplicate}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {mode === "add" ? "Save" : "Update"}
           </Button>

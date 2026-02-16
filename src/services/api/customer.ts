@@ -181,6 +181,13 @@ export interface CustomerStatement {
   netOutstandingReceivable: number;
 }
 
+export interface SimilarCustomer {
+  id: number;
+  code: string;
+  name: string;
+  masterTypeDisplay: string;
+}
+
 export interface CreateCustomerRequest {
   name: string;
   masterType: MasterType;
@@ -273,6 +280,11 @@ export const customerApi = {
   },
   getById: (id: number) => fetchApi<CustomerDetail>(`/customers/${id}`),
   getNextCodes: () => fetchApi<NextCustomerCodes>('/customers/next-codes'),
+  checkSimilarNames: (name: string, excludeId?: number) => {
+    const query = new URLSearchParams({ name });
+    if (excludeId) query.append('excludeId', excludeId.toString());
+    return fetchApi<SimilarCustomer[]>(`/customers/check-similar?${query}`);
+  },
   create: (data: CreateCustomerRequest) =>
     fetchApi<number>('/customers', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: number, data: UpdateCustomerRequest) =>

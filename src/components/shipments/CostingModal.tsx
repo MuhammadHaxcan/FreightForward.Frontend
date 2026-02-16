@@ -16,7 +16,7 @@ import { ShipmentParty, ShipmentCosting, settingsApi } from "@/services/api";
 import { useCurrencyTypes } from "@/hooks/useSettings";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 import { useQuery } from "@tanstack/react-query";
-import { X } from "lucide-react";
+import { X, Lock, Info } from "lucide-react";
 
 // Extend ShipmentCosting with UI-specific fields for the modal
 // The modal transforms between API format (currencyId) and display format (currency code)
@@ -44,6 +44,12 @@ const taxOptions = ["0%", "5%", "10%", "15%"];
 export function CostingModal({ open, onOpenChange, parties, costing, onSave, defaultBillToCustomerId, defaultVendorCustomerId, defaultActiveTab }: CostingModalProps) {
   const baseCurrencyCode = useBaseCurrency();
   const LOCAL_CURRENCY = baseCurrencyCode;
+
+  // Invoice lock states
+  const isSaleLocked = !!costing?.saleInvoiced;
+  const isCostLocked = !!costing?.purchaseInvoiced;
+  const isFullyLocked = isSaleLocked && isCostLocked;
+
   const [activeTab, setActiveTab] = useState(defaultActiveTab || "cost");
 
   // Fetch currency types from settings
@@ -504,11 +510,25 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
       <DialogContent className="max-w-2xl bg-card border border-border p-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-lg font-semibold">
-            {costing ? "Edit Costing" : "Add Costing"}
+            {isFullyLocked ? "View Costing" : costing ? "Edit Costing" : "Add Costing"}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 p-6 pt-4">
+          {/* Invoice Lock Banner */}
+          {(isSaleLocked || isCostLocked) && (
+            <div className="flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 px-3 py-2 text-sm text-amber-800 dark:text-amber-300">
+              <Info className="h-4 w-4 shrink-0" />
+              <span>
+                {isFullyLocked
+                  ? "This costing is fully invoiced. Delete invoice(s) to enable editing."
+                  : isSaleLocked
+                    ? "Sale side is locked (invoiced). Delete the invoice to edit sale fields."
+                    : "Cost side is locked (invoiced). Delete the purchase invoice to edit cost fields."}
+              </span>
+            </div>
+          )}
+
           {/* Common Fields - Row 1 */}
           <div className="grid grid-cols-4 gap-3">
             <div className="col-span-2">
@@ -521,6 +541,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                 searchPlaceholder="Search charges..."
                 triggerClassName="bg-background border-border h-9"
                 emptyMessage={isLoadingChargeItems ? "Loading..." : "No charge items available"}
+                disabled={isFullyLocked}
               />
             </div>
             <div className="col-span-2">
@@ -530,6 +551,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                 onChange={(e) => handleInputChange("description", e.target.value)}
                 placeholder="Description"
                 className="bg-background border-border h-9"
+                disabled={isFullyLocked}
               />
             </div>
           </div>
@@ -544,6 +566,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                 onValueChange={(v) => handleInputChange("ppcc", v)}
                 triggerClassName="bg-background border-border h-9"
                 searchPlaceholder="Search..."
+                disabled={isFullyLocked}
               />
             </div>
             <div>
@@ -563,6 +586,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                 searchPlaceholder="Search units..."
                 triggerClassName="bg-background border-border h-9"
                 emptyMessage={isLoadingCostingUnits ? "Loading..." : "No units available"}
+                disabled={isFullyLocked}
               />
             </div>
             <div className="col-span-2">
@@ -572,6 +596,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                 onChange={(e) => handleInputChange("remarks", e.target.value)}
                 placeholder="Remarks"
                 className="bg-background border-border h-9"
+                disabled={isFullyLocked}
               />
             </div>
           </div>
@@ -584,12 +609,14 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                 className="data-[state=active]:bg-modal-header data-[state=active]:text-white text-sm h-8"
               >
                 Cost
+                {isCostLocked && <Lock className="h-3 w-3 ml-1" />}
               </TabsTrigger>
               <TabsTrigger
                 value="sale"
                 className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-sm h-8"
               >
                 Sale
+                {isSaleLocked && <Lock className="h-3 w-3 ml-1" />}
               </TabsTrigger>
             </TabsList>
 
@@ -607,6 +634,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                     onValueChange={handleCostCurrencyChange}
                     triggerClassName="bg-background border-border h-8 text-xs"
                     searchPlaceholder="Search..."
+                    disabled={isCostLocked}
                   />
                 </div>
                 <div>
@@ -615,6 +643,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                     value={formData.costExRate}
                     onChange={(e) => handleCostInputChange("costExRate", e.target.value)}
                     className="bg-background border-border h-8 text-xs"
+                    disabled={isCostLocked}
                   />
                 </div>
                 <div>
@@ -624,6 +653,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                     onChange={(e) => handleCostInputChange("costNoOfUnit", e.target.value)}
                     placeholder="0"
                     className="bg-background border-border h-8 text-xs"
+                    disabled={isCostLocked}
                   />
                 </div>
                 <div>
@@ -633,6 +663,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                     onChange={(e) => handleCostInputChange("costPerUnit", e.target.value)}
                     placeholder="0.00"
                     className="bg-background border-border h-8 text-xs"
+                    disabled={isCostLocked}
                   />
                 </div>
                 <div>
@@ -665,6 +696,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                     placeholder="Select vendor"
                     searchPlaceholder="Search vendors..."
                     triggerClassName="bg-background border-border h-8 text-xs"
+                    disabled={isCostLocked}
                   />
                 </div>
                 <div>
@@ -674,6 +706,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                     onChange={(e) => handleInputChange("costReferenceNo", e.target.value)}
                     placeholder="Ref No"
                     className="bg-background border-border h-8 text-xs"
+                    disabled={isCostLocked}
                   />
                 </div>
                 <div>
@@ -682,6 +715,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                     value={formData.costDate}
                     onChange={(v) => handleInputChange("costDate", v)}
                     className="h-8 text-xs"
+                    disabled={isCostLocked}
                   />
                 </div>
                 <div>
@@ -692,6 +726,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                     onValueChange={(v) => handleInputChange("costTax", v)}
                     triggerClassName="bg-background border-border h-8 text-xs"
                     searchPlaceholder="Search..."
+                    disabled={isCostLocked}
                   />
                 </div>
               </div>
@@ -711,6 +746,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                     onValueChange={handleSaleCurrencyChange}
                     triggerClassName="bg-background border-border h-8 text-xs"
                     searchPlaceholder="Search..."
+                    disabled={isSaleLocked}
                   />
                 </div>
                 <div>
@@ -719,6 +755,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                     value={formData.saleExRate}
                     onChange={(e) => handleSaleInputChange("saleExRate", e.target.value)}
                     className="bg-background border-border h-8 text-xs"
+                    disabled={isSaleLocked}
                   />
                 </div>
                 <div>
@@ -728,6 +765,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                     onChange={(e) => handleSaleInputChange("saleNoOfUnit", e.target.value)}
                     placeholder="0"
                     className="bg-background border-border h-8 text-xs"
+                    disabled={isSaleLocked}
                   />
                 </div>
                 <div>
@@ -737,6 +775,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                     onChange={(e) => handleSaleInputChange("salePerUnit", e.target.value)}
                     placeholder="0.00"
                     className="bg-background border-border h-8 text-xs"
+                    disabled={isSaleLocked}
                   />
                 </div>
                 <div>
@@ -769,6 +808,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                     placeholder="Select debtor"
                     searchPlaceholder="Search debtors..."
                     triggerClassName="bg-background border-border h-8 text-xs"
+                    disabled={isSaleLocked}
                   />
                 </div>
                 <div>
@@ -787,6 +827,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                     onValueChange={(v) => handleInputChange("saleTax", v)}
                     triggerClassName="bg-background border-border h-8 text-xs"
                     searchPlaceholder="Search..."
+                    disabled={isSaleLocked}
                   />
                 </div>
               </div>
@@ -801,15 +842,17 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
               onClick={() => onOpenChange(false)}
               className="px-6 h-9"
             >
-              Cancel
+              {isFullyLocked ? "Close" : "Cancel"}
             </Button>
-            <Button
-              size="sm"
-              onClick={handleSave}
-              className="btn-success px-6 h-9"
-            >
-              {costing ? "Update" : "Add"}
-            </Button>
+            {!isFullyLocked && (
+              <Button
+                size="sm"
+                onClick={handleSave}
+                className="btn-success px-6 h-9"
+              >
+                {costing ? "Update" : "Add"}
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>
