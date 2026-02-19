@@ -316,6 +316,7 @@ const Shipments = () => {
                             <CheckCircle size={14} className="text-emerald-500" />
                           )}
                         </div>
+                        <div className="text-xs text-muted-foreground">{formatDate(shipment.jobDate, "dd/MM/yyyy")}</div>
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
