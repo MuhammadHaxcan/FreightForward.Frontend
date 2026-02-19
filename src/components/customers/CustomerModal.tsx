@@ -7,6 +7,7 @@ import { SearchableMultiSelect } from "@/components/ui/searchable-multi-select";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useCreateCustomer, useUpdateCustomer, useSimilarCustomerCheck } from "@/hooks/useCustomers";
+import { useAllCountries } from "@/hooks/useSettings";
 import { Customer, customerApi, settingsApi, NextCustomerCodes, CurrencyType, CustomerCategoryType } from "@/services/api";
 import { useQuery } from "@tanstack/react-query";
 
@@ -51,6 +52,10 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
         c.masterTypeDisplay === formData.masterType
     );
   }, [similarCustomers, formData.name, formData.masterType]);
+
+  // Fetch countries from API
+  const { data: countriesData } = useAllCountries();
+  const countries = countriesData || [];
 
   // Fetch currencies from API
   const { data: currenciesResponse } = useQuery({
@@ -249,12 +254,13 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
               <Label htmlFor="country" className="text-sm">
                 *Country
               </Label>
-              <Input
-                id="country"
+              <SearchableSelect
+                options={countries.map((c) => ({ value: c.name, label: c.name }))}
                 value={formData.country}
-                onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                placeholder="Country"
-                className="bg-muted/50"
+                onValueChange={(value) => setFormData({ ...formData, country: value })}
+                placeholder="Select Country"
+                searchPlaceholder="Search countries..."
+                triggerClassName="bg-muted/50"
               />
             </div>
           </div>

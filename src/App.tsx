@@ -33,7 +33,9 @@ const Banks = lazy(() => import("./pages/Banks"));
 const Leads = lazy(() => import("./pages/Leads"));
 const LeadForm = lazy(() => import("./pages/LeadForm"));
 const RateRequests = lazy(() => import("./pages/RateRequests"));
+const RateRequestForm = lazy(() => import("./pages/RateRequestForm"));
 const Quotations = lazy(() => import("./pages/Quotations"));
+const QuotationForm = lazy(() => import("./pages/QuotationForm"));
 const QuotationView = lazy(() => import("./pages/QuotationView"));
 const QuotationPrintView = lazy(() => import("./pages/QuotationPrintView"));
 const DailyExpenses = lazy(() => import("./pages/DailyExpenses"));
@@ -187,9 +189,34 @@ const AppRoutes = () => (
           <RateRequests />
         </ProtectedRoute>
       } />
+      <Route path="/sales/rate-requests/new" element={
+        <ProtectedRoute permission="ratereq_add">
+          <RateRequestForm />
+        </ProtectedRoute>
+      } />
+      <Route path="/sales/rate-requests/:id/edit" element={
+        <ProtectedRoute permission="ratereq_edit">
+          <RateRequestForm />
+        </ProtectedRoute>
+      } />
       <Route path="/sales/quotations" element={
         <ProtectedRoute permission="quot_view">
           <Quotations />
+        </ProtectedRoute>
+      } />
+      <Route path="/sales/quotations/new" element={
+        <ProtectedRoute permission="quot_add">
+          <QuotationForm />
+        </ProtectedRoute>
+      } />
+      <Route path="/sales/quotations/:id/edit" element={
+        <ProtectedRoute permission="quot_edit">
+          <QuotationForm />
+        </ProtectedRoute>
+      } />
+      <Route path="/sales/quotations/:id/view-details" element={
+        <ProtectedRoute permission="quot_view">
+          <QuotationForm />
         </ProtectedRoute>
       } />
       <Route path="/sales/quotations/:id/view" element={

@@ -25,10 +25,21 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { Edit, Send, Loader2, Plus, RotateCcw, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { useLeads, usePortalLeads, useAcceptPortalLead, useRevertPortalLead } from "@/hooks/useSales";
+import { useAllDebtors } from "@/hooks/useCustomers";
 import { SendRateRequestModal } from "@/components/leads/SendRateRequestModal";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 
@@ -56,6 +67,8 @@ export default function Leads() {
   const [acceptDialogOpen, setAcceptDialogOpen] = useState(false);
   const [acceptPortalLeadId, setAcceptPortalLeadId] = useState<number | null>(null);
   const [acceptLeadName, setAcceptLeadName] = useState("");
+  const [customerChoice, setCustomerChoice] = useState<"existing" | "new">("new");
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
 
   // Office Leads query
   const { data, isLoading, error } = useLeads({
@@ -77,6 +90,7 @@ export default function Leads() {
 
   const acceptMutation = useAcceptPortalLead();
   const revertMutation = useRevertPortalLead();
+  const { data: debtors = [] } = useAllDebtors();
 
   const leads = data?.items || [];
   const totalCount = data?.totalCount || 0;
@@ -124,11 +138,26 @@ export default function Leads() {
 
   const confirmAcceptPortalLead = () => {
     if (acceptPortalLeadId) {
-      acceptMutation.mutate(acceptPortalLeadId);
+      const existingCustomerId = customerChoice === "existing" && selectedCustomerId
+        ? parseInt(selectedCustomerId)
+        : undefined;
+      acceptMutation.mutate({ id: acceptPortalLeadId, existingCustomerId });
     }
     setAcceptDialogOpen(false);
     setAcceptPortalLeadId(null);
     setAcceptLeadName("");
+    setCustomerChoice("new");
+    setSelectedCustomerId(null);
+  };
+
+  const handleAcceptDialogClose = (open: boolean) => {
+    setAcceptDialogOpen(open);
+    if (!open) {
+      setAcceptPortalLeadId(null);
+      setAcceptLeadName("");
+      setCustomerChoice("new");
+      setSelectedCustomerId(null);
+    }
   };
 
   const handleRevertPortalLead = (portalLeadId: number) => {
@@ -322,7 +351,7 @@ export default function Leads() {
                             </Badge>
                           </TableCell>
                           <TableCell>{formatDate(lead.leadDate, "dd-MM-yyyy")}</TableCell>
-                          <TableCell className="text-green-600">{lead.fullName || lead.customerName}</TableCell>
+                          <TableCell className="text-green-600">{lead.customerName || lead.fullName}</TableCell>
                           <TableCell>{lead.freightMode || "-"}</TableCell>
                           <TableCell>{lead.incoTermCode || "-"}</TableCell>
                           <TableCell className="text-green-600">{lead.polCountry || lead.pickupCountryName || "-"}</TableCell>
@@ -526,24 +555,64 @@ export default function Leads() {
           </TabsContent>
         </Tabs>
 
-        {/* Accept Confirmation Dialog */}
-        <AlertDialog open={acceptDialogOpen} onOpenChange={setAcceptDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Accept Portal Lead</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to accept the lead from <strong>{acceptLeadName}</strong>?
-                This will create a local lead in your office and mark it as accepted.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmAcceptPortalLead} className="btn-success">
+        {/* Accept Portal Lead Dialog */}
+        <Dialog open={acceptDialogOpen} onOpenChange={handleAcceptDialogClose}>
+          <DialogContent className="max-w-xl">
+            <DialogHeader>
+              <DialogTitle>Accept Portal Lead</DialogTitle>
+              <DialogDescription>
+                Accept the lead from <strong>{acceptLeadName}</strong>. Choose how to assign the customer.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <RadioGroup
+                value={customerChoice}
+                onValueChange={(value) => {
+                  setCustomerChoice(value as "existing" | "new");
+                  if (value === "new") setSelectedCustomerId(null);
+                }}
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="new" id="customer-new" />
+                  <Label htmlFor="customer-new">Create new customer</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="existing" id="customer-existing" />
+                  <Label htmlFor="customer-existing">Link to existing customer</Label>
+                </div>
+              </RadioGroup>
+
+              {customerChoice === "existing" && (
+                <SearchableSelect
+                  options={debtors.map((d) => ({
+                    value: d.id.toString(),
+                    label: `${d.name} (${d.code})`,
+                  }))}
+                  value={selectedCustomerId || ""}
+                  onValueChange={setSelectedCustomerId}
+                  placeholder="Select a customer..."
+                  searchPlaceholder="Search customers..."
+                  defaultSearch={acceptLeadName}
+                  autoOpen
+                />
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => handleAcceptDialogClose(false)}>
+                Cancel
+              </Button>
+              <Button
+                className="btn-success"
+                onClick={confirmAcceptPortalLead}
+                disabled={customerChoice === "existing" && !selectedCustomerId}
+              >
                 Accept
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Revert Confirmation Dialog */}
         <AlertDialog open={revertDialogOpen} onOpenChange={setRevertDialogOpen}>

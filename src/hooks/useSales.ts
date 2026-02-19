@@ -52,8 +52,8 @@ export function useAcceptPortalLead() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: number) => {
-      const response = await portalLeadApi.accept(id);
+    mutationFn: async ({ id, existingCustomerId }: { id: number; existingCustomerId?: number }) => {
+      const response = await portalLeadApi.accept(id, existingCustomerId);
       if (response.error) {
         throw new Error(response.error);
       }
@@ -229,6 +229,20 @@ export function useUpdateRateRequest() {
   });
 }
 
+export function useRateRequest(id: number) {
+  return useQuery({
+    queryKey: ['rateRequests', id],
+    queryFn: async () => {
+      const response = await rateRequestApi.getById(id);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+    enabled: id > 0,
+  });
+}
+
 // Quotations
 export function useQuotations(params?: {
   pageNumber?: number;
@@ -359,6 +373,28 @@ export function useApproveQuotation() {
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to approve quotation');
+    },
+  });
+}
+
+// Convert Quotation to Shipment (updates lead status)
+export function useConvertQuotationToShipment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const response = await quotationApi.convertToShipment(id);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['quotations'] });
+    },
+    onError: (error: Error) => {
+      console.error('Failed to update lead status:', error.message);
     },
   });
 }

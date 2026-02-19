@@ -469,8 +469,11 @@ export const portalLeadApi = {
     return fetchApi<PaginatedList<PortalLead>>(`/sales/portal-leads?${query}`);
   },
   getById: (id: number) => fetchApi<PortalLeadDetail>(`/sales/portal-leads/${id}`),
-  accept: (id: number) =>
-    fetchApi<AcceptPortalLeadResponse>(`/sales/portal-leads/${id}/accept`, { method: 'POST' }),
+  accept: (id: number, existingCustomerId?: number) =>
+    fetchApi<AcceptPortalLeadResponse>(`/sales/portal-leads/${id}/accept`, {
+      method: 'POST',
+      body: JSON.stringify({ existingCustomerId }),
+    }),
   revert: (id: number) =>
     fetchApi<{ message: string }>(`/sales/portal-leads/${id}/revert`, { method: 'POST' }),
 };
@@ -542,4 +545,6 @@ export const quotationApi = {
     fetchApi<void>(`/sales/quotations/${id}`, { method: 'DELETE' }),
   approve: (id: number) =>
     fetchApi<{ bookingNo: string }>(`/sales/quotations/${id}/approve`, { method: 'POST' }),
+  convertToShipment: (id: number) =>
+    fetchApi<void>(`/sales/quotations/${id}/convert-to-shipment`, { method: 'POST' }),
 };

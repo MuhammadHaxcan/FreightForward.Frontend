@@ -14,13 +14,6 @@ import {
 } from "@/components/ui/table";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -30,30 +23,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Edit, Plus, FileText, Loader2, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import { useRateRequests, useCreateRateRequest, useUpdateRateRequest, useLead } from "@/hooks/useSales";
-import { EquipmentGridReadOnly } from "@/components/leads/EquipmentGridReadOnly";
-import { BoxPalletsGridReadOnly } from "@/components/leads/BoxPalletsGridReadOnly";
-import { useAllCountries, useAllPorts, useAllIncoTerms, useAllCustomerCategoryTypes } from "@/hooks/useSettings";
-import { useAllCreditors } from "@/hooks/useCustomers";
+import { useRateRequests, useUpdateRateRequest } from "@/hooks/useSales";
 import { RateRequest } from "@/services/api";
-
-type ModalMode = "add" | "edit";
 
 export default function RateRequests() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [currentPage, setCurrentPage] = useState(1);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<ModalMode>("add");
-  const [selectedRequest, setSelectedRequest] = useState<RateRequest | null>(null);
-  const [selectAllVendorEmail, setSelectAllVendorEmail] = useState(false);
   const [selectedRateRequestId, setSelectedRateRequestId] = useState<number | null>(null);
   const [showReceivedConfirm, setShowReceivedConfirm] = useState(false);
   const [rateRequestToMarkReceived, setRateRequestToMarkReceived] = useState<RateRequest | null>(null);
@@ -64,25 +44,7 @@ export default function RateRequests() {
     searchTerm: searchTerm || undefined,
   });
 
-  const createMutation = useCreateRateRequest();
   const updateMutation = useUpdateRateRequest();
-
-  // Load reference data for dropdowns
-  const { data: countriesData } = useAllCountries();
-  const { data: portsData } = useAllPorts();
-  const { data: incoTermsData } = useAllIncoTerms();
-  const { data: categoryTypesData } = useAllCustomerCategoryTypes();
-  const { data: vendorsData } = useAllCreditors();
-
-  // Ensure arrays are always defined to prevent .map() errors on first load
-  const countries = useMemo(() => Array.isArray(countriesData) ? countriesData : [], [countriesData]);
-  const ports = useMemo(() => Array.isArray(portsData) ? portsData : [], [portsData]);
-  const incoTerms = useMemo(() => Array.isArray(incoTermsData) ? incoTermsData : [], [incoTermsData]);
-  const categoryTypes = useMemo(() => Array.isArray(categoryTypesData) ? categoryTypesData : [], [categoryTypesData]);
-  const vendors = useMemo(() => Array.isArray(vendorsData) ? vendorsData : [], [vendorsData]);
-
-  // Fetch lead data when editing (includes lead details)
-  const { data: leadData, isLoading: isLeadLoading } = useLead(selectedRequest?.leadId || 0);
 
   const rateRequests = data?.items || [];
   const totalCount = data?.totalCount || 0;
@@ -101,27 +63,19 @@ export default function RateRequests() {
     }
   };
 
-  // formatDate imported from utils
-
   const handleConvertToQuotation = (request: RateRequest) => {
-    navigate("/sales/quotations", { state: { rateRequestId: request.id } });
+    navigate("/sales/quotations/new", { state: { rateRequestId: request.id } });
   };
 
   const handleConvertSelectedToQuotation = () => {
     if (selectedRateRequestId) {
-      navigate("/sales/quotations", { state: { rateRequestId: selectedRateRequestId } });
+      navigate("/sales/quotations/new", { state: { rateRequestId: selectedRateRequestId } });
     }
   };
 
   const selectedRateRequest = selectedRateRequestId
     ? rateRequests.find(r => r.id === selectedRateRequestId)
     : null;
-
-  const openModal = (mode: ModalMode, request?: RateRequest) => {
-    setModalMode(mode);
-    setSelectedRequest(request || null);
-    setIsModalOpen(true);
-  };
 
   const handleMarkAsReceived = async () => {
     if (!rateRequestToMarkReceived) return;
@@ -130,16 +84,12 @@ export default function RateRequests() {
         id: rateRequestToMarkReceived.id,
         data: { status: 'Received' }
       });
-      setSelectedRateRequestId(rateRequestToMarkReceived.id); // Auto-select the row
+      setSelectedRateRequestId(rateRequestToMarkReceived.id);
       setShowReceivedConfirm(false);
       setRateRequestToMarkReceived(null);
     } catch (error) {
       // Error handled by mutation
     }
-  };
-
-  const getModalTitle = () => {
-    return modalMode === "edit" ? "Edit Rate Request" : "Add Rate Request";
   };
 
   return (
@@ -158,7 +108,7 @@ export default function RateRequests() {
             </Button>
             <PermissionGate permission="ratereq_add">
               <Button
-                onClick={() => openModal("add")}
+                onClick={() => navigate("/sales/rate-requests/new")}
                 className="btn-success"
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -261,7 +211,7 @@ export default function RateRequests() {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 btn-success rounded"
-                              onClick={() => openModal("edit", request)}
+                              onClick={() => navigate(`/sales/rate-requests/${request.id}/edit`)}
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -349,239 +299,6 @@ export default function RateRequests() {
           </div>
         </div>
       </div>
-
-      {/* Add/Edit Rate Request Modal */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-0 bg-card">
-          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
-            <DialogTitle className="text-white text-xl">{getModalTitle()}</DialogTitle>
-            <DialogDescription className="text-white/70">
-              {modalMode === "edit" ? "Edit rate request details" : "Fill in the rate request details"}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="p-6 space-y-6">
-            {/* General Details */}
-            <div className="border border-border rounded-lg p-4">
-              <h3 className="text-primary font-semibold mb-4">General Details</h3>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label className="text-red-500">* Rate code</Label>
-                  <Input
-                    value={selectedRequest?.rateRequestNo || "RFQAE10827"}
-                    readOnly
-                    className="bg-muted"
-                  />
-                </div>
-                <div>
-                  <Label className="text-red-500">* Shipment Mode</Label>
-                  <SearchableSelect
-                    options={[
-                      { value: "air", label: "Air Freight" },
-                      { value: "fcl", label: "FCL-Sea Freight" },
-                      { value: "lcl", label: "LCL-Sea Freight" },
-                    ]}
-                    value={selectedRequest?.mode === "SeaFreightFCL" ? "fcl" : selectedRequest?.mode === "SeaFreightLCL" ? "lcl" : "air"}
-                    onValueChange={() => {}}
-                    placeholder="Select"
-                    searchPlaceholder="Search..."
-                  />
-                </div>
-                <div>
-                  <Label>Incoterm</Label>
-                  <SearchableSelect
-                    options={incoTerms?.map((term) => ({
-                      value: term.id.toString(),
-                      label: `${term.code}-${term.name}`,
-                    })) || []}
-                    value={selectedRequest?.incoTermId?.toString() || ""}
-                    onValueChange={() => {}}
-                    placeholder="Select"
-                    searchPlaceholder="Search..."
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Package Details */}
-            <div className="border border-border rounded-lg p-4">
-              <h3 className="text-primary font-semibold mb-4">Package Details</h3>
-
-              {isLeadLoading && selectedRequest?.leadId ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-green-600" />
-                  <span className="ml-2 text-muted-foreground">Loading package details...</span>
-                </div>
-              ) : leadData?.details && leadData.details.length > 0 ? (
-                <div className="space-y-4">
-                  {/* Show Equipment grid if there are equipment items */}
-                  {leadData.details.some(d => d.detailType === "Equipment") && (
-                    <EquipmentGridReadOnly
-                      equipments={leadData.details.filter(d => d.detailType === "Equipment")}
-                    />
-                  )}
-
-                  {/* Show BoxPallets grid if there are box/pallet items */}
-                  {leadData.details.some(d => d.detailType === "BoxPallet") && (
-                    <BoxPalletsGridReadOnly
-                      boxPallets={leadData.details.filter(d => d.detailType === "BoxPallet")}
-                    />
-                  )}
-
-                  {/* Commodity field */}
-                  <div className="mt-4">
-                    <Label>Commodity</Label>
-                    <Textarea
-                      defaultValue={selectedRequest?.productDescription || ""}
-                      placeholder="Enter commodity description"
-                      className="min-h-[40px]"
-                      readOnly
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  No package details available for this rate request.
-                </div>
-              )}
-            </div>
-
-            {/* Vendor Details */}
-            <div className="border border-border rounded-lg p-4">
-              <h3 className="text-primary font-semibold mb-4">Vendor Details</h3>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label>Vendors</Label>
-                  <SearchableSelect
-                    options={vendors?.map((vendor) => ({
-                      value: vendor.id.toString(),
-                      label: vendor.name,
-                    })) || []}
-                    value={selectedRequest?.vendorId?.toString() || ""}
-                    onValueChange={() => {}}
-                    placeholder="Select"
-                    searchPlaceholder="Search..."
-                  />
-                </div>
-                <div>
-                  <Label>Vendor Type</Label>
-                  <SearchableSelect
-                    options={categoryTypes?.map((type) => ({
-                      value: type.name,
-                      label: type.name,
-                    })) || []}
-                    value={selectedRequest?.vendorType || ""}
-                    onValueChange={() => {}}
-                    placeholder="Select"
-                    searchPlaceholder="Search..."
-                  />
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <Label>Vendor Email to</Label>
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id="selectAll"
-                        checked={selectAllVendorEmail}
-                        onCheckedChange={(checked) => setSelectAllVendorEmail(checked as boolean)}
-                      />
-                      <label htmlFor="selectAll" className="text-sm text-muted-foreground cursor-pointer">
-                        Select All
-                      </label>
-                    </div>
-                  </div>
-                  <Input defaultValue={selectedRequest?.vendorEmail || ""} placeholder="vendor@email.com" />
-                </div>
-              </div>
-            </div>
-
-            {/* Port Details */}
-            <div className="border border-border rounded-lg p-4">
-              <h3 className="text-primary font-semibold mb-4">Port Details</h3>
-              <div className="grid grid-cols-4 gap-4 mb-4">
-                <div>
-                  <Label className="text-red-500">* Arriving Country</Label>
-                  <SearchableSelect
-                    options={countries?.map((country) => ({
-                      value: country.id.toString(),
-                      label: country.name,
-                    })) || []}
-                    value={selectedRequest?.deliveryCountryId?.toString() || ""}
-                    onValueChange={() => {}}
-                    placeholder="Select"
-                    searchPlaceholder="Search..."
-                  />
-                </div>
-                <div>
-                  <Label className="text-red-500">* Arrival Port</Label>
-                  <SearchableSelect
-                    options={ports?.map((port) => ({
-                      value: port.id.toString(),
-                      label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
-                    })) || []}
-                    value={selectedRequest?.destinationPortId?.toString() || ""}
-                    onValueChange={() => {}}
-                    placeholder="Select"
-                    searchPlaceholder="Search..."
-                  />
-                </div>
-                <div>
-                  <Label className="text-red-500">* Departure Country</Label>
-                  <SearchableSelect
-                    options={countries?.map((country) => ({
-                      value: country.id.toString(),
-                      label: country.name,
-                    })) || []}
-                    value={selectedRequest?.pickupCountryId?.toString() || ""}
-                    onValueChange={() => {}}
-                    placeholder="Select"
-                    searchPlaceholder="Search..."
-                  />
-                </div>
-                <div>
-                  <Label>Departure Port</Label>
-                  <SearchableSelect
-                    options={ports?.map((port) => ({
-                      value: port.id.toString(),
-                      label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
-                    })) || []}
-                    value={selectedRequest?.loadingPortId?.toString() || ""}
-                    onValueChange={() => {}}
-                    placeholder="Select"
-                    searchPlaceholder="Search..."
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label className="text-red-500">* Pickup Address</Label>
-                  <Textarea defaultValue={selectedRequest?.pickupAddress || ""} placeholder="Enter pickup address" />
-                </div>
-                <div>
-                  <Label className="text-red-500">* Delivery Address</Label>
-                  <Textarea defaultValue={selectedRequest?.deliveryAddress || ""} placeholder="Enter delivery address" />
-                </div>
-                <div>
-                  <Label>Remarks Notes</Label>
-                  <Textarea placeholder="Additional notes..." />
-                </div>
-              </div>
-            </div>
-
-            {/* Footer Buttons for Add mode */}
-            {modalMode === "add" && (
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsModalOpen(false)}>
-                  Cancel
-                </Button>
-                <Button className="btn-success">
-                  Send Rate Request
-                </Button>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Mark as Received Confirmation Modal */}
       <AlertDialog open={showReceivedConfirm} onOpenChange={setShowReceivedConfirm}>

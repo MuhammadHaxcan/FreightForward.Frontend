@@ -81,7 +81,7 @@ import {
   useDeleteShipmentCosting,
 } from "@/hooks/useShipments";
 import { useDeleteInvoice, useDeletePurchaseInvoice } from "@/hooks/useInvoices";
-import { useQuotationForShipment } from "@/hooks/useSales";
+import { useQuotationForShipment, useConvertQuotationToShipment } from "@/hooks/useSales";
 
 // Helper function to get payment status display and styling
 const getPaymentStatusDisplay = (status: PaymentStatus) => {
@@ -163,6 +163,7 @@ const AddShipment = () => {
 
   // Fetch quotation data for conversion
   const { data: quotationForShipment } = useQuotationForShipment(conversionQuotationId || 0);
+  const convertQuotationToShipment = useConvertQuotationToShipment();
 
   // API hooks for mutations
   const createShipmentMutation = useCreateShipment();
@@ -610,6 +611,13 @@ const AddShipment = () => {
               // Continue with next container/cargo
             }
           }
+        }
+
+        // Update lead status to Converted
+        try {
+          await convertQuotationToShipment.mutateAsync(conversionQuotationId);
+        } catch {
+          // Non-critical: don't block conversion if lead status update fails
         }
 
         // Refetch shipment to get updated data

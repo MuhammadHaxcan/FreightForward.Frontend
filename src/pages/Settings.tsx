@@ -29,6 +29,7 @@ import {
   useCreateExpenseType,
   useUpdateExpenseType,
   useDeleteExpenseType,
+  useAllCountries,
 } from "@/hooks/useSettings";
 import {
   useBanks,
@@ -459,28 +460,8 @@ const Settings = () => {
     setBankForm({ bankName: "", acHolder: "", acNumber: "", ibanNumber: "", swiftCode: "", branch: "" });
   };
 
-  const countries = [
-    "United Arab Emirates",
-    "United States",
-    "United Kingdom",
-    "China",
-    "India",
-    "Turkey",
-    "Ecuador",
-    "Tanzania",
-    "Papua New Guinea",
-    "Gabon",
-    "Saudi Arabia",
-    "Qatar",
-    "Pakistan",
-    "Singapore",
-    "Germany",
-    "France",
-    "Italy",
-    "Japan",
-    "South Korea",
-    "Australia",
-  ];
+  const { data: countriesData } = useAllCountries();
+  const countries = (countriesData || []).map((c) => c.name);
 
   // Load company profile and all banks on mount
   useEffect(() => {

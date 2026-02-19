@@ -21,6 +21,8 @@ interface SearchableSelectProps {
   className?: string;
   triggerClassName?: string;
   emptyMessage?: string;
+  defaultSearch?: string;
+  autoOpen?: boolean;
 }
 
 export function SearchableSelect({
@@ -33,9 +35,25 @@ export function SearchableSelect({
   className,
   triggerClassName,
   emptyMessage = "No results found.",
+  defaultSearch = "",
+  autoOpen = false,
 }: SearchableSelectProps) {
   const [open, setOpen] = React.useState(false);
-  const [search, setSearch] = React.useState("");
+  const [search, setSearch] = React.useState(defaultSearch);
+
+  // Sync when defaultSearch changes externally
+  React.useEffect(() => {
+    setSearch(defaultSearch);
+  }, [defaultSearch]);
+
+  // Auto-open on mount when autoOpen is true
+  React.useEffect(() => {
+    if (autoOpen && !disabled) {
+      // Small delay to let the component render first
+      const timer = setTimeout(() => setOpen(true), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [autoOpen, disabled]);
 
   const selectedOption = options.find((opt) => opt.value === value);
 
