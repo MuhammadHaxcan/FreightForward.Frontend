@@ -401,6 +401,20 @@ export const invoiceApi = {
     if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
     return fetchApi<VatReportResult>(`/invoices/vat-report?${query}`);
   },
+  getVatInputReport: (params?: {
+    pageNumber?: number; pageSize?: number;
+    vendorId?: number; fromDate?: string; toDate?: string;
+    searchTerm?: string;
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.vendorId) query.append('vendorId', params.vendorId.toString());
+    if (params?.fromDate) query.append('fromDate', params.fromDate);
+    if (params?.toDate) query.append('toDate', params.toDate);
+    if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
+    return fetchApi<VatReportResult>(`/invoices/vat-input-report?${query}`);
+  },
   getAccountReceivableSummary: (params?: {
     pageNumber?: number; pageSize?: number;
     customerId?: number; fromDate?: string; toDate?: string;

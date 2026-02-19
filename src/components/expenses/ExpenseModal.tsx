@@ -196,7 +196,7 @@ export function ExpenseModal({
               />
             </div>
             <div>
-              <label className="form-label">Category</label>
+              <label className="form-label">Expense Type</label>
               <SearchableSelect
                 options={categories.map((cat) => ({ value: cat, label: cat }))}
                 value={formData.category}
