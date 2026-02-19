@@ -437,7 +437,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
             exRate: exRate,
             localAmount: costFCY * exRate,
             taxPercentage: parseFloat(charge.costTaxPercentage) || 0,
-            taxAmount: (parseFloat(charge.costTaxAmount) || 0) * exRate,
+            taxAmount: (costFCY * exRate) * (parseFloat(charge.costTaxPercentage) || 0) / 100,
           };
         });
 
@@ -492,7 +492,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
             exRate: exRate,
             localAmount: costFCY * exRate,
             taxPercentage: parseFloat(charge.costTaxPercentage) || 0,
-            taxAmount: (parseFloat(charge.costTaxAmount) || 0) * exRate,
+            taxAmount: (costFCY * exRate) * (parseFloat(charge.costTaxPercentage) || 0) / 100,
           };
         });
 
@@ -548,9 +548,11 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
     return sum + fcy * exRate;
   }, 0);
   const totalTax = selectedChargesData.reduce((sum, c) => {
-    const tax = parseFloat(c.costTaxAmount || 0);
+    const fcy = parseFloat(c.costFCY || 0);
     const exRate = getInvoiceExRate(c.costCurrencyId || 1);
-    return sum + tax * exRate;
+    const localAmt = fcy * exRate;
+    const taxPct = parseFloat(c.costTaxPercentage || 0);
+    return sum + localAmt * taxPct / 100;
   }, 0);
   const totalWithTax = totalCost + totalTax;
 

@@ -51,8 +51,11 @@ import {
 } from "@/services/api";
 import { toast } from "sonner";
 import { CurrencyRateHistoryModal } from "@/components/settings/CurrencyRateHistoryModal";
+import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 
 const Settings = () => {
+  const baseCurrency = useBaseCurrency();
+
   // Pagination state
   const [currencyPage, setCurrencyPage] = useState(1);
   const [portPage, setPortPage] = useState(1);
@@ -1573,7 +1576,7 @@ const Settings = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">ROE</label>
+              <label className="block text-sm font-medium text-foreground mb-1">ROE{currencyForm.code ? ` (${currencyForm.code} = ${baseCurrency})` : ""}</label>
               <Input
                 type="number"
                 step="any"
@@ -1626,7 +1629,7 @@ const Settings = () => {
                 <Input type="number" step="any" value={editCurrency.usdRate} onChange={(e) => setEditCurrency({ ...editCurrency, usdRate: parseFloat(e.target.value) || 0 })} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">ROE</label>
+                <label className="block text-sm font-medium text-foreground mb-1">ROE{editCurrency.code ? ` (${editCurrency.code} = ${baseCurrency})` : ""}</label>
                 <Input type="number" step="any" value={editCurrency.roe} onChange={(e) => setEditCurrency({ ...editCurrency, roe: parseFloat(e.target.value) || 0 })} />
               </div>
               <div className="flex justify-end gap-3 pt-4">
