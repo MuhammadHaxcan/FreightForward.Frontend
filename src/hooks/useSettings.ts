@@ -492,3 +492,16 @@ export function useAllChargeItems() {
     },
   });
 }
+
+export function useAllCostingUnits() {
+  return useQuery({
+    queryKey: ['costingUnits', 'all'],
+    queryFn: async () => {
+      const response = await settingsApi.getAllCostingUnits();
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+  });
+}

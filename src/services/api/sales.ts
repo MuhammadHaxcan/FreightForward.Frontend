@@ -279,13 +279,19 @@ export interface QuotationCharge {
   chargeType?: string;
   chargeItemId?: number;
   costingUnitId?: number;
-  bases?: string;
+  costingUnitName?: string;
   currencyId?: number;
   currencyCode?: string;
   rate: number;
   roe: number;
   quantity: number;
   amount: number;
+  costCurrencyId?: number;
+  costCurrencyCode?: string;
+  costRate?: number;
+  costRoe?: number;
+  costQuantity?: number;
+  costAmount?: number;
 }
 
 export interface QuotationCargoDetail {
@@ -355,12 +361,16 @@ export interface CreateQuotationRequest {
     chargeType?: string;
     chargeItemId?: number;
     costingUnitId?: number;
-    bases?: string;
     currencyId?: number;
     rate: number;
     roe: number;
     quantity: number;
     amount: number;
+    costCurrencyId?: number;
+    costRate?: number;
+    costRoe?: number;
+    costQuantity?: number;
+    costAmount?: number;
   }[];
   cargoDetails?: CreateQuotationCargoDetailRequest[];
 }

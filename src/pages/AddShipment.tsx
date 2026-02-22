@@ -555,6 +555,8 @@ const AddShipment = () => {
         // Add costings from quotation charges
         if (quotationForShipment.charges && quotationForShipment.charges.length > 0) {
           for (const charge of quotationForShipment.charges) {
+            const saleLCY = (charge.amount || 0) * (charge.roe || 1);
+            const costLCY = (charge.costAmount || 0) * (charge.costRoe || 1);
             const costingData: AddShipmentCostingRequest = {
               shipmentId: savedShipmentId,
               description: charge.chargeType || '',
@@ -564,21 +566,21 @@ const AddShipment = () => {
               saleCurrencyId: charge.currencyId,
               saleExRate: charge.roe || 1,
               saleFCY: charge.amount || 0,
-              saleLCY: (charge.amount || 0) * (charge.roe || 1),
+              saleLCY,
               saleTaxPercentage: 0,
               saleTaxAmount: 0,
-              costQty: 0,
-              costUnit: 0,
-              costCurrencyId: undefined,
-              costExRate: 1,
-              costFCY: 0,
-              costLCY: 0,
+              costQty: charge.costQuantity || 0,
+              costUnit: charge.costRate || 0,
+              costCurrencyId: charge.costCurrencyId,
+              costExRate: charge.costRoe || 1,
+              costFCY: charge.costAmount || 0,
+              costLCY,
               costTaxPercentage: 0,
               costTaxAmount: 0,
               unitId: charge.costingUnitId,
-              gp: (charge.amount || 0) * (charge.roe || 1), // Sale LCY as GP (no cost yet)
+              gp: saleLCY - costLCY,
               billToCustomerId: quotationForShipment.customerId,
-              vendorCustomerId: undefined,
+              vendorCustomerId: quotationForShipment.vendorId,
             };
             try {
               await addCostingMutation.mutateAsync({ shipmentId: savedShipmentId, data: costingData });

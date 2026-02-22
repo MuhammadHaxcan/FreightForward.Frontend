@@ -22,6 +22,7 @@ import {
   useAllCurrencyTypes,
   useAllChargeItems,
   useAllContainerTypes,
+  useAllCostingUnits,
 } from "@/hooks/useSettings";
 import { CreateQuotationRequest } from "@/services/api";
 
@@ -47,13 +48,19 @@ interface ChargeRow {
   id: number;
   chargeType: string;
   chargeItemId?: number;
-  bases: string;
+  costingUnitId?: number;
   currency: string;
   currencyId?: number;
   rate: string;
   roe: string;
   quantity: string;
   amount: string;
+  costCurrency: string;
+  costCurrencyId?: number;
+  costRate: string;
+  costRoe: string;
+  costQuantity: string;
+  costAmount: string;
 }
 
 interface FormData {
@@ -107,7 +114,7 @@ export default function QuotationForm() {
   ]);
 
   const [chargeRows, setChargeRows] = useState<ChargeRow[]>([
-    { id: 1, chargeType: "", bases: "", currency: "", rate: "", roe: "", quantity: "", amount: "" },
+    { id: 1, chargeType: "", currency: "", rate: "", roe: "", quantity: "", amount: "", costCurrency: "", costRate: "", costRoe: "", costQuantity: "", costAmount: "" },
   ]);
 
   // Queries
@@ -123,6 +130,7 @@ export default function QuotationForm() {
   const { data: currencyTypesData } = useAllCurrencyTypes();
   const { data: chargeItemsData } = useAllChargeItems();
   const { data: containerTypesData } = useAllContainerTypes();
+  const { data: costingUnitsData } = useAllCostingUnits();
 
   const debtors = useMemo(() => Array.isArray(debtorsData) ? debtorsData : [], [debtorsData]);
   const incoTerms = useMemo(() => Array.isArray(incoTermsData) ? incoTermsData : [], [incoTermsData]);
@@ -131,6 +139,7 @@ export default function QuotationForm() {
   const currencyTypes = useMemo(() => Array.isArray(currencyTypesData) ? currencyTypesData : [], [currencyTypesData]);
   const chargeItems = useMemo(() => Array.isArray(chargeItemsData) ? chargeItemsData : [], [chargeItemsData]);
   const containerTypes = useMemo(() => Array.isArray(containerTypesData) ? containerTypesData : [], [containerTypesData]);
+  const costingUnits = useMemo(() => Array.isArray(costingUnitsData) ? costingUnitsData : [], [costingUnitsData]);
 
   // Mutations
   const createMutation = useCreateQuotation();
@@ -282,13 +291,19 @@ export default function QuotationForm() {
             id: ch.id,
             chargeType: ch.chargeType || "",
             chargeItemId: ch.chargeItemId,
-            bases: ch.bases || "",
+            costingUnitId: ch.costingUnitId,
             currency: ch.currencyCode || "",
             currencyId: ch.currencyId,
             rate: ch.rate?.toString() || "",
             roe: ch.roe?.toString() || "",
             quantity: ch.quantity?.toString() || "",
             amount: ch.amount?.toString() || "",
+            costCurrency: ch.costCurrencyCode || "",
+            costCurrencyId: ch.costCurrencyId,
+            costRate: ch.costRate?.toString() || "",
+            costRoe: ch.costRoe?.toString() || "",
+            costQuantity: ch.costQuantity?.toString() || "",
+            costAmount: ch.costAmount?.toString() || "",
           }))
         );
       }
@@ -325,7 +340,7 @@ export default function QuotationForm() {
   const addChargeRow = () => {
     setChargeRows([
       ...chargeRows,
-      { id: Date.now(), chargeType: "", bases: "", currency: "", rate: "", roe: "", quantity: "", amount: "" },
+      { id: Date.now(), chargeType: "", currency: "", rate: "", roe: "", quantity: "", amount: "", costCurrency: "", costRate: "", costRoe: "", costQuantity: "", costAmount: "" },
     ]);
   };
 
@@ -349,11 +364,26 @@ export default function QuotationForm() {
             }
           }
 
+          if (field === "costCurrency" && currencyTypes) {
+            const selectedCurrency = currencyTypes.find((ct) => ct.code === value);
+            if (selectedCurrency) {
+              updated.costRoe = selectedCurrency.roe.toString();
+              updated.costCurrencyId = selectedCurrency.id;
+            }
+          }
+
           if (field === "rate" || field === "roe" || field === "quantity" || field === "currency") {
             const rate = parseFloat(updated.rate) || 0;
             const roe = parseFloat(updated.roe) || 1;
             const qty = parseFloat(updated.quantity) || 0;
             updated.amount = (rate * roe * qty).toFixed(2);
+          }
+
+          if (field === "costRate" || field === "costRoe" || field === "costQuantity" || field === "costCurrency") {
+            const rate = parseFloat(updated.costRate) || 0;
+            const roe = parseFloat(updated.costRoe) || 1;
+            const qty = parseFloat(updated.costQuantity) || 0;
+            updated.costAmount = (rate * roe * qty).toFixed(2);
           }
           return updated;
         }
@@ -388,12 +418,17 @@ export default function QuotationForm() {
         .map((row) => ({
           chargeType: row.chargeType || undefined,
           chargeItemId: row.chargeItemId,
-          bases: row.bases || undefined,
+          costingUnitId: row.costingUnitId || undefined,
           currencyId: row.currencyId,
           rate: parseFloat(row.rate) || 0,
           roe: parseFloat(row.roe) || 1,
           quantity: parseFloat(row.quantity) || 0,
           amount: parseFloat(row.amount) || 0,
+          costCurrencyId: row.costCurrencyId || undefined,
+          costRate: parseFloat(row.costRate) || undefined,
+          costRoe: parseFloat(row.costRoe) || undefined,
+          costQuantity: parseFloat(row.costQuantity) || undefined,
+          costAmount: parseFloat(row.costAmount) || undefined,
         })),
       cargoDetails: cargoRows.map((row) => ({
         calculationMode: row.calculationMode || "units",
@@ -988,18 +1023,32 @@ export default function QuotationForm() {
                 <CardTitle className="text-lg text-primary">Charges Details</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-8 gap-2 mb-2 text-sm font-medium">
+                {/* Group sub-headers */}
+                <div className="grid gap-1 mb-1" style={{ gridTemplateColumns: '2fr 1fr 5fr 5fr 0.5fr' }}>
+                  <div></div>
+                  <div></div>
+                  <div className="text-center text-sm font-semibold text-blue-600 bg-blue-50 rounded px-1 py-0.5">Sale</div>
+                  <div className="text-center text-sm font-semibold text-green-600 bg-green-50 rounded px-1 py-0.5">Cost</div>
+                  <div></div>
+                </div>
+                {/* Column headers */}
+                <div className="grid gap-1 mb-2 text-sm font-medium" style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 0.5fr' }}>
                   <div>Charge Type</div>
-                  <div>Bases</div>
+                  <div>Unit</div>
                   <div>Currency</div>
                   <div>Rate</div>
                   <div>ROE</div>
-                  <div>Quantity</div>
+                  <div>Qty</div>
+                  <div>Amount</div>
+                  <div>Currency</div>
+                  <div>Rate</div>
+                  <div>ROE</div>
+                  <div>Qty</div>
                   <div>Amount</div>
                   <div></div>
                 </div>
                 {chargeRows.map((row, index) => (
-                  <div key={row.id} className="grid grid-cols-8 gap-2 mb-2">
+                  <div key={row.id} className="grid gap-1 mb-2" style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 0.5fr' }}>
                     <SearchableSelect
                       disabled={isReadOnly}
                       options={chargeItems.map((ci) => ({
@@ -1024,12 +1073,20 @@ export default function QuotationForm() {
                       placeholder="Select Charge"
                       searchPlaceholder="Search..."
                     />
-                    <Input
-                      placeholder="Bases"
-                      value={row.bases}
-                      onChange={(e) => updateChargeRow(row.id, "bases", e.target.value)}
+                    <SearchableSelect
                       disabled={isReadOnly}
+                      options={costingUnits.map((u) => ({
+                        value: u.id.toString(),
+                        label: u.name,
+                      }))}
+                      value={row.costingUnitId?.toString() || ""}
+                      onValueChange={(value) =>
+                        updateChargeRow(row.id, "costingUnitId", parseInt(value))
+                      }
+                      placeholder="Unit"
+                      searchPlaceholder="Search..."
                     />
+                    {/* Sale columns */}
                     <SearchableSelect
                       disabled={isReadOnly}
                       options={currencyTypes.map((ct) => ({
@@ -1038,7 +1095,7 @@ export default function QuotationForm() {
                       }))}
                       value={row.currency}
                       onValueChange={(value) => updateChargeRow(row.id, "currency", value)}
-                      placeholder="Currency"
+                      placeholder="Cur"
                       searchPlaceholder="Search..."
                     />
                     <Input
@@ -1066,6 +1123,46 @@ export default function QuotationForm() {
                       type="number"
                       placeholder="Amount"
                       value={row.amount}
+                      readOnly
+                      className="bg-muted"
+                    />
+                    {/* Cost columns */}
+                    <SearchableSelect
+                      disabled={isReadOnly}
+                      options={currencyTypes.map((ct) => ({
+                        value: ct.code,
+                        label: ct.code,
+                      }))}
+                      value={row.costCurrency}
+                      onValueChange={(value) => updateChargeRow(row.id, "costCurrency", value)}
+                      placeholder="Cur"
+                      searchPlaceholder="Search..."
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Rate"
+                      value={row.costRate}
+                      onChange={(e) => updateChargeRow(row.id, "costRate", e.target.value)}
+                      disabled={isReadOnly}
+                    />
+                    <Input
+                      type="number"
+                      placeholder="ROE"
+                      value={row.costRoe}
+                      onChange={(e) => updateChargeRow(row.id, "costRoe", e.target.value)}
+                      disabled={isReadOnly}
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Qty"
+                      value={row.costQuantity}
+                      onChange={(e) => updateChargeRow(row.id, "costQuantity", e.target.value)}
+                      disabled={isReadOnly}
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Amount"
+                      value={row.costAmount}
                       readOnly
                       className="bg-muted"
                     />
