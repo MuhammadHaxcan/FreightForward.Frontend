@@ -139,6 +139,10 @@ export {
   type UpdateChargeItemRequest,
   type CreateExpenseTypeRequest,
   type UpdateExpenseTypeRequest,
+  InvoiceNoteType,
+  type InvoiceNote,
+  type CreateInvoiceNoteRequest,
+  type UpdateInvoiceNoteRequest,
 } from './settings';
 
 // Invoice

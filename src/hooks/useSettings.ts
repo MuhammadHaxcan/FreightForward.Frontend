@@ -9,6 +9,8 @@ import {
   UpdateChargeItemRequest,
   CreateExpenseTypeRequest,
   UpdateExpenseTypeRequest,
+  CreateInvoiceNoteRequest,
+  UpdateInvoiceNoteRequest,
   PaymentType,
 } from '@/services/api';
 import { toast } from 'sonner';
@@ -502,6 +504,87 @@ export function useAllCostingUnits() {
         throw new Error(response.error);
       }
       return response.data!;
+    },
+  });
+}
+
+// Invoice Notes Hooks
+export function useInvoiceNotes(params?: {
+  pageNumber?: number;
+  pageSize?: number;
+  searchTerm?: string;
+}) {
+  return useQuery({
+    queryKey: ['invoiceNotes', params],
+    queryFn: async () => {
+      const response = await settingsApi.getInvoiceNotes(params);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+  });
+}
+
+export function useCreateInvoiceNote() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: CreateInvoiceNoteRequest) => {
+      const response = await settingsApi.createInvoiceNote(data);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoiceNotes'] });
+      toast.success('Invoice note created successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to create invoice note');
+    },
+  });
+}
+
+export function useUpdateInvoiceNote() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: UpdateInvoiceNoteRequest }) => {
+      const response = await settingsApi.updateInvoiceNote(id, data);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoiceNotes'] });
+      toast.success('Invoice note updated successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update invoice note');
+    },
+  });
+}
+
+export function useDeleteInvoiceNote() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const response = await settingsApi.deleteInvoiceNote(id);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoiceNotes'] });
+      toast.success('Invoice note deleted successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to delete invoice note');
     },
   });
 }

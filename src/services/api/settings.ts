@@ -125,6 +125,32 @@ export interface Country {
   region?: string;
 }
 
+export enum InvoiceNoteType {
+  SaleInvoice = "SaleInvoice",
+  PurchaseInvoice = "PurchaseInvoice",
+  Both = "Both",
+}
+
+export interface InvoiceNote {
+  id: number;
+  text: string;
+  sortOrder: number;
+  noteType: InvoiceNoteType;
+  noteTypeName: string;
+  status?: string;
+}
+
+export interface CreateInvoiceNoteRequest {
+  text: string;
+  sortOrder: number;
+  noteType: InvoiceNoteType;
+  status?: string;
+}
+
+export interface UpdateInvoiceNoteRequest extends CreateInvoiceNoteRequest {
+  id: number;
+}
+
 export interface CreateCurrencyTypeRequest {
   name: string;
   code: string;
@@ -294,4 +320,21 @@ export const settingsApi = {
     fetchApi<void>(`/settings/expense-types/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteExpenseType: (id: number) =>
     fetchApi<void>(`/settings/expense-types/${id}`, { method: 'DELETE' }),
+
+  // Invoice Notes
+  getInvoiceNotes: (params?: { pageNumber?: number; pageSize?: number; searchTerm?: string }) => {
+    const query = new URLSearchParams();
+    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
+    return fetchApi<PaginatedList<InvoiceNote>>(`/settings/invoice-notes?${query}`);
+  },
+  getAllInvoiceNotes: () =>
+    fetchApi<InvoiceNote[]>('/settings/invoice-notes/all'),
+  createInvoiceNote: (data: CreateInvoiceNoteRequest) =>
+    fetchApi<number>('/settings/invoice-notes', { method: 'POST', body: JSON.stringify(data) }),
+  updateInvoiceNote: (id: number, data: UpdateInvoiceNoteRequest) =>
+    fetchApi<void>(`/settings/invoice-notes/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteInvoiceNote: (id: number) =>
+    fetchApi<void>(`/settings/invoice-notes/${id}`, { method: 'DELETE' }),
 };

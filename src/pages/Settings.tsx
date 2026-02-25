@@ -30,6 +30,10 @@ import {
   useUpdateExpenseType,
   useDeleteExpenseType,
   useAllCountries,
+  useInvoiceNotes,
+  useCreateInvoiceNote,
+  useUpdateInvoiceNote,
+  useDeleteInvoiceNote,
 } from "@/hooks/useSettings";
 import {
   useBanks,
@@ -45,6 +49,8 @@ import {
   PaymentType,
   Company,
   Bank,
+  InvoiceNote,
+  InvoiceNoteType,
   companyApi,
   bankApi,
   fileApi,
@@ -63,6 +69,7 @@ const Settings = () => {
   const [chargePage, setChargePage] = useState(1);
   const [expensePage, setExpensePage] = useState(1);
   const [bankPage, setBankPage] = useState(1);
+  const [notePage, setNotePage] = useState(1);
 
   // Page size state
   const [currencyPageSize, setCurrencyPageSize] = useState("10");
@@ -70,6 +77,7 @@ const Settings = () => {
   const [chargePageSize, setChargePageSize] = useState("10");
   const [expensePageSize, setExpensePageSize] = useState("10");
   const [bankPageSize, setBankPageSize] = useState("10");
+  const [notePageSize, setNotePageSize] = useState("10");
 
   // Search state
   const [currencySearch, setCurrencySearch] = useState("");
@@ -77,6 +85,7 @@ const Settings = () => {
   const [chargeSearch, setChargeSearch] = useState("");
   const [expenseSearch, setExpenseSearch] = useState("");
   const [bankSearch, setBankSearch] = useState("");
+  const [noteSearch, setNoteSearch] = useState("");
 
   // Modal states
   const [addCurrencyModalOpen, setAddCurrencyModalOpen] = useState(false);
@@ -84,12 +93,14 @@ const Settings = () => {
   const [addChargeModalOpen, setAddChargeModalOpen] = useState(false);
   const [addExpenseModalOpen, setAddExpenseModalOpen] = useState(false);
   const [addBankModalOpen, setAddBankModalOpen] = useState(false);
+  const [addNoteModalOpen, setAddNoteModalOpen] = useState(false);
 
   const [editCurrencyModalOpen, setEditCurrencyModalOpen] = useState(false);
   const [editPortModalOpen, setEditPortModalOpen] = useState(false);
   const [editChargeModalOpen, setEditChargeModalOpen] = useState(false);
   const [editExpenseModalOpen, setEditExpenseModalOpen] = useState(false);
   const [editBankModalOpen, setEditBankModalOpen] = useState(false);
+  const [editNoteModalOpen, setEditNoteModalOpen] = useState(false);
 
   // Edit form states
   const [editCurrency, setEditCurrency] = useState<CurrencyType | null>(null);
@@ -101,6 +112,7 @@ const Settings = () => {
   const [editCharge, setEditCharge] = useState<ChargeItem | null>(null);
   const [editExpense, setEditExpense] = useState<ExpenseType | null>(null);
   const [editBank, setEditBank] = useState<Bank | null>(null);
+  const [editNote, setEditNote] = useState<InvoiceNote | null>(null);
 
   // Company profile state
   const [companyId, setCompanyId] = useState<number | null>(null);
@@ -166,6 +178,13 @@ const Settings = () => {
     branch: "",
   });
 
+  const [noteForm, setNoteForm] = useState({
+    text: "",
+    sortOrder: "0",
+    noteType: InvoiceNoteType.Both as InvoiceNoteType,
+    status: "Active",
+  });
+
   // API queries
   const { data: currencyData, isLoading: currencyLoading } = useCurrencyTypes({
     pageNumber: currencyPage,
@@ -197,6 +216,12 @@ const Settings = () => {
     searchTerm: bankSearch || undefined,
   });
 
+  const { data: noteData, isLoading: noteLoading } = useInvoiceNotes({
+    pageNumber: notePage,
+    pageSize: parseInt(notePageSize),
+    searchTerm: noteSearch || undefined,
+  });
+
   // Mutations
   const createCurrencyMutation = useCreateCurrencyType();
   const updateCurrencyMutation = useUpdateCurrencyType();
@@ -217,6 +242,10 @@ const Settings = () => {
   const createBankMutation = useCreateBank();
   const updateBankMutation = useUpdateBank();
   const deleteBankMutation = useDeleteBank();
+
+  const createNoteMutation = useCreateInvoiceNote();
+  const updateNoteMutation = useUpdateInvoiceNote();
+  const deleteNoteMutation = useDeleteInvoiceNote();
 
   // Handlers
   const handleAddCurrency = () => {
@@ -350,6 +379,49 @@ const Settings = () => {
     deleteChargeMutation.mutate(id);
   };
 
+  const handleAddNote = () => {
+    createNoteMutation.mutate(
+      {
+        text: noteForm.text,
+        sortOrder: parseInt(noteForm.sortOrder) || 0,
+        noteType: noteForm.noteType,
+        status: noteForm.status,
+      },
+      {
+        onSuccess: () => {
+          setAddNoteModalOpen(false);
+          resetNoteForm();
+        },
+      }
+    );
+  };
+
+  const handleUpdateNote = () => {
+    if (!editNote) return;
+    updateNoteMutation.mutate(
+      {
+        id: editNote.id,
+        data: {
+          id: editNote.id,
+          text: editNote.text,
+          sortOrder: editNote.sortOrder,
+          noteType: editNote.noteType,
+          status: editNote.status,
+        },
+      },
+      {
+        onSuccess: () => {
+          setEditNoteModalOpen(false);
+          setEditNote(null);
+        },
+      }
+    );
+  };
+
+  const handleDeleteNote = (id: number) => {
+    deleteNoteMutation.mutate(id);
+  };
+
   const handleAddExpense = () => {
     createExpenseMutation.mutate(
       {
@@ -461,6 +533,10 @@ const Settings = () => {
 
   const resetBankForm = () => {
     setBankForm({ bankName: "", acHolder: "", acNumber: "", ibanNumber: "", swiftCode: "", branch: "" });
+  };
+
+  const resetNoteForm = () => {
+    setNoteForm({ text: "", sortOrder: "0", noteType: InvoiceNoteType.Both, status: "Active" });
   };
 
   const { data: countriesData } = useAllCountries();
@@ -609,6 +685,12 @@ const Settings = () => {
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
             >
               Banks
+            </TabsTrigger>
+            <TabsTrigger
+              value="notes"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
+            >
+              Notes
             </TabsTrigger>
           </TabsList>
 
@@ -1504,6 +1586,153 @@ const Settings = () => {
               )}
             </div>
           </TabsContent>
+
+          {/* Notes Tab */}
+          <TabsContent value="notes">
+            <div className="bg-card rounded-lg border border-border">
+              <div className="flex items-center justify-between p-4 border-b border-border">
+                <h2 className="text-lg font-semibold text-primary">Invoice Notes</h2>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Show</span>
+                    <SearchableSelect
+                      options={[
+                        { value: "10", label: "10" },
+                        { value: "25", label: "25" },
+                        { value: "50", label: "50" },
+                        { value: "100", label: "100" },
+                      ]}
+                      value={notePageSize}
+                      onValueChange={(value) => { setNotePageSize(value); setNotePage(1); }}
+                      triggerClassName="w-[90px] h-8"
+                    />
+                    <span className="text-sm text-muted-foreground">entries</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Search:</span>
+                    <Input
+                      placeholder=""
+                      value={noteSearch}
+                      onChange={(e) => setNoteSearch(e.target.value)}
+                      className="h-9 w-48"
+                    />
+                  </div>
+                  <PermissionGate permission="invoicenote_add">
+                    <Button className="btn-success gap-2" onClick={() => setAddNoteModalOpen(true)}>
+                      <Plus size={16} />
+                      Add New
+                    </Button>
+                  </PermissionGate>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                {noteLoading ? (
+                  <div className="flex justify-center items-center p-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-table-header text-table-header-foreground">
+                        <th className="px-4 py-3 text-left text-sm font-semibold w-24">Action</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold w-16">#</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold">Text</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold w-40">Type</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold w-24">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {noteData?.items.map((note, index) => (
+                        <tr
+                          key={note.id}
+                          className={`border-b border-border hover:bg-table-row-hover transition-colors ${
+                            index % 2 === 0 ? "bg-card" : "bg-secondary/30"
+                          }`}
+                        >
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-1">
+                              <PermissionGate permission="invoicenote_edit">
+                                <button
+                                  onClick={() => {
+                                    setEditNote({ ...note });
+                                    setEditNoteModalOpen(true);
+                                  }}
+                                  className="p-1.5 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors"
+                                >
+                                  <Edit size={14} />
+                                </button>
+                              </PermissionGate>
+                              <PermissionGate permission="invoicenote_delete">
+                                <button
+                                  onClick={() => handleDeleteNote(note.id)}
+                                  className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </PermissionGate>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm">{note.sortOrder}</td>
+                          <td className="px-4 py-3 text-sm text-primary font-medium">{note.text}</td>
+                          <td className="px-4 py-3 text-sm">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              note.noteType === InvoiceNoteType.SaleInvoice
+                                ? "bg-blue-100 text-blue-800"
+                                : note.noteType === InvoiceNoteType.PurchaseInvoice
+                                ? "bg-orange-100 text-orange-800"
+                                : "bg-green-100 text-green-800"
+                            }`}>
+                              {note.noteType === InvoiceNoteType.SaleInvoice
+                                ? "Sale Invoice"
+                                : note.noteType === InvoiceNoteType.PurchaseInvoice
+                                ? "Purchase Invoice"
+                                : "Both"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm">{note.status}</td>
+                        </tr>
+                      ))}
+                      {noteData?.items.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+                            No invoice notes found
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+              {noteData && (
+                <div className="flex items-center justify-between p-4">
+                  <p className="text-sm text-muted-foreground">
+                    Showing {((notePage - 1) * parseInt(notePageSize)) + 1} to {Math.min(notePage * parseInt(notePageSize), noteData.totalCount)} of {noteData.totalCount} entries
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3"
+                      disabled={!noteData.hasPreviousPage}
+                      onClick={() => setNotePage(p => p - 1)}
+                    >
+                      Previous
+                    </Button>
+                    <Button size="sm" className="h-8 w-8 bg-primary text-primary-foreground">{notePage}</Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3"
+                      disabled={!noteData.hasNextPage}
+                      onClick={() => setNotePage(p => p + 1)}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </TabsContent>
         </Tabs>
       </div>
 
@@ -2019,6 +2248,140 @@ const Settings = () => {
                   disabled={updateBankMutation.isPending}
                 >
                   {updateBankMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Update
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Note Modal */}
+      <Dialog open={addNoteModalOpen} onOpenChange={(open) => { setAddNoteModalOpen(open); if (!open) resetNoteForm(); }}>
+        <DialogContent className="sm:max-w-md bg-card p-0">
+          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+            <DialogTitle className="text-white text-lg font-semibold"><span className="font-bold">Add New</span> Invoice Note</DialogTitle>
+          </DialogHeader>
+          <div className="p-6 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Note Text</label>
+              <textarea
+                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px]"
+                placeholder="Enter note text"
+                value={noteForm.text}
+                onChange={(e) => setNoteForm({ ...noteForm, text: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Sort Order</label>
+              <Input
+                type="number"
+                placeholder="0"
+                value={noteForm.sortOrder}
+                onChange={(e) => setNoteForm({ ...noteForm, sortOrder: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Type</label>
+              <SearchableSelect
+                options={[
+                  { value: String(InvoiceNoteType.SaleInvoice), label: "Sale Invoice" },
+                  { value: String(InvoiceNoteType.PurchaseInvoice), label: "Purchase Invoice" },
+                  { value: String(InvoiceNoteType.Both), label: "Both" },
+                ]}
+                value={String(noteForm.noteType)}
+                onValueChange={(value) => setNoteForm({ ...noteForm, noteType: value as InvoiceNoteType })}
+                placeholder="Select Type"
+                searchPlaceholder="Search..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">Status</label>
+              <SearchableSelect
+                options={[
+                  { value: "Active", label: "Active" },
+                  { value: "Inactive", label: "Inactive" },
+                ]}
+                value={noteForm.status}
+                onValueChange={(value) => setNoteForm({ ...noteForm, status: value })}
+                placeholder="Select Status"
+                searchPlaceholder="Search..."
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button variant="outline" onClick={() => setAddNoteModalOpen(false)}>Cancel</Button>
+              <Button
+                className="btn-success"
+                onClick={handleAddNote}
+                disabled={createNoteMutation.isPending}
+              >
+                {createNoteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Note Modal */}
+      <Dialog open={editNoteModalOpen} onOpenChange={setEditNoteModalOpen}>
+        <DialogContent className="sm:max-w-md bg-card p-0">
+          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+            <DialogTitle className="text-white text-lg font-semibold">Edit Invoice Note</DialogTitle>
+          </DialogHeader>
+          {editNote && (
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Note Text</label>
+                <textarea
+                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px]"
+                  value={editNote.text}
+                  onChange={(e) => setEditNote({ ...editNote, text: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Sort Order</label>
+                <Input
+                  type="number"
+                  value={editNote.sortOrder}
+                  onChange={(e) => setEditNote({ ...editNote, sortOrder: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Type</label>
+                <SearchableSelect
+                  options={[
+                    { value: String(InvoiceNoteType.SaleInvoice), label: "Sale Invoice" },
+                    { value: String(InvoiceNoteType.PurchaseInvoice), label: "Purchase Invoice" },
+                    { value: String(InvoiceNoteType.Both), label: "Both" },
+                  ]}
+                  value={String(editNote.noteType)}
+                  onValueChange={(value) => setEditNote({ ...editNote, noteType: value as InvoiceNoteType })}
+                  placeholder="Select Type"
+                  searchPlaceholder="Search..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Status</label>
+                <SearchableSelect
+                  options={[
+                    { value: "Active", label: "Active" },
+                    { value: "Inactive", label: "Inactive" },
+                  ]}
+                  value={editNote.status || "Active"}
+                  onValueChange={(value) => setEditNote({ ...editNote, status: value })}
+                  placeholder="Select Status"
+                  searchPlaceholder="Search..."
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-4">
+                <Button variant="outline" onClick={() => setEditNoteModalOpen(false)}>Cancel</Button>
+                <Button
+                  className="btn-success"
+                  onClick={handleUpdateNote}
+                  disabled={updateNoteMutation.isPending}
+                >
+                  {updateNoteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Update
                 </Button>
               </div>
