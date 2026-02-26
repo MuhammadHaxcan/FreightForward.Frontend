@@ -78,6 +78,7 @@ export function RecordReceiptModal({
   const [chequeNo, setChequeNo] = useState("");
   const [chequeDate, setChequeDate] = useState("");
   const [chequeBank, setChequeBank] = useState("");
+  const [postDatedValidDate, setPostDatedValidDate] = useState("");
   const [remarks, setRemarks] = useState("");
 
   // Get current payment type config
@@ -147,6 +148,7 @@ export function RecordReceiptModal({
         { id: 2, code: "Card", name: "Card", requiresBank: true, requiresChequeDetails: false, sortOrder: 2 },
         { id: 3, code: "Cheque", name: "Cheque", requiresBank: true, requiresChequeDetails: true, sortOrder: 3 },
         { id: 4, code: "BankWire", name: "Bank Wire", requiresBank: true, requiresChequeDetails: false, sortOrder: 4 },
+        { id: 6, code: "PostDatedCheque", name: "Post Dated Cheque", requiresBank: true, requiresChequeDetails: true, sortOrder: 6 },
       ]);
     }
   };
@@ -194,6 +196,7 @@ export function RecordReceiptModal({
     setChequeNo("");
     setChequeDate("");
     setChequeBank("");
+    setPostDatedValidDate("");
     setRemarks("");
   };
 
@@ -285,6 +288,7 @@ export function RecordReceiptModal({
         chequeNo: requiresChequeDetails ? (chequeNo || undefined) : undefined,
         chequeDate: requiresChequeDetails ? (chequeDate || undefined) : undefined,
         chequeBank: requiresChequeDetails ? (chequeBank || undefined) : undefined,
+        postDatedValidDate: paymentMode === "PostDatedCheque" ? (postDatedValidDate || undefined) : undefined,
         invoices: selectedInvoices.map(inv => ({
           invoiceId: inv.invoiceId,
           amount: inv.payingAmount,
@@ -386,6 +390,9 @@ export function RecordReceiptModal({
                   setChequeDate("");
                   setChequeBank("");
                 }
+                if (v !== "PostDatedCheque") {
+                  setPostDatedValidDate("");
+                }
               }}
               placeholder="Select Payment Type"
               searchPlaceholder="Search payment types..."
@@ -412,15 +419,30 @@ export function RecordReceiptModal({
                   placeholder="Cheque Date"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Cheque Bank</Label>
-                <Input
-                  value={chequeBank}
-                  onChange={(e) => setChequeBank(e.target.value)}
-                  placeholder="Cheque Bank"
-                />
-              </div>
+              {paymentMode !== "PostDatedCheque" && (
+                <div className="space-y-2">
+                  <Label>Cheque Bank</Label>
+                  <Input
+                    value={chequeBank}
+                    onChange={(e) => setChequeBank(e.target.value)}
+                    placeholder="Cheque Bank"
+                  />
+                </div>
+              )}
             </>
+          )}
+
+          {/* Post Dated Cheque Valid Date */}
+          {paymentMode === "PostDatedCheque" && (
+            <div className="space-y-2">
+              <Label>Valid Date (Maturity)</Label>
+              <Input
+                type="date"
+                value={postDatedValidDate}
+                onChange={(e) => setPostDatedValidDate(e.target.value)}
+                placeholder="Valid Date"
+              />
+            </div>
           )}
 
           {/* Receipt Number */}

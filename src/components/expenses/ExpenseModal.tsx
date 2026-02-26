@@ -23,6 +23,7 @@ const paymentModeLabels: Record<string, string> = {
   "BankWire": "BANK WIRE",
   "BankTransfer": "BANK TRANSFER",
   "Card": "CARD",
+  "PostDatedCheque": "POST DATED CHEQUE",
 };
 
 // Map display labels back to enum values
@@ -32,6 +33,7 @@ const paymentModeToEnum: Record<string, string> = {
   "BANK WIRE": "BankWire",
   "BANK TRANSFER": "BankTransfer",
   "CARD": "Card",
+  "POST DATED CHEQUE": "PostDatedCheque",
 };
 
 interface ExpenseModalProps {
@@ -50,6 +52,7 @@ interface ExpenseModalProps {
     amount: number;
     chequeNumber?: string;
     chequeDate?: string;
+    postDatedValidDate?: string;
   }) => void;
   expense: ApiExpense | null;
   banks: Bank[];
@@ -62,10 +65,11 @@ const paymentModeConfig: Record<string, { requiresBank: boolean; requiresChequeD
   "BANK WIRE": { requiresBank: true, requiresChequeDetails: false },
   "BANK TRANSFER": { requiresBank: true, requiresChequeDetails: false },
   "CARD": { requiresBank: true, requiresChequeDetails: false },
+  "POST DATED CHEQUE": { requiresBank: true, requiresChequeDetails: true },
 };
 
 const paymentTypes = ["Inwards", "Outwards"] as const;
-const paymentModes = ["CASH", "CHEQUE", "BANK WIRE", "BANK TRANSFER", "CARD"];
+const paymentModes = ["CASH", "CHEQUE", "BANK WIRE", "BANK TRANSFER", "CARD", "POST DATED CHEQUE"];
 
 export function ExpenseModal({
   open,
@@ -88,6 +92,7 @@ export function ExpenseModal({
     amount: 0,
     chequeNumber: "",
     chequeDate: "",
+    postDatedValidDate: "",
   });
 
   // Fetch expense categories based on selected payment type
@@ -120,6 +125,7 @@ export function ExpenseModal({
         amount: expense.amount,
         chequeNumber: expense.chequeNumber || "",
         chequeDate: expense.chequeDate || "",
+        postDatedValidDate: expense.postDatedValidDate || "",
       });
     } else {
       setFormData({
@@ -134,6 +140,7 @@ export function ExpenseModal({
         amount: 0,
         chequeNumber: "",
         chequeDate: "",
+        postDatedValidDate: "",
       });
     }
   }, [expense, open, banks]);
@@ -168,6 +175,7 @@ export function ExpenseModal({
       amount: formData.amount,
       chequeNumber: formData.chequeNumber || undefined,
       chequeDate: formData.chequeDate || undefined,
+      postDatedValidDate: formData.paymentMode === "POST DATED CHEQUE" ? (formData.postDatedValidDate || undefined) : undefined,
     });
   };
 
@@ -266,6 +274,7 @@ export function ExpenseModal({
                     bankId: config?.requiresBank ? formData.bankId : undefined,
                     chequeNumber: config?.requiresChequeDetails ? formData.chequeNumber : "",
                     chequeDate: config?.requiresChequeDetails ? formData.chequeDate : "",
+                    postDatedValidDate: value === "POST DATED CHEQUE" ? formData.postDatedValidDate : "",
                   });
                 }}
                 placeholder="Select Payment Type"
@@ -293,9 +302,9 @@ export function ExpenseModal({
             </div>
           </div>
 
-          {/* Cheque-specific fields - only shown when CHEQUE is selected */}
+          {/* Cheque-specific fields - only shown when CHEQUE or POST DATED CHEQUE is selected */}
           {requiresChequeDetails && (
-            <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg border">
+            <div className={`grid ${formData.paymentMode === "POST DATED CHEQUE" ? "grid-cols-3" : "grid-cols-2"} gap-4 p-4 bg-muted/50 rounded-lg border`}>
               <div>
                 <label className="form-label">Cheque Number</label>
                 <Input
@@ -311,6 +320,15 @@ export function ExpenseModal({
                   onChange={(value) => setFormData({ ...formData, chequeDate: value })}
                 />
               </div>
+              {formData.paymentMode === "POST DATED CHEQUE" && (
+                <div>
+                  <label className="form-label">Valid Date (Maturity)</label>
+                  <DateInput
+                    value={formData.postDatedValidDate}
+                    onChange={(value) => setFormData({ ...formData, postDatedValidDate: value })}
+                  />
+                </div>
+              )}
             </div>
           )}
 

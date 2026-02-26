@@ -1,7 +1,7 @@
 import { fetchApi, fetchBlob, PaginatedList, PaymentStatus, API_BASE_URL } from './base';
 
 // Payment Mode enum
-export type PaymentMode = 'Cash' | 'Cheque' | 'BankWire' | 'BankTransfer' | 'Card';
+export type PaymentMode = 'Cash' | 'Cheque' | 'BankWire' | 'BankTransfer' | 'Card' | 'PostDatedCheque';
 
 // Invoice Types
 export interface CreateInvoiceItemRequest {
@@ -462,6 +462,7 @@ export interface Receipt {
   chequeNo?: string;
   chequeDate?: string;
   chequeBank?: string;
+  postDatedValidDate?: string;
   invoiceCount: number;
   invoiceNumbers?: string;
   jobNumbers?: string;
@@ -508,6 +509,7 @@ export interface CreateReceiptRequest {
   chequeNo?: string;
   chequeDate?: string;
   chequeBank?: string;
+  postDatedValidDate?: string;
   invoices: CreateReceiptInvoiceRequest[];
 }
 
@@ -523,6 +525,7 @@ export interface UpdateReceiptRequest {
   chequeNo?: string;
   chequeDate?: string;
   chequeBank?: string;
+  postDatedValidDate?: string;
   amount: number;
 }
 

@@ -183,7 +183,7 @@ export default function PaymentVouchers() {
                   </TableCell>
                   <TableCell>
                     <span className="px-2 py-1 rounded text-xs bg-green-100 text-green-800">
-                      {payment.paymentMode.toUpperCase().replace("BANKWIRE", "BANK WIRE")}
+                      {payment.paymentMode === 'PostDatedCheque' ? 'POST DATED CHEQUE' : payment.paymentMode.toUpperCase().replace("BANKWIRE", "BANK WIRE").replace("BANKTRANSFER", "BANK TRANSFER")}
                     </span>
                   </TableCell>
                   <TableCell>

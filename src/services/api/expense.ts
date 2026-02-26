@@ -15,6 +15,7 @@ export interface Expense {
   receiptRef?: string;
   chequeNumber?: string;
   chequeDate?: string;
+  postDatedValidDate?: string;
   currencyId?: number;
   currencyCode?: string;
   amount: number;
@@ -31,6 +32,7 @@ export interface CreateExpenseRequest {
   receiptRef?: string;
   chequeNumber?: string;
   chequeDate?: string;
+  postDatedValidDate?: string;
   currencyId?: number;
   amount: number;
 }

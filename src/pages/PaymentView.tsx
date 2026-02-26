@@ -128,7 +128,7 @@ export default function PaymentView() {
             </TableHeader>
             <TableBody>
               <TableRow>
-                <TableCell>{payment.paymentMode.toUpperCase().replace("BANKWIRE", "BANK WIRE")}</TableCell>
+                <TableCell>{payment.paymentMode === 'PostDatedCheque' ? 'POST DATED CHEQUE' : payment.paymentMode.toUpperCase().replace("BANKWIRE", "BANK WIRE").replace("BANKTRANSFER", "BANK TRANSFER")}</TableCell>
                 <TableCell>{payment.chequeNo || "-"}</TableCell>
                 <TableCell>
                   {payment.chequeDate ? formatDate(payment.chequeDate, "dd-MM-yyyy") : "-"}

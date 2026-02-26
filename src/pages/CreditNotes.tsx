@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { formatDate } from "@/lib/utils";
-import { Search, Eye, Trash2 } from "lucide-react";
+import { Search, Eye, Trash2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -19,6 +19,8 @@ import { creditNoteApi, customerApi, AccountCreditNote, Customer } from "@/servi
 import { useDeleteCreditNote } from "@/hooks/useCreditNotes";
 import { useAuth } from "@/contexts/AuthContext";
 import { DeleteConfirmationModal } from "@/components/ui/delete-confirmation-modal";
+import { PermissionGate } from "@/components/auth/PermissionGate";
+import { AddCreditNoteModal } from "@/components/credit-notes/AddCreditNoteModal";
 
 export default function CreditNotes() {
   const navigate = useNavigate();
@@ -33,6 +35,7 @@ export default function CreditNotes() {
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [addModalOpen, setAddModalOpen] = useState(false);
   const deleteMutation = useDeleteCreditNote();
 
   // Fetch customers for filter (only Debtors)
@@ -88,7 +91,18 @@ export default function CreditNotes() {
   return (
     <MainLayout>
     <div className="p-6 space-y-4">
-      <h1 className="text-2xl font-semibold">Credit Notes</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-semibold">Credit Notes</h1>
+        <PermissionGate permission="creditnote_add">
+          <Button
+            className="btn-success"
+            onClick={() => setAddModalOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add New
+          </Button>
+        </PermissionGate>
+      </div>
 
       {/* Filters */}
       <div className="bg-muted/30 border rounded-lg p-4">
@@ -271,6 +285,15 @@ export default function CreditNotes() {
       onConfirm={handleDelete}
       title="Delete Credit Note"
       description="Are you sure you want to delete this credit note? This action cannot be undone."
+    />
+
+    <AddCreditNoteModal
+      open={addModalOpen}
+      onOpenChange={setAddModalOpen}
+      onSuccess={() => {
+        setAddModalOpen(false);
+        fetchCreditNotes();
+      }}
     />
     </MainLayout>
   );

@@ -130,6 +130,7 @@ export default function ReceiptVouchers() {
       case 'Cash': return 'CASH';
       case 'Cheque': return 'CHEQUE';
       case 'Card': return 'CARD';
+      case 'PostDatedCheque': return 'POST DATED CHEQUE';
       default: return mode.toUpperCase();
     }
   };

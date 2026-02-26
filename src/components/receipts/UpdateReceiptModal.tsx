@@ -56,6 +56,7 @@ export function UpdateReceiptModal({
   const [chequeNo, setChequeNo] = useState("");
   const [chequeDate, setChequeDate] = useState("");
   const [chequeBank, setChequeBank] = useState("");
+  const [postDatedValidDate, setPostDatedValidDate] = useState("");
   const [amount, setAmount] = useState<number>(0);
 
   // Get current payment type config
@@ -106,6 +107,7 @@ export function UpdateReceiptModal({
         setChequeNo(data.chequeNo || "");
         setChequeDate(data.chequeDate ? format(new Date(data.chequeDate), "yyyy-MM-dd") : "");
         setChequeBank(data.chequeBank || "");
+        setPostDatedValidDate(data.postDatedValidDate ? format(new Date(data.postDatedValidDate), "yyyy-MM-dd") : "");
         setAmount(data.amount);
 
         // Set all invoice numbers for display
@@ -154,6 +156,7 @@ export function UpdateReceiptModal({
         chequeNo: requiresChequeDetails ? (chequeNo || undefined) : undefined,
         chequeDate: requiresChequeDetails ? (chequeDate || undefined) : undefined,
         chequeBank: requiresChequeDetails ? (chequeBank || undefined) : undefined,
+        postDatedValidDate: paymentMode === "PostDatedCheque" ? (postDatedValidDate || undefined) : undefined,
         amount: amount,
       };
 
@@ -222,7 +225,7 @@ export function UpdateReceiptModal({
             <SearchableSelect
               options={paymentTypes.map((pt) => ({
                 value: pt.code,
-                label: pt.name,
+                label: pt.name.toUpperCase(),
               }))}
               value={paymentMode}
               onValueChange={(v) => {
@@ -236,6 +239,9 @@ export function UpdateReceiptModal({
                   setChequeNo("");
                   setChequeDate("");
                   setChequeBank("");
+                }
+                if (v !== "PostDatedCheque") {
+                  setPostDatedValidDate("");
                 }
               }}
               placeholder="Select Payment Type"
@@ -263,15 +269,30 @@ export function UpdateReceiptModal({
                   placeholder="Cheque Date"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Cheque Bank</Label>
-                <Input
-                  value={chequeBank}
-                  onChange={(e) => setChequeBank(e.target.value)}
-                  placeholder="Cheque Bank"
-                />
-              </div>
+              {paymentMode !== "PostDatedCheque" && (
+                <div className="space-y-2">
+                  <Label>Cheque Bank</Label>
+                  <Input
+                    value={chequeBank}
+                    onChange={(e) => setChequeBank(e.target.value)}
+                    placeholder="Cheque Bank"
+                  />
+                </div>
+              )}
             </>
+          )}
+
+          {/* Post Dated Cheque Valid Date */}
+          {paymentMode === "PostDatedCheque" && (
+            <div className="space-y-2">
+              <Label>Valid Date (Maturity)</Label>
+              <Input
+                type="date"
+                value={postDatedValidDate}
+                onChange={(e) => setPostDatedValidDate(e.target.value)}
+                placeholder="Valid Date"
+              />
+            </div>
           )}
 
           {/* Receipt Number - Read Only */}
@@ -323,7 +344,7 @@ export function UpdateReceiptModal({
             <SearchableSelect
               options={banks.map((bank) => ({
                 value: bank.id.toString(),
-                label: `${bank.bankName} (${bank.accountNo || ""})`,
+                label: bank.accountNo ? `${bank.bankName} (${bank.accountNo})` : bank.bankName,
               }))}
               value={bankId?.toString() || ""}
               onValueChange={(v) => setBankId(v ? parseInt(v) : null)}

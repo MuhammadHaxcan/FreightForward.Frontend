@@ -71,6 +71,7 @@ const allSidebarItems: SidebarItem[] = [
       { title: "Receipt Vouchers", path: "/accounts/receipt-vouchers", permission: "receipt_view" },
       { title: "Payment Vouchers", path: "/accounts/payment-vouchers", permission: "paymentvoucher_view" },
       { title: "Daily Expenses", path: "/accounts/daily-expenses", permission: "expense_view" },
+      { title: "Post Dated Cheques", path: "/accounts/post-dated-cheques", permission: "pdc_view" },
       { title: "Cost Sheet", path: "/accounts/cost-sheet", permission: "ship_view" },
       { title: "VAT Report", path: "/accounts/vat-report", permission: "invoice_view" },
       { title: "Credit Notes", path: "/accounts/credit-notes", permission: "creditnote_view" },

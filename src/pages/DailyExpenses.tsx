@@ -34,6 +34,7 @@ const paymentModeLabels: Record<string, string> = {
   "BankWire": "BANK WIRE",
   "BankTransfer": "BANK TRANSFER",
   "Card": "CARD",
+  "PostDatedCheque": "POST DATED CHEQUE",
 };
 
 // Map display labels back to enum values
@@ -43,6 +44,7 @@ const paymentModeValues: Record<string, string> = {
   "BANK WIRE": "BankWire",
   "BANK TRANSFER": "BankTransfer",
   "CARD": "Card",
+  "POST DATED CHEQUE": "PostDatedCheque",
 };
 
 export default function DailyExpenses() {
@@ -116,6 +118,7 @@ export default function DailyExpenses() {
     amount: number;
     chequeNumber?: string;
     chequeDate?: string;
+    postDatedValidDate?: string;
   }) => {
     const request: CreateExpenseRequest = {
       expenseDate: expenseData.date,
@@ -127,6 +130,7 @@ export default function DailyExpenses() {
       receiptRef: expenseData.receipt !== "---" ? expenseData.receipt : undefined,
       chequeNumber: expenseData.chequeNumber,
       chequeDate: expenseData.chequeDate,
+      postDatedValidDate: expenseData.postDatedValidDate,
       currencyId: expenseData.currencyId,
       expenseTypeId: expenseData.expenseTypeId,
       amount: expenseData.amount,
@@ -149,6 +153,7 @@ export default function DailyExpenses() {
     amount: number;
     chequeNumber?: string;
     chequeDate?: string;
+    postDatedValidDate?: string;
   }) => {
     if (editingExpense) {
       const request: CreateExpenseRequest = {
@@ -161,6 +166,7 @@ export default function DailyExpenses() {
         receiptRef: expenseData.receipt !== "---" ? expenseData.receipt : undefined,
         chequeNumber: expenseData.chequeNumber,
         chequeDate: expenseData.chequeDate,
+        postDatedValidDate: expenseData.postDatedValidDate,
         currencyId: expenseData.currencyId,
         expenseTypeId: expenseData.expenseTypeId,
         amount: expenseData.amount,
@@ -464,6 +470,9 @@ export default function DailyExpenses() {
                     <div><span className="font-medium text-muted-foreground">Cheque No:</span> <span>{viewingExpense.chequeNumber}</span></div>
                     <div><span className="font-medium text-muted-foreground">Cheque Date:</span> <span>{viewingExpense.chequeDate ? formatDate(viewingExpense.chequeDate) : "---"}</span></div>
                   </>
+                )}
+                {viewingExpense.postDatedValidDate && (
+                  <div><span className="font-medium text-muted-foreground">Valid Date (Maturity):</span> <span>{formatDate(viewingExpense.postDatedValidDate)}</span></div>
                 )}
               </div>
               {viewingExpense.description && (

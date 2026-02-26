@@ -78,6 +78,7 @@ export function RecordPaymentModal({
   const [chequeNo, setChequeNo] = useState("");
   const [chequeDate, setChequeDate] = useState("");
   const [chequeBank, setChequeBank] = useState("");
+  const [postDatedValidDate, setPostDatedValidDate] = useState("");
   const [narration, setNarration] = useState("");
 
   // Get current payment type config
@@ -147,6 +148,7 @@ export function RecordPaymentModal({
         { id: 2, code: "Card", name: "Card", requiresBank: true, requiresChequeDetails: false, sortOrder: 2 },
         { id: 3, code: "Cheque", name: "Cheque", requiresBank: true, requiresChequeDetails: true, sortOrder: 3 },
         { id: 4, code: "BankWire", name: "Bank Wire", requiresBank: true, requiresChequeDetails: false, sortOrder: 4 },
+        { id: 6, code: "PostDatedCheque", name: "Post Dated Cheque", requiresBank: true, requiresChequeDetails: true, sortOrder: 6 },
       ]);
     }
   };
@@ -194,6 +196,7 @@ export function RecordPaymentModal({
     setChequeNo("");
     setChequeDate("");
     setChequeBank("");
+    setPostDatedValidDate("");
     setNarration("");
   };
 
@@ -276,6 +279,7 @@ export function RecordPaymentModal({
         chequeNo: chequeNo || undefined,
         chequeDate: chequeDate || undefined,
         chequeBank: chequeBank || undefined,
+        postDatedValidDate: paymentMode === "PostDatedCheque" ? (postDatedValidDate || undefined) : undefined,
         purchaseInvoices: selectedInvoices.map(inv => ({
           purchaseInvoiceId: inv.purchaseInvoiceId,
           amount: inv.payingAmount,
@@ -380,6 +384,9 @@ export function RecordPaymentModal({
                   setChequeDate("");
                   setChequeBank("");
                 }
+                if (v !== "PostDatedCheque") {
+                  setPostDatedValidDate("");
+                }
               }}
               placeholder="Select Type"
               searchPlaceholder="Search payment types..."
@@ -406,15 +413,30 @@ export function RecordPaymentModal({
                   placeholder="Cheque Date"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Cheque Bank</Label>
-                <Input
-                  value={chequeBank}
-                  onChange={(e) => setChequeBank(e.target.value)}
-                  placeholder="Cheque Bank"
-                />
-              </div>
+              {paymentMode !== "PostDatedCheque" && (
+                <div className="space-y-2">
+                  <Label>Cheque Bank</Label>
+                  <Input
+                    value={chequeBank}
+                    onChange={(e) => setChequeBank(e.target.value)}
+                    placeholder="Cheque Bank"
+                  />
+                </div>
+              )}
             </>
+          )}
+
+          {/* Post Dated Cheque Valid Date */}
+          {paymentMode === "PostDatedCheque" && (
+            <div className="space-y-2">
+              <Label>Valid Date (Maturity)</Label>
+              <Input
+                type="date"
+                value={postDatedValidDate}
+                onChange={(e) => setPostDatedValidDate(e.target.value)}
+                placeholder="Valid Date"
+              />
+            </div>
           )}
 
           {/* Payment Voucher Number */}

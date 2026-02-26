@@ -226,6 +226,12 @@ export {
   type CreateGeneralDocumentRequest,
 } from './generalDocument';
 
+// Post Dated Cheques
+export {
+  getPostDatedCheques,
+  type PostDatedCheque,
+} from './postDatedCheque';
+
 // Export combined API object for convenience
 export const api = {
   banks: _bankApi,

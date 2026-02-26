@@ -69,6 +69,7 @@ const CreditNoteEdit = lazy(() => import("./pages/CreditNoteEdit"));
 const CreditNotePrintView = lazy(() => import("./pages/CreditNotePrintView"));
 const ChangePassword = lazy(() => import("./pages/ChangePassword"));
 const Profile = lazy(() => import("./pages/Profile"));
+const PostDatedCheques = lazy(() => import("./pages/PostDatedCheques"));
 const GeneralDocuments = lazy(() => import("./pages/GeneralDocuments"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -347,6 +348,11 @@ const AppRoutes = () => (
       <Route path="/accounts/account-payable/print" element={
         <ProtectedRoute permission="accpay_view">
           <AccountPayablePrintView />
+        </ProtectedRoute>
+      } />
+      <Route path="/accounts/post-dated-cheques" element={
+        <ProtectedRoute permission="pdc_view">
+          <PostDatedCheques />
         </ProtectedRoute>
       } />
       <Route path="/accounts/credit-notes" element={

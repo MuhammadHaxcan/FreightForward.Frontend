@@ -16,6 +16,7 @@ export interface PaymentVoucher {
   chequeNo?: string;
   chequeDate?: string;
   chequeBank?: string;
+  postDatedValidDate?: string;
   purchaseInvoiceCount: number;
   purchaseInvoiceNumbers?: string;
   jobNumbers?: string;
@@ -79,6 +80,7 @@ export interface CreatePaymentVoucherRequest {
   chequeNo?: string;
   chequeDate?: string;
   chequeBank?: string;
+  postDatedValidDate?: string;
   purchaseInvoices: CreatePaymentVoucherPurchaseInvoiceRequest[];
 }
 
@@ -99,6 +101,7 @@ export interface UpdatePaymentVoucherRequest {
   chequeNo?: string;
   chequeDate?: string;
   chequeBank?: string;
+  postDatedValidDate?: string;
   amount: number;
 }
 
