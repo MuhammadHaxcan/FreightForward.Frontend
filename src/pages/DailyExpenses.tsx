@@ -209,10 +209,10 @@ export default function DailyExpenses() {
         </div>
 
         {/* Filters */}
-        <div className="bg-card rounded-lg border p-4">
+        <div className="bg-muted/30 border rounded-lg p-4">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="md:col-span-2">
-              <label className="text-sm font-medium text-muted-foreground mb-1 block">Date Range</label>
+              <label className="text-sm font-medium text-green-600 mb-1 block">Date Range</label>
               <div className="flex gap-2 items-center">
                 <DateInput value={startDate} onChange={setStartDate} placeholder="Start Date" />
                 <span className="text-muted-foreground">-</span>
@@ -220,7 +220,7 @@ export default function DailyExpenses() {
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium text-muted-foreground mb-1 block">Bank</label>
+              <label className="text-sm font-medium text-green-600 mb-1 block">Bank</label>
               <SearchableSelect
                 options={[
                   { value: "all", label: "Select All" },
@@ -233,7 +233,7 @@ export default function DailyExpenses() {
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-muted-foreground mb-1 block">Expense Type</label>
+              <label className="text-sm font-medium text-green-600 mb-1 block">Expense Type</label>
               <SearchableSelect
                 options={[
                   { value: "all", label: "Select All" },
@@ -267,8 +267,7 @@ export default function DailyExpenses() {
         </div>
 
         {/* Search and Table */}
-        <div className="bg-card rounded-lg border">
-          <div className="p-4 flex justify-between items-center">
+          <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Show</span>
               <SearchableSelect
@@ -298,6 +297,7 @@ export default function DailyExpenses() {
             </div>
           </div>
 
+        <div className="border rounded-lg overflow-hidden">
           {isLoading ? (
             <div className="flex items-center justify-center p-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -372,10 +372,11 @@ export default function DailyExpenses() {
               </TableBody>
             </Table>
           )}
+        </div>
 
-          {/* Pagination */}
-          {expensesData && (
-            <div className="p-4 flex justify-between items-center">
+        {/* Pagination */}
+        {expensesData && (
+          <div className="flex justify-between items-center">
               <div className="text-sm text-muted-foreground">
                 Showing {expensesData.totalCount > 0 ? (pageNumber - 1) * pageSize + 1 : 0} to {Math.min(pageNumber * pageSize, expensesData.totalCount)} of {expensesData.totalCount} entries
               </div>
@@ -432,10 +433,9 @@ export default function DailyExpenses() {
                 >
                   Next
                 </Button>
-              </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       <ExpenseModal

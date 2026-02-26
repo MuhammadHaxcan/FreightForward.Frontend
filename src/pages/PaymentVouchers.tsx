@@ -100,9 +100,9 @@ export default function PaymentVouchers() {
 
   return (
     <MainLayout>
-      <div className="p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">All Payment Voucher</h1>
+      <div className="p-6 space-y-4">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-semibold">All Payment Voucher</h1>
           <PermissionGate permission="paymentvoucher_add">
             <Button
               className="btn-success"
@@ -114,7 +114,7 @@ export default function PaymentVouchers() {
           </PermissionGate>
         </div>
 
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Show</span>
           <SearchableSelect
@@ -139,7 +139,7 @@ export default function PaymentVouchers() {
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Search:</span>
           <Input
-            className="w-64"
+            className="w-48"
             placeholder="Search..."
             value={searchTerm}
             onChange={(e) => handleSearch(e.target.value)}
@@ -171,7 +171,7 @@ export default function PaymentVouchers() {
               </TableRow>
             ) : data?.items && data.items.length > 0 ? (
               data.items.map((payment) => (
-                <TableRow key={payment.id}>
+                <TableRow key={payment.id} className="hover:bg-table-row-hover">
                   <TableCell>
                     {formatDate(payment.paymentDate, "dd MMM yyyy")}
                   </TableCell>
@@ -265,7 +265,7 @@ export default function PaymentVouchers() {
 
       {/* Pagination */}
       {data && (
-        <div className="mt-4 flex justify-between items-center">
+        <div className="flex justify-between items-center">
           <div className="text-sm text-muted-foreground">
             Showing {data.totalCount > 0 ? (pageNumber - 1) * pageSize + 1 : 0} to {Math.min(pageNumber * pageSize, data.totalCount)} of {data.totalCount} entries
           </div>

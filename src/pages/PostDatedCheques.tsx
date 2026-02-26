@@ -50,7 +50,7 @@ function PDCTable({ source, filterOptions, showTypeColumn = false, partyColumnLa
 
   return (
     <>
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Show</span>
           <SearchableSelect
@@ -88,7 +88,7 @@ function PDCTable({ source, filterOptions, showTypeColumn = false, partyColumnLa
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Search:</span>
           <Input
-            className="w-64"
+            className="w-48"
             placeholder="Search..."
             value={searchTerm}
             onChange={(e) => handleSearch(e.target.value)}
@@ -124,7 +124,7 @@ function PDCTable({ source, filterOptions, showTypeColumn = false, partyColumnLa
               </TableRow>
             ) : data?.items && data.items.length > 0 ? (
               data.items.map((pdc) => (
-                <TableRow key={`${pdc.voucherNo}-${pdc.id}`}>
+                <TableRow key={`${pdc.voucherNo}-${pdc.id}`} className="hover:bg-table-row-hover">
                   {showTypeColumn && (
                     <TableCell>
                       <span
@@ -187,7 +187,7 @@ function PDCTable({ source, filterOptions, showTypeColumn = false, partyColumnLa
 
       {/* Pagination */}
       {data && (
-        <div className="mt-4 flex justify-between items-center">
+        <div className="flex justify-between items-center">
           <div className="text-sm text-muted-foreground">
             Showing{" "}
             {data.totalCount > 0 ? (pageNumber - 1) * pageSize + 1 : 0} to{" "}
@@ -252,8 +252,8 @@ function PDCTable({ source, filterOptions, showTypeColumn = false, partyColumnLa
 export default function PostDatedCheques() {
   return (
     <MainLayout>
-      <div className="p-6">
-        <h1 className="text-2xl font-bold mb-6">Post Dated Cheques</h1>
+      <div className="p-6 space-y-4">
+        <h1 className="text-2xl font-semibold">Post Dated Cheques</h1>
 
         <Tabs defaultValue="expenses" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-4">

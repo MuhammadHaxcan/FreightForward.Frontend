@@ -1,10 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { formatDate } from "@/lib/utils";
-import { Eye, Plus } from "lucide-react";
+import { formatDate, formatDateToISO, formatDateForDisplay } from "@/lib/utils";
+import { Eye, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PermissionGate } from "@/components/auth/PermissionGate";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Table,
@@ -14,9 +13,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { invoiceApi, customerApi, AccountPurchaseInvoice, Customer } from "@/services/api";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
+import { DateRange } from "react-day-picker";
 
 export default function PurchaseInvoices() {
   const navigate = useNavigate();
@@ -25,6 +27,11 @@ export default function PurchaseInvoices() {
   const [vendors, setVendors] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedVendor, setSelectedVendor] = useState<string>("all");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+    to: new Date(),
+  });
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
@@ -42,13 +49,16 @@ export default function PurchaseInvoices() {
   }, []);
 
   // Fetch purchase invoices
-  const fetchInvoices = async () => {
+  const fetchInvoices = useCallback(async () => {
     setLoading(true);
     try {
       const response = await invoiceApi.getAllPurchaseInvoices({
         pageNumber,
         pageSize,
         searchTerm: searchTerm || undefined,
+        vendorId: selectedVendor !== "all" ? parseInt(selectedVendor) : undefined,
+        fromDate: dateRange?.from ? formatDateToISO(dateRange.from) : undefined,
+        toDate: dateRange?.to ? formatDateToISO(dateRange.to) : undefined,
       });
       if (response.data) {
         setInvoices(response.data.items);
@@ -60,15 +70,14 @@ export default function PurchaseInvoices() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pageNumber, pageSize, searchTerm, selectedVendor, dateRange]);
 
   useEffect(() => {
     fetchInvoices();
-  }, [pageNumber, pageSize]);
+  }, [fetchInvoices]);
 
   const handleSearch = () => {
     setPageNumber(1);
-    fetchInvoices();
   };
 
   const handleViewInvoice = (purchaseNo: string) => {
@@ -86,14 +95,70 @@ export default function PurchaseInvoices() {
     <MainLayout>
       <div className="p-6 space-y-4">
         {/* Header */}
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-semibold">Purchase Invoices</h1>
-          <PermissionGate permission="purchase_add">
-            <Button className="btn-success">
-              <Plus className="h-4 w-4 mr-2" />
-              New Purchase Invoice
-            </Button>
-          </PermissionGate>
+        <h1 className="text-2xl font-semibold">Purchase Invoices</h1>
+
+        {/* Filters */}
+        <div className="bg-muted/30 border rounded-lg p-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-green-600">Vendors (Creditors)</label>
+              <SearchableSelect
+                options={[
+                  { value: "all", label: "Select All" },
+                  ...vendors.map((vendor) => ({
+                    value: vendor.id.toString(),
+                    label: vendor.name,
+                  })),
+                ]}
+                value={selectedVendor}
+                onValueChange={setSelectedVendor}
+                placeholder="Select All"
+                searchPlaceholder="Search vendors..."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-green-600">Date</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {dateRange?.from ? (
+                      dateRange.to ? (
+                        <>
+                          {formatDateForDisplay(dateRange.from, "MMM d, yyyy")} -{" "}
+                          {formatDateForDisplay(dateRange.to, "MMM d, yyyy")}
+                        </>
+                      ) : (
+                        formatDateForDisplay(dateRange.from, "MMM d, yyyy")
+                      )
+                    ) : (
+                      <span>Pick a date range</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    initialFocus
+                    mode="range"
+                    defaultMonth={dateRange?.from}
+                    selected={dateRange}
+                    onSelect={setDateRange}
+                    numberOfMonths={2}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="flex items-end">
+              <Button onClick={handleSearch} className="bg-primary text-primary-foreground">
+                Search
+              </Button>
+            </div>
+          </div>
         </div>
 
         {/* Table Controls */}
