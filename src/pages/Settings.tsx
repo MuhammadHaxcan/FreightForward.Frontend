@@ -1432,6 +1432,18 @@ const Settings = () => {
                           searchPlaceholder="Search banks..."
                         />
                       </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">Currency</label>
+                        <Input
+                          value={allCurrencies.find(c => c.id === companyProfile.baseCurrencyId)?.name
+                            ? `${allCurrencies.find(c => c.id === companyProfile.baseCurrencyId)!.name} (${allCurrencies.find(c => c.id === companyProfile.baseCurrencyId)!.code})`
+                            : ""}
+                          readOnly
+                          disabled
+                          className="bg-muted"
+                          placeholder="No currency set"
+                        />
+                      </div>
                     </div>
                   </div>
 
