@@ -26,6 +26,7 @@ const AllUsers = () => {
   const [userToDelete, setUserToDelete] = useState<UserListItem | null>(null);
 
   // Form state
+  const [username, setUsername] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [contactNumber, setContactNumber] = useState("");
@@ -118,6 +119,7 @@ const AllUsers = () => {
   const roles = rolesData || [];
 
   const resetForm = () => {
+    setUsername("");
     setFirstName("");
     setLastName("");
     setContactNumber("");
@@ -146,6 +148,7 @@ const AllUsers = () => {
     }
     const fullUser = result.data!;
 
+    setUsername(fullUser.username);
     setFirstName(fullUser.firstName);
     setLastName(fullUser.lastName);
     setContactNumber(fullUser.contactNumber || "");
@@ -171,11 +174,16 @@ const AllUsers = () => {
 
   const handleSave = () => {
     if (modalMode === "add") {
+      if (!username.trim()) {
+        toast.error("Username is required");
+        return;
+      }
       if (!password) {
         toast.error("Password is required for new users");
         return;
       }
       const createData: CreateUserRequest = {
+        username,
         firstName,
         lastName,
         email,
@@ -187,6 +195,7 @@ const AllUsers = () => {
       createUserMutation.mutate(createData);
     } else if (editingUserId) {
       const updateData: UpdateUserRequest = {
+        username,
         firstName,
         lastName,
         email,
@@ -368,6 +377,17 @@ const AllUsers = () => {
           </DialogHeader>
 
           <div className="p-6 space-y-6">
+            <div className="space-y-2">
+              <Label className="text-sm">Username <span className="text-destructive">*</span></Label>
+              <Input
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Username"
+                disabled={modalMode === "edit"}
+                className={modalMode === "edit" ? "bg-muted cursor-not-allowed" : ""}
+              />
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">First Name <span className="text-destructive">*</span></Label>

@@ -75,6 +75,18 @@ export const authApi = {
       method: 'PUT',
       body: JSON.stringify(request),
     }),
+
+  requestPasswordReset: async (username: string) => {
+    const response = await fetch(`${API_BASE_URL}/auth/request-password-reset`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username }),
+    });
+    if (!response.ok) {
+      return { error: 'Request failed' };
+    }
+    return { data: true };
+  },
 };
 
 // Users API

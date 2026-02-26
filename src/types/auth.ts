@@ -139,6 +139,7 @@ export interface ChangePasswordRequest {
   currentPassword: string;
   newPassword: string;
   baseCurrencyId?: number;
+  companyName?: string;
 }
 
 export interface UpdateProfileRequest {
@@ -292,4 +293,13 @@ export interface MigrationsInfo {
   pendingMigrations: string[];
   appliedMigrations: string[];
   hasPendingMigrations: boolean;
+}
+
+export interface PasswordResetRequestDto {
+  id: number;
+  username: string;
+  fullName: string;
+  passwordResetRequestedAt: string;
+  officeId: number;
+  officeName: string;
 }

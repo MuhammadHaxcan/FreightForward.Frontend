@@ -19,6 +19,7 @@ const OfficesList = lazy(() => import("./pages/system/OfficesList"));
 const SystemAdminsList = lazy(() => import("./pages/system/SystemAdminsList"));
 const AuditLogsList = lazy(() => import("./pages/system/AuditLogsList"));
 const Companies = lazy(() => import("./pages/Companies"));
+const ResetPasswordRequests = lazy(() => import("./pages/system/ResetPasswordRequests"));
 const Shipments = lazy(() => import("./pages/Shipments"));
 const ShipmentDetail = lazy(() => import("./pages/ShipmentDetail"));
 const AddShipment = lazy(() => import("./pages/AddShipment"));
@@ -104,6 +105,7 @@ const AppRoutes = () => (
       <Route path="/system/offices" element={<OfficesList />} />
       <Route path="/system/admins" element={<SystemAdminsList />} />
       <Route path="/system/audit-logs" element={<AuditLogsList />} />
+      <Route path="/system/reset-password" element={<ResetPasswordRequests />} />
 
       {/* Public routes */}
       <Route path="/login" element={<Login />} />

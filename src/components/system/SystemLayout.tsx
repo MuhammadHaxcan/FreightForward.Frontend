@@ -1,7 +1,7 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Button } from '../ui/button';
-import { Loader2, Shield, Building2, Users, LogOut, FileText, ChevronDown } from 'lucide-react';
+import { Loader2, Shield, Building2, Users, LogOut, FileText, ChevronDown, KeyRound } from 'lucide-react';
 import { systemAdminAuthApi } from '../../services/api/systemAdmin';
 import { getAccessToken, clearTokens } from '../../services/api/base';
 import type { SystemAdminUser } from '../../types/auth';
@@ -61,6 +61,7 @@ export default function SystemLayout({ children }: SystemLayoutProps) {
     { path: '/system/offices', label: 'Offices', icon: Building2 },
     { path: '/system/admins', label: 'Admins', icon: Users },
     { path: '/system/audit-logs', label: 'Audit Logs', icon: FileText },
+    { path: '/system/reset-password', label: 'Reset Password', icon: KeyRound },
   ];
 
   return (

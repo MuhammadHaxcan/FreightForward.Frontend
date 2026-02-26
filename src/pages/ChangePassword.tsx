@@ -18,6 +18,7 @@ export default function ChangePassword() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [baseCurrencyId, setBaseCurrencyId] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -83,12 +84,18 @@ export default function ChangePassword() {
       return;
     }
 
+    if (needsCurrencySetup && !companyName.trim()) {
+      setError('Please enter a company name');
+      return;
+    }
+
     setIsSubmitting(true);
 
     const result = await authApi.changePassword({
       currentPassword,
       newPassword,
       ...(needsCurrencySetup && baseCurrencyId ? { baseCurrencyId: parseInt(baseCurrencyId) } : {}),
+      ...(needsCurrencySetup && companyName.trim() ? { companyName: companyName.trim() } : {}),
     });
 
     if (result.error) {
@@ -218,6 +225,19 @@ export default function ChangePassword() {
                 <li>One special character (!@#$%^&*)</li>
               </ul>
             </div>
+
+            {needsCurrencySetup && (
+              <div className="space-y-2">
+                <Label htmlFor="companyName">Company Name</Label>
+                <Input
+                  id="companyName"
+                  placeholder="Enter your company name"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  required
+                />
+              </div>
+            )}
 
             {needsCurrencySetup && (
               <div className="space-y-2">

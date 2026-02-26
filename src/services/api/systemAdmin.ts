@@ -12,6 +12,7 @@ import type {
   CreateSystemAdminRequest,
   UpdateSystemAdminRequest,
   MigrationsInfo,
+  PasswordResetRequestDto,
 } from '../../types/auth';
 
 // System Admin Auth API
@@ -102,6 +103,18 @@ export const officesApi = {
     query.append('limit', limit.toString());
     return fetchApi<OfficeAuditLog[]>(`/system/offices/audit-logs?${query}`);
   },
+};
+
+// Password Reset API
+export const passwordResetApi = {
+  getAllRequests: () =>
+    fetchApi<PasswordResetRequestDto[]>('/system/password-reset/all'),
+
+  fulfill: (officeId: number, userId: number, newPassword: string) =>
+    fetchApi<void>(`/system/password-reset/${officeId}/users/${userId}/fulfill`, {
+      method: 'POST',
+      body: JSON.stringify({ newPassword }),
+    }),
 };
 
 // System Admins API

@@ -39,7 +39,8 @@ interface CostingModalProps {
 }
 
 const ppccOptions = ["Prepaid", "Postpaid"];
-const taxOptions = ["0%", "5%", "10%", "15%"];
+const taxOptions = ["0%", "5%", "10%", "15%", "Custom"];
+const standardTaxValues = [0, 5, 10, 15];
 
 export function CostingModal({ open, onOpenChange, parties, costing, onSave, defaultBillToCustomerId, defaultVendorCustomerId, defaultActiveTab }: CostingModalProps) {
   const baseCurrencyCode = useBaseCurrency();
@@ -115,6 +116,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
     costReferenceNo: "",
     costDate: getTodayDateOnly(),
     costTax: "0%",
+    costCustomTax: "",
     saleCurrency: LOCAL_CURRENCY,
     saleCurrencyId: undefined as number | undefined,
     saleExRate: "1.000",
@@ -127,6 +129,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
     saleBillToCustomerId: "",
     saleGP: "0.00",
     saleTax: "0%",
+    saleCustomTax: "",
   });
 
   const [formData, setFormData] = useState(getDefaultFormData());
@@ -202,7 +205,14 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
         costVendorCustomerId: costing.vendorCustomerId?.toString() || "",
         costReferenceNo: costing.costReferenceNo || "",
         costDate: costing.costDate?.split('T')[0] || getTodayDateOnly(),
-        costTax: costing.costTaxPercentage ? `${costing.costTaxPercentage}%` : "0%",
+        costTax: (() => {
+          const val = parseFloat(costing.costTaxPercentage as string) || 0;
+          return standardTaxValues.includes(val) ? `${val}%` : "Custom";
+        })(),
+        costCustomTax: (() => {
+          const val = parseFloat(costing.costTaxPercentage as string) || 0;
+          return standardTaxValues.includes(val) ? "" : val.toString();
+        })(),
         saleCurrency: costing.saleCurrency || costing.saleCurrencyCode || LOCAL_CURRENCY,
         saleCurrencyId: costing.saleCurrencyId || undefined,
         saleExRate: costing.saleExRate?.toString() || "1.000",
@@ -214,7 +224,14 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
         saleBillToName: costing.billToName || "",
         saleBillToCustomerId: costing.billToCustomerId?.toString() || "",
         saleGP: costing.gp?.toString() || "0.00",
-        saleTax: costing.saleTaxPercentage ? `${costing.saleTaxPercentage}%` : "0%",
+        saleTax: (() => {
+          const val = parseFloat(costing.saleTaxPercentage as string) || 0;
+          return standardTaxValues.includes(val) ? `${val}%` : "Custom";
+        })(),
+        saleCustomTax: (() => {
+          const val = parseFloat(costing.saleTaxPercentage as string) || 0;
+          return standardTaxValues.includes(val) ? "" : val.toString();
+        })(),
       });
     } else if (open && !costing && !formInitializedRef.current) {
       formInitializedRef.current = true;
@@ -461,8 +478,12 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
       : parseInt(formData.saleBillToCustomerId);
 
     // Parse tax percentages and calculate tax amounts
-    const costTaxPercentage = parseFloat(formData.costTax.replace('%', '')) || 0;
-    const saleTaxPercentage = parseFloat(formData.saleTax.replace('%', '')) || 0;
+    const costTaxPercentage = formData.costTax === "Custom"
+      ? (parseFloat(formData.costCustomTax) || 0)
+      : (parseFloat(formData.costTax.replace('%', '')) || 0);
+    const saleTaxPercentage = formData.saleTax === "Custom"
+      ? (parseFloat(formData.saleCustomTax) || 0)
+      : (parseFloat(formData.saleTax.replace('%', '')) || 0);
     const costLCYValue = parseFloat(formData.costLCYAmount) || 0;
     const saleLCYValue = parseFloat(formData.saleLCYAmount) || 0;
 
@@ -720,14 +741,32 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                 </div>
                 <div>
                   <Label className="text-xs">Tax %</Label>
-                  <SearchableSelect
-                    options={taxOptions.map(tax => ({ value: tax, label: tax }))}
-                    value={formData.costTax}
-                    onValueChange={(v) => handleInputChange("costTax", v)}
-                    triggerClassName="bg-background border-border h-8 text-xs"
-                    searchPlaceholder="Search..."
-                    disabled={isCostLocked}
-                  />
+                  <div className="flex flex-col gap-1">
+                    <SearchableSelect
+                      options={taxOptions.map(tax => ({ value: tax, label: tax }))}
+                      value={formData.costTax}
+                      onValueChange={(v) => {
+                        handleInputChange("costTax", v);
+                        if (v !== "Custom") handleInputChange("costCustomTax", "");
+                      }}
+                      triggerClassName="bg-background border-border h-8 text-xs"
+                      searchPlaceholder="Search..."
+                      disabled={isCostLocked}
+                    />
+                    {formData.costTax === "Custom" && (
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="100"
+                        value={formData.costCustomTax}
+                        onChange={(e) => handleInputChange("costCustomTax", e.target.value)}
+                        placeholder="0.00"
+                        className="bg-background border-border h-8 text-xs"
+                        disabled={isCostLocked}
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
             </TabsContent>
@@ -821,14 +860,32 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                 </div>
                 <div>
                   <Label className="text-xs">Tax %</Label>
-                  <SearchableSelect
-                    options={taxOptions.map(tax => ({ value: tax, label: tax }))}
-                    value={formData.saleTax}
-                    onValueChange={(v) => handleInputChange("saleTax", v)}
-                    triggerClassName="bg-background border-border h-8 text-xs"
-                    searchPlaceholder="Search..."
-                    disabled={isSaleLocked}
-                  />
+                  <div className="flex flex-col gap-1">
+                    <SearchableSelect
+                      options={taxOptions.map(tax => ({ value: tax, label: tax }))}
+                      value={formData.saleTax}
+                      onValueChange={(v) => {
+                        handleInputChange("saleTax", v);
+                        if (v !== "Custom") handleInputChange("saleCustomTax", "");
+                      }}
+                      triggerClassName="bg-background border-border h-8 text-xs"
+                      searchPlaceholder="Search..."
+                      disabled={isSaleLocked}
+                    />
+                    {formData.saleTax === "Custom" && (
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="100"
+                        value={formData.saleCustomTax}
+                        onChange={(e) => handleInputChange("saleCustomTax", e.target.value)}
+                        placeholder="0.00"
+                        className="bg-background border-border h-8 text-xs"
+                        disabled={isSaleLocked}
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
             </TabsContent>
