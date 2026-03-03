@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { usersApi, rolesApi } from "../services/api/auth";
+import { hrEmployeeApi } from "../services/api/hr";
 import { PermissionGate } from "../components/auth/PermissionGate";
 import type { UserListItem, CreateUserRequest, UpdateUserRequest } from "../types/auth";
 
@@ -34,6 +35,25 @@ const AllUsers = () => {
   const [password, setPassword] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>([]);
+
+  // Employee form state
+  const [createEmployee, setCreateEmployee] = useState(false);
+  const [employeeCode, setEmployeeCode] = useState("");
+  const [department, setDepartment] = useState("");
+  const [designation, setDesignation] = useState("");
+  const [joiningDate, setJoiningDate] = useState("");
+  const [gender, setGender] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [nationalId, setNationalId] = useState("");
+  const [passportNumber, setPassportNumber] = useState("");
+  const [passportExpiry, setPassportExpiry] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [bankAccountNumber, setBankAccountNumber] = useState("");
+  const [bankIban, setBankIban] = useState("");
+  const [bankBranch, setBankBranch] = useState("");
+  const [emergencyContactName, setEmergencyContactName] = useState("");
+  const [emergencyContactNumber, setEmergencyContactNumber] = useState("");
+  const [address, setAddress] = useState("");
 
   // Fetch users
   const { data: usersData, isLoading: usersLoading } = useQuery({
@@ -128,6 +148,24 @@ const AllUsers = () => {
     setIsActive(true);
     setSelectedRoleIds([]);
     setEditingUserId(null);
+    // Employee fields
+    setCreateEmployee(false);
+    setEmployeeCode("");
+    setDepartment("");
+    setDesignation("");
+    setJoiningDate("");
+    setGender("");
+    setDateOfBirth("");
+    setNationalId("");
+    setPassportNumber("");
+    setPassportExpiry("");
+    setBankName("");
+    setBankAccountNumber("");
+    setBankIban("");
+    setBankBranch("");
+    setEmergencyContactName("");
+    setEmergencyContactNumber("");
+    setAddress("");
   };
 
   // Convert string[] to number[] for API calls
@@ -191,6 +229,25 @@ const AllUsers = () => {
         contactNumber: contactNumber || undefined,
         isActive,
         roleIds: getSelectedRoleIdsAsNumbers(),
+        ...(createEmployee && {
+          createEmployee: true,
+          employeeCode,
+          department: department || undefined,
+          designation: designation || undefined,
+          joiningDate: joiningDate || undefined,
+          dateOfBirth: dateOfBirth || undefined,
+          gender: gender || undefined,
+          nationalId: nationalId || undefined,
+          passportNumber: passportNumber || undefined,
+          passportExpiry: passportExpiry || undefined,
+          bankName: bankName || undefined,
+          bankAccountNumber: bankAccountNumber || undefined,
+          bankIban: bankIban || undefined,
+          bankBranch: bankBranch || undefined,
+          emergencyContactName: emergencyContactName || undefined,
+          emergencyContactNumber: emergencyContactNumber || undefined,
+          address: address || undefined,
+        }),
       };
       createUserMutation.mutate(createData);
     } else if (editingUserId) {
@@ -369,7 +426,7 @@ const AllUsers = () => {
 
       {/* Add/Edit Employee Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto p-0 bg-card">
+        <DialogContent className={`${createEmployee ? "sm:max-w-[700px]" : "sm:max-w-[600px]"} max-h-[85vh] overflow-y-auto p-0 bg-card`}>
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white">
               {modalMode === "add" ? "Add New" : "Edit"} Employee
@@ -466,6 +523,199 @@ const AllUsers = () => {
               />
             </div>
 
+            {/* Create as Employee Toggle - only shown when adding */}
+            {modalMode === "add" && (
+              <>
+                <div className="flex items-center gap-2 pt-2 border-t border-border">
+                  <Checkbox
+                    id="createEmployee"
+                    checked={createEmployee}
+                    onCheckedChange={async (checked) => {
+                      const isChecked = checked === true;
+                      setCreateEmployee(isChecked);
+                      if (isChecked) {
+                        const result = await hrEmployeeApi.getNextCode();
+                        if (result.data) {
+                          setEmployeeCode(result.data);
+                        }
+                      }
+                    }}
+                  />
+                  <Label htmlFor="createEmployee" className="text-sm font-medium cursor-pointer">
+                    Create as Employee (HR Profile)
+                  </Label>
+                </div>
+
+                {createEmployee && (
+                  <div className="space-y-4 p-4 bg-secondary/30 rounded-lg border border-border">
+                    <h4 className="text-sm font-semibold text-foreground">Employee Details</h4>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm">Employee Code <span className="text-destructive">*</span></Label>
+                        <Input
+                          value={employeeCode}
+                          readOnly
+                          className="bg-muted"
+                          placeholder="Auto-generated"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Joining Date</Label>
+                        <Input
+                          type="date"
+                          value={joiningDate}
+                          onChange={(e) => setJoiningDate(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm">Department</Label>
+                        <Input
+                          value={department}
+                          onChange={(e) => setDepartment(e.target.value)}
+                          placeholder="e.g. Operations"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Designation</Label>
+                        <Input
+                          value={designation}
+                          onChange={(e) => setDesignation(e.target.value)}
+                          placeholder="e.g. Manager"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm">Gender</Label>
+                        <SearchableSelect
+                          options={[
+                            { value: "Male", label: "Male" },
+                            { value: "Female", label: "Female" },
+                            { value: "Other", label: "Other" },
+                          ]}
+                          value={gender}
+                          onValueChange={setGender}
+                          placeholder="Select gender..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Date of Birth</Label>
+                        <Input
+                          type="date"
+                          value={dateOfBirth}
+                          onChange={(e) => setDateOfBirth(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm">National ID</Label>
+                        <Input
+                          value={nationalId}
+                          onChange={(e) => setNationalId(e.target.value)}
+                          placeholder="National ID"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Passport Number</Label>
+                        <Input
+                          value={passportNumber}
+                          onChange={(e) => setPassportNumber(e.target.value)}
+                          placeholder="Passport Number"
+                        />
+                      </div>
+                    </div>
+
+                    {passportNumber && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-sm">Passport Expiry</Label>
+                          <Input
+                            type="date"
+                            value={passportExpiry}
+                            onChange={(e) => setPassportExpiry(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <h4 className="text-sm font-semibold text-foreground pt-2">Bank Details</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm">Bank Name</Label>
+                        <Input
+                          value={bankName}
+                          onChange={(e) => setBankName(e.target.value)}
+                          placeholder="Bank Name"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Account Number</Label>
+                        <Input
+                          value={bankAccountNumber}
+                          onChange={(e) => setBankAccountNumber(e.target.value)}
+                          placeholder="Account Number"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm">IBAN</Label>
+                        <Input
+                          value={bankIban}
+                          onChange={(e) => setBankIban(e.target.value)}
+                          placeholder="IBAN"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Branch</Label>
+                        <Input
+                          value={bankBranch}
+                          onChange={(e) => setBankBranch(e.target.value)}
+                          placeholder="Branch"
+                        />
+                      </div>
+                    </div>
+
+                    <h4 className="text-sm font-semibold text-foreground pt-2">Emergency Contact</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm">Contact Name</Label>
+                        <Input
+                          value={emergencyContactName}
+                          onChange={(e) => setEmergencyContactName(e.target.value)}
+                          placeholder="Emergency Contact Name"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm">Contact Number</Label>
+                        <Input
+                          value={emergencyContactNumber}
+                          onChange={(e) => setEmergencyContactNumber(e.target.value)}
+                          placeholder="Emergency Contact Number"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm">Address</Label>
+                      <Input
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        placeholder="Full Address"
+                      />
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
 
             <div className="flex justify-end gap-2 pt-4 border-t border-border">
               <Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>

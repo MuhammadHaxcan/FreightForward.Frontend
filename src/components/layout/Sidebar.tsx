@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronDown,
   Menu,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -87,6 +88,20 @@ const allSidebarItems: SidebarItem[] = [
     subMenuItems: [
       { title: "All Users", path: "/users/all", permission: "user_view" },
       { title: "Permission Roles", path: "/users/roles", permission: "role_view" },
+    ]
+  },
+  {
+    title: "HR",
+    icon: Building2,
+    path: "/hr",
+    hasSubmenu: true,
+    subMenuItems: [
+      { title: "Employees", path: "/hr/employees", permission: "hr_emp_view" },
+      { title: "Salary Components", path: "/hr/salary-components", permission: "hr_salary_view" },
+      { title: "Attendance", path: "/hr/attendance", permission: "hr_attend_view" },
+      { title: "Attendance Summary", path: "/hr/attendance-summary", permission: "hr_attend_view" },
+      { title: "Payroll", path: "/hr/payroll", permission: "hr_payroll_view" },
+      { title: "Advances", path: "/hr/advances", permission: "hr_advance_view" },
     ]
   },
   { title: "General Document", icon: FileText, path: "/general-document" },

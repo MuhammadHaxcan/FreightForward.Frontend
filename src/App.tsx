@@ -75,6 +75,17 @@ const PostDatedCheques = lazy(() => import("./pages/PostDatedCheques"));
 const GeneralDocuments = lazy(() => import("./pages/GeneralDocuments"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
+// HR pages
+const HrEmployees = lazy(() => import("./pages/hr/HrEmployees"));
+const HrEmployeeDetail = lazy(() => import("./pages/hr/HrEmployeeDetail"));
+const HrSalaryComponents = lazy(() => import("./pages/hr/HrSalaryComponents"));
+const HrPayroll = lazy(() => import("./pages/hr/HrPayroll"));
+const HrPayslip = lazy(() => import("./pages/hr/HrPayslip"));
+const HrAdvances = lazy(() => import("./pages/hr/HrAdvances"));
+const HrAttendance = lazy(() => import("./pages/hr/HrAttendance"));
+const HrAttendanceSummary = lazy(() => import("./pages/hr/HrAttendanceSummary"));
+const AttendancePrintView = lazy(() => import("./pages/hr/AttendancePrintView"));
+
 // Loading fallback component
 const PageLoader = () => (
   <div className="flex h-screen items-center justify-center bg-background">
@@ -413,6 +424,34 @@ const AppRoutes = () => (
           <Settings />
         </ProtectedRoute>
       } />
+            {/* HR routes */}
+            <Route path="/hr/employees" element={
+                <ProtectedRoute permission="hr_emp_view"><HrEmployees /></ProtectedRoute>
+            } />
+            <Route path="/hr/employees/:id" element={
+                <ProtectedRoute permission="hr_emp_view"><HrEmployeeDetail /></ProtectedRoute>
+            } />
+            <Route path="/hr/salary-components" element={
+                <ProtectedRoute permission="hr_salary_view"><HrSalaryComponents /></ProtectedRoute>
+            } />
+            <Route path="/hr/payroll" element={
+                <ProtectedRoute permission="hr_payroll_view"><HrPayroll /></ProtectedRoute>
+            } />
+            <Route path="/hr/payslip/:id" element={
+                <ProtectedRoute permission="hr_payroll_view"><HrPayslip /></ProtectedRoute>
+            } />
+            <Route path="/hr/advances" element={
+                <ProtectedRoute permission="hr_advance_view"><HrAdvances /></ProtectedRoute>
+            } />
+            <Route path="/hr/attendance" element={
+                <ProtectedRoute permission="hr_attend_view"><HrAttendance /></ProtectedRoute>
+            } />
+            <Route path="/hr/attendance-summary" element={
+                <ProtectedRoute permission="hr_attend_view"><HrAttendanceSummary /></ProtectedRoute>
+            } />
+            <Route path="/hr/attendance/print" element={
+                <ProtectedRoute permission="hr_attend_view"><AttendancePrintView /></ProtectedRoute>
+            } />
       <Route path="*" element={<NotFound />} />
     </Routes>
   </ConditionalAuthProvider>

@@ -108,6 +108,24 @@ export interface CreateUserRequest {
   isActive: boolean;
   profilePictureUrl?: string;
   roleIds: number[];
+  // Optional employee fields
+  createEmployee?: boolean;
+  employeeCode?: string;
+  department?: string;
+  designation?: string;
+  joiningDate?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  nationalId?: string;
+  passportNumber?: string;
+  passportExpiry?: string;
+  bankName?: string;
+  bankAccountNumber?: string;
+  bankIban?: string;
+  bankBranch?: string;
+  emergencyContactName?: string;
+  emergencyContactNumber?: string;
+  address?: string;
 }
 
 export interface UpdateUserRequest {
