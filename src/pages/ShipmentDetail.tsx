@@ -17,7 +17,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Edit, Trash2, Plus, Loader2, AlertTriangle, Eye } from "lucide-react";
+import { Edit, Trash2, Plus, Loader2, AlertTriangle, Eye, FileText } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -243,6 +244,9 @@ const ShipmentDetail = () => {
     filePath?: string;
   } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Reports dialog state
+  const [showReportsDialog, setShowReportsDialog] = useState(false);
 
   // Warning modal state
   const [warningModalOpen, setWarningModalOpen] = useState(false);
@@ -902,6 +906,13 @@ const ShipmentDetail = () => {
             Edit Shipment - Job No : <span className="font-bold">{formData.jobNumber}</span>
           </h1>
           <div className="flex gap-2">
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              onClick={() => setShowReportsDialog(true)}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Reports
+            </Button>
             <Button
               className="btn-success"
               onClick={handleSaveShipment}
@@ -2349,6 +2360,51 @@ const ShipmentDetail = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Reports Dialog */}
+      <Dialog open={showReportsDialog} onOpenChange={setShowReportsDialog}>
+        <DialogContent className="max-w-md p-0 bg-card">
+          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+            <DialogTitle className="text-white text-lg">Shipment Reports</DialogTitle>
+          </DialogHeader>
+          <div className="p-4">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2 px-2 text-sm font-semibold w-12">No.</th>
+                  <th className="text-left py-2 px-2 text-sm font-semibold">Report Name</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { no: 1, name: "CARGO MANIFEST", slug: "cargo-manifest" },
+                  { no: 2, name: "PROOF OF DELIVERY", slug: "proof-of-delivery" },
+                  { no: 3, name: "CARGO ARRIVAL", slug: "cargo-arrival-notice" },
+                  { no: 4, name: "FREIGHT CERTIFICATE", slug: "freight-certificate" },
+                  { no: 5, name: "MBL SHIPPING", slug: "mbl-shipping-instruction" },
+                ].map((report) => (
+                  <tr key={report.slug} className="border-b hover:bg-muted/50">
+                    <td className="py-2 px-2 text-sm">{report.no}</td>
+                    <td className="py-2 px-2">
+                      <button
+                        className="text-emerald-600 hover:text-emerald-700 hover:underline font-medium text-sm"
+                        onClick={() => window.open(`/shipments/${id}/reports/${report.slug}`, '_blank')}
+                      >
+                        {report.name}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <DialogFooter className="p-4 pt-0">
+            <Button variant="outline" onClick={() => setShowReportsDialog(false)} className="mx-auto">
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 };

@@ -24,6 +24,7 @@ const Shipments = lazy(() => import("./pages/Shipments"));
 const ShipmentDetail = lazy(() => import("./pages/ShipmentDetail"));
 const AddShipment = lazy(() => import("./pages/AddShipment"));
 const BillOfLadingViewer = lazy(() => import("./pages/BillOfLadingViewer"));
+const ShipmentReportPrintView = lazy(() => import("./pages/ShipmentReportPrintView"));
 const MasterCustomers = lazy(() => import("./pages/MasterCustomers"));
 const CustomerDetail = lazy(() => import("./pages/CustomerDetail"));
 const NeutralDetail = lazy(() => import("./pages/NeutralDetail"));
@@ -145,6 +146,11 @@ const AppRoutes = () => (
       <Route path="/shipments/:id/edit" element={
         <ProtectedRoute permission="ship_view">
           <ShipmentDetail />
+        </ProtectedRoute>
+      } />
+      <Route path="/shipments/:shipmentId/reports/:reportType" element={
+        <ProtectedRoute permission="ship_view">
+          <ShipmentReportPrintView />
         </ProtectedRoute>
       } />
       <Route path="/shipments/bill-of-lading" element={

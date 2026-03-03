@@ -13,7 +13,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { Edit, Search, Calendar, CheckCircle, Loader2, Plus, MapPin } from "lucide-react";
+import { Edit, Search, Calendar, CheckCircle, Loader2, Plus, MapPin, FileText } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useShipments } from "@/hooks/useShipments";
 import { Shipment, ShipmentStatus } from "@/services/api";
@@ -29,6 +30,7 @@ const Shipments = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [reportsShipmentId, setReportsShipmentId] = useState<number | null>(null);
 
   // Build search params based on search type
   const searchParams = useMemo(() => {
@@ -298,16 +300,28 @@ const Shipments = () => {
                       className={`hover:bg-table-row-hover ${index % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}
                     >
                       <TableCell>
-                        <PermissionGate permission="ship_edit">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 btn-success rounded"
-                            onClick={() => handleEdit(shipment)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </PermissionGate>
+                        <div className="flex gap-1">
+                          <PermissionGate permission="ship_edit">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 btn-success rounded"
+                              onClick={() => handleEdit(shipment)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </PermissionGate>
+                          <PermissionGate permission="ship_view">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded"
+                              onClick={() => setReportsShipmentId(shipment.id)}
+                            >
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                          </PermissionGate>
+                        </div>
                       </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
@@ -425,6 +439,51 @@ const Shipments = () => {
           </div>
         </div>
       </div>
+
+      {/* Reports Dialog */}
+      <Dialog open={reportsShipmentId !== null} onOpenChange={(open) => { if (!open) setReportsShipmentId(null); }}>
+        <DialogContent className="max-w-md p-0 bg-card">
+          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+            <DialogTitle className="text-white text-lg">Shipment Reports</DialogTitle>
+          </DialogHeader>
+          <div className="p-4">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2 px-2 text-sm font-semibold w-12">No.</th>
+                  <th className="text-left py-2 px-2 text-sm font-semibold">Report Name</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { no: 1, name: "CARGO MANIFEST", slug: "cargo-manifest" },
+                  { no: 2, name: "PROOF OF DELIVERY", slug: "proof-of-delivery" },
+                  { no: 3, name: "CARGO ARRIVAL", slug: "cargo-arrival-notice" },
+                  { no: 4, name: "FREIGHT CERTIFICATE", slug: "freight-certificate" },
+                  { no: 5, name: "MBL SHIPPING", slug: "mbl-shipping-instruction" },
+                ].map((report) => (
+                  <tr key={report.slug} className="border-b hover:bg-muted/50">
+                    <td className="py-2 px-2 text-sm">{report.no}</td>
+                    <td className="py-2 px-2">
+                      <button
+                        className="text-emerald-600 hover:text-emerald-700 hover:underline font-medium text-sm"
+                        onClick={() => window.open(`/shipments/${reportsShipmentId}/reports/${report.slug}`, '_blank')}
+                      >
+                        {report.name}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <DialogFooter className="p-4 pt-0">
+            <Button variant="outline" onClick={() => setReportsShipmentId(null)} className="mx-auto">
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 };
