@@ -86,6 +86,7 @@ export {
   type ShipmentStatus,
   type ShipmentDirection,
   type ShipmentMode,
+  type ShipmentType,
   type BLServiceType,
   type FreightType,
   type Shipment,

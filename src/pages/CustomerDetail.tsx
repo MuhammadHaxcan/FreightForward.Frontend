@@ -15,6 +15,7 @@ import { formatDate, cn } from "@/lib/utils";
 import { customerApi, settingsApi, CustomerCategoryType, CurrencyType, Invoice as ApiInvoice, AccountReceivable as ApiAccountReceivable, AccountPayable as ApiAccountPayable, PaymentStatus, Receipt as ApiReceipt, CustomerStatement } from "@/services/api";
 import { getPaymentVouchers, PaymentVoucher } from "@/services/api/payment";
 import { invoiceApi, AccountPurchaseInvoice, creditNoteApi, UnpaidInvoice } from "@/services/api/invoice";
+import { hrEmployeeApi } from "@/services/api/hr";
 import { useToast } from "@/hooks/use-toast";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 import { format } from "date-fns";
@@ -93,6 +94,7 @@ const CustomerDetail = () => {
   const [saving, setSaving] = useState(false);
   const [categoryTypes, setCategoryTypes] = useState<CustomerCategoryType[]>([]);
   const [currencyTypes, setCurrencyTypes] = useState<CurrencyType[]>([]);
+  const [employees, setEmployees] = useState<{ id: number; employeeCode: string; fullName: string }[]>([]);
 
   // Invoices state (declared early to avoid reference errors)
   const [invoices, setInvoices] = useState<ApiInvoice[]>([]);
@@ -171,6 +173,7 @@ const CustomerDetail = () => {
     status: "Active",
     carrierCode: "",
     currencyId: "",
+    assignedTo: "",
   });
 
   // Load category types and customer data
@@ -188,6 +191,16 @@ const CustomerDetail = () => {
         const currencyResponse = await settingsApi.getAllCurrencyTypes();
         if (currencyResponse.data) {
           setCurrencyTypes(currencyResponse.data);
+        }
+
+        // Load employees
+        try {
+          const employeeResponse = await hrEmployeeApi.getDropdown();
+          if (employeeResponse.data) {
+            setEmployees(employeeResponse.data);
+          }
+        } catch (e) {
+          console.error("Error loading employees:", e);
         }
 
         // Load customer data if editing
@@ -211,6 +224,7 @@ const CustomerDetail = () => {
               status: customer.status || "Active",
               carrierCode: customer.carrierCode || "",
               currencyId: customer.currencyId?.toString() || "",
+              assignedTo: customer.assignedTo || "",
             });
             // Load account details currency from customer's base currency
             if (customer.currencyId && currencyResponse.data) {
@@ -655,6 +669,7 @@ const CustomerDetail = () => {
           taxPercentage: profileData.taxPercentage ? parseFloat(profileData.taxPercentage) : undefined,
           carrierCode: profileData.carrierCode || undefined,
           status: profileData.status,
+          assignedTo: profileData.assignedTo || undefined,
         };
 
         const response = await customerApi.update(parseInt(id), updateData);
@@ -682,6 +697,7 @@ const CustomerDetail = () => {
           taxNo: profileData.ntnVatTaxNo || undefined,
           taxPercentage: profileData.taxPercentage ? parseFloat(profileData.taxPercentage) : undefined,
           carrierCode: profileData.carrierCode || undefined,
+          assignedTo: profileData.assignedTo || undefined,
         };
 
         const response = await customerApi.create(createData);
@@ -935,7 +951,7 @@ const CustomerDetail = () => {
             ]}
             value={profileData.masterType}
             onValueChange={v => setProfileData({...profileData, masterType: v as "Debtors" | "Creditors" | "Neutral"})}
-            disabled={isViewMode}
+            disabled={isViewMode || isEditMode}
             triggerClassName="bg-muted/50"
           />
         </div>
@@ -990,7 +1006,7 @@ const CustomerDetail = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div className="space-y-2">
           <Label className="text-sm">Tax Percentage</Label>
           <Input value={profileData.taxPercentage} onChange={e => setProfileData({...profileData, taxPercentage: e.target.value})} disabled={isViewMode} />
@@ -1014,6 +1030,17 @@ const CustomerDetail = () => {
         <div className="space-y-2">
           <Label className="text-sm">Carrier Code</Label>
           <Input value={profileData.carrierCode} onChange={e => setProfileData({...profileData, carrierCode: e.target.value})} disabled={isViewMode} />
+        </div>
+        <div className="space-y-2">
+          <Label className="text-sm">Assign To</Label>
+          <SearchableSelect
+            options={employees.map(emp => ({ value: emp.fullName, label: `${emp.fullName} (${emp.employeeCode})` }))}
+            value={profileData.assignedTo}
+            onValueChange={v => setProfileData({...profileData, assignedTo: v})}
+            disabled={isViewMode}
+            searchPlaceholder="Search employees..."
+            placeholder="Select employee..."
+          />
         </div>
       </div>
     </div>

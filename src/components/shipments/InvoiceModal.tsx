@@ -418,7 +418,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
       // Update existing invoice
       const items: UpdateInvoiceItemRequest[] = selectedCharges.map(charge => {
         const saleFCY = parseFloat(charge.saleFCY || 0);
-        const exRate = getInvoiceExRate(charge.saleCurrencyId || 1);
+        const exRate = getChargeExRate(charge);
         const localAmount = saleFCY * exRate;
         const taxPercentage = parseFloat(charge.saleTaxPercentage) || 0;
         const taxAmount = localAmount * taxPercentage / 100;
@@ -469,7 +469,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
       // Create new invoice
       const items: CreateInvoiceItemRequest[] = selectedCharges.map(charge => {
         const saleFCY = parseFloat(charge.saleFCY || 0);
-        const exRate = getInvoiceExRate(charge.saleCurrencyId || 1);
+        const exRate = getChargeExRate(charge);
         const localAmount = saleFCY * exRate;
         const taxPercentage = parseFloat(charge.saleTaxPercentage) || 0;
         const taxAmount = localAmount * taxPercentage / 100;
@@ -530,14 +530,20 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
     return (chargeCurrency.roe || 1) / invoiceRoe;
   };
 
+  const getChargeExRate = (charge: ShipmentCosting): number => {
+    const savedExRate = parseFloat(charge.saleExRate as string);
+    if (savedExRate && savedExRate > 0) return savedExRate;
+    return getInvoiceExRate(charge.saleCurrencyId || 1);
+  };
+
   const totalSale = selectedChargesData.reduce((sum, c) => {
     const fcy = parseFloat(c.saleFCY || 0);
-    const exRate = getInvoiceExRate(c.saleCurrencyId || 1);
+    const exRate = getChargeExRate(c);
     return sum + fcy * exRate;
   }, 0);
   const totalTax = selectedChargesData.reduce((sum, c) => {
     const fcy = parseFloat(c.saleFCY || 0);
-    const exRate = getInvoiceExRate(c.saleCurrencyId || 1);
+    const exRate = getChargeExRate(c);
     const localAmt = fcy * exRate;
     const taxPct = parseFloat(c.saleTaxPercentage || 0);
     return sum + localAmt * taxPct / 100;
@@ -664,8 +670,8 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
                       <TableCell className="text-xs py-2">{charge.saleUnit}</TableCell>
                       <TableCell className="text-xs py-2">{currencies.find(c => c.id === charge.saleCurrencyId)?.code || charge.saleCurrencyCode || ""}</TableCell>
                       <TableCell className="text-xs py-2">{charge.saleFCY}</TableCell>
-                      <TableCell className="text-xs py-2">{getInvoiceExRate(charge.saleCurrencyId || 1).toFixed(3)}</TableCell>
-                      <TableCell className="text-xs py-2">{(parseFloat(charge.saleFCY || 0) * getInvoiceExRate(charge.saleCurrencyId || 1)).toFixed(2)}</TableCell>
+                      <TableCell className="text-xs py-2">{getChargeExRate(charge).toFixed(3)}</TableCell>
+                      <TableCell className="text-xs py-2">{(parseFloat(charge.saleFCY || 0) * getChargeExRate(charge)).toFixed(2)}</TableCell>
                     </TableRow>
                   ))
                 )}

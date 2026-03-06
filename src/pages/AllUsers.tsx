@@ -315,6 +315,7 @@ const AllUsers = () => {
               <thead>
                 <tr className="bg-table-header text-table-header-foreground">
                   <th className="px-4 py-3 text-left text-sm font-semibold">Action</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Username</th>
                   <th className="px-4 py-3 text-left text-sm font-semibold">Name</th>
                   <th className="px-4 py-3 text-left text-sm font-semibold">Email</th>
                   <th className="px-4 py-3 text-left text-sm font-semibold">Roles</th>
@@ -324,13 +325,13 @@ const AllUsers = () => {
               <tbody>
                 {usersLoading ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
                       Loading...
                     </td>
                   </tr>
                 ) : users.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
                       No users found
                     </td>
                   </tr>
@@ -362,6 +363,7 @@ const AllUsers = () => {
                           </PermissionGate>
                         </div>
                       </td>
+                      <td className="px-4 py-3 text-sm text-muted-foreground">{user.username}</td>
                       <td className="px-4 py-3 text-sm text-primary font-medium">{user.fullName}</td>
                       <td className="px-4 py-3 text-sm text-primary">{user.email}</td>
                       <td className="px-4 py-3 text-sm text-muted-foreground">

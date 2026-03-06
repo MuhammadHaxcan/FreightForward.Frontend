@@ -2,11 +2,13 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { format } from "date-fns";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { DateInput } from "@/components/ui/date-input";
 import {
   Dialog,
   DialogContent,
@@ -20,7 +22,9 @@ import {
   hrEmployeeApi,
   PayrollListItem,
   UpdatePayrollRequest,
+  MarkPaidRequest,
 } from "@/services/api/hr";
+import { useBanks } from "@/hooks/useBanks";
 
 const monthNames = [
   "",
@@ -49,6 +53,27 @@ const formatAmount = (n: number) =>
     maximumFractionDigits: 2,
   });
 
+// Payment mode config (same pattern as ExpenseModal)
+const paymentModeToEnum: Record<string, string> = {
+  "CASH": "Cash",
+  "CHEQUE": "Cheque",
+  "BANK WIRE": "BankWire",
+  "BANK TRANSFER": "BankTransfer",
+  "CARD": "Card",
+  "POST DATED CHEQUE": "PostDatedCheque",
+};
+
+const paymentModes = ["CASH", "CHEQUE", "BANK WIRE", "BANK TRANSFER", "CARD", "POST DATED CHEQUE"];
+
+const paymentModeConfig: Record<string, { requiresBank: boolean; requiresChequeDetails: boolean }> = {
+  "CASH": { requiresBank: false, requiresChequeDetails: false },
+  "CHEQUE": { requiresBank: true, requiresChequeDetails: true },
+  "BANK WIRE": { requiresBank: true, requiresChequeDetails: false },
+  "BANK TRANSFER": { requiresBank: true, requiresChequeDetails: false },
+  "CARD": { requiresBank: true, requiresChequeDetails: false },
+  "POST DATED CHEQUE": { requiresBank: true, requiresChequeDetails: true },
+};
+
 const HrPayroll = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -58,9 +83,13 @@ const HrPayroll = () => {
   const [filterYear, setFilterYear] = useState(
     currentDate.getFullYear().toString()
   );
-  const [filterMonth, setFilterMonth] = useState(
+  const [filterMonthFrom, setFilterMonthFrom] = useState(
     (currentDate.getMonth() + 1).toString()
   );
+  const [filterMonthTo, setFilterMonthTo] = useState(
+    (currentDate.getMonth() + 1).toString()
+  );
+  const [filterEmployeeId, setFilterEmployeeId] = useState("");
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
@@ -86,6 +115,16 @@ const HrPayroll = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
+  // Mark Paid modal
+  const [markPaidModalOpen, setMarkPaidModalOpen] = useState(false);
+  const [markPaidPayroll, setMarkPaidPayroll] = useState<PayrollListItem | null>(null);
+  const [markPaidPaymentMode, setMarkPaidPaymentMode] = useState("CASH");
+  const [markPaidBankId, setMarkPaidBankId] = useState<string>("");
+  const [markPaidExpenseDate, setMarkPaidExpenseDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [markPaidChequeNumber, setMarkPaidChequeNumber] = useState("");
+  const [markPaidChequeDate, setMarkPaidChequeDate] = useState("");
+  const [markPaidPostDatedValidDate, setMarkPaidPostDatedValidDate] = useState("");
+
   // Year options
   const yearOptions = Array.from({ length: 5 }, (_, i) => {
     const y = currentDate.getFullYear() - 2 + i;
@@ -95,13 +134,15 @@ const HrPayroll = () => {
   // ==================== Queries ====================
 
   const { data: payrollData, isLoading } = useQuery({
-    queryKey: ["hr-payroll", pageNumber, pageSize, filterYear, filterMonth],
+    queryKey: ["hr-payroll", pageNumber, pageSize, filterYear, filterMonthFrom, filterMonthTo, filterEmployeeId],
     queryFn: async () => {
       const result = await hrPayrollApi.getAll({
         pageNumber,
         pageSize,
         year: parseInt(filterYear),
-        month: parseInt(filterMonth),
+        monthFrom: parseInt(filterMonthFrom),
+        monthTo: parseInt(filterMonthTo),
+        employeeId: filterEmployeeId ? parseInt(filterEmployeeId) : undefined,
       });
       if (result.error) throw new Error(result.error);
       return result.data;
@@ -116,6 +157,8 @@ const HrPayroll = () => {
       return result.data;
     },
   });
+
+  const { data: banksData } = useBanks({ pageSize: 100 });
 
   // ==================== Mutations ====================
 
@@ -201,14 +244,16 @@ const HrPayroll = () => {
   });
 
   const markPaidMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const result = await hrPayrollApi.markPaid(id);
+    mutationFn: async ({ id, data }: { id: number; data: MarkPaidRequest }) => {
+      const result = await hrPayrollApi.markPaid(id, data);
       if (result.error) throw new Error(result.error);
       return result.data;
     },
     onSuccess: () => {
       toast.success("Payroll marked as paid");
       queryClient.invalidateQueries({ queryKey: ["hr-payroll"] });
+      setMarkPaidModalOpen(false);
+      setMarkPaidPayroll(null);
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to mark as paid");
@@ -221,11 +266,15 @@ const HrPayroll = () => {
   const totalCount = payrollData?.totalCount || 0;
   const totalPages = payrollData?.totalPages || 1;
   const employees = empDropdown || [];
+  const banks = banksData?.items || [];
 
   const editNetSalary =
     (parseFloat(editEarnings) || 0) -
     (parseFloat(editDeductions) || 0) -
     (parseFloat(editAdvance) || 0);
+
+  const markPaidRequiresBank = paymentModeConfig[markPaidPaymentMode]?.requiresBank ?? false;
+  const markPaidRequiresChequeDetails = paymentModeConfig[markPaidPaymentMode]?.requiresChequeDetails ?? false;
 
   // ==================== Handlers ====================
 
@@ -279,6 +328,30 @@ const HrPayroll = () => {
     if (deletingId !== null) {
       deleteMutation.mutate(deletingId);
     }
+  };
+
+  const handleOpenMarkPaid = (item: PayrollListItem) => {
+    setMarkPaidPayroll(item);
+    setMarkPaidPaymentMode("CASH");
+    setMarkPaidBankId("");
+    setMarkPaidExpenseDate(format(new Date(), "yyyy-MM-dd"));
+    setMarkPaidChequeNumber("");
+    setMarkPaidChequeDate("");
+    setMarkPaidPostDatedValidDate("");
+    setMarkPaidModalOpen(true);
+  };
+
+  const handleSubmitMarkPaid = () => {
+    if (!markPaidPayroll) return;
+    const data: MarkPaidRequest = {
+      paymentMode: paymentModeToEnum[markPaidPaymentMode] || "Cash",
+      bankId: markPaidRequiresBank && markPaidBankId ? parseInt(markPaidBankId) : undefined,
+      expenseDate: markPaidExpenseDate,
+      chequeNumber: markPaidRequiresChequeDetails && markPaidChequeNumber ? markPaidChequeNumber : undefined,
+      chequeDate: markPaidRequiresChequeDetails && markPaidChequeDate ? markPaidChequeDate : undefined,
+      postDatedValidDate: markPaidPaymentMode === "POST DATED CHEQUE" && markPaidPostDatedValidDate ? markPaidPostDatedValidDate : undefined,
+    };
+    markPaidMutation.mutate({ id: markPaidPayroll.id, data });
   };
 
   const getStatusBadge = (status: string) => {
@@ -378,8 +451,8 @@ const HrPayroll = () => {
         )}
 
         {/* Filters */}
-        <div className="bg-muted/30 border rounded-lg p-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-muted/30 border rounded-lg p-4 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="text-sm font-medium text-green-600 mb-1 block">
                 Year
@@ -395,37 +468,69 @@ const HrPayroll = () => {
             </div>
             <div>
               <label className="text-sm font-medium text-green-600 mb-1 block">
-                Month
+                Month From
               </label>
               <SearchableSelect
                 options={months}
-                value={filterMonth}
+                value={filterMonthFrom}
                 onValueChange={(v) => {
-                  setFilterMonth(v);
+                  setFilterMonthFrom(v);
                   setPageNumber(1);
                 }}
               />
             </div>
-            <div className="flex items-end">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Show:</span>
-                <SearchableSelect
-                  options={[
-                    { value: "10", label: "10" },
-                    { value: "25", label: "25" },
-                    { value: "50", label: "50" },
-                    { value: "100", label: "100" },
-                  ]}
-                  value={pageSize.toString()}
-                  onValueChange={(v) => {
-                    setPageSize(parseInt(v));
-                    setPageNumber(1);
-                  }}
-                  triggerClassName="w-[90px] h-8"
-                />
-                <span className="text-sm text-muted-foreground">entries</span>
-              </div>
+            <div>
+              <label className="text-sm font-medium text-green-600 mb-1 block">
+                Month To
+              </label>
+              <SearchableSelect
+                options={months}
+                value={filterMonthTo}
+                onValueChange={(v) => {
+                  setFilterMonthTo(v);
+                  setPageNumber(1);
+                }}
+              />
             </div>
+            <div>
+              <label className="text-sm font-medium text-green-600 mb-1 block">
+                Employee
+              </label>
+              <SearchableSelect
+                options={[
+                  { value: "", label: "All Employees" },
+                  ...employees.map((e) => ({
+                    value: e.id.toString(),
+                    label: `${e.employeeCode} - ${e.fullName}`,
+                  })),
+                ]}
+                value={filterEmployeeId}
+                onValueChange={(v) => {
+                  setFilterEmployeeId(v);
+                  setPageNumber(1);
+                }}
+                placeholder="All Employees"
+                searchPlaceholder="Search employees..."
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Show:</span>
+            <SearchableSelect
+              options={[
+                { value: "10", label: "10" },
+                { value: "25", label: "25" },
+                { value: "50", label: "50" },
+                { value: "100", label: "100" },
+              ]}
+              value={pageSize.toString()}
+              onValueChange={(v) => {
+                setPageSize(parseInt(v));
+                setPageNumber(1);
+              }}
+              triggerClassName="w-[90px] h-8"
+            />
+            <span className="text-sm text-muted-foreground">entries</span>
           </div>
         </div>
 
@@ -533,7 +638,7 @@ const HrPayroll = () => {
                             <PermissionGate permission="hr_payroll_edit">
                               <button
                                 className="p-1.5 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
-                                onClick={() => markPaidMutation.mutate(item.id)}
+                                onClick={() => handleOpenMarkPaid(item)}
                                 title="Mark Paid"
                               >
                                 <Check size={14} />
@@ -754,6 +859,126 @@ const HrPayroll = () => {
                 disabled={deleteMutation.isPending}
               >
                 {deleteMutation.isPending ? "Deleting..." : "Delete"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Mark as Paid Modal */}
+      <Dialog open={markPaidModalOpen} onOpenChange={setMarkPaidModalOpen}>
+        <DialogContent className="sm:max-w-[550px] max-h-[85vh] overflow-y-auto p-0 bg-card">
+          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+            <DialogTitle className="text-white">Mark as Paid</DialogTitle>
+          </DialogHeader>
+          <div className="p-6 space-y-4">
+            {markPaidPayroll && (
+              <>
+                {/* Read-only info */}
+                <div className="grid grid-cols-2 gap-4 p-3 bg-muted/50 rounded-lg border">
+                  <div>
+                    <Label className="text-sm text-muted-foreground">Employee</Label>
+                    <p className="text-sm font-medium">{markPaidPayroll.employeeName}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-muted-foreground">Net Salary</Label>
+                    <p className="text-sm font-medium">{formatAmount(markPaidPayroll.netSalary)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-muted-foreground">Period</Label>
+                    <p className="text-sm font-medium">{monthNames[markPaidPayroll.month]} {markPaidPayroll.year}</p>
+                  </div>
+                </div>
+
+                <div className="border-t border-border pt-4 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="form-label">Payment Mode</label>
+                      <SearchableSelect
+                        options={paymentModes.map((mode) => ({ value: mode, label: mode }))}
+                        value={markPaidPaymentMode}
+                        onValueChange={(value) => {
+                          const config = paymentModeConfig[value];
+                          setMarkPaidPaymentMode(value);
+                          if (!config?.requiresBank) setMarkPaidBankId("");
+                          if (!config?.requiresChequeDetails) {
+                            setMarkPaidChequeNumber("");
+                            setMarkPaidChequeDate("");
+                          }
+                          if (value !== "POST DATED CHEQUE") setMarkPaidPostDatedValidDate("");
+                        }}
+                        placeholder="Select Payment Mode"
+                        searchPlaceholder="Search..."
+                      />
+                    </div>
+                    <div>
+                      <label className="form-label">Bank</label>
+                      <SearchableSelect
+                        options={banks.map((bank) => ({ value: bank.id.toString(), label: bank.bankName }))}
+                        value={markPaidBankId}
+                        onValueChange={setMarkPaidBankId}
+                        disabled={!markPaidRequiresBank}
+                        triggerClassName={!markPaidRequiresBank ? "bg-muted" : ""}
+                        placeholder="Select Bank"
+                        searchPlaceholder="Search..."
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="form-label">Expense Date</label>
+                    <DateInput
+                      value={markPaidExpenseDate}
+                      onChange={setMarkPaidExpenseDate}
+                    />
+                  </div>
+
+                  {/* Cheque-specific fields */}
+                  {markPaidRequiresChequeDetails && (
+                    <div className={`grid ${markPaidPaymentMode === "POST DATED CHEQUE" ? "grid-cols-3" : "grid-cols-2"} gap-4 p-4 bg-muted/50 rounded-lg border`}>
+                      <div>
+                        <label className="form-label">Cheque Number</label>
+                        <Input
+                          placeholder="Enter cheque number"
+                          value={markPaidChequeNumber}
+                          onChange={(e) => setMarkPaidChequeNumber(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="form-label">Cheque Date</label>
+                        <DateInput
+                          value={markPaidChequeDate}
+                          onChange={setMarkPaidChequeDate}
+                        />
+                      </div>
+                      {markPaidPaymentMode === "POST DATED CHEQUE" && (
+                        <div>
+                          <label className="form-label">Valid Date (Maturity)</label>
+                          <DateInput
+                            value={markPaidPostDatedValidDate}
+                            onChange={setMarkPaidPostDatedValidDate}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            <div className="flex justify-end gap-2 pt-4 border-t border-border">
+              <Button
+                variant="outline"
+                onClick={() => setMarkPaidModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="btn-success"
+                onClick={handleSubmitMarkPaid}
+                disabled={markPaidMutation.isPending}
+              >
+                {markPaidMutation.isPending ? "Processing..." : "Confirm Payment"}
               </Button>
             </div>
           </div>

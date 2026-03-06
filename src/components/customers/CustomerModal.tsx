@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useCreateCustomer, useUpdateCustomer, useSimilarCustomerCheck } from "@/hooks/useCustomers";
 import { useAllCountries } from "@/hooks/useSettings";
 import { Customer, customerApi, settingsApi, NextCustomerCodes, CurrencyType, CustomerCategoryType } from "@/services/api";
+import { hrEmployeeApi } from "@/services/api/hr";
 import { useQuery } from "@tanstack/react-query";
 
 interface CustomerModalProps {
@@ -32,6 +33,7 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
     city: "",
     currencyId: "",
     taxNo: "",
+    assignedTo: "",
   });
 
   const createMutation = useCreateCustomer();
@@ -73,6 +75,14 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
   });
   const categoryTypes = useMemo(() => categoryTypesResponse?.data ?? [], [categoryTypesResponse?.data]);
 
+  // Fetch employees for Assign To dropdown
+  const { data: employeesResponse } = useQuery({
+    queryKey: ['employees', 'dropdown'],
+    queryFn: () => hrEmployeeApi.getDropdown(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const employees = employeesResponse?.data ?? [];
+
   // Fetch next customer codes from API
   const { data: nextCodesResponse, refetch: refetchNextCodes } = useQuery({
     queryKey: ['customers', 'nextCodes'],
@@ -112,6 +122,7 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
         city: customer.city || "",
         currencyId: customer.currencyId?.toString() || "",
         taxNo: customer.taxNo || "",
+        assignedTo: customer.assignedTo || "",
       });
     } else if (mode === "add") {
       // Reset form for add mode
@@ -126,6 +137,7 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
         city: "",
         currencyId: "",
         taxNo: "",
+        assignedTo: "",
       });
       refetchNextCodes();
     }
@@ -143,6 +155,7 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
       city: formData.city || undefined,
       currencyId: formData.currencyId ? parseInt(formData.currencyId) : undefined,
       taxNo: formData.taxNo || undefined,
+      assignedTo: formData.assignedTo || undefined,
     };
 
     if (mode === "add") {
@@ -334,6 +347,18 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
                 onChange={(e) => setFormData({ ...formData, taxNo: e.target.value })}
                 placeholder="Ref No"
                 className="bg-muted/50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm">Assign To</Label>
+              <SearchableSelect
+                options={employees.map((emp) => ({ value: emp.fullName, label: `${emp.fullName} (${emp.employeeCode})` }))}
+                value={formData.assignedTo}
+                onValueChange={(value) => setFormData({ ...formData, assignedTo: value })}
+                placeholder="Select employee..."
+                searchPlaceholder="Search employees..."
+                triggerClassName="bg-muted/50"
               />
             </div>
           </div>

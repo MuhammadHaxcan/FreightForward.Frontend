@@ -6,6 +6,7 @@ export type ShipmentDirection = 'Import' | 'Export' | 'CrossTrade';
 export type ShipmentMode = 'SeaFreightFCL' | 'SeaFreightLCL' | 'AirFreight' | 'BreakBulk' | 'RoRo';
 export type BLServiceType = 'FCLFCL' | 'LCLLCL' | 'LCLFCL' | 'FCLLCL';
 export type FreightType = 'Prepaid' | 'Collect';
+export type ShipmentType = 'ConsoleShipment' | 'NonConsoleShipment';
 export type StatusEventType =
   | 'GateOutEmpty' | 'GateIn' | 'LoadOnVessel' | 'VesselDeparture'
   | 'VesselArrival' | 'Discharge' | 'OnRail' | 'OffRail'
@@ -19,6 +20,8 @@ export interface Shipment {
   directionDisplay: string;
   mode: ShipmentMode;
   modeDisplay: string;
+  shipmentType: ShipmentType;
+  shipmentTypeDisplay: string;
   houseBLNo?: string;
   mblNumber?: string;
   customerName?: string;
@@ -235,6 +238,8 @@ export interface CreateShipmentRequest {
   jobDate: string;
   direction: ShipmentDirection;
   mode: ShipmentMode;
+  shipmentType?: ShipmentType;
+  assignedTo?: string;
   incoTermId?: number;
   hblNo?: string;
   hblDate?: string;

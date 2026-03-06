@@ -264,6 +264,7 @@ const Shipments = () => {
                   <TableHead className="text-table-header-foreground font-semibold">Document No</TableHead>
                   <TableHead className="text-table-header-foreground font-semibold">Customer</TableHead>
                   <TableHead className="text-table-header-foreground font-semibold">Direction/Mode</TableHead>
+                  <TableHead className="text-table-header-foreground font-semibold">Shipment Type</TableHead>
                   <TableHead className="text-table-header-foreground font-semibold">POL</TableHead>
                   <TableHead className="text-table-header-foreground font-semibold">POD</TableHead>
                   <TableHead className="text-table-header-foreground font-semibold">Carrier/Vessel</TableHead>
@@ -274,7 +275,7 @@ const Shipments = () => {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={13} className="text-center py-8">
+                    <TableCell colSpan={14} className="text-center py-8">
                       <div className="flex items-center justify-center gap-2 text-muted-foreground">
                         <Loader2 className="h-5 w-5 animate-spin" />
                         Loading shipments...
@@ -283,13 +284,13 @@ const Shipments = () => {
                   </TableRow>
                 ) : isError ? (
                   <TableRow>
-                    <TableCell colSpan={13} className="text-center py-8 text-red-500">
+                    <TableCell colSpan={14} className="text-center py-8 text-red-500">
                       Error loading shipments: {error?.message || 'Unknown error'}
                     </TableCell>
                   </TableRow>
                 ) : shipments.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
                       No shipments found
                     </TableCell>
                   </TableRow>
@@ -346,6 +347,9 @@ const Shipments = () => {
                           {getDirectionBadge(shipment.direction)}
                           <span className="text-sm block">{shipment.modeDisplay || "-"}</span>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">{shipment.shipmentTypeDisplay || "-"}</span>
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">

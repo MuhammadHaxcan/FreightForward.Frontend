@@ -44,6 +44,7 @@ import {
   shipmentApi,
   ShipmentDirection,
   ShipmentMode,
+  ShipmentType,
   BLServiceType,
   FreightType,
   CreateShipmentRequest,
@@ -66,6 +67,7 @@ import {
   PaymentStatus,
   fileApi,
 } from "@/services/api";
+import { hrEmployeeApi } from "@/services/api/hr";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   useCreateShipment,
@@ -144,6 +146,22 @@ const mapFreightType = (type: string): FreightType => {
   return map[type] || 'Collect';
 };
 
+const mapShipmentType = (type: string): ShipmentType => {
+  const map: Record<string, ShipmentType> = {
+    'Console Shipment': 'ConsoleShipment',
+    'Non-Console Shipment': 'NonConsoleShipment',
+  };
+  return map[type] || 'NonConsoleShipment';
+};
+
+// Helper to format port label based on selected mode
+const getPortLabel = (port: { seaPortName?: string; seaPortCode?: string; airPortName?: string; airPortCode?: string; city?: string; country?: string }, mode: string): string => {
+  if (mode === 'Air Freight') {
+    return `${port.airPortName || ''}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`;
+  }
+  return `${port.seaPortName || ''}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} - ${port.city}, ${port.country}`;
+};
+
 const AddShipment = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -197,6 +215,7 @@ const AddShipment = () => {
     jobStatus: "Opened",
     direction: "Cross-Trade",
     mode: "Air Freight",
+    shipmentType: "Non-Console Shipment",
     incoTermId: "" as string,
     houseBLNo: "",
     houseBLDate: getTodayDateOnly(),
@@ -214,6 +233,7 @@ const AddShipment = () => {
     carrier: "",
     freeTime: "0",
     networkPartnerId: undefined as number | undefined,
+    assignedTo: "",
     placeOfReceipt: "",
     portOfReceiptId: undefined as number | undefined,
     portOfReceipt: "",
@@ -273,6 +293,14 @@ const AddShipment = () => {
     staleTime: 60 * 60 * 1000, // Cache for 1 hour
   });
   const networkPartners = useMemo(() => networkPartnersResponse?.data ?? [], [networkPartnersResponse?.data]);
+
+  // Fetch Employees for Assign To dropdown
+  const { data: employeesResponse, isLoading: isLoadingEmployees } = useQuery({
+    queryKey: ['employees', 'dropdown'],
+    queryFn: () => hrEmployeeApi.getDropdown(),
+    staleTime: 60 * 60 * 1000,
+  });
+  const employees = useMemo(() => employeesResponse?.data ?? [], [employeesResponse?.data]);
 
   // Fetch BL Types
   const { data: blTypesResponse } = useQuery({
@@ -1081,6 +1109,8 @@ const AddShipment = () => {
         jobStatus: (formData.jobStatus || 'Opened') as ShipmentStatus,
         direction: mapDirection(formData.direction),
         mode: mapMode(formData.mode),
+        shipmentType: mapShipmentType(formData.shipmentType),
+        assignedTo: formData.assignedTo || undefined,
         incoTermId: formData.incoTermId ? parseInt(formData.incoTermId) : undefined,
         hblNo: formData.houseBLNo || undefined,
         hblDate: formData.houseBLDate || undefined,
@@ -1237,7 +1267,7 @@ const AddShipment = () => {
               {/* Section 1: Basic Shipment Details */}
               <div className="bg-card border border-border rounded-lg p-6 space-y-4">
                 <h3 className="text-emerald-600 font-semibold text-lg border-b border-border pb-2">Basic Shipment Details</h3>
-                <div className="grid grid-cols-6 gap-4">
+                <div className="grid grid-cols-7 gap-4">
                   <div>
                     <Label className="text-sm">Job Number</Label>
                     <Input
@@ -1295,6 +1325,17 @@ const AddShipment = () => {
                         }));
                       }}
                       searchPlaceholder="Search modes..."
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm">Shipment Type</Label>
+                    <SearchableSelect
+                      options={[
+                        { value: "Console Shipment", label: "Console Shipment" },
+                        { value: "Non-Console Shipment", label: "Non-Console Shipment" },
+                      ]}
+                      value={formData.shipmentType}
+                      onValueChange={(v) => handleInputChange("shipmentType", v)}
                     />
                   </div>
                   <div>
@@ -1443,7 +1484,7 @@ const AddShipment = () => {
                 </div>
 
                 {/* Additional BL Info */}
-                <div className="grid grid-cols-4 gap-4 pt-2">
+                <div className="grid grid-cols-5 gap-4 pt-2">
                   <div>
                     <Label className="text-sm">Place of BL Issue</Label>
                     <Input value={formData.placeOfBLIssue} onChange={(e) => handleInputChange("placeOfBLIssue", e.target.value)} placeholder="Place of BL Issue" />
@@ -1470,6 +1511,20 @@ const AddShipment = () => {
                       emptyMessage={isLoadingNetworkPartners ? "Loading..." : "No partners found"}
                     />
                   </div>
+                  <div>
+                    <Label className="text-sm">Assign To</Label>
+                    <SearchableSelect
+                      options={employees.map(emp => ({
+                        value: emp.fullName,
+                        label: `${emp.employeeCode} - ${emp.fullName}`,
+                      }))}
+                      value={formData.assignedTo}
+                      onValueChange={(v) => handleInputChange("assignedTo", v)}
+                      placeholder="Select"
+                      searchPlaceholder="Search employees..."
+                      emptyMessage={isLoadingEmployees ? "Loading..." : "No employees found"}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -1486,7 +1541,7 @@ const AddShipment = () => {
                       <SearchableSelect
                         options={ports.map(port => ({
                           value: port.id.toString(),
-                          label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
+                          label: getPortLabel(port, formData.mode),
                         }))}
                         value={formData.placeOfReceipt}
                         onValueChange={(v) => handleInputChange("placeOfReceipt", v)}
@@ -1500,7 +1555,7 @@ const AddShipment = () => {
                       <SearchableSelect
                         options={ports.map(port => ({
                           value: port.id.toString(),
-                          label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
+                          label: getPortLabel(port, formData.mode),
                         }))}
                         value={formData.portOfReceipt}
                         onValueChange={(v) => {
@@ -1518,7 +1573,7 @@ const AddShipment = () => {
                       <SearchableSelect
                         options={ports.map(port => ({
                           value: port.id.toString(),
-                          label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
+                          label: getPortLabel(port, formData.mode),
                         }))}
                         value={formData.portOfLoading}
                         onValueChange={(v) => {
@@ -1543,7 +1598,7 @@ const AddShipment = () => {
                       <SearchableSelect
                         options={ports.map(port => ({
                           value: port.id.toString(),
-                          label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
+                          label: getPortLabel(port, formData.mode),
                         }))}
                         value={formData.portOfDischarge}
                         onValueChange={(v) => {
@@ -1561,7 +1616,7 @@ const AddShipment = () => {
                       <SearchableSelect
                         options={ports.map(port => ({
                           value: port.id.toString(),
-                          label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
+                          label: getPortLabel(port, formData.mode),
                         }))}
                         value={formData.portOfFinalDestination}
                         onValueChange={(v) => {
@@ -1579,7 +1634,7 @@ const AddShipment = () => {
                       <SearchableSelect
                         options={ports.map(port => ({
                           value: port.id.toString(),
-                          label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
+                          label: getPortLabel(port, formData.mode),
                         }))}
                         value={formData.placeOfDelivery}
                         onValueChange={(v) => handleInputChange("placeOfDelivery", v)}

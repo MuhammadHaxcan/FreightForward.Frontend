@@ -65,6 +65,14 @@ export interface Payslip {
 export interface UpdatePayrollRequest {
   totalEarnings: number; totalDeductions: number; advanceDeduction: number; netSalary: number; remarks?: string;
 }
+export interface MarkPaidRequest {
+  paymentMode: string;
+  bankId?: number;
+  expenseDate: string;
+  chequeNumber?: string;
+  chequeDate?: string;
+  postDatedValidDate?: string;
+}
 
 // Advance
 export interface Advance {
@@ -133,7 +141,7 @@ export const hrSalaryApi = {
 };
 
 export const hrPayrollApi = {
-  getAll: (p?: { pageNumber?: number; pageSize?: number; year?: number; month?: number }) =>
+  getAll: (p?: { pageNumber?: number; pageSize?: number; year?: number; monthFrom?: number; monthTo?: number; employeeId?: number }) =>
     fetchApi<PaginatedList<PayrollListItem>>(`/hr/payroll?${buildQuery(p || {})}`),
   getPayslip: (id: number) => fetchApi<Payslip>(`/hr/payroll/${id}/payslip`),
   generate: (employeeId: number, data: { year: number; month: number }) =>
@@ -143,7 +151,7 @@ export const hrPayrollApi = {
   update: (id: number, data: UpdatePayrollRequest) =>
     fetchApi<void>(`/hr/payroll/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: number) => fetchApi<void>(`/hr/payroll/${id}`, { method: 'DELETE' }),
-  markPaid: (id: number) => fetchApi<void>(`/hr/payroll/${id}/mark-paid`, { method: 'POST' }),
+  markPaid: (id: number, data: MarkPaidRequest) => fetchApi<void>(`/hr/payroll/${id}/mark-paid`, { method: 'POST', body: JSON.stringify(data) }),
   cancel: (id: number) => fetchApi<void>(`/hr/payroll/${id}/cancel`, { method: 'POST' }),
 };
 

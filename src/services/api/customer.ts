@@ -23,6 +23,7 @@ export interface Customer {
   currencyCode?: string;
   taxNo?: string;
   status?: string;
+  assignedTo?: string;
   createdAt: string;
 }
 
@@ -202,6 +203,7 @@ export interface CreateCustomerRequest {
   taxNo?: string;
   taxPercentage?: number;
   carrierCode?: string;
+  assignedTo?: string;
 }
 
 export interface NextCustomerCodes {
@@ -226,6 +228,7 @@ export interface UpdateCustomerRequest {
   taxPercentage?: number;
   carrierCode?: string;
   status?: string;
+  assignedTo?: string;
 }
 
 export interface CreateCustomerContactRequest {

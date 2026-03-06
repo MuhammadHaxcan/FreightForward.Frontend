@@ -17,6 +17,8 @@ import { useCurrencyTypes } from "@/hooks/useSettings";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 import { useQuery } from "@tanstack/react-query";
 import { X, Lock, Info } from "lucide-react";
+import { toast } from "sonner";
+import { FieldError, fieldErrorClass } from "@/components/ui/field-error";
 
 // Extend ShipmentCosting with UI-specific fields for the modal
 // The modal transforms between API format (currencyId) and display format (currency code)
@@ -117,6 +119,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
     costDate: getTodayDateOnly(),
     costTax: "0%",
     costCustomTax: "",
+    costCustomTaxAmount: "",
     saleCurrency: LOCAL_CURRENCY,
     saleCurrencyId: undefined as number | undefined,
     saleExRate: "1.000",
@@ -130,9 +133,11 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
     saleGP: "0.00",
     saleTax: "0%",
     saleCustomTax: "",
+    saleCustomTaxAmount: "",
   });
 
   const [formData, setFormData] = useState(getDefaultFormData());
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const formInitializedRef = useRef(false);
 
   // Reset ref when modal closes, set active tab when opening
@@ -140,6 +145,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
     if (!open) {
       formInitializedRef.current = false;
     } else {
+      setErrors({});
       setActiveTab(defaultActiveTab || "cost");
     }
   }, [open, defaultActiveTab]);
@@ -213,6 +219,12 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
           const val = parseFloat(costing.costTaxPercentage as string) || 0;
           return standardTaxValues.includes(val) ? "" : val.toString();
         })(),
+        costCustomTaxAmount: (() => {
+          const val = parseFloat(costing.costTaxPercentage as string) || 0;
+          if (standardTaxValues.includes(val)) return "";
+          const lcy = parseFloat(costing.costLCY as string) || 0;
+          return ((lcy * val) / 100).toFixed(2);
+        })(),
         saleCurrency: costing.saleCurrency || costing.saleCurrencyCode || LOCAL_CURRENCY,
         saleCurrencyId: costing.saleCurrencyId || undefined,
         saleExRate: costing.saleExRate?.toString() || "1.000",
@@ -231,6 +243,12 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
         saleCustomTax: (() => {
           const val = parseFloat(costing.saleTaxPercentage as string) || 0;
           return standardTaxValues.includes(val) ? "" : val.toString();
+        })(),
+        saleCustomTaxAmount: (() => {
+          const val = parseFloat(costing.saleTaxPercentage as string) || 0;
+          if (standardTaxValues.includes(val)) return "";
+          const lcy = parseFloat(costing.saleLCY as string) || 0;
+          return ((lcy * val) / 100).toFixed(2);
         })(),
       });
     } else if (open && !costing && !formInitializedRef.current) {
@@ -303,16 +321,9 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
     const unitPrice = parseFloat(perUnit) || 0;
     const rate = parseFloat(exRate) || 1;
 
-    // FCY = No of Units * Cost per Unit (in foreign currency)
     const fcyAmount = units * unitPrice;
-
-    // LCY = FCY * Exchange Rate (converted to local currency)
     const lcyAmount = fcyAmount * rate;
-
-    return {
-      fcy: fcyAmount.toFixed(2),
-      lcy: lcyAmount.toFixed(2)
-    };
+    return { fcy: fcyAmount.toFixed(2), lcy: lcyAmount.toFixed(2) };
   };
 
   const calculateSaleAmounts = (currency: string, noOfUnit: string, perUnit: string, exRate: string) => {
@@ -320,16 +331,9 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
     const unitPrice = parseFloat(perUnit) || 0;
     const rate = parseFloat(exRate) || 1;
 
-    // FCY = No of Units * Price per Unit (in foreign currency)
     const fcyAmount = units * unitPrice;
-
-    // LCY = FCY * Exchange Rate (converted to local currency)
     const lcyAmount = fcyAmount * rate;
-
-    return {
-      fcy: fcyAmount.toFixed(2),
-      lcy: lcyAmount.toFixed(2)
-    };
+    return { fcy: fcyAmount.toFixed(2), lcy: lcyAmount.toFixed(2) };
   };
 
   // Calculate GP (Gross Profit)
@@ -345,15 +349,19 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
     const amounts = calculateCostAmounts(currency, formData.costNoOfUnit, formData.costPerUnit, roe.toFixed(3));
     const currencyObj = currencyTypes.find(c => c.code === currency);
 
-    setFormData(prev => ({
-      ...prev,
-      costCurrency: currency,
-      costCurrencyId: currencyObj?.id,
-      costExRate: roe.toFixed(3),
-      costFCYAmount: amounts.fcy,
-      costLCYAmount: amounts.lcy,
-      saleGP: calculateGP(prev.saleLCYAmount, amounts.lcy)
-    }));
+    setFormData(prev => {
+      const updated = {
+        ...prev,
+        costCurrency: currency,
+        costCurrencyId: currencyObj?.id,
+        costExRate: roe.toFixed(3),
+        costFCYAmount: amounts.fcy,
+        costLCYAmount: amounts.lcy,
+        saleGP: calculateGP(prev.saleLCYAmount, amounts.lcy),
+      };
+      recalcCostTax(updated, amounts.lcy);
+      return updated;
+    });
   };
 
   // Handle sale currency change - update exchange rate from ROE
@@ -362,57 +370,85 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
     const amounts = calculateSaleAmounts(currency, formData.saleNoOfUnit, formData.salePerUnit, roe.toFixed(3));
     const currencyObj = currencyTypes.find(c => c.code === currency);
 
-    setFormData(prev => ({
-      ...prev,
-      saleCurrency: currency,
-      saleCurrencyId: currencyObj?.id,
-      saleExRate: roe.toFixed(3),
-      saleFCYAmount: amounts.fcy,
-      saleLCYAmount: amounts.lcy,
-      saleGP: calculateGP(amounts.lcy, prev.costLCYAmount)
-    }));
+    setFormData(prev => {
+      const updated = {
+        ...prev,
+        saleCurrency: currency,
+        saleCurrencyId: currencyObj?.id,
+        saleExRate: roe.toFixed(3),
+        saleFCYAmount: amounts.fcy,
+        saleLCYAmount: amounts.lcy,
+        saleGP: calculateGP(amounts.lcy, prev.costLCYAmount),
+      };
+      recalcSaleTax(updated, amounts.lcy);
+      return updated;
+    });
+  };
+
+  // Recalculate custom tax amount from percentage when LCY changes
+  const recalcCostTax = (data: typeof formData, newLCY: string) => {
+    if (data.costTax === "Custom" && data.costCustomTax) {
+      const pct = parseFloat(data.costCustomTax) || 0;
+      const lcy = parseFloat(newLCY) || 0;
+      data.costCustomTaxAmount = ((lcy * pct) / 100).toFixed(2);
+    }
+  };
+
+  const recalcSaleTax = (data: typeof formData, newLCY: string) => {
+    if (data.saleTax === "Custom" && data.saleCustomTax) {
+      const pct = parseFloat(data.saleCustomTax) || 0;
+      const lcy = parseFloat(newLCY) || 0;
+      data.saleCustomTaxAmount = ((lcy * pct) / 100).toFixed(2);
+    }
   };
 
   // Handle cost input changes and recalculate
   const handleCostInputChange = (field: string, value: string) => {
-    const newFormData = { ...formData, [field]: value };
+    setFormData(prev => {
+      const newFormData = { ...prev, [field]: value };
 
-    if (field === 'costNoOfUnit' || field === 'costPerUnit' || field === 'costExRate') {
-      const amounts = calculateCostAmounts(
-        newFormData.costCurrency,
-        newFormData.costNoOfUnit,
-        newFormData.costPerUnit,
-        newFormData.costExRate
-      );
-      newFormData.costFCYAmount = amounts.fcy;
-      newFormData.costLCYAmount = amounts.lcy;
-      newFormData.saleGP = calculateGP(newFormData.saleLCYAmount, amounts.lcy);
-    }
+      if (field === 'costNoOfUnit' || field === 'costPerUnit' || field === 'costExRate') {
+        const amounts = calculateCostAmounts(
+          newFormData.costCurrency,
+          newFormData.costNoOfUnit,
+          newFormData.costPerUnit,
+          newFormData.costExRate
+        );
+        newFormData.costFCYAmount = amounts.fcy;
+        newFormData.costLCYAmount = amounts.lcy;
+        newFormData.saleGP = calculateGP(newFormData.saleLCYAmount, amounts.lcy);
+        recalcCostTax(newFormData, amounts.lcy);
+      }
 
-    setFormData(newFormData);
+      return newFormData;
+    });
   };
 
   // Handle sale input changes and recalculate
   const handleSaleInputChange = (field: string, value: string) => {
-    const newFormData = { ...formData, [field]: value };
+    setFormData(prev => {
+      const newFormData = { ...prev, [field]: value };
 
-    if (field === 'saleNoOfUnit' || field === 'salePerUnit' || field === 'saleExRate') {
-      const amounts = calculateSaleAmounts(
-        newFormData.saleCurrency,
-        newFormData.saleNoOfUnit,
-        newFormData.salePerUnit,
-        newFormData.saleExRate
-      );
-      newFormData.saleFCYAmount = amounts.fcy;
-      newFormData.saleLCYAmount = amounts.lcy;
-      newFormData.saleGP = calculateGP(amounts.lcy, newFormData.costLCYAmount);
-    }
+      if (field === 'saleNoOfUnit' || field === 'salePerUnit' || field === 'saleExRate') {
+        const amounts = calculateSaleAmounts(
+          newFormData.saleCurrency,
+          newFormData.saleNoOfUnit,
+          newFormData.salePerUnit,
+          newFormData.saleExRate
+        );
+        newFormData.saleFCYAmount = amounts.fcy;
+        newFormData.saleLCYAmount = amounts.lcy;
+        newFormData.saleGP = calculateGP(amounts.lcy, newFormData.costLCYAmount);
+        recalcSaleTax(newFormData, amounts.lcy);
+      }
 
-    setFormData(newFormData);
+      return newFormData;
+    });
   };
 
   // Handle charge selection - auto-populate description with charge name
   const handleChargeChange = (chargeName: string) => {
+    setErrors(prev => { const next = { ...prev }; delete next.charge; return next; });
     setFormData(prev => ({
       ...prev,
       charge: chargeName,
@@ -468,6 +504,13 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
   };
 
   const handleSave = () => {
+    // Validate charge selection
+    if (!formData.charge) {
+      setErrors({ charge: "Please select a charge" });
+      return;
+    }
+    setErrors({});
+
     // Get the actual customer IDs - prefer the stored customer ID, fallback to party ID
     const vendorCustomerId = formData.costVendor === "_none" || !formData.costVendorCustomerId
       ? (formData.costVendor && formData.costVendor !== "_none" ? parseInt(formData.costVendor) : undefined)
@@ -487,6 +530,14 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
     const costLCYValue = parseFloat(formData.costLCYAmount) || 0;
     const saleLCYValue = parseFloat(formData.saleLCYAmount) || 0;
 
+    // Use custom tax amount if user typed it directly, otherwise calculate from percentage
+    const costTaxAmountFinal = formData.costTax === "Custom" && formData.costCustomTaxAmount
+      ? parseFloat(formData.costCustomTaxAmount) || 0
+      : (costLCYValue * costTaxPercentage) / 100;
+    const saleTaxAmountFinal = formData.saleTax === "Custom" && formData.saleCustomTaxAmount
+      ? parseFloat(formData.saleCustomTaxAmount) || 0
+      : (saleLCYValue * saleTaxPercentage) / 100;
+
     onSave({
       id: costing?.id || Date.now(),
       description: formData.charge, // The charge name (used as description in backend)
@@ -502,7 +553,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
       saleFCY: formData.saleFCYAmount,
       saleLCY: formData.saleLCYAmount,
       saleTaxPercentage: saleTaxPercentage.toString(),
-      saleTaxAmount: ((saleLCYValue * saleTaxPercentage) / 100).toFixed(2),
+      saleTaxAmount: saleTaxAmountFinal.toFixed(2),
       costQty: formData.costNoOfUnit || "0.000",
       costUnit: formData.costPerUnit || "0.00",
       costCurrency: formData.costCurrency,
@@ -512,7 +563,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
       costFCY: formData.costFCYAmount,
       costLCY: formData.costLCYAmount,
       costTaxPercentage: costTaxPercentage.toString(),
-      costTaxAmount: ((costLCYValue * costTaxPercentage) / 100).toFixed(2),
+      costTaxAmount: costTaxAmountFinal.toFixed(2),
       unitId: formData.unitId,
       unitName: formData.unit,
       gp: formData.saleGP,
@@ -528,7 +579,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl bg-card border border-border p-0">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto bg-card border border-border p-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-lg font-semibold">
             {isFullyLocked ? "View Costing" : costing ? "Edit Costing" : "Add Costing"}
@@ -560,10 +611,11 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                 onValueChange={handleChargeChange}
                 placeholder="Select charge type"
                 searchPlaceholder="Search charges..."
-                triggerClassName="bg-background border-border h-9"
+                triggerClassName={`bg-background border-border h-9 ${fieldErrorClass(errors.charge)}`}
                 emptyMessage={isLoadingChargeItems ? "Loading..." : "No charge items available"}
                 disabled={isFullyLocked}
               />
+              <FieldError message={errors.charge} />
             </div>
             <div className="col-span-2">
               <Label className="text-xs font-medium">Description</Label>
@@ -747,28 +799,88 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                       value={formData.costTax}
                       onValueChange={(v) => {
                         handleInputChange("costTax", v);
-                        if (v !== "Custom") handleInputChange("costCustomTax", "");
+                        if (v !== "Custom") {
+                          handleInputChange("costCustomTax", "");
+                          handleInputChange("costCustomTaxAmount", "");
+                        }
                       }}
                       triggerClassName="bg-background border-border h-8 text-xs"
                       searchPlaceholder="Search..."
                       disabled={isCostLocked}
                     />
                     {formData.costTax === "Custom" && (
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max="100"
-                        value={formData.costCustomTax}
-                        onChange={(e) => handleInputChange("costCustomTax", e.target.value)}
-                        placeholder="0.00"
-                        className="bg-background border-border h-8 text-xs"
-                        disabled={isCostLocked}
-                      />
+                      <div className="flex gap-1">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="100"
+                          value={formData.costCustomTax}
+                          onChange={(e) => {
+                            const pct = parseFloat(e.target.value) || 0;
+                            const lcy = parseFloat(formData.costLCYAmount) || 0;
+                            setFormData(prev => ({
+                              ...prev,
+                              costCustomTax: e.target.value,
+                              costCustomTaxAmount: lcy > 0 ? ((lcy * pct) / 100).toFixed(2) : "0.00",
+                            }));
+                          }}
+                          placeholder="%"
+                          className="bg-background border-border h-8 text-xs w-1/2"
+                          disabled={isCostLocked}
+                        />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={formData.costCustomTaxAmount}
+                          onChange={(e) => {
+                            const amt = parseFloat(e.target.value) || 0;
+                            const lcy = parseFloat(formData.costLCYAmount) || 0;
+                            setFormData(prev => ({
+                              ...prev,
+                              costCustomTaxAmount: e.target.value,
+                              costCustomTax: lcy > 0 ? ((amt / lcy) * 100).toFixed(2) : "0.00",
+                            }));
+                          }}
+                          placeholder="Amount"
+                          className="bg-background border-border h-8 text-xs w-1/2"
+                          disabled={isCostLocked}
+                        />
+                      </div>
                     )}
                   </div>
                 </div>
               </div>
+              {(() => {
+                const lcy = parseFloat(formData.costLCYAmount) || 0;
+                let vat = 0;
+                if (formData.costTax === "Custom") {
+                  if (formData.costCustomTaxAmount) vat = parseFloat(formData.costCustomTaxAmount) || 0;
+                  else { const pct = parseFloat(formData.costCustomTax) || 0; vat = (lcy * pct) / 100; }
+                } else {
+                  const pct = parseFloat(formData.costTax?.replace('%', '') || '0') || 0;
+                  vat = (lcy * pct) / 100;
+                }
+                const subTotal = lcy + vat;
+                const curr = formData.costCurrency || "USD";
+                return (
+                  <div className="flex items-center justify-end gap-6 pt-2 border-t border-border mt-2">
+                    <div className="text-center">
+                      <div className="text-xs text-muted-foreground">Total Cost</div>
+                      <div className="text-sm font-semibold">{curr} {lcy.toFixed(2)}</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs text-muted-foreground">VAT</div>
+                      <div className="text-sm font-semibold">{curr} {vat.toFixed(2)}</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs text-muted-foreground">Sub Total</div>
+                      <div className="text-sm font-bold text-emerald-600">{curr} {subTotal.toFixed(2)}</div>
+                    </div>
+                  </div>
+                );
+              })()}
             </TabsContent>
 
             {/* Sale Tab */}
@@ -866,28 +978,88 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                       value={formData.saleTax}
                       onValueChange={(v) => {
                         handleInputChange("saleTax", v);
-                        if (v !== "Custom") handleInputChange("saleCustomTax", "");
+                        if (v !== "Custom") {
+                          handleInputChange("saleCustomTax", "");
+                          handleInputChange("saleCustomTaxAmount", "");
+                        }
                       }}
                       triggerClassName="bg-background border-border h-8 text-xs"
                       searchPlaceholder="Search..."
                       disabled={isSaleLocked}
                     />
                     {formData.saleTax === "Custom" && (
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        max="100"
-                        value={formData.saleCustomTax}
-                        onChange={(e) => handleInputChange("saleCustomTax", e.target.value)}
-                        placeholder="0.00"
-                        className="bg-background border-border h-8 text-xs"
-                        disabled={isSaleLocked}
-                      />
+                      <div className="flex gap-1">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="100"
+                          value={formData.saleCustomTax}
+                          onChange={(e) => {
+                            const pct = parseFloat(e.target.value) || 0;
+                            const lcy = parseFloat(formData.saleLCYAmount) || 0;
+                            setFormData(prev => ({
+                              ...prev,
+                              saleCustomTax: e.target.value,
+                              saleCustomTaxAmount: lcy > 0 ? ((lcy * pct) / 100).toFixed(2) : "0.00",
+                            }));
+                          }}
+                          placeholder="%"
+                          className="bg-background border-border h-8 text-xs w-1/2"
+                          disabled={isSaleLocked}
+                        />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={formData.saleCustomTaxAmount}
+                          onChange={(e) => {
+                            const amt = parseFloat(e.target.value) || 0;
+                            const lcy = parseFloat(formData.saleLCYAmount) || 0;
+                            setFormData(prev => ({
+                              ...prev,
+                              saleCustomTaxAmount: e.target.value,
+                              saleCustomTax: lcy > 0 ? ((amt / lcy) * 100).toFixed(2) : "0.00",
+                            }));
+                          }}
+                          placeholder="Amount"
+                          className="bg-background border-border h-8 text-xs w-1/2"
+                          disabled={isSaleLocked}
+                        />
+                      </div>
                     )}
                   </div>
                 </div>
               </div>
+              {(() => {
+                const lcy = parseFloat(formData.saleLCYAmount) || 0;
+                let vat = 0;
+                if (formData.saleTax === "Custom") {
+                  if (formData.saleCustomTaxAmount) vat = parseFloat(formData.saleCustomTaxAmount) || 0;
+                  else { const pct = parseFloat(formData.saleCustomTax) || 0; vat = (lcy * pct) / 100; }
+                } else {
+                  const pct = parseFloat(formData.saleTax?.replace('%', '') || '0') || 0;
+                  vat = (lcy * pct) / 100;
+                }
+                const subTotal = lcy + vat;
+                const curr = formData.saleCurrency || "USD";
+                return (
+                  <div className="flex items-center justify-end gap-6 pt-2 border-t border-border mt-2">
+                    <div className="text-center">
+                      <div className="text-xs text-muted-foreground">Total Sale</div>
+                      <div className="text-sm font-semibold">{curr} {lcy.toFixed(2)}</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs text-muted-foreground">VAT</div>
+                      <div className="text-sm font-semibold">{curr} {vat.toFixed(2)}</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs text-muted-foreground">Sub Total</div>
+                      <div className="text-sm font-bold text-emerald-600">{curr} {subTotal.toFixed(2)}</div>
+                    </div>
+                  </div>
+                );
+              })()}
             </TabsContent>
           </Tabs>
 

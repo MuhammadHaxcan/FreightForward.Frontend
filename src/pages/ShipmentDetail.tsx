@@ -75,10 +75,12 @@ import {
   ShipmentStatus,
   ShipmentDirection,
   ShipmentMode,
+  ShipmentType,
   BLServiceType,
   FreightType,
   PaymentStatus,
 } from "@/services/api";
+import { hrEmployeeApi } from "@/services/api/hr";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 // Helper function to get payment status display and styling
@@ -130,6 +132,30 @@ const mapDisplayToDirection = (direction: string): string => {
   return direction === 'Cross-Trade' ? 'CrossTrade' : direction;
 };
 
+const mapShipmentType = (type: string): ShipmentType => {
+  const map: Record<string, ShipmentType> = {
+    'Console Shipment': 'ConsoleShipment',
+    'Non-Console Shipment': 'NonConsoleShipment',
+  };
+  return map[type] || 'NonConsoleShipment';
+};
+
+const mapShipmentTypeToDisplay = (type: string): string => {
+  const map: Record<string, string> = {
+    'ConsoleShipment': 'Console Shipment',
+    'NonConsoleShipment': 'Non-Console Shipment',
+  };
+  return map[type] || type;
+};
+
+// Helper to format port label based on selected mode
+const getPortLabel = (port: { seaPortName?: string; seaPortCode?: string; airPortName?: string; airPortCode?: string; city?: string; country?: string }, mode: string): string => {
+  if (mode === 'Air Freight') {
+    return `${port.airPortName || ''}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`;
+  }
+  return `${port.seaPortName || ''}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} - ${port.city}, ${port.country}`;
+};
+
 // Empty initial form data
 const emptyFormData = {
   jobNumber: "",
@@ -137,6 +163,7 @@ const emptyFormData = {
   jobStatus: "",
   direction: "",
   mode: "",
+  shipmentType: "",
   incoTermId: "",
   houseBLNo: "",
   houseBLDate: "",
@@ -303,6 +330,14 @@ const ShipmentDetail = () => {
   });
   const networkPartners = useMemo(() => networkPartnersResponse?.data ?? [], [networkPartnersResponse?.data]);
 
+  // Fetch Employees for Assign To dropdown
+  const { data: employeesResponse, isLoading: isLoadingEmployees } = useQuery({
+    queryKey: ['employees', 'dropdown'],
+    queryFn: () => hrEmployeeApi.getDropdown(),
+    staleTime: 60 * 60 * 1000,
+  });
+  const employees = useMemo(() => employeesResponse?.data ?? [], [employeesResponse?.data]);
+
   // Fetch BL Types
   const { data: blTypesResponse } = useQuery({
     queryKey: ['blTypes', 'all'],
@@ -360,6 +395,7 @@ const ShipmentDetail = () => {
         jobStatus: shipmentData.jobStatus,
         direction: mapDirectionToDisplay(shipmentData.direction),
         mode: mapModeToDisplay(shipmentData.mode),
+        shipmentType: mapShipmentTypeToDisplay(shipmentData.shipmentType || 'NonConsoleShipment'),
         incoTermId: shipmentData.incoTermId?.toString() || '',
         houseBLNo: shipmentData.houseBLNo || '',
         // Use correct field names from backend DTO (camelCase of HblDate, HblStatus, etc.)
@@ -852,6 +888,7 @@ const ShipmentDetail = () => {
           jobStatus: (formData.jobStatus || 'Opened') as ShipmentStatus,
           direction: mapDisplayToDirection(formData.direction) as ShipmentDirection,
           mode: mapDisplayToMode(formData.mode) as ShipmentMode,
+          shipmentType: mapShipmentType(formData.shipmentType),
           incoTermId: formData.incoTermId ? parseInt(formData.incoTermId) : undefined,
           hblNo: formData.houseBLNo || undefined,
           hblDate: formData.houseBLDate || undefined,
@@ -1011,7 +1048,7 @@ const ShipmentDetail = () => {
               {/* Section 1: Basic Shipment Details */}
               <div className="bg-card border border-border rounded-lg p-6 space-y-4">
                 <h3 className="text-emerald-600 font-semibold text-lg border-b border-border pb-2">Basic Shipment Details</h3>
-                <div className="grid grid-cols-6 gap-4">
+                <div className="grid grid-cols-7 gap-4">
                   <div>
                     <Label className="text-sm">Job Number</Label>
                     <Input value={formData.jobNumber} readOnly className="bg-muted" />
@@ -1066,6 +1103,17 @@ const ShipmentDetail = () => {
                         }));
                       }}
                       searchPlaceholder="Search modes..."
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm">Shipment Type</Label>
+                    <SearchableSelect
+                      options={[
+                        { value: "Console Shipment", label: "Console Shipment" },
+                        { value: "Non-Console Shipment", label: "Non-Console Shipment" },
+                      ]}
+                      value={formData.shipmentType}
+                      onValueChange={(v) => handleInputChange("shipmentType", v)}
                     />
                   </div>
                   <div>
@@ -1214,7 +1262,7 @@ const ShipmentDetail = () => {
                 </div>
 
                 {/* Additional B/L Info */}
-                <div className="grid grid-cols-4 gap-4 pt-2">
+                <div className="grid grid-cols-5 gap-4 pt-2">
                   <div>
                     <Label className="text-sm">Place of BL Issue</Label>
                     <Input value={formData.placeOfBLIssue} onChange={(e) => handleInputChange("placeOfBLIssue", e.target.value)} placeholder="Place of BL Issue" />
@@ -1241,6 +1289,20 @@ const ShipmentDetail = () => {
                       emptyMessage={isLoadingNetworkPartners ? "Loading..." : "No partners found"}
                     />
                   </div>
+                  <div>
+                    <Label className="text-sm">Assign To</Label>
+                    <SearchableSelect
+                      options={employees.map(emp => ({
+                        value: emp.fullName,
+                        label: `${emp.employeeCode} - ${emp.fullName}`,
+                      }))}
+                      value={formData.assignedTo}
+                      onValueChange={(v) => handleInputChange("assignedTo", v)}
+                      placeholder="Select"
+                      searchPlaceholder="Search employees..."
+                      emptyMessage={isLoadingEmployees ? "Loading..." : "No employees found"}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -1257,7 +1319,7 @@ const ShipmentDetail = () => {
                       <SearchableSelect
                         options={ports.map(port => ({
                           value: port.id.toString(),
-                          label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
+                          label: getPortLabel(port, formData.mode),
                         }))}
                         value={formData.placeOfReceipt}
                         onValueChange={(v) => handleInputChange("placeOfReceipt", v)}
@@ -1271,7 +1333,7 @@ const ShipmentDetail = () => {
                       <SearchableSelect
                         options={ports.map(port => ({
                           value: port.id.toString(),
-                          label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
+                          label: getPortLabel(port, formData.mode),
                         }))}
                         value={formData.portOfReceipt}
                         onValueChange={(v) => {
@@ -1289,7 +1351,7 @@ const ShipmentDetail = () => {
                       <SearchableSelect
                         options={ports.map(port => ({
                           value: port.id.toString(),
-                          label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
+                          label: getPortLabel(port, formData.mode),
                         }))}
                         value={formData.portOfLoading}
                         onValueChange={(v) => {
@@ -1314,7 +1376,7 @@ const ShipmentDetail = () => {
                       <SearchableSelect
                         options={ports.map(port => ({
                           value: port.id.toString(),
-                          label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
+                          label: getPortLabel(port, formData.mode),
                         }))}
                         value={formData.portOfDischarge}
                         onValueChange={(v) => {
@@ -1332,7 +1394,7 @@ const ShipmentDetail = () => {
                       <SearchableSelect
                         options={ports.map(port => ({
                           value: port.id.toString(),
-                          label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
+                          label: getPortLabel(port, formData.mode),
                         }))}
                         value={formData.portOfFinalDestination}
                         onValueChange={(v) => {
@@ -1350,7 +1412,7 @@ const ShipmentDetail = () => {
                       <SearchableSelect
                         options={ports.map(port => ({
                           value: port.id.toString(),
-                          label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
+                          label: getPortLabel(port, formData.mode),
                         }))}
                         value={formData.placeOfDelivery}
                         onValueChange={(v) => handleInputChange("placeOfDelivery", v)}

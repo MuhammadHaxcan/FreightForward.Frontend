@@ -424,7 +424,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
         )
         .map(charge => {
           const costFCY = parseFloat(charge.costFCY) || 0;
-          const exRate = getInvoiceExRate(charge.costCurrencyId || 1);
+          const exRate = getChargeExRate(charge);
           return {
             id: existingItemIds.get(charge.id) || undefined,
             shipmentCostingId: charge.id,
@@ -480,7 +480,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
         )
         .map(charge => {
           const costFCY = parseFloat(charge.costFCY) || 0;
-          const exRate = getInvoiceExRate(charge.costCurrencyId || 1);
+          const exRate = getChargeExRate(charge);
           return {
             shipmentCostingId: charge.id,
             chargeDetails: charge.description || '',
@@ -542,14 +542,20 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
     return (chargeCurrency.roe || 1) / invoiceRoe;
   };
 
+  const getChargeExRate = (charge: ShipmentCosting): number => {
+    const savedExRate = parseFloat(charge.costExRate as string);
+    if (savedExRate && savedExRate > 0) return savedExRate;
+    return getInvoiceExRate(charge.costCurrencyId || 1);
+  };
+
   const totalCost = selectedChargesData.reduce((sum, c) => {
     const fcy = parseFloat(c.costFCY || 0);
-    const exRate = getInvoiceExRate(c.costCurrencyId || 1);
+    const exRate = getChargeExRate(c);
     return sum + fcy * exRate;
   }, 0);
   const totalTax = selectedChargesData.reduce((sum, c) => {
     const fcy = parseFloat(c.costFCY || 0);
-    const exRate = getInvoiceExRate(c.costCurrencyId || 1);
+    const exRate = getChargeExRate(c);
     const localAmt = fcy * exRate;
     const taxPct = parseFloat(c.costTaxPercentage || 0);
     return sum + localAmt * taxPct / 100;
@@ -705,8 +711,8 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
                       <TableCell className="text-xs py-2">{charge.costUnit}</TableCell>
                       <TableCell className="text-xs py-2">{currencies.find(c => c.id === charge.costCurrencyId)?.code || charge.costCurrencyCode || ""}</TableCell>
                       <TableCell className="text-xs py-2">{charge.costFCY}</TableCell>
-                      <TableCell className="text-xs py-2">{getInvoiceExRate(charge.costCurrencyId || 1).toFixed(3)}</TableCell>
-                      <TableCell className="text-xs py-2">{(parseFloat(charge.costFCY || 0) * getInvoiceExRate(charge.costCurrencyId || 1)).toFixed(2)}</TableCell>
+                      <TableCell className="text-xs py-2">{getChargeExRate(charge).toFixed(3)}</TableCell>
+                      <TableCell className="text-xs py-2">{(parseFloat(charge.costFCY || 0) * getChargeExRate(charge)).toFixed(2)}</TableCell>
                     </TableRow>
                   ))
                 )}
