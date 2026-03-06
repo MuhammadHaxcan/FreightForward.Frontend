@@ -39,6 +39,11 @@ interface InvoiceSaveResult {
   charges: number[];
 }
 
+interface HouseBLOption {
+  id: number;
+  houseBLNo?: string;
+}
+
 interface InvoiceModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -47,6 +52,7 @@ interface InvoiceModalProps {
   parties: ShipmentParty[];
   onSave: (invoice: InvoiceSaveResult) => void | Promise<void>;
   editInvoiceId?: number | null;
+  houseBLs?: HouseBLOption[];
 }
 
 // Helper function to deduplicate parties by customerId
@@ -60,7 +66,7 @@ const deduplicateByCustomerId = (partyList: ShipmentParty[]): ShipmentParty[] =>
   });
 };
 
-export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, parties, onSave, editInvoiceId }: InvoiceModalProps) {
+export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, parties, onSave, editInvoiceId, houseBLs }: InvoiceModalProps) {
   const baseCurrencyCode = useBaseCurrency();
   const createInvoiceMutation = useCreateInvoice();
   const updateInvoiceMutation = useUpdateInvoice();
@@ -88,6 +94,8 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
   const [costingModalOpen, setCostingModalOpen] = useState(false);
   const [editingCostingForModal, setEditingCostingForModal] = useState<CostingModalData | undefined>(undefined);
   const [pendingAutoSelect, setPendingAutoSelect] = useState<number | null>(null);
+
+  const [hblFilter, setHblFilter] = useState<string>("all");
 
   const [formData, setFormData] = useState({
     invoiceId: "",
@@ -120,6 +128,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
       setCostingModalOpen(false);
       setEditingCostingForModal(undefined);
       setPendingAutoSelect(null);
+      setHblFilter("all");
 
       // Fetch currency types
       settingsApi.getAllCurrencyTypes().then(response => {
@@ -207,6 +216,13 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
       return hasValidSale || isFromThisInvoice;
     });
   }, [localCostings, formData.customerId, debtorParties, editInvoiceData]);
+
+  // Apply HBL filter on top of filteredCharges for display
+  const displayedCharges = useMemo(() => {
+    if (!houseBLs || houseBLs.length === 0 || hblFilter === "all") return filteredCharges;
+    const hblId = parseInt(hblFilter);
+    return filteredCharges.filter(c => c.houseBLId === hblId);
+  }, [filteredCharges, hblFilter, houseBLs]);
 
   // Update currency when company selection changes (only in create mode)
   useEffect(() => {
@@ -388,10 +404,21 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
   };
 
   const handleCheckAll = (checked: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      selectedCharges: checked ? filteredCharges.map(c => c.id) : []
-    }));
+    if (checked) {
+      // Add all displayed charges to selection (merge with existing selections)
+      const displayedIds = displayedCharges.map(c => c.id);
+      setFormData(prev => ({
+        ...prev,
+        selectedCharges: [...new Set([...prev.selectedCharges, ...displayedIds])],
+      }));
+    } else {
+      // Remove all displayed charges from selection
+      const displayedIds = new Set(displayedCharges.map(c => c.id));
+      setFormData(prev => ({
+        ...prev,
+        selectedCharges: prev.selectedCharges.filter(id => !displayedIds.has(id)),
+      }));
+    }
   };
 
   const isSaving = createInvoiceMutation.isPending || updateInvoiceMutation.isPending;
@@ -615,13 +642,30 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
           {/* Charges Details */}
           <div className="space-y-3">
             <h3 className="text-primary font-semibold text-sm">Charges Details</h3>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="checkAll"
-                checked={formData.selectedCharges.length === filteredCharges.length && filteredCharges.length > 0}
-                onCheckedChange={(checked) => handleCheckAll(checked as boolean)}
-              />
-              <Label htmlFor="checkAll" className="text-xs">Check All</Label>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="checkAll"
+                  checked={displayedCharges.length > 0 && displayedCharges.every(c => formData.selectedCharges.includes(c.id))}
+                  onCheckedChange={(checked) => handleCheckAll(checked as boolean)}
+                />
+                <Label htmlFor="checkAll" className="text-xs">Check All</Label>
+              </div>
+              {houseBLs && houseBLs.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs font-medium">House B/L:</Label>
+                  <SearchableSelect
+                    options={[
+                      { value: "all", label: "All House B/Ls" },
+                      ...houseBLs.map(hbl => ({ value: hbl.id.toString(), label: hbl.houseBLNo || `HBL #${hbl.id}` })),
+                    ]}
+                    value={hblFilter}
+                    onValueChange={setHblFilter}
+                    triggerClassName="w-[180px] h-8 text-xs bg-background border-border"
+                    searchPlaceholder="Search HBL..."
+                  />
+                </div>
+              )}
             </div>
 
             <Table>
@@ -640,16 +684,18 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCharges.length === 0 ? (
+                {displayedCharges.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={10} className="text-center text-muted-foreground text-xs py-4">
                       {!formData.customerId
                         ? "Select a debtor to see available charges"
-                        : "No uninvoiced charges assigned to this debtor"}
+                        : hblFilter !== "all"
+                          ? "No charges found for the selected House B/L"
+                          : "No uninvoiced charges assigned to this debtor"}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredCharges.map((charge, index) => (
+                  displayedCharges.map((charge, index) => (
                     <TableRow key={charge.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
                       <TableCell className="py-2">
                         <Checkbox

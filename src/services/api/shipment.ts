@@ -45,6 +45,7 @@ export interface Shipment {
   status?: string;
   createdAt: string;
   latestEvent?: LatestStatusEvent;
+  houseBLCount: number;
 }
 
 export interface ShipmentDetail extends Shipment {
@@ -86,6 +87,7 @@ export interface ShipmentDetail extends Shipment {
   cargos: ShipmentCargo[];
   documents: ShipmentDocument[];
   statusLogs: ShipmentStatusLog[];
+  houseBLs: ShipmentHouseBL[];
 }
 
 export interface ShipmentParty {
@@ -98,6 +100,8 @@ export interface ShipmentParty {
   mobile?: string;
   phone?: string;
   email?: string;
+  houseBLId?: number;
+  houseBLNo?: string;
 }
 
 export interface ShipmentContainer {
@@ -150,6 +154,11 @@ export interface ShipmentCosting {
   saleInvoiced: boolean;
   purchaseInvoiced: boolean;
   ppcc?: string;
+  houseBLId?: number;
+  houseBLNo?: string;
+  isMasterCost: boolean;
+  proratedFromCostingId?: number;
+  prorationMethod?: string;
 }
 
 export interface ShipmentCargo {
@@ -160,6 +169,8 @@ export interface ShipmentCargo {
   totalCBM?: number;
   totalWeight?: number;
   description?: string;
+  houseBLId?: number;
+  houseBLNo?: string;
 }
 
 export interface AddShipmentCargoRequest {
@@ -168,6 +179,7 @@ export interface AddShipmentCargoRequest {
   totalCBM?: number | null;
   totalWeight?: number | null;
   description?: string;
+  houseBLId?: number | null;
 }
 
 export interface UpdateShipmentCargoRequest extends AddShipmentCargoRequest {
@@ -289,6 +301,7 @@ export interface AddShipmentPartyRequest {
   mobile?: string;
   phone?: string;
   email?: string;
+  houseBLId?: number;
 }
 
 export interface AddShipmentContainerRequest {
@@ -346,6 +359,8 @@ export interface AddShipmentCostingRequest {
   costReferenceNo?: string;
   costDate?: string;
   ppcc?: string;
+  houseBLId?: number;
+  isMasterCost?: boolean;
 }
 
 export interface UpdateShipmentCostingRequest {
@@ -379,6 +394,89 @@ export interface UpdateShipmentCostingRequest {
   costReferenceNo?: string;
   costDate?: string;
   ppcc?: string;
+  houseBLId?: number;
+  isMasterCost?: boolean;
+}
+
+// House BL Types
+export type ProrationMethod = 'ByWeight' | 'ByCBM' | 'EqualSplit' | 'Manual';
+
+export interface ContainerHouseBLAllocation {
+  id?: number;
+  shipmentContainerId: number;
+  containerNumber?: string;
+  containerTypeName?: string;
+  houseBLId: number;
+  pieces: number;
+  grossWeight: number;
+  volume: number;
+}
+
+export interface ShipmentHouseBL {
+  id: number;
+  houseBLNo?: string;
+  houseBLDate?: string;
+  houseBLStatus?: string;
+  hblServiceType?: string;
+  hblNoBLIssued?: string;
+  hblFreight?: string;
+  shipperName?: string;
+  consigneeName?: string;
+  notifyPartyName?: string;
+  marksNumbers?: string;
+  notes?: string;
+  totalWeight: number;
+  totalCBM: number;
+  totalSaleLCY: number;
+  totalCostLCY: number;
+  gp: number;
+  containerAllocations?: ContainerHouseBLAllocation[];
+}
+
+export interface CreateShipmentHouseBLRequest {
+  houseBLNo?: string;
+  houseBLDate?: string;
+  houseBLStatus?: string;
+  hblServiceType?: BLServiceType;
+  hblNoBLIssued?: string;
+  hblFreight?: FreightType;
+  shipperName?: string;
+  consigneeName?: string;
+  notifyPartyName?: string;
+  marksNumbers?: string;
+  notes?: string;
+  containerAllocations?: { shipmentContainerId: number; pieces: number; grossWeight: number; volume: number }[];
+}
+
+export interface ProrationPreview {
+  costingId: number;
+  description: string;
+  totalAmount: number;
+  method: ProrationMethod;
+  allocations: ProrationAllocation[];
+  costCurrencyId?: number;
+  costCurrencyCode?: string;
+  costExRate: number;
+  ppcc?: string;
+}
+
+export interface ProrationAllocation {
+  houseBLId: number;
+  houseBLNo?: string;
+  weight: number;
+  cbm: number;
+  allocationPercent: number;
+  allocatedAmount: number;
+  debtors?: { customerId?: number; customerName: string }[];
+}
+
+export interface ProrateRequest {
+  method: ProrationMethod;
+  manualAllocations?: Record<number, number>;
+  billToAllocations?: Record<number, number>;
+  saleCurrencyId?: number;
+  saleExRate?: number;
+  saleTaxPercentage?: number;
 }
 
 // Shipment Invoice Types
@@ -505,6 +603,33 @@ export const shipmentApi = {
       body: JSON.stringify(data),
     }),
   deleteStatusLog: (statusLogId: number) => fetchApi<void>(`/shipments/status-logs/${statusLogId}`, { method: 'DELETE' }),
+
+  // House BLs
+  getHouseBLs: (shipmentId: number) =>
+    fetchApi<ShipmentHouseBL[]>(`/shipments/${shipmentId}/house-bls`),
+  addHouseBL: (shipmentId: number, data: CreateShipmentHouseBLRequest) =>
+    fetchApi<number>(`/shipments/${shipmentId}/house-bls`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateHouseBL: (houseBLId: number, data: CreateShipmentHouseBLRequest) =>
+    fetchApi<void>(`/shipments/house-bls/${houseBLId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deleteHouseBL: (houseBLId: number) =>
+    fetchApi<void>(`/shipments/house-bls/${houseBLId}`, { method: 'DELETE' }),
+
+  // Proration
+  getProrationPreview: (shipmentId: number, costingId: number, method: ProrationMethod) =>
+    fetchApi<ProrationPreview>(`/shipments/${shipmentId}/costings/${costingId}/proration-preview?method=${method}`),
+  prorate: (shipmentId: number, costingId: number, data: ProrateRequest) =>
+    fetchApi<void>(`/shipments/${shipmentId}/costings/${costingId}/prorate`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  removeProration: (shipmentId: number, costingId: number) =>
+    fetchApi<void>(`/shipments/${shipmentId}/costings/${costingId}/prorate`, { method: 'DELETE' }),
 
   // Invoices
   getInvoices: (shipmentId: number) =>

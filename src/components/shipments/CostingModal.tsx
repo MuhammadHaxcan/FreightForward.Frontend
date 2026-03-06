@@ -36,13 +36,16 @@ interface CostingModalProps {
   defaultBillToCustomerId?: number;
   defaultVendorCustomerId?: number;
   defaultActiveTab?: "cost" | "sale";
+  houseBLId?: number;
+  isMasterCost?: boolean;
+  houseBLs?: Array<{ id: number; houseBLNo?: string }>;
 }
 
 const ppccOptions = ["Prepaid", "Postpaid"];
 const taxOptions = ["0%", "5%", "10%", "15%", "Custom"];
 const standardTaxValues = [0, 5, 10, 15];
 
-export function CostingModal({ open, onOpenChange, parties, costing, onSave, defaultBillToCustomerId, defaultVendorCustomerId, defaultActiveTab }: CostingModalProps) {
+export function CostingModal({ open, onOpenChange, parties, costing, onSave, defaultBillToCustomerId, defaultVendorCustomerId, defaultActiveTab, houseBLId, isMasterCost, houseBLs }: CostingModalProps) {
   const baseCurrencyCode = useBaseCurrency();
   const LOCAL_CURRENCY = baseCurrencyCode;
 
@@ -84,6 +87,11 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
     });
   };
 
+  // Track selected House BL for linking costs to specific HBLs
+  const [selectedHouseBLId, setSelectedHouseBLId] = useState<number | undefined>(
+    costing?.houseBLId ?? houseBLId
+  );
+
   // Filter parties by master type and deduplicate by customerId
   // (same customer may appear with different party types)
   const creditorParties = useMemo(() =>
@@ -91,10 +99,17 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
     [parties]
   );
 
-  const debtorParties = useMemo(() =>
-    deduplicateByCustomerId(parties.filter(p => p.masterType === 'Debtors')),
-    [parties]
-  );
+  const debtorParties = useMemo(() => {
+    const allDebtors = parties.filter(p => p.masterType === 'Debtors');
+    const effectiveHouseBLId = selectedHouseBLId ?? costing?.houseBLId ?? houseBLId;
+    if (effectiveHouseBLId) {
+      // HBL-specific: show this HBL's debtors + shipment-level debtors
+      return deduplicateByCustomerId(
+        allDebtors.filter(p => p.houseBLId === effectiveHouseBLId || !p.houseBLId)
+      );
+    }
+    return deduplicateByCustomerId(allDebtors);
+  }, [parties, selectedHouseBLId, costing?.houseBLId, houseBLId]);
 
   const getDefaultFormData = () => ({
     charge: "",
@@ -135,14 +150,18 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
   const [formData, setFormData] = useState(getDefaultFormData());
   const formInitializedRef = useRef(false);
 
+  // Resolve effective isMasterCost from prop or costing data
+  const effectiveIsMasterCost = isMasterCost ?? costing?.isMasterCost ?? false;
+
   // Reset ref when modal closes, set active tab when opening
   useEffect(() => {
     if (!open) {
       formInitializedRef.current = false;
     } else {
-      setActiveTab(defaultActiveTab || "cost");
+      setActiveTab(effectiveIsMasterCost ? "cost" : (defaultActiveTab || "cost"));
+      setSelectedHouseBLId(costing?.houseBLId ?? houseBLId ?? undefined);
     }
-  }, [open, defaultActiveTab]);
+  }, [open, defaultActiveTab, effectiveIsMasterCost, costing?.houseBLId, houseBLId]);
 
   // Set default currency IDs when currencyTypes load for new entries
   useEffect(() => {
@@ -522,6 +541,8 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
       billToName: formData.saleBillToName,
       costReferenceNo: formData.costReferenceNo || null,
       costDate: formData.costDate || null,
+      houseBLId: selectedHouseBLId ?? costing?.houseBLId ?? houseBLId,
+      isMasterCost: costing?.isMasterCost ?? isMasterCost,
     });
     onOpenChange(false);
   };
@@ -547,6 +568,30 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                     ? "Sale side is locked (invoiced). Delete the invoice to edit sale fields."
                     : "Cost side is locked (invoiced). Delete the purchase invoice to edit cost fields."}
               </span>
+            </div>
+          )}
+
+          {/* House BL Assignment - only for non-master, when HBLs exist */}
+          {houseBLs && houseBLs.length > 0 && !effectiveIsMasterCost && (
+            <div className="grid grid-cols-4 gap-3">
+              <div className="col-span-2">
+                <Label className="text-xs font-medium">House B/L</Label>
+                <SearchableSelect
+                  options={[
+                    { value: "", label: "Shipment Level" },
+                    ...houseBLs.map(hbl => ({
+                      value: hbl.id.toString(),
+                      label: hbl.houseBLNo || `HBL #${hbl.id}`,
+                    })),
+                  ]}
+                  value={selectedHouseBLId?.toString() || ""}
+                  onValueChange={(v) => setSelectedHouseBLId(v ? parseInt(v) : undefined)}
+                  placeholder="Shipment Level"
+                  searchPlaceholder="Search HBLs..."
+                  triggerClassName="bg-background border-border h-9"
+                  disabled={isFullyLocked || !!costing?.proratedFromCostingId}
+                />
+              </div>
             </div>
           )}
 
@@ -635,9 +680,11 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
               <TabsTrigger
                 value="sale"
                 className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-sm h-8"
+                disabled={effectiveIsMasterCost}
               >
                 Sale
-                {isSaleLocked && <Lock className="h-3 w-3 ml-1" />}
+                {effectiveIsMasterCost && <span className="text-[10px] ml-1">(N/A)</span>}
+                {isSaleLocked && !effectiveIsMasterCost && <Lock className="h-3 w-3 ml-1" />}
               </TabsTrigger>
             </TabsList>
 

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+
 import { DateInput } from "@/components/ui/date-input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
@@ -35,6 +36,8 @@ import { PurchaseModal } from "@/components/shipments/PurchaseModal";
 import { DocumentModal } from "@/components/shipments/DocumentModal";
 import { StatusLogModal } from "@/components/shipments/StatusLogModal";
 import { StatusTimeline } from "@/components/shipments/StatusTimeline";
+import { HouseBLModal } from "@/components/shipments/HouseBLModal";
+import { ProrationModal } from "@/components/shipments/ProrationModal";
 import { DeleteConfirmationModal } from "@/components/ui/delete-confirmation-modal";
 import { toast } from "sonner";
 import { getTodayDateOnly } from "@/lib/utils";
@@ -79,6 +82,7 @@ import {
   FreightType,
   PaymentStatus,
 } from "@/services/api";
+import type { ShipmentHouseBL } from "@/services/api/shipment";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 // Helper function to get payment status display and styling
@@ -138,12 +142,7 @@ const emptyFormData = {
   direction: "",
   mode: "",
   incoTermId: "",
-  houseBLNo: "",
-  houseBLDate: "",
-  houseBLStatus: "",
-  hblServiceType: "",
-  hblNoBLIssued: "",
-  hblFreight: "",
+
   mblNumber: "",
   mblDate: "",
   mblStatus: "",
@@ -210,6 +209,7 @@ const ShipmentDetail = () => {
   const [formData, setFormData] = useState(emptyFormData);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
+  const [selectedHouseBLId, setSelectedHouseBLId] = useState<string>("");
   const [cargoDetails, setCargoDetails] = useState<ShipmentCargo[]>([]);
   const [newCargoEntry, setNewCargoEntry] = useState({ quantity: "", packageTypeId: "", totalCBM: "", totalWeight: "", description: "" });
   const [isSavingCargo, setIsSavingCargo] = useState(false);
@@ -244,6 +244,17 @@ const ShipmentDetail = () => {
     filePath?: string;
   } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // House BL states
+  const [houseBLModalOpen, setHouseBLModalOpen] = useState(false);
+  const [editingHouseBL, setEditingHouseBL] = useState<ShipmentHouseBL | null>(null);
+
+  const [newCostingIsMaster, setNewCostingIsMaster] = useState(false);
+  const [costingHBLFilter, setCostingHBLFilter] = useState<string>("all");
+  const [prorationModalOpen, setProrationModalOpen] = useState(false);
+  const [prorationCostingId, setProrationCostingId] = useState<number>(0);
+  const [prorationDescription, setProrationDescription] = useState('');
+  const [prorationAmount, setProrationAmount] = useState(0);
 
   // Reports dialog state
   const [showReportsDialog, setShowReportsDialog] = useState(false);
@@ -333,6 +344,16 @@ const ShipmentDetail = () => {
   const costings = shipmentData?.costings || [];
   const parties = shipmentData?.parties || [];
 
+  // Filter costings by House BL
+  const filteredCostings = useMemo(() => {
+    if (costingHBLFilter === "all") return costings;
+    if (costingHBLFilter === "shipment") return costings.filter(c => !c.houseBLId && !c.isMasterCost);
+    if (costingHBLFilter === "master") return costings.filter(c => c.isMasterCost);
+    // Filter by specific HBL id
+    const hblId = parseInt(costingHBLFilter);
+    return costings.filter(c => c.houseBLId === hblId);
+  }, [costings, costingHBLFilter]);
+
   // Parse selected category ID for customer filtering
   const parsedCategoryId = selectedCategoryId ? parseInt(selectedCategoryId) : undefined;
 
@@ -361,13 +382,7 @@ const ShipmentDetail = () => {
         direction: mapDirectionToDisplay(shipmentData.direction),
         mode: mapModeToDisplay(shipmentData.mode),
         incoTermId: shipmentData.incoTermId?.toString() || '',
-        houseBLNo: shipmentData.houseBLNo || '',
-        // Use correct field names from backend DTO (camelCase of HblDate, HblStatus, etc.)
-        houseBLDate: shipmentData.hblDate?.split('T')[0] || '',
-        houseBLStatus: shipmentData.hblStatus || '',
-        hblServiceType: shipmentData.hblServiceType || '',
-        hblNoBLIssued: shipmentData.hblNoBLIssued || '',
-        hblFreight: shipmentData.hblFreight || '',
+
         mblNumber: shipmentData.mblNumber || '',
         mblDate: shipmentData.mblDate?.split('T')[0] || '',
         mblStatus: shipmentData.mblStatus || '',
@@ -418,6 +433,7 @@ const ShipmentDetail = () => {
       if (shipmentData.statusLogs) {
         setStatusLogs(shipmentData.statusLogs);
       }
+
     }
   }, [shipmentData]);
 
@@ -440,9 +456,12 @@ const ShipmentDetail = () => {
       return;
     }
 
-    // Check if customer is already added with the SAME category
+    // Check if customer is already added with the SAME category and HBL
+    const parsedHouseBLId = selectedHouseBLId ? parseInt(selectedHouseBLId) : undefined;
     const existingParty = parties.find(
-      p => p.customerId === selectedCustomer.id && p.customerCategoryId === parsedCategoryId
+      p => p.customerId === selectedCustomer.id
+        && p.customerCategoryId === parsedCategoryId
+        && (p.houseBLId || undefined) === parsedHouseBLId
     );
     if (existingParty) {
       const partyLabel = categoryTypes.find(c => c.id.toString() === selectedCategoryId)?.name || "this category";
@@ -461,10 +480,12 @@ const ShipmentDetail = () => {
         mobile: '',
         phone: selectedCustomer.phone || '',
         email: selectedCustomer.email || '',
+        houseBLId: parsedHouseBLId,
       }
     });
 
     setSelectedCustomerId("");
+    setSelectedHouseBLId("");
   };
 
   const handleDeleteParty = (partyId: number, partyName?: string) => {
@@ -576,6 +597,8 @@ const ShipmentDetail = () => {
           costReferenceNo: costingData.costReferenceNo || undefined,
           costDate: costingData.costDate || undefined,
           ppcc: costingData.ppcc || undefined,
+          houseBLId: costingData.houseBLId,
+          isMasterCost: costingData.isMasterCost,
         };
 
         await updateCostingMutation.mutateAsync({ shipmentId, costingId: editingCosting.id, data });
@@ -608,6 +631,8 @@ const ShipmentDetail = () => {
           costReferenceNo: costingData.costReferenceNo || undefined,
           costDate: costingData.costDate || undefined,
           ppcc: costingData.ppcc || undefined,
+          houseBLId: costingData.houseBLId,
+          isMasterCost: costingData.isMasterCost,
         };
 
         await addCostingMutation.mutateAsync({ shipmentId, data });
@@ -853,12 +878,7 @@ const ShipmentDetail = () => {
           direction: mapDisplayToDirection(formData.direction) as ShipmentDirection,
           mode: mapDisplayToMode(formData.mode) as ShipmentMode,
           incoTermId: formData.incoTermId ? parseInt(formData.incoTermId) : undefined,
-          hblNo: formData.houseBLNo || undefined,
-          hblDate: formData.houseBLDate || undefined,
-          hblStatus: formData.houseBLStatus || undefined,
-          hblServiceType: (formData.hblServiceType || undefined) as BLServiceType | undefined,
-          hblNoBLIssued: formData.hblNoBLIssued || undefined,
-          hblFreight: (formData.hblFreight || undefined) as FreightType | undefined,
+
           mblNo: formData.mblNumber || undefined,
           mblDate: formData.mblDate || undefined,
           mblStatus: formData.mblStatus || undefined,
@@ -967,13 +987,19 @@ const ShipmentDetail = () => {
             >
               Shipment Info
             </TabsTrigger>
-            <TabsTrigger 
+            <TabsTrigger
               value="parties"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
             >
               Parties
             </TabsTrigger>
-            <TabsTrigger 
+            <TabsTrigger
+              value="housebls"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
+            >
+              House B/Ls
+            </TabsTrigger>
+            <TabsTrigger
               value="containers"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
             >
@@ -1061,7 +1087,6 @@ const ShipmentDetail = () => {
                         setFormData(prev => ({
                           ...prev,
                           mode: v,
-                          houseBLStatus: isAir ? "HAWB" : "HBL",
                           mblStatus: isAir ? "MAWB" : "MBL",
                         }));
                       }}
@@ -1092,62 +1117,8 @@ const ShipmentDetail = () => {
                 {/* House B/L */}
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium text-muted-foreground">House B/L</h4>
-                  <div className="grid grid-cols-6 gap-4">
-                    <div>
-                      <Label className="text-sm">House B/L No</Label>
-                      <Input value={formData.houseBLNo} onChange={(e) => handleInputChange("houseBLNo", e.target.value)} placeholder="B/L No" />
-                    </div>
-                    <div>
-                      <Label className="text-sm">Date</Label>
-                      <DateInput value={formData.houseBLDate} onChange={(v) => handleInputChange("houseBLDate", v)} />
-                    </div>
-                    <div>
-                      <Label className="text-sm">{formData.mode === 'Air Freight' ? 'AWB Status' : 'BL Status'}</Label>
-                      <SearchableSelect
-                        options={
-                          filteredBLTypes.length > 0
-                            ? filteredBLTypes
-                                .filter(bt => bt.code === 'HBL' || bt.code === 'HAWB' || bt.code === 'EXPRESS')
-                                .map(bt => ({ value: bt.code, label: `${bt.code} - ${bt.name}` }))
-                            : [
-                                { value: "HBL", label: "HBL - House Bill of Lading" },
-                                { value: "EXPRESS", label: "Express Release" },
-                              ]
-                        }
-                        value={formData.houseBLStatus}
-                        onValueChange={(v) => handleInputChange("houseBLStatus", v)}
-                        placeholder="Select"
-                        searchPlaceholder="Search..."
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-sm">BL Service Type</Label>
-                      <SearchableSelect
-                        options={[
-                          { value: "FCLFCL", label: "FCL/FCL" },
-                          { value: "LCLLCL", label: "LCL/LCL" },
-                          { value: "LCLFCL", label: "LCL/FCL" },
-                          { value: "FCLLCL", label: "FCL/LCL" },
-                        ]}
-                        value={formData.hblServiceType}
-                        onValueChange={(v) => handleInputChange("hblServiceType", v)}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-sm">No BL Issued</Label>
-                      <Input value={formData.hblNoBLIssued} onChange={(e) => handleInputChange("hblNoBLIssued", e.target.value)} placeholder="No BL Issued" />
-                    </div>
-                    <div>
-                      <Label className="text-sm">Freight</Label>
-                      <SearchableSelect
-                        options={[
-                          { value: "Prepaid", label: "Prepaid" },
-                          { value: "Collect", label: "Collect" },
-                        ]}
-                        value={formData.hblFreight}
-                        onValueChange={(v) => handleInputChange("hblFreight", v)}
-                      />
-                    </div>
+                  <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-md p-4 text-sm text-blue-700 dark:text-blue-300">
+                    Manage House B/Ls in the <strong>House B/Ls</strong> tab. ({shipmentData?.houseBLs?.length ?? 0} HBL{(shipmentData?.houseBLs?.length ?? 0) !== 1 ? 's' : ''} added)
                   </div>
                 </div>
 
@@ -1473,7 +1444,7 @@ const ShipmentDetail = () => {
             <div className="bg-card border border-border rounded-lg p-6 space-y-6">
               <h3 className="text-emerald-600 font-semibold text-lg">Parties</h3>
 
-              <div className="grid grid-cols-3 gap-4 items-end">
+              <div className={`grid gap-4 items-end ${(shipmentData?.houseBLs?.length ?? 0) > 0 ? 'grid-cols-4' : 'grid-cols-3'}`}>
                 <div>
                   <Label className="text-sm text-red-500">* Customer Type</Label>
                   <SearchableSelect
@@ -1504,6 +1475,24 @@ const ShipmentDetail = () => {
                     searchPlaceholder="Search customers..."
                   />
                 </div>
+                {(shipmentData?.houseBLs?.length ?? 0) > 0 && (
+                  <div>
+                    <Label className="text-sm">House B/L</Label>
+                    <SearchableSelect
+                      options={[
+                        { value: "", label: "Shipment Level" },
+                        ...(shipmentData?.houseBLs || []).map(hbl => ({
+                          value: hbl.id.toString(),
+                          label: hbl.houseBLNo || `HBL #${hbl.id}`,
+                        }))
+                      ]}
+                      value={selectedHouseBLId}
+                      onValueChange={setSelectedHouseBLId}
+                      placeholder="Shipment Level"
+                      searchPlaceholder="Search HBLs..."
+                    />
+                  </div>
+                )}
                 <div>
                   <Button
                     className="btn-success"
@@ -1524,6 +1513,7 @@ const ShipmentDetail = () => {
                       <TableHead className="text-table-header-foreground">Master Type</TableHead>
                       <TableHead className="text-table-header-foreground">Type</TableHead>
                       <TableHead className="text-table-header-foreground">Name</TableHead>
+                      <TableHead className="text-table-header-foreground">House B/L</TableHead>
                       <TableHead className="text-table-header-foreground">Mobile</TableHead>
                       <TableHead className="text-table-header-foreground">Phone</TableHead>
                       <TableHead className="text-table-header-foreground">Email</TableHead>
@@ -1533,7 +1523,7 @@ const ShipmentDetail = () => {
                   <TableBody>
                     {parties.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                           No parties added yet
                         </TableCell>
                       </TableRow>
@@ -1552,6 +1542,7 @@ const ShipmentDetail = () => {
                           <TableCell>{party.masterType}</TableCell>
                           <TableCell className="text-emerald-600">{party.customerCategoryName || "-"}</TableCell>
                           <TableCell className="text-emerald-600">{party.customerName}</TableCell>
+                          <TableCell>{party.houseBLNo || "Shipment"}</TableCell>
                           <TableCell>{party.mobile || "-"}</TableCell>
                           <TableCell>{party.phone || "-"}</TableCell>
                           <TableCell className="text-emerald-600">{party.email || "-"}</TableCell>
@@ -1690,6 +1681,91 @@ const ShipmentDetail = () => {
             </div>
           </TabsContent>
 
+          {/* House B/Ls Tab */}
+          <TabsContent value="housebls" className="mt-0">
+            <div className="bg-card border border-border rounded-lg p-6 space-y-6">
+              <div className="flex justify-between items-center">
+                <h3 className="text-emerald-600 font-semibold text-lg">House B/Ls</h3>
+                <Button
+                  size="sm"
+                  className="btn-success h-9 px-4"
+                  onClick={() => {
+                    setEditingHouseBL(null);
+                    setHouseBLModalOpen(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-1.5" />
+                  Add House B/L
+                </Button>
+              </div>
+
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-table-header">
+                      <TableHead className="text-table-header-foreground">S.No</TableHead>
+                      <TableHead className="text-table-header-foreground">HBL No</TableHead>
+                      <TableHead className="text-table-header-foreground">Date</TableHead>
+                      <TableHead className="text-table-header-foreground">Status</TableHead>
+                      <TableHead className="text-table-header-foreground">Weight</TableHead>
+                      <TableHead className="text-table-header-foreground">CBM</TableHead>
+                      <TableHead className="text-table-header-foreground">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {!shipmentData?.houseBLs?.length ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">No House B/Ls</TableCell>
+                      </TableRow>
+                    ) : (
+                      shipmentData.houseBLs.map((hbl, index) => (
+                        <TableRow key={hbl.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
+                          <TableCell>{index + 1}</TableCell>
+                          <TableCell className="text-emerald-600">{hbl.houseBLNo || '-'}</TableCell>
+                          <TableCell>{hbl.houseBLDate?.split('T')[0] || '-'}</TableCell>
+                          <TableCell>{hbl.houseBLStatus || '-'}</TableCell>
+                          <TableCell>{hbl.totalWeight?.toFixed(3) || '0.000'}</TableCell>
+                          <TableCell>{hbl.totalCBM?.toFixed(3) || '0.000'}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 btn-success rounded"
+                                onClick={() => {
+                                  setEditingHouseBL(hbl);
+                                  setHouseBLModalOpen(true);
+                                }}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded"
+                                onClick={async () => {
+                                  try {
+                                    await shipmentApi.deleteHouseBL(hbl.id);
+                                    toast.success("House B/L deleted successfully");
+                                    refetchShipment();
+                                  } catch (error) {
+                                    toast.error("Failed to delete House B/L");
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </TabsContent>
+
           {/* Costing Tab */}
           <TabsContent value="costing" className="mt-0">
             <div className="bg-card border border-border rounded-lg p-6 space-y-6">
@@ -1701,12 +1777,27 @@ const ShipmentDetail = () => {
                     className="btn-success h-9 px-4"
                     onClick={() => {
                       setEditingCosting(null);
+                      setNewCostingIsMaster(false);
                       setCostingModalOpen(true);
                     }}
                   >
                     <Plus className="h-4 w-4 mr-1.5" />
                     Create
                   </Button>
+                  {(shipmentData?.houseBLs?.length ?? 0) > 0 && (
+                    <Button
+                      size="sm"
+                      className="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white"
+                      onClick={() => {
+                        setEditingCosting(null);
+                        setNewCostingIsMaster(true);
+                        setCostingModalOpen(true);
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-1.5" />
+                      Create Master Cost
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     className="btn-success h-9 px-4"
@@ -1741,6 +1832,35 @@ const ShipmentDetail = () => {
                     <div className="w-4 h-4 rounded bg-violet-100 dark:bg-violet-900/30 border border-violet-300"></div>
                     <span>Both Invoiced</span>
                   </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-4 h-4 rounded bg-blue-100 dark:bg-blue-900/30 border border-blue-300"></div>
+                    <span>Prorated</span>
+                  </div>
+                </div>
+              )}
+
+              {/* House BL Filter */}
+              {(shipmentData?.houseBLs?.length ?? 0) > 0 && costings.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs font-medium whitespace-nowrap">Filter by House BL:</Label>
+                  <div className="w-48">
+                    <SearchableSelect
+                      options={[
+                        { value: "all", label: "All Costings" },
+                        { value: "shipment", label: "Shipment Level" },
+                        { value: "master", label: "Master Costs" },
+                        ...(shipmentData?.houseBLs || []).map(hbl => ({
+                          value: hbl.id.toString(),
+                          label: hbl.houseBLNo || `HBL #${hbl.id}`,
+                        })),
+                      ]}
+                      value={costingHBLFilter}
+                      onValueChange={setCostingHBLFilter}
+                      placeholder="All Costings"
+                      searchPlaceholder="Search..."
+                      triggerClassName="bg-background border-border h-8 text-xs"
+                    />
+                  </div>
                 </div>
               )}
 
@@ -1750,6 +1870,7 @@ const ShipmentDetail = () => {
                     <TableRow className="bg-table-header">
                       <TableHead className="text-table-header-foreground">S.No</TableHead>
                       <TableHead className="text-table-header-foreground">Description</TableHead>
+                      <TableHead className="text-table-header-foreground">House BL</TableHead>
                       <TableHead className="text-table-header-foreground">Sale Quantity</TableHead>
                       <TableHead className="text-table-header-foreground">Sale Unit</TableHead>
                       <TableHead className="text-table-header-foreground">Currency</TableHead>
@@ -1768,19 +1889,36 @@ const ShipmentDetail = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {costings.length === 0 ? (
+                    {filteredCostings.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={17} className="text-center text-muted-foreground py-8">No costing entries</TableCell>
+                        <TableCell colSpan={18} className="text-center text-muted-foreground py-8">No costing entries</TableCell>
                       </TableRow>
                     ) : (
-                      costings.map((cost, index) => {
+                      filteredCostings.map((cost, index) => {
                         const bothInvoiced = cost.saleInvoiced && cost.purchaseInvoiced;
                         const saleHighlight = bothInvoiced ? "bg-violet-100 dark:bg-violet-900/30" : cost.saleInvoiced ? "bg-emerald-100 dark:bg-emerald-900/30" : "";
                         const costHighlight = bothInvoiced ? "bg-violet-100 dark:bg-violet-900/30" : cost.purchaseInvoiced ? "bg-orange-100 dark:bg-orange-900/30" : "";
+                        const isProrated = !!cost.proratedFromCostingId;
                         return (
-                        <TableRow key={cost.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
+                        <TableRow key={cost.id} className={`${index % 2 === 0 ? "bg-card" : "bg-secondary/30"} ${isProrated ? "opacity-70" : ""}`}>
                           <TableCell>{index + 1}</TableCell>
-                          <TableCell className="text-emerald-600">{cost.description}</TableCell>
+                          <TableCell className="text-emerald-600">
+                            <div className="flex items-center gap-1.5">
+                              {isProrated && (
+                                <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">[PRORATED]</span>
+                              )}
+                              {cost.description}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {cost.isMasterCost ? (
+                              <span className="text-xs font-medium text-blue-600">Master</span>
+                            ) : cost.houseBLNo ? (
+                              <span className="text-xs">{cost.houseBLNo}</span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">Shipment</span>
+                            )}
+                          </TableCell>
                           <TableCell className={saleHighlight}>{cost.saleQty}</TableCell>
                           <TableCell className={saleHighlight}>{cost.saleUnit}</TableCell>
                           <TableCell className={saleHighlight}>{cost.saleCurrencyCode}</TableCell>
@@ -1805,6 +1943,22 @@ const ShipmentDetail = () => {
                               >
                                 {cost.saleInvoiced && cost.purchaseInvoiced ? <Eye className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
                               </Button>
+                              {shipmentData?.houseBLs && shipmentData.houseBLs.length > 0 && cost.isMasterCost && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 bg-blue-500 hover:bg-blue-600 text-white rounded"
+                                  title="Prorate to House B/Ls"
+                                  onClick={() => {
+                                    setProrationCostingId(cost.id);
+                                    setProrationDescription(cost.description || '');
+                                    setProrationAmount(cost.costLCY || 0);
+                                    setProrationModalOpen(true);
+                                  }}
+                                >
+                                  <span className="text-xs font-bold">P</span>
+                                </Button>
+                              )}
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -2268,11 +2422,16 @@ const ShipmentDetail = () => {
         open={costingModalOpen}
         onOpenChange={(open) => {
           setCostingModalOpen(open);
-          if (!open) setEditingCosting(null);
+          if (!open) {
+            setEditingCosting(null);
+            setNewCostingIsMaster(false);
+          }
         }}
         parties={parties}
         costing={editingCosting}
         onSave={handleSaveCosting}
+        isMasterCost={newCostingIsMaster || undefined}
+        houseBLs={shipmentData?.houseBLs || []}
       />
 
       <InvoiceModal
@@ -2341,6 +2500,39 @@ const ShipmentDetail = () => {
         }
         itemName={deleteModalConfig?.name}
         isLoading={isDeleting}
+      />
+
+      <HouseBLModal
+        open={houseBLModalOpen}
+        onClose={() => {
+          setHouseBLModalOpen(false);
+          setEditingHouseBL(null);
+        }}
+        shipmentId={shipmentId}
+        houseBL={editingHouseBL}
+        onSaved={() => {
+          setHouseBLModalOpen(false);
+          setEditingHouseBL(null);
+          refetchShipment();
+        }}
+        containers={containers}
+      />
+
+      <ProrationModal
+        open={prorationModalOpen}
+        onClose={() => {
+          setProrationModalOpen(false);
+          setProrationCostingId(0);
+        }}
+        shipmentId={shipmentId}
+        costingId={prorationCostingId}
+        costingDescription={prorationDescription}
+        costingAmount={prorationAmount}
+        onSaved={() => {
+          setProrationModalOpen(false);
+          setProrationCostingId(0);
+          refetchShipment();
+        }}
       />
 
       {/* Warning Modal */}

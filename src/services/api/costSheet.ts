@@ -28,6 +28,7 @@ export interface CostSheetDetailDto {
   totalSaleLCY: number;
   totalCostLCY: number;
   profit: number;
+  houseBLSummaries: CostSheetHouseBLSummaryDto[];
 }
 
 // Costing line item
@@ -51,6 +52,10 @@ export interface CostSheetCostingDto {
   costLCY: number;
   unitName?: string;
   gp: number;
+  houseBLId?: number;
+  houseBLNo?: string;
+  isMasterCost: boolean;
+  isProratedCost: boolean;
 }
 
 // Bill To section
@@ -81,6 +86,15 @@ export interface CostSheetPurchaseInvoiceDto {
   purchaseInvoiceId: number;
   purchaseNo?: string;
   status?: string;
+}
+
+export interface CostSheetHouseBLSummaryDto {
+  houseBLId: number;
+  houseBLNo?: string;
+  shipperName?: string;
+  totalSaleLCY: number;
+  totalCostLCY: number;
+  gp: number;
 }
 
 export const costSheetApi = {

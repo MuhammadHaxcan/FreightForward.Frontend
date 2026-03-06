@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+
 import { DateInput } from "@/components/ui/date-input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
@@ -35,6 +36,7 @@ import { InvoiceModal } from "@/components/shipments/InvoiceModal";
 import { PurchaseModal } from "@/components/shipments/PurchaseModal";
 import { StatusLogModal } from "@/components/shipments/StatusLogModal";
 import { StatusTimeline } from "@/components/shipments/StatusTimeline";
+import { HouseBLModal } from "@/components/shipments/HouseBLModal";
 import { DeleteConfirmationModal } from "@/components/ui/delete-confirmation-modal";
 import { toast } from "sonner";
 import { useCustomers } from "@/hooks/useCustomers";
@@ -80,6 +82,7 @@ import {
   useUpdateShipmentCosting,
   useDeleteShipmentCosting,
 } from "@/hooks/useShipments";
+import type { ShipmentHouseBL } from "@/services/api/shipment";
 import { useDeleteInvoice, useDeletePurchaseInvoice } from "@/hooks/useInvoices";
 import { useQuotationForShipment, useConvertQuotationToShipment } from "@/hooks/useSales";
 
@@ -198,12 +201,7 @@ const AddShipment = () => {
     direction: "Cross-Trade",
     mode: "Air Freight",
     incoTermId: "" as string,
-    houseBLNo: "",
-    houseBLDate: getTodayDateOnly(),
-    houseBLStatus: "HAWB",
-    hblServiceType: "LCLLCL",
-    hblNoBLIssued: "0",
-    hblFreight: "Collect",
+
     mblNumber: "",
     mblDate: getTodayDateOnly(),
     mblStatus: "MAWB",
@@ -243,12 +241,28 @@ const AddShipment = () => {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
   const [containers, setContainers] = useState<Array<Partial<ShipmentContainer> & { sNo?: number | string }>>([]);
   const [costing, setCosting] = useState<Array<Partial<ShipmentCosting>>>([]);
+  const [costingHBLFilter, setCostingHBLFilter] = useState<string>("all");
+
+  // Filter costings by House BL
+  const filteredCosting = useMemo(() => {
+    if (costingHBLFilter === "all") return costing;
+    if (costingHBLFilter === "shipment") return costing.filter(c => !c.houseBLId && !c.isMasterCost);
+    if (costingHBLFilter === "master") return costing.filter(c => c.isMasterCost);
+    const hblId = parseInt(costingHBLFilter);
+    return costing.filter(c => c.houseBLId === hblId);
+  }, [costing, costingHBLFilter]);
+
   const [documents, setDocuments] = useState<ShipmentDocument[]>([]);
   const [cargoDetails, setCargoDetails] = useState<ShipmentCargo[]>([]);
   const [newCargoEntry, setNewCargoEntry] = useState({ quantity: "", packageTypeId: "", totalCBM: "", totalWeight: "", description: "" });
   const [isSavingCargo, setIsSavingCargo] = useState(false);
   const [statusLogs, setStatusLogs] = useState<ShipmentStatusLog[]>([]);
   const [statusLogModalOpen, setStatusLogModalOpen] = useState(false);
+  const [houseBLs, setHouseBLs] = useState<ShipmentHouseBL[]>([]);
+  const [houseBLModalOpen, setHouseBLModalOpen] = useState(false);
+  const [editingHouseBL, setEditingHouseBL] = useState<ShipmentHouseBL | null>(null);
+
+  const [newCostingIsMaster, setNewCostingIsMaster] = useState(false);
 
   // Fetch customer category types
   const { data: categoryTypesResponse } = useQuery({
@@ -440,6 +454,10 @@ const AddShipment = () => {
       // Sync status logs from saved data
       if (savedShipmentData.statusLogs) {
         setStatusLogs(savedShipmentData.statusLogs);
+      }
+      // Sync house BLs from saved data
+      if (savedShipmentData.houseBLs) {
+        setHouseBLs(savedShipmentData.houseBLs);
       }
     }
   }, [savedShipmentData]);
@@ -655,7 +673,7 @@ const AddShipment = () => {
   // Delete confirmation modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteModalConfig, setDeleteModalConfig] = useState<{
-    type: 'party' | 'container' | 'costing' | 'cargo' | 'document' | 'statusLog' | 'invoice' | 'purchaseInvoice';
+    type: 'party' | 'container' | 'costing' | 'cargo' | 'document' | 'statusLog' | 'invoice' | 'purchaseInvoice' | 'houseBL';
     id: number;
     name?: string;
     filePath?: string;
@@ -665,6 +683,23 @@ const AddShipment = () => {
   // Warning modal state
   const [warningModalOpen, setWarningModalOpen] = useState(false);
   const [warningMessage, setWarningMessage] = useState("");
+
+  const fetchHouseBLs = async () => {
+    if (savedShipmentId) {
+      try {
+        const response = await shipmentApi.getHouseBLs(savedShipmentId);
+        if (response.data) {
+          setHouseBLs(response.data);
+        }
+      } catch {}
+    }
+  };
+
+  const handleDeleteHouseBL = (houseBLId: number, houseBLNo?: string) => {
+    if (!savedShipmentId) return;
+    setDeleteModalConfig({ type: 'houseBL', id: houseBLId, name: houseBLNo || `House B/L #${houseBLId}` });
+    setDeleteModalOpen(true);
+  };
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -816,6 +851,8 @@ const AddShipment = () => {
           costReferenceNo: cost.costReferenceNo || undefined,
           costDate: cost.costDate || undefined,
           ppcc: cost.ppcc || undefined,
+          houseBLId: cost.houseBLId,
+          isMasterCost: cost.isMasterCost,
         };
 
         await updateCostingMutation.mutateAsync({ shipmentId: savedShipmentId, costingId: editingCosting.id, data: costingData });
@@ -848,6 +885,8 @@ const AddShipment = () => {
           costReferenceNo: cost.costReferenceNo || undefined,
           costDate: cost.costDate || undefined,
           ppcc: cost.ppcc || undefined,
+          houseBLId: cost.houseBLId,
+          isMasterCost: cost.isMasterCost,
         };
 
         await addCostingMutation.mutateAsync({ shipmentId: savedShipmentId, data: costingData });
@@ -1063,6 +1102,11 @@ const AddShipment = () => {
           queryClient.invalidateQueries({ queryKey: ['shipment-invoices', savedShipmentId] });
           refetchShipment();
           break;
+        case 'houseBL':
+          await shipmentApi.deleteHouseBL(deleteModalConfig.id);
+          setHouseBLs(prev => prev.filter(h => h.id !== deleteModalConfig.id));
+          toast.success("House B/L deleted successfully");
+          break;
       }
       setDeleteModalOpen(false);
       setDeleteModalConfig(null);
@@ -1082,12 +1126,7 @@ const AddShipment = () => {
         direction: mapDirection(formData.direction),
         mode: mapMode(formData.mode),
         incoTermId: formData.incoTermId ? parseInt(formData.incoTermId) : undefined,
-        hblNo: formData.houseBLNo || undefined,
-        hblDate: formData.houseBLDate || undefined,
-        hblStatus: formData.houseBLStatus || undefined,
-        hblServiceType: (formData.hblServiceType || undefined) as BLServiceType | undefined,
-        hblNoBLIssued: formData.hblNoBLIssued || undefined,
-        hblFreight: formData.hblFreight ? mapFreightType(formData.hblFreight) : undefined,
+
         mblNo: formData.mblNumber || undefined,
         mblDate: formData.mblDate || undefined,
         mblStatus: formData.mblStatus || undefined,
@@ -1186,6 +1225,13 @@ const AddShipment = () => {
           <TabsList className="w-full justify-start mb-4 bg-card border border-border rounded-lg p-1 h-auto flex-wrap">
             <TabsTrigger value="shipment-info" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5">
               Shipment Info
+            </TabsTrigger>
+            <TabsTrigger
+              value="housebls"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!savedShipmentId}
+            >
+              House B/Ls
             </TabsTrigger>
             <TabsTrigger
               value="parties"
@@ -1290,7 +1336,6 @@ const AddShipment = () => {
                         const isAir = v === 'Air Freight';
                         setFormData(prev => ({
                           ...prev,
-                          houseBLStatus: isAir ? "HAWB" : "HBL",
                           mblStatus: isAir ? "MAWB" : "MBL",
                         }));
                       }}
@@ -1321,62 +1366,12 @@ const AddShipment = () => {
                 {/* House B/L */}
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium text-muted-foreground">House B/L</h4>
-                  <div className="grid grid-cols-6 gap-4">
-                    <div>
-                      <Label className="text-sm">House B/L No</Label>
-                      <Input value={formData.houseBLNo} onChange={(e) => handleInputChange("houseBLNo", e.target.value)} placeholder="B/L No" />
-                    </div>
-                    <div>
-                      <Label className="text-sm">Date</Label>
-                      <DateInput value={formData.houseBLDate} onChange={(v) => handleInputChange("houseBLDate", v)} />
-                    </div>
-                    <div>
-                      <Label className="text-sm">{formData.mode === 'Air Freight' ? 'AWB Status' : 'BL Status'}</Label>
-                      <SearchableSelect
-                        options={
-                          filteredBLTypes.length > 0
-                            ? filteredBLTypes
-                                .filter(bt => bt.code === 'HBL' || bt.code === 'HAWB' || bt.code === 'EXPRESS')
-                                .map(bt => ({ value: bt.code, label: `${bt.code} - ${bt.name}` }))
-                            : [
-                                { value: "HBL", label: "HBL - House Bill of Lading" },
-                                { value: "EXPRESS", label: "Express Release" },
-                              ]
-                        }
-                        value={formData.houseBLStatus}
-                        onValueChange={(v) => handleInputChange("houseBLStatus", v)}
-                        placeholder="Select"
-                        searchPlaceholder="Search..."
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-sm">BL Service Type</Label>
-                      <SearchableSelect
-                        options={[
-                          { value: "FCLFCL", label: "FCL/FCL" },
-                          { value: "LCLLCL", label: "LCL/LCL" },
-                          { value: "LCLFCL", label: "LCL/FCL" },
-                          { value: "FCLLCL", label: "FCL/LCL" },
-                        ]}
-                        value={formData.hblServiceType}
-                        onValueChange={(v) => handleInputChange("hblServiceType", v)}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-sm">No BL Issued</Label>
-                      <Input value={formData.hblNoBLIssued} onChange={(e) => handleInputChange("hblNoBLIssued", e.target.value)} placeholder="No BL Issued" />
-                    </div>
-                    <div>
-                      <Label className="text-sm">Freight</Label>
-                      <SearchableSelect
-                        options={[
-                          { value: "Prepaid", label: "Prepaid" },
-                          { value: "Collect", label: "Collect" },
-                        ]}
-                        value={formData.hblFreight}
-                        onValueChange={(v) => handleInputChange("hblFreight", v)}
-                      />
-                    </div>
+                  <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-md p-4 text-sm text-blue-700 dark:text-blue-300">
+                    {savedShipmentId ? (
+                      <>Manage House B/Ls in the <strong>House B/Ls</strong> tab. ({houseBLs.length} HBL{houseBLs.length !== 1 ? 's' : ''} added)</>
+                    ) : (
+                      <>Save the shipment first, then manage House B/Ls in the <strong>House B/Ls</strong> tab.</>
+                    )}
                   </div>
                 </div>
 
@@ -1697,6 +1692,80 @@ const AddShipment = () => {
             </div>
           </TabsContent>
 
+          {/* House B/Ls Tab */}
+          <TabsContent value="housebls" className="mt-0">
+            <div className="bg-card border border-border rounded-lg p-6 space-y-6">
+              <div className="flex justify-between items-center">
+                <h3 className="text-emerald-600 font-semibold text-lg">House B/Ls</h3>
+                <Button
+                  className="btn-success"
+                  onClick={() => {
+                    setEditingHouseBL(null);
+                    setHouseBLModalOpen(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add House B/L
+                </Button>
+              </div>
+
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-table-header">
+                    <TableHead className="text-table-header-foreground">S.No</TableHead>
+                    <TableHead className="text-table-header-foreground">HBL No</TableHead>
+                    <TableHead className="text-table-header-foreground">Date</TableHead>
+                    <TableHead className="text-table-header-foreground">Status</TableHead>
+                    <TableHead className="text-table-header-foreground">Shipper</TableHead>
+                    <TableHead className="text-table-header-foreground">Consignee</TableHead>
+                    <TableHead className="text-table-header-foreground">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {houseBLs.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No House B/Ls added yet</TableCell>
+                    </TableRow>
+                  ) : (
+                    houseBLs.map((hbl, index) => (
+                      <TableRow key={hbl.id}>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell className="text-emerald-600">{hbl.houseBLNo || "-"}</TableCell>
+                        <TableCell>{hbl.houseBLDate ? new Date(hbl.houseBLDate).toLocaleDateString() : "-"}</TableCell>
+                        <TableCell>{hbl.houseBLStatus || "-"}</TableCell>
+                        <TableCell>{hbl.shipperName || "-"}</TableCell>
+                        <TableCell>{hbl.consigneeName || "-"}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 bg-blue-500 hover:bg-blue-600 text-white rounded"
+                              onClick={() => {
+                                setEditingHouseBL(hbl);
+                                setHouseBLModalOpen(true);
+                              }}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded"
+                              onClick={() => handleDeleteHouseBL(hbl.id, hbl.houseBLNo)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
+
           {/* Parties Tab */}
           <TabsContent value="parties" className="mt-0">
             <div className="bg-card border border-border rounded-lg p-6 space-y-6">
@@ -1879,12 +1948,27 @@ const AddShipment = () => {
                     className="btn-success h-9 px-4"
                     onClick={() => {
                       setEditingCosting(null);
+                      setNewCostingIsMaster(false);
                       setCostingModalOpen(true);
                     }}
                   >
                     <Plus className="h-4 w-4 mr-1.5" />
                     Create
                   </Button>
+                  {houseBLs.length > 0 && (
+                    <Button
+                      size="sm"
+                      className="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white"
+                      onClick={() => {
+                        setEditingCosting(null);
+                        setNewCostingIsMaster(true);
+                        setCostingModalOpen(true);
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-1.5" />
+                      Create Master Cost
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     className="btn-success h-9 px-4"
@@ -1922,12 +2006,38 @@ const AddShipment = () => {
                 </div>
               )}
 
+              {/* House BL Filter */}
+              {houseBLs.length > 0 && costing.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs font-medium whitespace-nowrap">Filter by House BL:</Label>
+                  <div className="w-48">
+                    <SearchableSelect
+                      options={[
+                        { value: "all", label: "All Costings" },
+                        { value: "shipment", label: "Shipment Level" },
+                        { value: "master", label: "Master Costs" },
+                        ...houseBLs.map(hbl => ({
+                          value: hbl.id.toString(),
+                          label: hbl.houseBLNo || `HBL #${hbl.id}`,
+                        })),
+                      ]}
+                      value={costingHBLFilter}
+                      onValueChange={setCostingHBLFilter}
+                      placeholder="All Costings"
+                      searchPlaceholder="Search..."
+                      triggerClassName="bg-background border-border h-8 text-xs"
+                    />
+                  </div>
+                </div>
+              )}
+
               <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-table-header">
                     <TableHead className="text-table-header-foreground">S.No</TableHead>
                     <TableHead className="text-table-header-foreground">Description</TableHead>
+                    <TableHead className="text-table-header-foreground">House BL</TableHead>
                     <TableHead className="text-table-header-foreground">Sale Quantity</TableHead>
                     <TableHead className="text-table-header-foreground">Sale Unit</TableHead>
                     <TableHead className="text-table-header-foreground">Currency</TableHead>
@@ -1946,12 +2056,12 @@ const AddShipment = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {costing.length === 0 ? (
+                  {filteredCosting.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={17} className="text-center text-muted-foreground">No costing entries</TableCell>
+                      <TableCell colSpan={18} className="text-center text-muted-foreground">No costing entries</TableCell>
                     </TableRow>
                   ) : (
-                    costing.map((cost, index) => {
+                    filteredCosting.map((cost, index) => {
                       // Column-level highlighting based on invoice status
                       const bothInvoiced = cost.saleInvoiced && cost.purchaseInvoiced;
                       const saleHighlight = bothInvoiced ? "bg-violet-100 dark:bg-violet-900/30" : cost.saleInvoiced ? "bg-emerald-100 dark:bg-emerald-900/30" : "";
@@ -1961,6 +2071,15 @@ const AddShipment = () => {
                         <TableRow key={cost.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
                           <TableCell>{index + 1}</TableCell>
                           <TableCell className="text-emerald-600">{cost.description}</TableCell>
+                          <TableCell className="text-xs">
+                            {cost.isMasterCost ? (
+                              <span className="text-xs font-medium text-blue-600">Master</span>
+                            ) : cost.houseBLNo ? (
+                              <span className="text-xs">{cost.houseBLNo}</span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">Shipment</span>
+                            )}
+                          </TableCell>
                           <TableCell className={saleHighlight}>{cost.saleQty}</TableCell>
                           <TableCell className={saleHighlight}>{cost.saleUnit}</TableCell>
                           <TableCell className={saleHighlight}>{cost.saleCurrencyCode}</TableCell>
@@ -2416,11 +2535,16 @@ const AddShipment = () => {
         open={costingModalOpen}
         onOpenChange={(open) => {
           setCostingModalOpen(open);
-          if (!open) setEditingCosting(null);
+          if (!open) {
+            setEditingCosting(null);
+            setNewCostingIsMaster(false);
+          }
         }}
         parties={parties}
         costing={editingCosting}
         onSave={handleSaveCosting}
+        isMasterCost={newCostingIsMaster || undefined}
+        houseBLs={houseBLs}
       />
 
       <DocumentModal
@@ -2434,6 +2558,22 @@ const AddShipment = () => {
         onOpenChange={setStatusLogModalOpen}
         onSave={handleAddStatusLogFromModal}
       />
+
+      {savedShipmentId && (
+        <HouseBLModal
+          open={houseBLModalOpen}
+          onClose={() => {
+            setHouseBLModalOpen(false);
+            setEditingHouseBL(null);
+          }}
+          shipmentId={savedShipmentId}
+          houseBL={editingHouseBL}
+          onSaved={() => {
+            fetchHouseBLs();
+            refetchShipment();
+          }}
+        />
+      )}
 
       <InvoiceModal
         open={invoiceModalOpen}
@@ -2483,7 +2623,8 @@ const AddShipment = () => {
           deleteModalConfig?.type === 'document' ? 'Delete Document' :
           deleteModalConfig?.type === 'statusLog' ? 'Delete Status Event' :
           deleteModalConfig?.type === 'invoice' ? 'Delete Invoice' :
-          deleteModalConfig?.type === 'purchaseInvoice' ? 'Delete Purchase Invoice' : 'Delete Item'
+          deleteModalConfig?.type === 'purchaseInvoice' ? 'Delete Purchase Invoice' :
+          deleteModalConfig?.type === 'houseBL' ? 'Delete House B/L' : 'Delete Item'
         }
         itemName={deleteModalConfig?.name}
         isLoading={isDeleting}

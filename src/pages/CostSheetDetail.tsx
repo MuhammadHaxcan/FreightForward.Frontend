@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Printer, Loader2 } from "lucide-react";
 import { costSheetApi } from "@/services/api";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
@@ -109,7 +110,18 @@ export const CostSheetDetail = () => {
               {detail.costings.map((costing, index) => (
                 <TableRow key={costing.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
                   <TableCell className="text-xs">{costing.serialNo}</TableCell>
-                  <TableCell className="text-xs">{costing.description}</TableCell>
+                  <TableCell className="text-xs">
+                    <span>{costing.description}</span>
+                    {costing.houseBLNo && (
+                      <Badge variant="outline" className="ml-1 text-[9px] px-1 py-0 border-blue-400 text-blue-600">{costing.houseBLNo}</Badge>
+                    )}
+                    {costing.isMasterCost && (
+                      <Badge className="ml-1 text-[9px] px-1 py-0 bg-amber-100 text-amber-700 hover:bg-amber-100">Master</Badge>
+                    )}
+                    {costing.isProratedCost && (
+                      <Badge className="ml-1 text-[9px] px-1 py-0 bg-purple-100 text-purple-700 hover:bg-purple-100">Prorated</Badge>
+                    )}
+                  </TableCell>
                   <TableCell className="text-xs">{costing.saleQty.toFixed(3)}</TableCell>
                   <TableCell className="text-xs">{costing.saleUnit.toFixed(2)}</TableCell>
                   <TableCell className="text-xs">{costing.saleCurrencyCode}</TableCell>
@@ -222,6 +234,39 @@ export const CostSheetDetail = () => {
             </div>
           </div>
         </div>
+
+        {/* Per-HBL Summary */}
+        {detail.houseBLSummaries?.length > 0 && (
+          <div className="space-y-2">
+            <h2 className="text-lg font-semibold">Per-HBL Summary</h2>
+            <div className="border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-emerald-600">
+                    <TableHead className="text-white text-xs">HBL No</TableHead>
+                    <TableHead className="text-white text-xs">Shipper</TableHead>
+                    <TableHead className="text-white text-xs text-right">Sale LCY</TableHead>
+                    <TableHead className="text-white text-xs text-right">Cost LCY</TableHead>
+                    <TableHead className="text-white text-xs text-right">GP</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {detail.houseBLSummaries.map((hbl, index) => (
+                    <TableRow key={hbl.houseBLId} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
+                      <TableCell className="text-xs font-medium">{hbl.houseBLNo || "-"}</TableCell>
+                      <TableCell className="text-xs">{hbl.shipperName || "-"}</TableCell>
+                      <TableCell className="text-xs text-right text-emerald-600">{hbl.totalSaleLCY.toFixed(2)}</TableCell>
+                      <TableCell className="text-xs text-right text-red-600">{hbl.totalCostLCY.toFixed(2)}</TableCell>
+                      <TableCell className={`text-xs text-right font-medium ${hbl.gp >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                        {hbl.gp.toFixed(2)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        )}
       </div>
     </MainLayout>
   );

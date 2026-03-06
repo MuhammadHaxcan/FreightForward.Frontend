@@ -334,8 +334,21 @@ const Shipments = () => {
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
-                          <div className="text-emerald-600 text-sm">HBL - {shipment.houseBLNo || "-"}</div>
-                          <div className="text-emerald-600 text-sm">MBL - {shipment.mblNumber || "-"}</div>
+                          {shipment.houseBLCount > 0 ? (
+                            <>
+                              <div className="text-emerald-600 text-sm flex items-center gap-1">
+                                MBL - {shipment.mblNumber || "-"}
+                                <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 text-[10px] px-1.5 py-0 font-medium">
+                                  {shipment.houseBLCount} HBLs
+                                </Badge>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="text-emerald-600 text-sm">HBL - {shipment.houseBLNo || "-"}</div>
+                              <div className="text-emerald-600 text-sm">MBL - {shipment.mblNumber || "-"}</div>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className="max-w-[200px]">
