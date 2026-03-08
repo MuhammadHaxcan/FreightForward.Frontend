@@ -6,7 +6,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Loader2, Search, Printer, Minus, Plus } from "lucide-react";
+import { Loader2, Search, Printer, Minus, Plus, FileText } from "lucide-react";
 
 // Find party by category keyword match
 function findParty(parties: ShipmentParty[], ...keywords: string[]) {
@@ -229,7 +229,6 @@ export default function BillOfLadingViewer() {
 
   return (
     <MainLayout>
-    <div className="min-h-screen bg-gray-100">
       {/* Print CSS */}
       <style>{`
         @media print {
@@ -252,125 +251,139 @@ export default function BillOfLadingViewer() {
         }
       `}</style>
 
-      {/* Controls Bar */}
-      <div className="no-print sticky top-0 z-50 bg-white border-b shadow-sm px-4 py-2 flex flex-wrap items-center gap-3">
-        {/* Job search */}
-        <div className="flex items-center gap-2">
-          <Input
-            value={jobInput}
-            onChange={(e) => setJobInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && doSearch()}
-            placeholder="Job Number..."
-            className="w-40 h-8 text-sm"
-          />
-          <Button
-            size="sm"
-            className="h-8"
-            onClick={doSearch}
-            disabled={loading}
-          >
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Search className="h-4 w-4" />
-            )}
-          </Button>
-          {ship && (
-            <span className="text-xs text-emerald-600 font-medium">
-              {ship.jobNumber}
-            </span>
-          )}
-          {notFound && (
-            <span className="text-xs text-red-500">Not found</span>
-          )}
+      <div className="p-6 space-y-4 no-print">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-semibold text-foreground">Bill of Lading</h1>
         </div>
 
-        {/* Font size */}
-        <div className="border-l pl-3 flex items-center gap-1">
-          <Label className="text-xs text-gray-500">Font</Label>
-          <Button
-            size="icon"
-            variant="outline"
-            className="h-6 w-6"
-            onClick={() => setFontSize((f) => Math.max(6, f - 0.5))}
-          >
-            <Minus className="h-3 w-3" />
-          </Button>
-          <span className="text-xs w-8 text-center font-mono">{fontSize}</span>
-          <Button
-            size="icon"
-            variant="outline"
-            className="h-6 w-6"
-            onClick={() => setFontSize((f) => Math.min(14, f + 0.5))}
-          >
-            <Plus className="h-3 w-3" />
-          </Button>
-        </div>
+        {/* Controls */}
+        <div className="bg-muted/30 border rounded-lg p-4">
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Job search */}
+            <div className="flex items-center gap-2">
+              <Label className="text-xs font-medium text-muted-foreground">Job No.</Label>
+              <Input
+                value={jobInput}
+                onChange={(e) => setJobInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && doSearch()}
+                placeholder="Enter job number..."
+                className="w-44 h-9"
+              />
+              <Button
+                size="sm"
+                className="h-9"
+                onClick={doSearch}
+                disabled={loading}
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Search className="h-4 w-4 mr-1" />
+                )}
+                Search
+              </Button>
+              {ship && (
+                <span className="text-sm text-emerald-600 font-medium ml-1">
+                  {ship.jobNumber}
+                </span>
+              )}
+              {notFound && (
+                <span className="text-sm text-red-500 ml-1">Not found</span>
+              )}
+            </div>
 
-        {/* Line height */}
-        <div className="flex items-center gap-1">
-          <Label className="text-xs text-gray-500">Line</Label>
-          <Button
-            size="icon"
-            variant="outline"
-            className="h-6 w-6"
-            onClick={() =>
-              setLineHeight((l) => Math.max(1, +(l - 0.1).toFixed(1)))
-            }
-          >
-            <Minus className="h-3 w-3" />
-          </Button>
-          <span className="text-xs w-8 text-center font-mono">
-            {lineHeight.toFixed(1)}
-          </span>
-          <Button
-            size="icon"
-            variant="outline"
-            className="h-6 w-6"
-            onClick={() =>
-              setLineHeight((l) => Math.min(2.5, +(l + 0.1).toFixed(1)))
-            }
-          >
-            <Plus className="h-3 w-3" />
-          </Button>
-        </div>
+            {/* Separator */}
+            <div className="h-8 w-px bg-border hidden md:block" />
 
-        {/* Offsets */}
-        <div className="flex items-center gap-1">
-          <Label className="text-xs text-gray-500">Top</Label>
-          <Input
-            type="number"
-            value={topOffset}
-            onChange={(e) => setTopOffset(+e.target.value)}
-            className="w-14 h-6 text-xs"
-            step={0.5}
-          />
-          <Label className="text-xs text-gray-500 ml-1">Left</Label>
-          <Input
-            type="number"
-            value={leftOffset}
-            onChange={(e) => setLeftOffset(+e.target.value)}
-            className="w-14 h-6 text-xs"
-            step={0.5}
-          />
-          <span className="text-[10px] text-gray-400">mm</span>
-        </div>
+            {/* Font size */}
+            <div className="flex items-center gap-1">
+              <Label className="text-xs font-medium text-muted-foreground">Font</Label>
+              <Button
+                size="icon"
+                variant="outline"
+                className="h-7 w-7"
+                onClick={() => setFontSize((f) => Math.max(6, f - 0.5))}
+              >
+                <Minus className="h-3 w-3" />
+              </Button>
+              <span className="text-xs w-8 text-center font-mono">{fontSize}</span>
+              <Button
+                size="icon"
+                variant="outline"
+                className="h-7 w-7"
+                onClick={() => setFontSize((f) => Math.min(14, f + 0.5))}
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
+            </div>
 
-        {/* Print button */}
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-8 ml-auto"
-          onClick={() => window.print()}
-          disabled={!ship}
-        >
-          <Printer className="h-4 w-4 mr-1" /> Print
-        </Button>
+            {/* Line height */}
+            <div className="flex items-center gap-1">
+              <Label className="text-xs font-medium text-muted-foreground">Line</Label>
+              <Button
+                size="icon"
+                variant="outline"
+                className="h-7 w-7"
+                onClick={() =>
+                  setLineHeight((l) => Math.max(1, +(l - 0.1).toFixed(1)))
+                }
+              >
+                <Minus className="h-3 w-3" />
+              </Button>
+              <span className="text-xs w-8 text-center font-mono">
+                {lineHeight.toFixed(1)}
+              </span>
+              <Button
+                size="icon"
+                variant="outline"
+                className="h-7 w-7"
+                onClick={() =>
+                  setLineHeight((l) => Math.min(2.5, +(l + 0.1).toFixed(1)))
+                }
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
+            </div>
+
+            {/* Offsets */}
+            <div className="flex items-center gap-1">
+              <Label className="text-xs font-medium text-muted-foreground">Top</Label>
+              <Input
+                type="number"
+                value={topOffset}
+                onChange={(e) => setTopOffset(+e.target.value)}
+                className="w-16 h-9 text-sm"
+                step={0.5}
+              />
+              <Label className="text-xs font-medium text-muted-foreground ml-1">Left</Label>
+              <Input
+                type="number"
+                value={leftOffset}
+                onChange={(e) => setLeftOffset(+e.target.value)}
+                className="w-16 h-9 text-sm"
+                step={0.5}
+              />
+              <span className="text-xs text-muted-foreground">mm</span>
+            </div>
+
+            {/* Print button */}
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-9 ml-auto"
+              onClick={() => window.print()}
+              disabled={!ship}
+            >
+              <Printer className="h-4 w-4 mr-1" /> Print
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* BL Document */}
       {ship ? (
-        <div className="bl-wrapper flex justify-center py-6">
+        <div className="bl-wrapper flex justify-center py-6 bg-gray-100">
           <div
             className="bl-page bg-white shadow-lg"
             style={{
@@ -915,19 +928,19 @@ export default function BillOfLadingViewer() {
           </div>
         </div>
       ) : (
-        <div className="flex items-center justify-center h-[calc(100vh-50px)]">
-          <div className="text-center text-gray-400">
+        <div className="flex items-center justify-center h-[60vh]">
+          <div className="text-center">
+            <FileText className="h-16 w-16 text-muted-foreground/30 mx-auto mb-4" />
             {notFound ? (
-              <p className="text-red-500">
-                Shipment not found for: {searchJob}
+              <p className="text-red-500 text-sm">
+                Shipment not found for: <span className="font-medium">{searchJob}</span>
               </p>
             ) : (
-              <p>Enter a Job Number to view the Bill of Lading</p>
+              <p className="text-muted-foreground">Enter a Job Number above to view the Bill of Lading</p>
             )}
           </div>
         </div>
       )}
-    </div>
     </MainLayout>
   );
 }

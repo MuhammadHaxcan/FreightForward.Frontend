@@ -276,17 +276,17 @@ const AppRoutes = () => (
         </ProtectedRoute>
       } />
       <Route path="/accounts/purchase-invoices" element={
-        <ProtectedRoute permission="invoice_view">
+        <ProtectedRoute permission="purchase_view">
           <PurchaseInvoices />
         </ProtectedRoute>
       } />
       <Route path="/accounts/purchase-invoices/:id" element={
-        <ProtectedRoute permission="invoice_view">
+        <ProtectedRoute permission="purchase_view">
           <PurchaseInvoiceView />
         </ProtectedRoute>
       } />
       <Route path="/accounts/purchase-invoices/:id/print" element={
-        <ProtectedRoute permission="invoice_view">
+        <ProtectedRoute permission="purchase_view">
           <PurchaseInvoicePrintView />
         </ProtectedRoute>
       } />

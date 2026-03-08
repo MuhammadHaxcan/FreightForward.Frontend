@@ -78,7 +78,7 @@ const allSidebarItems: SidebarItem[] = [
     hasSubmenu: true,
     subMenuItems: [
       { title: "Invoices", path: "/accounts/invoices", permission: "invoice_view" },
-      { title: "Purchase Invoices", path: "/accounts/purchase-invoices", permission: "invoice_view" },
+      { title: "Purchase Invoices", path: "/accounts/purchase-invoices", permission: "purchase_view" },
       { title: "Receipt Vouchers", path: "/accounts/receipt-vouchers", permission: "receipt_view" },
       { title: "Payment Vouchers", path: "/accounts/payment-vouchers", permission: "paymentvoucher_view" },
       { title: "Daily Expenses", path: "/accounts/daily-expenses", permission: "expense_view" },
