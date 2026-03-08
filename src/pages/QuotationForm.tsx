@@ -330,9 +330,29 @@ export default function QuotationForm() {
     }
   };
 
+  const calculateCbm = (length?: number, width?: number, height?: number, volumeUnit?: string): number | undefined => {
+    const l = length || 0;
+    const w = width || 0;
+    const h = height || 0;
+    if (l === 0 || w === 0 || h === 0) return undefined;
+    const raw = l * w * h;
+    if (volumeUnit === "inch") return raw / 61_024;
+    if (volumeUnit === "meter") return raw;
+    // Default: cm
+    return raw / 1_000_000;
+  };
+
   const updateCargoRow = (rowId: number, field: keyof CargoRow, value: CargoRow[keyof CargoRow]) => {
     setCargoRows(
-      cargoRows.map((row) => (row.id === rowId ? { ...row, [field]: value } : row))
+      cargoRows.map((row) => {
+        if (row.id !== rowId) return row;
+        const updated = { ...row, [field]: value };
+        // Auto-calculate CBM when dimensions or unit change
+        if (field === "length" || field === "width" || field === "height" || field === "volumeUnit") {
+          updated.cbm = calculateCbm(updated.length, updated.width, updated.height, updated.volumeUnit);
+        }
+        return updated;
+      })
     );
   };
 
@@ -840,7 +860,8 @@ export default function QuotationForm() {
                           disabled={isReadOnly}
                           options={[
                             { value: "cm", label: "CM" },
-                            { value: "inch", label: "INCH" },
+                            { value: "meter", label: "Meter" },
+                            { value: "inch", label: "Inch" },
                           ]}
                           value={row.volumeUnit || "cm"}
                           onValueChange={(value) => updateCargoRow(row.id, "volumeUnit", value)}
@@ -850,11 +871,9 @@ export default function QuotationForm() {
                         <Input
                           type="number"
                           placeholder="CBM"
-                          value={row.cbm || ""}
-                          onChange={(e) =>
-                            updateCargoRow(row.id, "cbm", parseFloat(e.target.value) || undefined)
-                          }
-                          disabled={isReadOnly}
+                          value={row.cbm?.toFixed(6) || ""}
+                          disabled
+                          className="bg-muted"
                         />
                         <Input
                           type="number"

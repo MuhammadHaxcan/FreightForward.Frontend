@@ -1,5 +1,5 @@
 import { MainLayout } from "@/components/layout/MainLayout";
-import { Plus, Pencil, Eye, Trash2, Loader2, X } from "lucide-react";
+import { Check, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -14,25 +14,16 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { CustomerModal } from "@/components/customers/CustomerModal";
-import { useCustomers, useDeleteCustomer } from "@/hooks/useCustomers";
-import { Customer, MasterType } from "@/services/api";
-import { PermissionGate } from "@/components/auth/PermissionGate";
+import { usePendingApprovalCustomers, useApproveCustomer, useDenyCustomer } from "@/hooks/useCustomers";
+import { Customer } from "@/services/api";
 
-const MasterCustomers = () => {
-  const navigate = useNavigate();
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editCustomer, setEditCustomer] = useState<Customer | null>(null);
-  const [modalMode, setModalMode] = useState<"add" | "edit">("add");
+const CustomerApproval = () => {
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [masterTypeFilter, setMasterTypeFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
+  const [customerToDeny, setCustomerToDeny] = useState<Customer | null>(null);
 
-  // Debounce search term
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
@@ -41,57 +32,23 @@ const MasterCustomers = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const { data, isLoading, error } = useCustomers({
+  const { data, isLoading, error } = usePendingApprovalCustomers({
     pageNumber: currentPage,
     pageSize: parseInt(entriesPerPage),
     searchTerm: debouncedSearchTerm || undefined,
-    masterType: (masterTypeFilter || undefined) as MasterType | undefined,
   });
 
-  const deleteMutation = useDeleteCustomer();
+  const approveMutation = useApproveCustomer();
+  const denyMutation = useDenyCustomer();
 
   const customers = data?.items || [];
   const totalCount = data?.totalCount || 0;
   const totalPages = data?.totalPages || 1;
 
-  const handleAddNew = () => {
-    setEditCustomer(null);
-    setModalMode("add");
-    setModalOpen(true);
-  };
-
-  const handleEdit = (customer: Customer) => {
-    if (customer.masterType === "Debtors") {
-      navigate(`/master-customers/${customer.id}/edit`);
-    } else if (customer.masterType === "Creditors") {
-      navigate(`/master-customers/${customer.id}/edit`);
-    } else if (customer.masterType === "Neutral") {
-      navigate(`/master-customers/${customer.id}/neutral/edit`);
-    } else {
-      setEditCustomer(customer);
-      setModalMode("edit");
-      setModalOpen(true);
-    }
-  };
-
-  const handleView = (customer: Customer) => {
-    if (customer.masterType === "Debtors") {
-      navigate(`/master-customers/${customer.id}/edit?mode=view`);
-    } else if (customer.masterType === "Creditors") {
-      navigate(`/master-customers/${customer.id}/edit?mode=view`);
-    } else if (customer.masterType === "Neutral") {
-      navigate(`/master-customers/${customer.id}/neutral/edit?mode=view`);
-    }
-  };
-
-  const handleDelete = (customer: Customer) => {
-    setCustomerToDelete(customer);
-  };
-
-  const confirmDelete = () => {
-    if (customerToDelete) {
-      deleteMutation.mutate(customerToDelete.id);
-      setCustomerToDelete(null);
+  const confirmDeny = () => {
+    if (customerToDeny) {
+      denyMutation.mutate(customerToDeny.id);
+      setCustomerToDeny(null);
     }
   };
 
@@ -100,13 +57,7 @@ const MasterCustomers = () => {
       <div className="p-6 space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-foreground">Master Customers</h1>
-          <PermissionGate permission="cust_add">
-            <Button className="btn-success gap-2" onClick={handleAddNew}>
-              <Plus size={16} />
-              Add New Customer
-            </Button>
-          </PermissionGate>
+          <h1 className="text-2xl font-semibold text-foreground">Pending Approval</h1>
         </div>
 
         {/* Actions Row */}
@@ -132,31 +83,13 @@ const MasterCustomers = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Master Type:</span>
-              <SearchableSelect
-                options={[
-                  { value: "all", label: "All" },
-                  { value: "Debtors", label: "Debtors" },
-                  { value: "Creditors", label: "Creditors" },
-                  { value: "Neutral", label: "Neutral" },
-                ]}
-                value={masterTypeFilter || "all"}
-                onValueChange={(value) => {
-                  setMasterTypeFilter(value === "all" ? "" : value);
-                  setCurrentPage(1);
-                }}
-                triggerClassName="w-[120px] h-8"
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Search:</span>
               <div className="relative">
                 <Input
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-[250px] h-8 pr-8"
-                  placeholder="Name, code or email..."
+                  placeholder="Name or code..."
                 />
                 {searchTerm && (
                   <button
@@ -171,7 +104,7 @@ const MasterCustomers = () => {
           </div>
         </div>
 
-        {/* Customers Table */}
+        {/* Table */}
         <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             {isLoading ? (
@@ -188,10 +121,10 @@ const MasterCustomers = () => {
                   <tr className="bg-table-header text-table-header-foreground">
                     <th className="px-4 py-3 text-left text-sm font-semibold">Code</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold">Master Type</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold">Category</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold">Name</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold">Phone</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold">Country</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">Created At</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold">Action</th>
                   </tr>
                 </thead>
@@ -199,7 +132,7 @@ const MasterCustomers = () => {
                   {customers.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
-                        No customers found
+                        No pending customers found
                       </td>
                     </tr>
                   ) : (
@@ -212,44 +145,33 @@ const MasterCustomers = () => {
                       >
                         <td className="px-4 py-3 text-sm font-medium text-foreground">{customer.code}</td>
                         <td className="px-4 py-3 text-sm text-muted-foreground">{customer.masterType}</td>
-                        <td className="px-4 py-3 text-sm text-muted-foreground">
-                          {customer.categories?.map(c => c.name).join(", ") || "-"}
-                        </td>
                         <td className="px-4 py-3 text-sm text-foreground">{customer.name}</td>
                         <td className="px-4 py-3 text-sm text-muted-foreground">{customer.phone || "-"}</td>
-                        <td className="px-4 py-3 text-sm text-muted-foreground">{customer.country}</td>
+                        <td className="px-4 py-3 text-sm text-muted-foreground">{customer.country || "-"}</td>
+                        <td className="px-4 py-3 text-sm text-muted-foreground">
+                          {new Date(customer.createdAt).toLocaleDateString()}
+                        </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1">
-                            <PermissionGate permission="cust_edit">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
-                                onClick={() => handleEdit(customer)}
-                              >
-                                <Pencil size={16} />
-                              </Button>
-                            </PermissionGate>
-                            {(customer.masterType === "Debtors" || customer.masterType === "Creditors" || customer.masterType === "Neutral") && (
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
-                                onClick={() => handleView(customer)}
-                              >
-                                <Eye size={16} />
-                              </Button>
-                            )}
-                            <PermissionGate permission="cust_delete">
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                onClick={() => handleDelete(customer)}
-                              >
-                                <Trash2 size={16} />
-                              </Button>
-                            </PermissionGate>
+                            <Button
+                              size="sm"
+                              className="h-8 gap-1 bg-green-600 hover:bg-green-700 text-white"
+                              onClick={() => approveMutation.mutate(customer.id)}
+                              disabled={approveMutation.isPending}
+                            >
+                              <Check size={14} />
+                              Approve
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="h-8 gap-1"
+                              onClick={() => setCustomerToDeny(customer)}
+                              disabled={denyMutation.isPending}
+                            >
+                              <X size={14} />
+                              Deny
+                            </Button>
                           </div>
                         </td>
                       </tr>
@@ -305,29 +227,22 @@ const MasterCustomers = () => {
         </div>
       </div>
 
-      <CustomerModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        customer={editCustomer}
-        mode={modalMode}
-      />
-
-      {/* Delete Confirmation */}
-      <AlertDialog open={!!customerToDelete} onOpenChange={() => setCustomerToDelete(null)}>
+      {/* Deny Confirmation */}
+      <AlertDialog open={!!customerToDeny} onOpenChange={() => setCustomerToDeny(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Customer</AlertDialogTitle>
+            <AlertDialogTitle>Deny Customer</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{customerToDelete?.name}"? This action cannot be undone.
+              Are you sure you want to deny "{customerToDeny?.name}"? This customer will be removed from the pending list.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={confirmDelete}
+              onClick={confirmDeny}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              Deny
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -336,4 +251,4 @@ const MasterCustomers = () => {
   );
 };
 
-export default MasterCustomers;
+export default CustomerApproval;

@@ -49,7 +49,17 @@ const allSidebarItems: SidebarItem[] = [
       { title: "Bill of Lading", path: "/shipments/bill-of-lading", permission: "bl_view" },
     ]
   },
-  { title: "Master Customers", icon: Users, path: "/master-customers", permission: "cust_view" },
+  {
+    title: "Customers",
+    icon: Users,
+    path: "/master-customers",
+    permission: "cust_view",
+    hasSubmenu: true,
+    subMenuItems: [
+      { title: "Master List", path: "/master-customers", permission: "cust_view" },
+      { title: "Pending Approval", path: "/customer-approval", permission: "cust_approve" },
+    ]
+  },
   {
     title: "Sales",
     icon: TrendingUp,

@@ -220,9 +220,9 @@ export default function BillOfLadingViewer() {
     };
   }, [ship]);
 
-  // Overflow calc (~60mm cargo area)
+  // Overflow calc (~93mm cargo area)
   const lineHMm = fontSize * lineHeight * 0.3528;
-  const maxLines = Math.max(5, Math.floor(60 / lineHMm));
+  const maxLines = Math.max(5, Math.floor(93 / lineHMm));
   const [marksShow, marksOver] = splitOverflow(cargo.marks, maxLines);
   const [descShow, descOver] = splitOverflow(cargo.desc, maxLines);
   const hasOverflow = !!(marksOver || descOver);
@@ -382,26 +382,63 @@ export default function BillOfLadingViewer() {
               lineHeight,
             }}
           >
-            {/* === ROW 1: Shipper + Booking/BL === */}
+            {/* === HEADER: Ocean Bill of Lading (screen only) === */}
+            <div
+              className="bl-lbl"
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "baseline",
+                padding: "0.5mm 3mm",
+                borderBottom: "1px solid #bbb",
+              }}
+            >
+              <div>
+                <span style={{ fontSize: "14pt", fontWeight: "bold", fontFamily: "Arial, sans-serif", color: "#000" }}>
+                  Ocean Bill of Lading{" "}
+                </span>
+                <span style={{ fontSize: "7pt", fontFamily: "Arial, sans-serif", color: "#444" }}>
+                  FOR COMBINED TRANSPORT OR PORT-TO-PORT SHIPMENT
+                </span>
+              </div>
+              <div style={{ fontSize: "12pt", fontWeight: "bold", fontFamily: "Arial, sans-serif", color: "#000" }}>
+                NON-NEGOTIABLE
+              </div>
+            </div>
+
+            {/* === ROW 1+2: Shipper & Consignee (left 57.7%) + Booking/BL & Logo (right 42.3%) === */}
             <div style={{ display: "flex" }}>
-              {/* Shipper */}
-              <div
-                className="bl-border"
-                style={{ ...cell, width: "55%", minHeight: "45mm" }}
-              >
-                <div className="bl-lbl" style={lbl}>
-                  Shipper
+              {/* Left: Shipper (33mm) + Consignee (33mm) */}
+              <div style={{ width: "57.7%", display: "flex", flexDirection: "column" }}>
+                <div
+                  className="bl-border"
+                  style={{ ...cell, minHeight: "33mm" }}
+                >
+                  <div className="bl-lbl" style={lbl}>
+                    Shipper
+                  </div>
+                  <div style={{ whiteSpace: "pre-wrap" }}>
+                    {formatParty(shipper)}
+                  </div>
                 </div>
-                <div style={{ whiteSpace: "pre-wrap" }}>
-                  {formatParty(shipper)}
+                <div
+                  className="bl-border"
+                  style={{ ...cell, minHeight: "33mm" }}
+                >
+                  <div className="bl-lbl" style={lbl}>
+                    Consignee (if 'To Order' so indicate)
+                  </div>
+                  <div style={{ whiteSpace: "pre-wrap" }}>
+                    {formatParty(consignee)}
+                  </div>
                 </div>
               </div>
-              {/* Right side */}
-              <div style={{ width: "45%", display: "flex", flexDirection: "column" }}>
+              {/* Right: Booking (43.4%) + BL (56.6%) on top (10mm), Logo below (55mm) */}
+              <div style={{ width: "42.3%", display: "flex", flexDirection: "column" }}>
                 <div style={{ display: "flex" }}>
                   <div
                     className="bl-border"
-                    style={{ ...cell, width: "50%", minHeight: "13mm" }}
+                    style={{ ...cell, width: "43.4%", minHeight: "10mm" }}
                   >
                     <div className="bl-lbl" style={lbl}>
                       Booking No.
@@ -410,7 +447,7 @@ export default function BillOfLadingViewer() {
                   </div>
                   <div
                     className="bl-border"
-                    style={{ ...cell, width: "50%", minHeight: "13mm" }}
+                    style={{ ...cell, width: "56.6%", minHeight: "10mm" }}
                   >
                     <div className="bl-lbl" style={lbl}>
                       B/L No.
@@ -418,12 +455,13 @@ export default function BillOfLadingViewer() {
                     <div>{ship.houseBLNo || ""}</div>
                   </div>
                 </div>
-                {/* Logo + Company branding area - screen only */}
+                {/* Logo (55mm) */}
                 <div
                   className="bl-border bl-lbl"
                   style={{
                     ...cell,
                     flex: 1,
+                    minHeight: "55mm",
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
@@ -447,37 +485,13 @@ export default function BillOfLadingViewer() {
               </div>
             </div>
 
-            {/* === ROW 2: Consignee + Company Info === */}
+            {/* === ROW 3: Notify (33mm) + transport (11mm each) left, Delivery Agent (55mm) right === */}
             <div style={{ display: "flex" }}>
-              <div
-                className="bl-border"
-                style={{ ...cell, width: "55%", minHeight: "33mm" }}
-              >
-                <div className="bl-lbl" style={lbl}>
-                  Consignee (if 'To Order' so indicate)
-                </div>
-                <div style={{ whiteSpace: "pre-wrap" }}>
-                  {formatParty(consignee)}
-                </div>
-              </div>
-              <div
-                className="bl-border bl-lbl"
-                style={{
-                  ...cell,
-                  width: "45%",
-                  minHeight: "33mm",
-                }}
-              >
-              </div>
-            </div>
-
-            {/* === ROW 3-5: Notify/Transport fields (left) + Delivery Agent (right) === */}
-            <div style={{ display: "flex" }}>
-              {/* LEFT column: Notify Party + 4 transport fields */}
-              <div style={{ width: "55%", display: "flex", flexDirection: "column" }}>
+              {/* Left: Notify + Pre-Carriage + Vessel */}
+              <div style={{ width: "57.7%", display: "flex", flexDirection: "column" }}>
                 <div
                   className="bl-border"
-                  style={{ ...cell, minHeight: "25mm" }}
+                  style={{ ...cell, minHeight: "33mm" }}
                 >
                   <div className="bl-lbl" style={lbl}>
                     Notify Party (No claim shall attach for failure to notify)
@@ -489,7 +503,7 @@ export default function BillOfLadingViewer() {
                 <div style={{ display: "flex" }}>
                   <div
                     className="bl-border"
-                    style={{ ...cell, width: "60%", minHeight: "8mm" }}
+                    style={{ ...cell, width: "57.5%", minHeight: "11mm" }}
                   >
                     <div className="bl-lbl" style={lbl}>
                       Pre-Carriage by
@@ -498,7 +512,7 @@ export default function BillOfLadingViewer() {
                   </div>
                   <div
                     className="bl-border"
-                    style={{ ...cell, width: "40%", minHeight: "8mm" }}
+                    style={{ ...cell, width: "42.5%", minHeight: "11mm" }}
                   >
                     <div className="bl-lbl" style={lbl}>
                       Place of Receipt
@@ -511,7 +525,7 @@ export default function BillOfLadingViewer() {
                 <div style={{ display: "flex" }}>
                   <div
                     className="bl-border"
-                    style={{ ...cell, width: "60%", minHeight: "8mm" }}
+                    style={{ ...cell, width: "57.5%", minHeight: "11mm" }}
                   >
                     <div className="bl-lbl" style={lbl}>
                       Vessel/Voyage
@@ -523,7 +537,7 @@ export default function BillOfLadingViewer() {
                   </div>
                   <div
                     className="bl-border"
-                    style={{ ...cell, width: "40%", minHeight: "8mm" }}
+                    style={{ ...cell, width: "42.5%", minHeight: "11mm" }}
                   >
                     <div className="bl-lbl" style={lbl}>
                       Port of Loading
@@ -532,10 +546,10 @@ export default function BillOfLadingViewer() {
                   </div>
                 </div>
               </div>
-              {/* RIGHT column: Delivery Agent spanning full height */}
+              {/* Right: Delivery Agent (55mm) */}
               <div
                 className="bl-border"
-                style={{ ...cell, width: "45%", alignSelf: "stretch" }}
+                style={{ ...cell, width: "42.3%", minHeight: "55mm", alignSelf: "stretch" }}
               >
                 <div className="bl-lbl" style={lbl}>
                   Delivery Agent at Destination
@@ -546,11 +560,11 @@ export default function BillOfLadingViewer() {
               </div>
             </div>
 
-            {/* === ROW 6: 4 port columns === */}
+            {/* === ROW 4: 4 port columns (10mm) === */}
             <div style={{ display: "flex" }}>
               <div
                 className="bl-border"
-                style={{ ...cell, width: "25%", minHeight: "17mm" }}
+                style={{ ...cell, width: "23%", minHeight: "10mm" }}
               >
                 <div className="bl-lbl" style={lbl}>
                   Port of Discharge
@@ -559,7 +573,7 @@ export default function BillOfLadingViewer() {
               </div>
               <div
                 className="bl-border"
-                style={{ ...cell, width: "25%", minHeight: "17mm" }}
+                style={{ ...cell, width: "28%", minHeight: "10mm" }}
               >
                 <div className="bl-lbl" style={lbl}>
                   Place of Delivery/Final Destination
@@ -573,7 +587,7 @@ export default function BillOfLadingViewer() {
               </div>
               <div
                 className="bl-border"
-                style={{ ...cell, width: "25%", minHeight: "17mm" }}
+                style={{ ...cell, width: "19%", minHeight: "10mm" }}
               >
                 <div className="bl-lbl" style={lbl}>
                   Freight Payable at
@@ -588,7 +602,7 @@ export default function BillOfLadingViewer() {
               </div>
               <div
                 className="bl-border"
-                style={{ ...cell, width: "25%", minHeight: "17mm" }}
+                style={{ ...cell, width: "30%", minHeight: "10mm" }}
               >
                 <div className="bl-lbl" style={lbl}>
                   No of Original Bill of Lading
@@ -653,12 +667,12 @@ export default function BillOfLadingViewer() {
               </div>
             </div>
 
-            {/* === CARGO CONTENT (no borders — pre-printed on stationery) === */}
+            {/* === CARGO CONTENT (93mm) === */}
             <div style={{ display: "flex" }}>
               <div
                 style={{
                   width: "20%",
-                  minHeight: "60mm",
+                  minHeight: "93mm",
                   padding: "1mm 2mm",
                   whiteSpace: "pre-wrap",
                   wordBreak: "break-word",
@@ -671,7 +685,7 @@ export default function BillOfLadingViewer() {
               <div
                 style={{
                   width: "46%",
-                  minHeight: "60mm",
+                  minHeight: "93mm",
                   padding: "1mm 2mm",
                   whiteSpace: "pre-wrap",
                   wordBreak: "break-word",
@@ -684,7 +698,7 @@ export default function BillOfLadingViewer() {
               <div
                 style={{
                   width: "16%",
-                  minHeight: "60mm",
+                  minHeight: "93mm",
                   padding: "1mm 2mm",
                   boxSizing: "border-box",
                 }}
@@ -694,7 +708,7 @@ export default function BillOfLadingViewer() {
               <div
                 style={{
                   width: "18%",
-                  minHeight: "60mm",
+                  minHeight: "93mm",
                   padding: "1mm 2mm",
                   boxSizing: "border-box",
                 }}
@@ -717,11 +731,11 @@ export default function BillOfLadingViewer() {
               ABOVE PARTICULARS AS DECLARED BY SHIPPER
             </div>
 
-            {/* === FREIGHT & CHARGES === */}
+            {/* === FREIGHT & CHARGES (21mm) === */}
             <div style={{ display: "flex" }}>
               <div
                 className="bl-border"
-                style={{ ...cell, width: "18%", minHeight: "15mm" }}
+                style={{ ...cell, width: "26%", minHeight: "21mm" }}
               >
                 <div className="bl-lbl" style={lbl}>
                   Freight and Charges
@@ -729,7 +743,7 @@ export default function BillOfLadingViewer() {
               </div>
               <div
                 className="bl-border"
-                style={{ ...cell, width: "12%", minHeight: "15mm" }}
+                style={{ ...cell, width: "12%", minHeight: "21mm" }}
               >
                 <div className="bl-lbl" style={lbl}>
                   Rev. tons
@@ -737,7 +751,7 @@ export default function BillOfLadingViewer() {
               </div>
               <div
                 className="bl-border"
-                style={{ ...cell, width: "10%", minHeight: "15mm" }}
+                style={{ ...cell, width: "10%", minHeight: "21mm" }}
               >
                 <div className="bl-lbl" style={lbl}>
                   Rate
@@ -745,7 +759,7 @@ export default function BillOfLadingViewer() {
               </div>
               <div
                 className="bl-border"
-                style={{ ...cell, width: "6%", minHeight: "15mm" }}
+                style={{ ...cell, width: "6%", minHeight: "21mm" }}
               >
                 <div className="bl-lbl" style={lbl}>
                   per
@@ -753,7 +767,7 @@ export default function BillOfLadingViewer() {
               </div>
               <div
                 className="bl-border"
-                style={{ ...cell, width: "27%", minHeight: "15mm" }}
+                style={{ ...cell, width: "23.5%", minHeight: "21mm" }}
               >
                 <div className="bl-lbl" style={lbl}>
                   Prepaid
@@ -764,7 +778,7 @@ export default function BillOfLadingViewer() {
               </div>
               <div
                 className="bl-border"
-                style={{ ...cell, width: "27%", minHeight: "15mm" }}
+                style={{ ...cell, width: "22.5%", minHeight: "21mm" }}
               >
                 <div className="bl-lbl" style={lbl}>
                   Collect
@@ -775,15 +789,15 @@ export default function BillOfLadingViewer() {
               </div>
             </div>
 
-            {/* === BOTTOM: Legal + Place/Date/Signed === */}
+            {/* === BOTTOM: Legal (56.6%, 30mm) + Place/Date (10mm) + Signed (20mm) === */}
             <div style={{ display: "flex" }}>
               {/* Legal text - screen only */}
               <div
                 className="bl-border bl-lbl"
                 style={{
                   ...cell,
-                  width: "50%",
-                  minHeight: "35mm",
+                  width: "56.6%",
+                  minHeight: "30mm",
                   fontSize: "5pt",
                   color: "#999",
                   fontFamily: "Arial, sans-serif",
@@ -812,17 +826,17 @@ export default function BillOfLadingViewer() {
                   exchange for the Goods or delivery order.
                 </p>
               </div>
-              {/* Place/Date + Signed */}
+              {/* Place/Date (10mm) + Signed (20mm) */}
               <div
                 style={{
-                  width: "50%",
+                  width: "43.4%",
                   display: "flex",
                   flexDirection: "column",
                 }}
               >
                 <div
                   className="bl-border"
-                  style={{ ...cell, minHeight: "15mm" }}
+                  style={{ ...cell, minHeight: "10mm" }}
                 >
                   <div className="bl-lbl" style={lbl}>
                     Place and Date of Issue
@@ -833,7 +847,7 @@ export default function BillOfLadingViewer() {
                       .join(", ")}
                   </div>
                 </div>
-                <div className="bl-border" style={{ ...cell, flex: 1 }}>
+                <div className="bl-border" style={{ ...cell, flex: 1, minHeight: "20mm" }}>
                   <div className="bl-lbl" style={lbl}>
                     Signed on behalf of the Carrier:
                   </div>

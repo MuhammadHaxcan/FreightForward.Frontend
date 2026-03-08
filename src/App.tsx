@@ -26,6 +26,7 @@ const AddShipment = lazy(() => import("./pages/AddShipment"));
 const BillOfLadingViewer = lazy(() => import("./pages/BillOfLadingViewer"));
 const ShipmentReportPrintView = lazy(() => import("./pages/ShipmentReportPrintView"));
 const MasterCustomers = lazy(() => import("./pages/MasterCustomers"));
+const CustomerApproval = lazy(() => import("./pages/CustomerApproval"));
 const CustomerDetail = lazy(() => import("./pages/CustomerDetail"));
 const NeutralDetail = lazy(() => import("./pages/NeutralDetail"));
 const AllUsers = lazy(() => import("./pages/AllUsers"));
@@ -172,6 +173,11 @@ const AppRoutes = () => (
       <Route path="/master-customers" element={
         <ProtectedRoute permission="cust_view">
           <MasterCustomers />
+        </ProtectedRoute>
+      } />
+      <Route path="/customer-approval" element={
+        <ProtectedRoute permission="cust_approve">
+          <CustomerApproval />
         </ProtectedRoute>
       } />
       <Route path="/master-customers/:id/edit" element={

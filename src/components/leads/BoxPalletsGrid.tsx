@@ -78,7 +78,7 @@ export function BoxPalletsGrid({ boxPallets, onChange, packageTypes }: BoxPallet
               <TableHead className="text-white">W</TableHead>
               <TableHead className="text-white">H</TableHead>
               <TableHead className="text-white">Measurement</TableHead>
-              <TableHead className="text-white">Volume</TableHead>
+              <TableHead className="text-white">CBM</TableHead>
               <TableHead className="text-white">Weight</TableHead>
               <TableHead className="text-white w-24">Actions</TableHead>
             </TableRow>
@@ -99,7 +99,7 @@ export function BoxPalletsGrid({ boxPallets, onChange, packageTypes }: BoxPallet
                   <TableCell>{item.width || 0}</TableCell>
                   <TableCell>{item.height || 0}</TableCell>
                   <TableCell>{item.measurementType || "-"}</TableCell>
-                  <TableCell>{item.volume?.toFixed(2) || "0.00"}</TableCell>
+                  <TableCell>{item.volume?.toFixed(4) || "0.0000"}</TableCell>
                   <TableCell>{item.weight}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
@@ -133,7 +133,7 @@ export function BoxPalletsGrid({ boxPallets, onChange, packageTypes }: BoxPallet
       {boxPallets.length > 0 && (
         <div className="flex justify-end gap-6">
           <div className="text-sm font-medium">
-            Volume Total: <span className="text-green-600">{totalVolume.toFixed(2)}</span>
+            CBM Total: <span className="text-green-600">{totalVolume.toFixed(4)}</span>
           </div>
           <div className="text-sm font-medium">
             Weight Total: <span className="text-green-600">{totalWeight.toFixed(2)}</span>

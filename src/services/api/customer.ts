@@ -24,6 +24,7 @@ export interface Customer {
   taxNo?: string;
   status?: string;
   assignedTo?: string;
+  isApproved?: boolean;
   createdAt: string;
 }
 
@@ -375,4 +376,17 @@ export const customerApi = {
     fetchApi<CustomerStatement>(
       `/customers/${customerId}/statement?fromDate=${fromDate}&toDate=${toDate}`
     ),
+
+  // Customer Approval
+  getPendingApproval: (params?: { pageNumber?: number; pageSize?: number; searchTerm?: string }) => {
+    const query = new URLSearchParams();
+    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
+    return fetchApi<PaginatedList<Customer>>(`/customers/pending-approval?${query}`);
+  },
+  approve: (id: number) =>
+    fetchApi<void>(`/customers/${id}/approve`, { method: 'POST' }),
+  deny: (id: number) =>
+    fetchApi<void>(`/customers/${id}/deny`, { method: 'POST' }),
 };

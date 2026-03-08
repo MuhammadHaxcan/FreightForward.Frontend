@@ -210,6 +210,67 @@ export function useSimilarCustomerCheck(name: string, excludeId?: number) {
   });
 }
 
+// Customer Approval hooks
+export function usePendingApprovalCustomers(params?: {
+  pageNumber?: number;
+  pageSize?: number;
+  searchTerm?: string;
+}) {
+  return useQuery({
+    queryKey: ['customers', 'pending-approval', params],
+    queryFn: async () => {
+      const response = await customerApi.getPendingApproval(params);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+    staleTime: 30 * 1000,
+  });
+}
+
+export function useApproveCustomer() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const response = await customerApi.approve(id);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      toast.success('Customer approved successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to approve customer');
+    },
+  });
+}
+
+export function useDenyCustomer() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const response = await customerApi.deny(id);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      toast.success('Customer denied successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to deny customer');
+    },
+  });
+}
+
 // Get all customers (any type) for dropdowns
 export function useAllCustomers() {
   return useQuery({
