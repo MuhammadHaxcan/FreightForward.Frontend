@@ -62,6 +62,8 @@ const deduplicateByCustomerId = (partyList: ShipmentParty[]): ShipmentParty[] =>
 
 export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, parties, onSave, editInvoiceId }: InvoiceModalProps) {
   const baseCurrencyCode = useBaseCurrency();
+  const isBaseCurrency = (currencyCode?: string): boolean =>
+    (currencyCode || "").trim().toUpperCase() === (baseCurrencyCode || "").trim().toUpperCase();
   const createInvoiceMutation = useCreateInvoice();
   const updateInvoiceMutation = useUpdateInvoice();
   const addCostingMutation = useAddShipmentCosting();
@@ -417,11 +419,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
     if (isEditMode && editInvoiceId) {
       // Update existing invoice
       const items: UpdateInvoiceItemRequest[] = selectedCharges.map(charge => {
-        const saleFCY = parseFloat(charge.saleFCY || 0);
-        const exRate = getChargeExRate(charge);
-        const localAmount = saleFCY * exRate;
-        const taxPercentage = parseFloat(charge.saleTaxPercentage) || 0;
-        const taxAmount = localAmount * taxPercentage / 100;
+        const lineValues = getSaleLineValues(charge);
 
         return {
           id: existingItemIds.get(charge.id) || undefined,
@@ -431,11 +429,11 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
           currencyId: charge.saleCurrencyId || 1,
           quantity: parseFloat(charge.saleQty) || 1,
           salePerUnit: parseFloat(charge.saleUnit) || 0,
-          fcyAmount: saleFCY,
-          exRate: exRate,
-          localAmount: localAmount,
-          taxPercentage: parseFloat(charge.saleTaxPercentage) || 0,
-          taxAmount: taxAmount,
+          fcyAmount: lineValues.saleFCY,
+          exRate: lineValues.exRate,
+          localAmount: lineValues.localAmount,
+          taxPercentage: lineValues.taxPercentage,
+          taxAmount: lineValues.taxAmount,
         };
       });
 
@@ -468,11 +466,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
     } else {
       // Create new invoice
       const items: CreateInvoiceItemRequest[] = selectedCharges.map(charge => {
-        const saleFCY = parseFloat(charge.saleFCY || 0);
-        const exRate = getChargeExRate(charge);
-        const localAmount = saleFCY * exRate;
-        const taxPercentage = parseFloat(charge.saleTaxPercentage) || 0;
-        const taxAmount = localAmount * taxPercentage / 100;
+        const lineValues = getSaleLineValues(charge);
 
         return {
           shipmentCostingId: charge.id,
@@ -481,11 +475,11 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
           ppcc: charge.ppcc || 'PP',
           salePerUnit: parseFloat(charge.saleUnit) || 0,
           currencyId: charge.saleCurrencyId || 1,
-          fcyAmount: saleFCY,
-          exRate: exRate,
-          localAmount: localAmount,
-          taxPercentage: parseFloat(charge.saleTaxPercentage) || 0,
-          taxAmount: taxAmount,
+          fcyAmount: lineValues.saleFCY,
+          exRate: lineValues.exRate,
+          localAmount: lineValues.localAmount,
+          taxPercentage: lineValues.taxPercentage,
+          taxAmount: lineValues.taxAmount,
         };
       });
 
@@ -536,18 +530,35 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
     return getInvoiceExRate(charge.saleCurrencyId || 1);
   };
 
-  const totalSale = selectedChargesData.reduce((sum, c) => {
-    const fcy = parseFloat(c.saleFCY || 0);
-    const exRate = getChargeExRate(c);
-    return sum + fcy * exRate;
-  }, 0);
-  const totalTax = selectedChargesData.reduce((sum, c) => {
-    const fcy = parseFloat(c.saleFCY || 0);
-    const exRate = getChargeExRate(c);
-    const localAmt = fcy * exRate;
-    const taxPct = parseFloat(c.saleTaxPercentage || 0);
-    return sum + localAmt * taxPct / 100;
-  }, 0);
+  const getSaleLineValues = (charge: ShipmentCosting) => {
+    const saleFCY = parseFloat(String(charge.saleFCY ?? 0)) || 0;
+    const saleLCY = parseFloat(String(charge.saleLCY ?? 0)) || 0;
+    const exRate = getChargeExRate(charge);
+    const chargeCurrencyCode =
+      currencies.find(c => c.id === charge.saleCurrencyId)?.code || charge.saleCurrencyCode;
+    const baseCurrency = currencies.find(c => isBaseCurrency(c.code));
+    const isBaseCurrencyCharge =
+      isBaseCurrency(chargeCurrencyCode) ||
+      (!!baseCurrency && charge.saleCurrencyId === baseCurrency.id);
+    // Preserve the pre-zero-FCY behavior for base-currency charges by using LCY directly.
+    const localAmount = isBaseCurrencyCharge && saleFCY === 0
+      ? saleLCY
+      : saleFCY * exRate;
+    const taxPercentage = parseFloat(String(charge.saleTaxPercentage ?? 0)) || 0;
+    const taxAmount = (localAmount * taxPercentage) / 100;
+
+    return { saleFCY, exRate, localAmount, taxPercentage, taxAmount };
+  };
+
+  const { totalSale, totalTax } = selectedChargesData.reduce(
+    (acc, charge) => {
+      const lineValues = getSaleLineValues(charge);
+      acc.totalSale += lineValues.localAmount;
+      acc.totalTax += lineValues.taxAmount;
+      return acc;
+    },
+    { totalSale: 0, totalTax: 0 }
+  );
   const totalWithTax = totalSale + totalTax;
 
   return (
@@ -671,7 +682,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
                       <TableCell className="text-xs py-2">{currencies.find(c => c.id === charge.saleCurrencyId)?.code || charge.saleCurrencyCode || ""}</TableCell>
                       <TableCell className="text-xs py-2">{charge.saleFCY}</TableCell>
                       <TableCell className="text-xs py-2">{getChargeExRate(charge).toFixed(3)}</TableCell>
-                      <TableCell className="text-xs py-2">{(parseFloat(charge.saleFCY || 0) * getChargeExRate(charge)).toFixed(2)}</TableCell>
+                      <TableCell className="text-xs py-2">{getSaleLineValues(charge).localAmount.toFixed(2)}</TableCell>
                     </TableRow>
                   ))
                 )}

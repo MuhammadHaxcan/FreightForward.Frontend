@@ -47,6 +47,9 @@ const standardTaxValues = [0, 5, 10, 15];
 export function CostingModal({ open, onOpenChange, parties, costing, onSave, defaultBillToCustomerId, defaultVendorCustomerId, defaultActiveTab }: CostingModalProps) {
   const baseCurrencyCode = useBaseCurrency();
   const LOCAL_CURRENCY = baseCurrencyCode;
+  const isBaseCurrency = (currencyCode?: string): boolean =>
+    (currencyCode || "").trim().toUpperCase() === (LOCAL_CURRENCY || "").trim().toUpperCase();
+  const getFooterCurrency = (sideCurrency?: string): string => LOCAL_CURRENCY || sideCurrency || "USD";
 
   // Invoice lock states
   const isSaleLocked = !!costing?.saleInvoiced;
@@ -191,6 +194,8 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
       // Find the party that matches the vendorCustomerId or billToCustomerId
       const vendorParty = creditorParties.find(p => p.customerId === costing.vendorCustomerId);
       const billToParty = debtorParties.find(p => p.customerId === costing.billToCustomerId);
+      const costCurrencyCode = costing.costCurrency || costing.costCurrencyCode || LOCAL_CURRENCY;
+      const saleCurrencyCode = costing.saleCurrency || costing.saleCurrencyCode || LOCAL_CURRENCY;
 
       setFormData({
         charge: costing.description || "",
@@ -199,13 +204,13 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
         unitId: costing.unitId || undefined,
         unit: costing.unitName || "",
         remarks: costing.remarks || "",
-        costCurrency: costing.costCurrency || costing.costCurrencyCode || LOCAL_CURRENCY,
+        costCurrency: costCurrencyCode,
         costCurrencyId: costing.costCurrencyId || undefined,
         costExRate: costing.costExRate?.toString() || "1.000",
         costNoOfUnit: costing.costQty?.toString() || "",
         costPerUnit: costing.costUnit?.toString() || "",
         costLCYAmount: costing.costLCY?.toString() || "0.00",
-        costFCYAmount: costing.costFCY?.toString() || "0.00",
+        costFCYAmount: isBaseCurrency(costCurrencyCode) ? "0.00" : (costing.costFCY?.toString() || "0.00"),
         costVendor: vendorParty?.id?.toString() || "_none",
         costVendorName: costing.vendorName || "",
         costVendorCustomerId: costing.vendorCustomerId?.toString() || "",
@@ -225,13 +230,13 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
           const lcy = parseFloat(costing.costLCY as string) || 0;
           return ((lcy * val) / 100).toFixed(2);
         })(),
-        saleCurrency: costing.saleCurrency || costing.saleCurrencyCode || LOCAL_CURRENCY,
+        saleCurrency: saleCurrencyCode,
         saleCurrencyId: costing.saleCurrencyId || undefined,
         saleExRate: costing.saleExRate?.toString() || "1.000",
         saleNoOfUnit: costing.saleQty?.toString() || "",
         salePerUnit: costing.saleUnit?.toString() || "",
         saleLCYAmount: costing.saleLCY?.toString() || "0.00",
-        saleFCYAmount: costing.saleFCY?.toString() || "0.00",
+        saleFCYAmount: isBaseCurrency(saleCurrencyCode) ? "0.00" : (costing.saleFCY?.toString() || "0.00"),
         saleBillTo: billToParty?.id?.toString() || "_none",
         saleBillToName: costing.billToName || "",
         saleBillToCustomerId: costing.billToCustomerId?.toString() || "",
@@ -321,8 +326,9 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
     const unitPrice = parseFloat(perUnit) || 0;
     const rate = parseFloat(exRate) || 1;
 
-    const fcyAmount = units * unitPrice;
-    const lcyAmount = fcyAmount * rate;
+    const baseAmount = units * unitPrice;
+    const fcyAmount = isBaseCurrency(currency) ? 0 : baseAmount;
+    const lcyAmount = baseAmount * rate;
     return { fcy: fcyAmount.toFixed(2), lcy: lcyAmount.toFixed(2) };
   };
 
@@ -331,8 +337,9 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
     const unitPrice = parseFloat(perUnit) || 0;
     const rate = parseFloat(exRate) || 1;
 
-    const fcyAmount = units * unitPrice;
-    const lcyAmount = fcyAmount * rate;
+    const baseAmount = units * unitPrice;
+    const fcyAmount = isBaseCurrency(currency) ? 0 : baseAmount;
+    const lcyAmount = baseAmount * rate;
     return { fcy: fcyAmount.toFixed(2), lcy: lcyAmount.toFixed(2) };
   };
 
@@ -537,6 +544,8 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
     const saleTaxAmountFinal = formData.saleTax === "Custom" && formData.saleCustomTaxAmount
       ? parseFloat(formData.saleCustomTaxAmount) || 0
       : (saleLCYValue * saleTaxPercentage) / 100;
+    const costFCYFinal = isBaseCurrency(formData.costCurrency) ? "0.00" : (parseFloat(formData.costFCYAmount) || 0).toFixed(2);
+    const saleFCYFinal = isBaseCurrency(formData.saleCurrency) ? "0.00" : (parseFloat(formData.saleFCYAmount) || 0).toFixed(2);
 
     onSave({
       id: costing?.id || Date.now(),
@@ -550,7 +559,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
       saleCurrencyId: formData.saleCurrencyId,
       saleCurrencyCode: formData.saleCurrency,
       saleExRate: formData.saleExRate,
-      saleFCY: formData.saleFCYAmount,
+      saleFCY: saleFCYFinal,
       saleLCY: formData.saleLCYAmount,
       saleTaxPercentage: saleTaxPercentage.toString(),
       saleTaxAmount: saleTaxAmountFinal.toFixed(2),
@@ -560,7 +569,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
       costCurrencyId: formData.costCurrencyId,
       costCurrencyCode: formData.costCurrency,
       costExRate: formData.costExRate,
-      costFCY: formData.costFCYAmount,
+      costFCY: costFCYFinal,
       costLCY: formData.costLCYAmount,
       costTaxPercentage: costTaxPercentage.toString(),
       costTaxAmount: costTaxAmountFinal.toFixed(2),
@@ -863,7 +872,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                   vat = (lcy * pct) / 100;
                 }
                 const subTotal = lcy + vat;
-                const curr = formData.costCurrency || "USD";
+                const curr = getFooterCurrency(formData.costCurrency);
                 return (
                   <div className="flex items-center justify-end gap-6 pt-2 border-t border-border mt-2">
                     <div className="text-center">
@@ -1042,7 +1051,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                   vat = (lcy * pct) / 100;
                 }
                 const subTotal = lcy + vat;
-                const curr = formData.saleCurrency || "USD";
+                const curr = getFooterCurrency(formData.saleCurrency);
                 return (
                   <div className="flex items-center justify-end gap-6 pt-2 border-t border-border mt-2">
                     <div className="text-center">
