@@ -67,6 +67,9 @@ const HrEmployeeDetail = () => {
   const [bankAccountNumber, setBankAccountNumber] = useState("");
   const [bankIban, setBankIban] = useState("");
   const [bankBranch, setBankBranch] = useState("");
+  const [annualLeaveDays, setAnnualLeaveDays] = useState("30");
+  const [sickLeaveDays, setSickLeaveDays] = useState("10");
+  const [paidLeaveDays, setPaidLeaveDays] = useState("5");
   const [profileLoaded, setProfileLoaded] = useState(false);
 
   // ========== Salary Tab State ==========
@@ -107,6 +110,9 @@ const HrEmployeeDetail = () => {
     setBankAccountNumber(employee.bankAccountNumber || "");
     setBankIban(employee.bankIban || "");
     setBankBranch(employee.bankBranch || "");
+    setAnnualLeaveDays(employee.annualLeaveDays?.toString() || "30");
+    setSickLeaveDays(employee.sickLeaveDays?.toString() || "10");
+    setPaidLeaveDays(employee.paidLeaveDays?.toString() || "5");
     setProfileLoaded(true);
   }
 
@@ -211,6 +217,9 @@ const HrEmployeeDetail = () => {
       bankAccountNumber: bankAccountNumber || undefined,
       bankIban: bankIban || undefined,
       bankBranch: bankBranch || undefined,
+      annualLeaveDays: parseInt(annualLeaveDays) || 30,
+      sickLeaveDays: parseInt(sickLeaveDays) || 10,
+      paidLeaveDays: parseInt(paidLeaveDays) || 5,
     };
     updateMutation.mutate(data);
   };
@@ -270,7 +279,9 @@ const HrEmployeeDetail = () => {
       Absent: "bg-red-500",
       Late: "bg-yellow-500",
       HalfDay: "bg-orange-500",
-      Leave: "bg-blue-500",
+      SickLeave: "bg-teal-500",
+      PaidLeave: "bg-blue-500",
+      AnnualLeave: "bg-cyan-500",
       Holiday: "bg-purple-500",
     };
     return <span className={`px-2 py-0.5 rounded text-xs font-medium text-white ${colors[status] || "bg-gray-500"}`}>{status}</span>;
@@ -449,6 +460,22 @@ const HrEmployeeDetail = () => {
               <div className="space-y-2">
                 <Label className="text-sm">Branch</Label>
                 <Input value={bankBranch} onChange={(e) => setBankBranch(e.target.value)} />
+              </div>
+            </div>
+
+            <h3 className="text-lg font-medium border-b pb-2">Leave Entitlements (per year)</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm">Annual Leave Days</Label>
+                <Input type="number" min={0} value={annualLeaveDays} onChange={(e) => setAnnualLeaveDays(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Sick Leave Days</Label>
+                <Input type="number" min={0} value={sickLeaveDays} onChange={(e) => setSickLeaveDays(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Paid Leave Days</Label>
+                <Input type="number" min={0} value={paidLeaveDays} onChange={(e) => setPaidLeaveDays(e.target.value)} />
               </div>
             </div>
 

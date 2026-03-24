@@ -49,17 +49,7 @@ const allSidebarItems: SidebarItem[] = [
       { title: "Bill of Lading", path: "/shipments/bill-of-lading", permission: "bl_view" },
     ]
   },
-  {
-    title: "Customers",
-    icon: Users,
-    path: "/master-customers",
-    permission: "cust_view",
-    hasSubmenu: true,
-    subMenuItems: [
-      { title: "Master List", path: "/master-customers", permission: "cust_view" },
-      { title: "Pending Approval", path: "/customer-approval", permission: "cust_approve" },
-    ]
-  },
+  { title: "Customers", icon: Users, path: "/master-customers", permission: "cust_view" },
   {
     title: "Sales",
     icon: TrendingUp,
@@ -110,6 +100,7 @@ const allSidebarItems: SidebarItem[] = [
       { title: "Salary Components", path: "/hr/salary-components", permission: "hr_salary_view" },
       { title: "Attendance", path: "/hr/attendance", permission: "hr_attend_view" },
       { title: "Attendance Summary", path: "/hr/attendance-summary", permission: "hr_attend_view" },
+      { title: "Attendance Policy", path: "/hr/attendance-policy", permission: "hr_attend_policy" },
       { title: "Payroll", path: "/hr/payroll", permission: "hr_payroll_view" },
       { title: "Advances", path: "/hr/advances", permission: "hr_advance_view" },
     ]

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { calculateCbm } from "@/lib/cargoCalculations";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -328,18 +329,6 @@ export default function QuotationForm() {
     if (cargoRows.length > 1) {
       setCargoRows(cargoRows.filter((row) => row.id !== rowId));
     }
-  };
-
-  const calculateCbm = (length?: number, width?: number, height?: number, volumeUnit?: string): number | undefined => {
-    const l = length || 0;
-    const w = width || 0;
-    const h = height || 0;
-    if (l === 0 || w === 0 || h === 0) return undefined;
-    const raw = l * w * h;
-    if (volumeUnit === "inch") return raw / 61_024;
-    if (volumeUnit === "meter") return raw;
-    // Default: cm
-    return raw / 1_000_000;
   };
 
   const updateCargoRow = (rowId: number, field: keyof CargoRow, value: CargoRow[keyof CargoRow]) => {

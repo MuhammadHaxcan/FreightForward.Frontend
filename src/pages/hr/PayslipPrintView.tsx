@@ -2,25 +2,10 @@ import { useParams } from "react-router-dom";
 import { API_BASE_URL } from "@/services/api/base";
 import { useAuthPdf } from "@/hooks/useAuthPdf";
 
-const REPORT_TITLES: Record<string, string> = {
-  "cargo-manifest": "Cargo Manifest",
-  "proof-of-delivery": "Proof of Delivery",
-  "cargo-arrival-notice": "Cargo Arrival Notice",
-  "freight-certificate": "Freight Certificate",
-  "mbl-shipping-instruction": "MBL Shipping Instruction",
-  "bill-of-lading": "Bill of Lading",
-};
-
-export default function ShipmentReportPrintView() {
-  const { shipmentId, reportType } = useParams<{ shipmentId: string; reportType: string }>();
-
-  const pdfUrl = shipmentId && reportType
-    ? `${API_BASE_URL}/shipments/${shipmentId}/reports/${reportType}?inline=true`
-    : null;
-
+export default function PayslipPrintView() {
+  const { id } = useParams<{ id: string }>();
+  const pdfUrl = `${API_BASE_URL}/hr/payroll/${id}/pdf?inline=true`;
   const { blobUrl, isLoading, error } = useAuthPdf(pdfUrl);
-
-  const title = REPORT_TITLES[reportType ?? ""] ?? "Report";
 
   return (
     <div className="h-screen w-screen relative">
@@ -28,7 +13,7 @@ export default function ShipmentReportPrintView() {
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading {title}...</p>
+            <p className="text-gray-600">Loading Payslip...</p>
           </div>
         </div>
       )}
@@ -49,7 +34,7 @@ export default function ShipmentReportPrintView() {
         <iframe
           src={blobUrl}
           className="w-full h-full border-0"
-          title={title}
+          title="Payslip"
         />
       )}
     </div>

@@ -61,7 +61,7 @@ export default function Quotations() {
   // Queries
   const { data, isLoading, error } = useQuotations({
     pageNumber: currentPage,
-    pageSize: parseInt(entriesPerPage),
+    pageSize: parseInt(entriesPerPage, 10) || 10,
     searchTerm: searchTerm || undefined,
     status: activeTab === "pending" ? "Pending" : activeTab === "approved" ? "Approved" : undefined,
   });
@@ -283,8 +283,8 @@ export default function Quotations() {
               <div className="p-4 flex justify-between items-center border-t border-border">
                 <span className="text-sm text-muted-foreground">
                   Showing{" "}
-                  {quotations.length > 0 ? (currentPage - 1) * parseInt(entriesPerPage) + 1 : 0} to{" "}
-                  {Math.min(currentPage * parseInt(entriesPerPage), totalCount)} of {totalCount} entries
+                  {quotations.length > 0 ? (currentPage - 1) * (parseInt(entriesPerPage, 10) || 10) + 1 : 0} to{" "}
+                  {Math.min(currentPage * (parseInt(entriesPerPage, 10) || 10), totalCount)} of {totalCount} entries
                 </span>
                 <div className="flex gap-1">
                   <Button

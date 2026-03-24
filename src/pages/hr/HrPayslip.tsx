@@ -30,7 +30,7 @@ const HrPayslip = () => {
     amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const handlePrint = () => {
-    window.print();
+    window.open(`/hr/payslip/${payrollId}/print`, '_blank');
   };
 
   const getStatusBadge = (status: string) => {

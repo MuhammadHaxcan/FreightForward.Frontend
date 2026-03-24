@@ -6,7 +6,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Loader2, Search, Printer, Minus, Plus, FileText } from "lucide-react";
+import { Loader2, Search, Printer, Minus, Plus, FileText, FileDown } from "lucide-react";
 
 // Find party by category keyword match
 function findParty(parties: ShipmentParty[], ...keywords: string[]) {
@@ -376,6 +376,15 @@ export default function BillOfLadingViewer() {
               disabled={!ship}
             >
               <Printer className="h-4 w-4 mr-1" /> Print
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-9"
+              onClick={() => window.open(`/shipments/${ship!.id}/reports/bill-of-lading`, '_blank')}
+              disabled={!ship}
+            >
+              <FileDown className="h-4 w-4 mr-1" /> PDF
             </Button>
           </div>
         </div>

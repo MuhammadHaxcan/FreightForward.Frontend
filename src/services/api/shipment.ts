@@ -1,4 +1,4 @@
-import { fetchApi, PaginatedList, MasterType, PaymentStatus, getAccessToken, isDevAuthDisabled, attemptTokenRefresh } from './base';
+import { fetchApi, PaginatedList, MasterType, PaymentStatus, getAccessToken, attemptTokenRefresh } from './base';
 
 // Shipment Types
 export type ShipmentStatus = 'Opened' | 'Closed' | 'Cancelled';
@@ -70,7 +70,7 @@ export interface ShipmentDetail extends Shipment {
   freeTime?: string;
   networkPartnerId?: number;
   networkPartnerName?: string;
-  assignedTo?: string;
+  salesperson?: string;
   // Vessel & Schedule
   voyage?: string;
   secondLegVessel: boolean;
@@ -157,17 +157,35 @@ export interface ShipmentCosting {
 
 export interface ShipmentCargo {
   id: number;
+  calculationMode: string;
   quantity: number;
   packageTypeId?: number;
   packageTypeName?: string;
+  loadType?: string;
+  length?: number;
+  width?: number;
+  height?: number;
+  volumeUnit?: string;
+  cbm?: number;
+  weight?: number;
+  weightUnit?: string;
   totalCBM?: number;
   totalWeight?: number;
   description?: string;
 }
 
 export interface AddShipmentCargoRequest {
+  calculationMode: string;
   quantity: number;
   packageTypeId?: number | null;
+  loadType?: string;
+  length?: number | null;
+  width?: number | null;
+  height?: number | null;
+  volumeUnit?: string;
+  cbm?: number | null;
+  weight?: number | null;
+  weightUnit?: string;
   totalCBM?: number | null;
   totalWeight?: number | null;
   description?: string;
@@ -239,7 +257,7 @@ export interface CreateShipmentRequest {
   direction: ShipmentDirection;
   mode: ShipmentMode;
   shipmentType?: ShipmentType;
-  assignedTo?: string;
+  salesperson?: string;
   incoTermId?: number;
   hblNo?: string;
   hblDate?: string;
@@ -282,7 +300,7 @@ export interface CreateShipmentRequest {
 export interface UpdateShipmentRequest extends CreateShipmentRequest {
   id: number;
   jobStatus: ShipmentStatus;
-  assignedTo?: string;
+  salesperson?: string;
 }
 
 export interface AddShipmentPartyRequest {
@@ -540,10 +558,10 @@ export const fileApi = {
       });
     };
 
-    let response = await makeRequest(isDevAuthDisabled() ? null : getAccessToken());
+    let response = await makeRequest(getAccessToken());
 
     // Handle 401 with token refresh
-    if (response.status === 401 && !isDevAuthDisabled()) {
+    if (response.status === 401) {
       const refreshed = await attemptTokenRefresh();
       if (refreshed) {
         response = await makeRequest(getAccessToken());
@@ -576,10 +594,10 @@ export const fileApi = {
       });
     };
 
-    let response = await makeRequest(isDevAuthDisabled() ? null : getAccessToken());
+    let response = await makeRequest(getAccessToken());
 
     // Handle 401 with token refresh
-    if (response.status === 401 && !isDevAuthDisabled()) {
+    if (response.status === 401) {
       const refreshed = await attemptTokenRefresh();
       if (refreshed) {
         response = await makeRequest(getAccessToken());

@@ -1435,9 +1435,10 @@ const Settings = () => {
                       <div>
                         <label className="block text-sm font-medium text-foreground mb-1">Currency</label>
                         <Input
-                          value={allCurrencies.find(c => c.id === companyProfile.baseCurrencyId)?.name
-                            ? `${allCurrencies.find(c => c.id === companyProfile.baseCurrencyId)!.name} (${allCurrencies.find(c => c.id === companyProfile.baseCurrencyId)!.code})`
-                            : ""}
+                          value={(() => {
+                            const cur = allCurrencies.find(c => c.id === companyProfile.baseCurrencyId);
+                            return cur ? `${cur.name} (${cur.code})` : "";
+                          })()}
                           readOnly
                           disabled
                           className="bg-muted"

@@ -57,11 +57,11 @@ const AllUsers = () => {
 
   // Fetch users
   const { data: usersData, isLoading: usersLoading } = useQuery({
-    queryKey: ["users", currentPage, parseInt(entriesPerPage), searchTerm],
+    queryKey: ["users", currentPage, parseInt(entriesPerPage, 10) || 10, searchTerm],
     queryFn: async () => {
       const result = await usersApi.getAll({
         pageNumber: currentPage,
-        pageSize: parseInt(entriesPerPage),
+        pageSize: parseInt(entriesPerPage, 10) || 10,
         searchTerm: searchTerm || undefined,
       });
       if (result.error) throw new Error(result.error);
@@ -388,8 +388,8 @@ const AllUsers = () => {
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            Showing {users.length > 0 ? (currentPage - 1) * parseInt(entriesPerPage) + 1 : 0} to{" "}
-            {Math.min(currentPage * parseInt(entriesPerPage), totalCount)} of {totalCount} entries
+            Showing {users.length > 0 ? (currentPage - 1) * (parseInt(entriesPerPage, 10) || 10) + 1 : 0} to{" "}
+            {Math.min(currentPage * (parseInt(entriesPerPage, 10) || 10), totalCount)} of {totalCount} entries
           </p>
           <div className="flex items-center gap-1">
             <Button

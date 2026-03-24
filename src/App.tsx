@@ -2,7 +2,6 @@ import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
@@ -26,7 +25,6 @@ const AddShipment = lazy(() => import("./pages/AddShipment"));
 const BillOfLadingViewer = lazy(() => import("./pages/BillOfLadingViewer"));
 const ShipmentReportPrintView = lazy(() => import("./pages/ShipmentReportPrintView"));
 const MasterCustomers = lazy(() => import("./pages/MasterCustomers"));
-const CustomerApproval = lazy(() => import("./pages/CustomerApproval"));
 const CustomerDetail = lazy(() => import("./pages/CustomerDetail"));
 const NeutralDetail = lazy(() => import("./pages/NeutralDetail"));
 const AllUsers = lazy(() => import("./pages/AllUsers"));
@@ -86,6 +84,8 @@ const HrAdvances = lazy(() => import("./pages/hr/HrAdvances"));
 const HrAttendance = lazy(() => import("./pages/hr/HrAttendance"));
 const HrAttendanceSummary = lazy(() => import("./pages/hr/HrAttendanceSummary"));
 const AttendancePrintView = lazy(() => import("./pages/hr/AttendancePrintView"));
+const PayslipPrintView = lazy(() => import("./pages/hr/PayslipPrintView"));
+const HrAttendancePolicy = lazy(() => import("./pages/hr/HrAttendancePolicy"));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -93,8 +93,6 @@ const PageLoader = () => (
     <Loader2 className="h-8 w-8 animate-spin text-primary" />
   </div>
 );
-
-const queryClient = new QueryClient();
 
 // Wrapper that conditionally applies AuthProvider only for non-system routes
 const ConditionalAuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -173,11 +171,6 @@ const AppRoutes = () => (
       <Route path="/master-customers" element={
         <ProtectedRoute permission="cust_view">
           <MasterCustomers />
-        </ProtectedRoute>
-      } />
-      <Route path="/customer-approval" element={
-        <ProtectedRoute permission="cust_approve">
-          <CustomerApproval />
         </ProtectedRoute>
       } />
       <Route path="/master-customers/:id/edit" element={
@@ -446,6 +439,9 @@ const AppRoutes = () => (
             <Route path="/hr/payslip/:id" element={
                 <ProtectedRoute permission="hr_payroll_view"><HrPayslip /></ProtectedRoute>
             } />
+            <Route path="/hr/payslip/:id/print" element={
+                <ProtectedRoute permission="hr_payroll_view"><PayslipPrintView /></ProtectedRoute>
+            } />
             <Route path="/hr/advances" element={
                 <ProtectedRoute permission="hr_advance_view"><HrAdvances /></ProtectedRoute>
             } />
@@ -454,6 +450,9 @@ const AppRoutes = () => (
             } />
             <Route path="/hr/attendance-summary" element={
                 <ProtectedRoute permission="hr_attend_view"><HrAttendanceSummary /></ProtectedRoute>
+            } />
+            <Route path="/hr/attendance-policy" element={
+                <ProtectedRoute permission="hr_attend_policy"><HrAttendancePolicy /></ProtectedRoute>
             } />
             <Route path="/hr/attendance/print" element={
                 <ProtectedRoute permission="hr_attend_view"><AttendancePrintView /></ProtectedRoute>
@@ -464,17 +463,15 @@ const AppRoutes = () => (
 );
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Suspense fallback={<PageLoader />}>
-          <AppRoutes />
-        </Suspense>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <TooltipProvider>
+    <Toaster />
+    <Sonner />
+    <BrowserRouter>
+      <Suspense fallback={<PageLoader />}>
+        <AppRoutes />
+      </Suspense>
+    </BrowserRouter>
+  </TooltipProvider>
 );
 
 export default App;

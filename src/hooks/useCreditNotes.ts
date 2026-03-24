@@ -66,8 +66,9 @@ export function useUpdateCreditNote() {
       }
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['creditNotes'] });
+      queryClient.invalidateQueries({ queryKey: ['creditNotes', variables.id] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       toast.success('Credit note updated successfully');
     },

@@ -69,8 +69,28 @@ const NeutralDetail = () => {
     address: "",
     status: "Active",
     carrierCode: "",
-    baseCurrency: baseCurrencyCode,
+    currencyId: "",
   });
+
+  const [accountDetails, setAccountDetails] = useState({
+    acName: "",
+    bankAcNo: "",
+    currency: baseCurrencyCode,
+    type: "Credit",
+    notes: "",
+    swiftCode: "",
+    acType: "",
+    approvedCreditDays: "0",
+    alertCreditDays: "0",
+    cc: "",
+    approvedCreditAmount: "0.00",
+    alertCreditAmount: "0.00",
+    bcc: "",
+  });
+
+  // Contacts list
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [contactForm, setContactForm] = useState<Partial<Contact>>({});
 
   // Load category types and customer data
   useEffect(() => {
@@ -109,8 +129,14 @@ const NeutralDetail = () => {
               address: customer.address || "",
               status: customer.status || "Active",
               carrierCode: customer.carrierCode || "",
-              baseCurrency: customer.baseCurrency || baseCurrencyCode,
+              currencyId: customer.currencyId?.toString() || "",
             });
+            if (customer.currencyId && currencyResponse.data) {
+              const currency = currencyResponse.data.find(c => c.id === customer.currencyId);
+              if (currency) {
+                setAccountDetails(prev => ({ ...prev, currency: currency.code }));
+              }
+            }
             // Load contacts
             if (customer.contacts) {
               setContacts(customer.contacts.map(c => ({
@@ -127,6 +153,28 @@ const NeutralDetail = () => {
                 skype: c.skype || "",
                 enableRateRequest: c.enableRateRequest,
               })));
+            }
+            if (customer.accountDetail) {
+              const accountDetail = customer.accountDetail;
+              const accountCurrency = accountDetail.currencyId && currencyResponse.data
+                ? currencyResponse.data.find(c => c.id === accountDetail.currencyId)
+                : null;
+
+              setAccountDetails({
+                acName: accountDetail.acName || "",
+                bankAcNo: accountDetail.bankAcNo || "",
+                currency: accountCurrency?.code || customer.currencyCode || baseCurrencyCode,
+                type: accountDetail.type || "Credit",
+                notes: accountDetail.notes || "",
+                swiftCode: accountDetail.swiftCode || "",
+                acType: accountDetail.acType || "",
+                approvedCreditDays: accountDetail.approvedCreditDays?.toString() || "0",
+                alertCreditDays: accountDetail.alertCreditDays?.toString() || "0",
+                cc: accountDetail.cc || "",
+                approvedCreditAmount: accountDetail.approvedCreditAmount?.toString() || "0.00",
+                alertCreditAmount: accountDetail.alertCreditAmount?.toString() || "0.00",
+                bcc: accountDetail.bcc || "",
+              });
             }
           }
         }
@@ -158,6 +206,9 @@ const NeutralDetail = () => {
 
     setSaving(true);
     try {
+      const selectedCurrency = currencyTypes.find(c => c.code === accountDetails.currency);
+      const currencyId = selectedCurrency?.id;
+
       if (isEditMode && id) {
         // Update existing customer
         const updateData = {
@@ -171,7 +222,7 @@ const NeutralDetail = () => {
           country: profileData.country || undefined,
           city: profileData.city || undefined,
           address: profileData.address || undefined,
-          baseCurrency: profileData.baseCurrency,
+          currencyId: currencyId || undefined,
           taxNo: profileData.ntnVatTaxNo || undefined,
           taxPercentage: profileData.taxPercentage ? parseFloat(profileData.taxPercentage) : undefined,
           carrierCode: profileData.carrierCode || undefined,
@@ -199,7 +250,7 @@ const NeutralDetail = () => {
           country: profileData.country || undefined,
           city: profileData.city || undefined,
           address: profileData.address || undefined,
-          baseCurrency: profileData.baseCurrency,
+          currencyId: currencyId || undefined,
           taxNo: profileData.ntnVatTaxNo || undefined,
           taxPercentage: profileData.taxPercentage ? parseFloat(profileData.taxPercentage) : undefined,
           carrierCode: profileData.carrierCode || undefined,
@@ -212,7 +263,7 @@ const NeutralDetail = () => {
 
         toast({
           title: "Success",
-          description: "Customer created successfully",
+          description: "Customer created and sent for approval",
         });
         navigate("/master-customers");
       }
@@ -228,26 +279,49 @@ const NeutralDetail = () => {
     }
   };
 
-  // Account Details state
-  const [accountDetails, setAccountDetails] = useState({
-    acName: "",
-    bankAcNo: "",
-    currency: baseCurrencyCode,
-    type: "Credit",
-    notes: "",
-    swiftCode: "",
-    acType: "",
-    approvedCreditDays: "0",
-    alertCreditDays: "0",
-    cc: "",
-    approvedCreditAmount: "0.00",
-    alertCreditAmount: "0.00",
-    bcc: "",
-  });
+  const handleSaveAccountDetails = async () => {
+    if (!id) {
+      return;
+    }
 
-  // Contacts list
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [contactForm, setContactForm] = useState<Partial<Contact>>({});
+    setSaving(true);
+    try {
+      const selectedCurrency = currencyTypes.find(c => c.code === accountDetails.currency);
+      const response = await customerApi.updateAccountDetail(parseInt(id), {
+        acName: accountDetails.acName || undefined,
+        bankAcNo: accountDetails.bankAcNo || undefined,
+        currencyId: selectedCurrency?.id || undefined,
+        type: accountDetails.type || undefined,
+        notes: accountDetails.notes || undefined,
+        swiftCode: accountDetails.swiftCode || undefined,
+        acType: accountDetails.acType || undefined,
+        approvedCreditDays: accountDetails.approvedCreditDays ? parseInt(accountDetails.approvedCreditDays) : undefined,
+        alertCreditDays: accountDetails.alertCreditDays ? parseInt(accountDetails.alertCreditDays) : undefined,
+        approvedCreditAmount: accountDetails.approvedCreditAmount ? parseFloat(accountDetails.approvedCreditAmount) : undefined,
+        alertCreditAmount: accountDetails.alertCreditAmount ? parseFloat(accountDetails.alertCreditAmount) : undefined,
+        cc: accountDetails.cc || undefined,
+        bcc: accountDetails.bcc || undefined,
+      });
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      toast({
+        title: "Success",
+        description: "Account details saved successfully",
+      });
+    } catch (error) {
+      console.error("Error saving account details:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save account details",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleSaveContact = () => {
     if (contactForm.name) {
@@ -272,7 +346,7 @@ const NeutralDetail = () => {
             options={[{ value: "Neutral", label: "Neutral" }]}
             value={profileData.masterType}
             onValueChange={v => setProfileData({...profileData, masterType: v as 'Neutral'})}
-            disabled={isViewMode}
+            disabled={isViewMode || isEditMode}
             triggerClassName="bg-muted/50"
           />
         </div>
@@ -455,7 +529,7 @@ const NeutralDetail = () => {
             options={currencyTypes.map(c => ({ value: c.code, label: c.code }))}
             value={accountDetails.currency}
             onValueChange={v => setAccountDetails({...accountDetails, currency: v})}
-            disabled={isViewMode}
+            disabled={isViewMode || (isEditMode && !!accountDetails.currency)}
             searchPlaceholder="Search currencies..."
           />
         </div>
@@ -514,6 +588,14 @@ const NeutralDetail = () => {
           <Input value={accountDetails.bcc} onChange={e => setAccountDetails({...accountDetails, bcc: e.target.value})} disabled={isViewMode} placeholder="BCC" />
         </div>
       </div>
+
+      {!isViewMode && isEditMode && (
+        <div className="flex justify-end pt-4">
+          <Button className="btn-success" onClick={handleSaveAccountDetails} disabled={saving}>
+            {saving ? "Saving..." : "Save Account Details"}
+          </Button>
+        </div>
+      )}
     </div>
   );
 

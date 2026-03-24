@@ -33,7 +33,7 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
     city: "",
     currencyId: "",
     taxNo: "",
-    assignedTo: "",
+    salesperson: "",
   });
 
   const createMutation = useCreateCustomer();
@@ -122,7 +122,7 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
         city: customer.city || "",
         currencyId: customer.currencyId?.toString() || "",
         taxNo: customer.taxNo || "",
-        assignedTo: customer.assignedTo || "",
+        salesperson: customer.salesperson || "",
       });
     } else if (mode === "add") {
       // Reset form for add mode
@@ -137,7 +137,7 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
         city: "",
         currencyId: "",
         taxNo: "",
-        assignedTo: "",
+        salesperson: "",
       });
       refetchNextCodes();
     }
@@ -155,7 +155,7 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
       city: formData.city || undefined,
       currencyId: formData.currencyId ? parseInt(formData.currencyId) : undefined,
       taxNo: formData.taxNo || undefined,
-      assignedTo: formData.assignedTo || undefined,
+      salesperson: formData.salesperson || undefined,
     };
 
     if (mode === "add") {
@@ -351,11 +351,11 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm">Assign To</Label>
+              <Label className="text-sm">Salesperson</Label>
               <SearchableSelect
                 options={employees.map((emp) => ({ value: emp.fullName, label: `${emp.fullName} (${emp.employeeCode})` }))}
-                value={formData.assignedTo}
-                onValueChange={(value) => setFormData({ ...formData, assignedTo: value })}
+                value={formData.salesperson}
+                onValueChange={(value) => setFormData({ ...formData, salesperson: value })}
                 placeholder="Select employee..."
                 searchPlaceholder="Search employees..."
                 triggerClassName="bg-muted/50"

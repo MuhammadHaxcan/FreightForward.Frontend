@@ -73,7 +73,7 @@ export default function Leads() {
   // Office Leads query
   const { data, isLoading, error } = useLeads({
     pageNumber: currentPage,
-    pageSize: parseInt(entriesPerPage),
+    pageSize: parseInt(entriesPerPage, 10) || 10,
     searchTerm: searchTerm || undefined,
   });
 
@@ -368,7 +368,7 @@ export default function Leads() {
 
               <div className="p-4 flex justify-between items-center border-t border-border">
                 <span className="text-sm text-muted-foreground">
-                  Showing {leads.length > 0 ? ((currentPage - 1) * parseInt(entriesPerPage)) + 1 : 0} to {Math.min(currentPage * parseInt(entriesPerPage), totalCount)} of {totalCount} entries
+                  Showing {leads.length > 0 ? ((currentPage - 1) * (parseInt(entriesPerPage, 10) || 10)) + 1 : 0} to {Math.min(currentPage * (parseInt(entriesPerPage, 10) || 10), totalCount)} of {totalCount} entries
                 </span>
                 <div className="flex gap-1">
                   <Button

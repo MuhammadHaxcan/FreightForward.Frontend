@@ -54,12 +54,6 @@ export function setAuthFailureCallback(callback: () => void): void {
   onAuthFailure = callback;
 }
 
-// Check if dev mode auth bypass is enabled
-// SECURITY: Only allows bypass in development mode (not production builds)
-export function isDevAuthDisabled(): boolean {
-  return import.meta.env.DEV && import.meta.env.VITE_DISABLE_AUTH === 'true';
-}
-
 // Generic fetch wrapper with auth
 export async function fetchApi<T>(
   endpoint: string,
@@ -71,12 +65,9 @@ export async function fetchApi<T>(
       ...options.headers,
     };
 
-    // Add auth header if token exists (skip in dev bypass mode)
-    if (!isDevAuthDisabled()) {
-      const accessToken = getAccessToken();
-      if (accessToken) {
-        (headers as Record<string, string>)['Authorization'] = `Bearer ${accessToken}`;
-      }
+    const accessToken = getAccessToken();
+    if (accessToken) {
+      (headers as Record<string, string>)['Authorization'] = `Bearer ${accessToken}`;
     }
 
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -145,18 +136,15 @@ export async function fetchApi<T>(
 export async function fetchBlob(url: string): Promise<Response> {
   const headers: HeadersInit = {};
 
-  // Add auth header if not in dev bypass mode
-  if (!isDevAuthDisabled()) {
-    const token = getAccessToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
+  const token = getAccessToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
 
   const response = await fetch(url, { headers });
 
   // Handle 401 - attempt token refresh
-  if (response.status === 401 && !isDevAuthDisabled()) {
+  if (response.status === 401) {
     const refreshResult = await attemptTokenRefresh();
     if (refreshResult) {
       // Retry with new token

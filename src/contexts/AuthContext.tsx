@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../services/api/auth';
-import { setAuthFailureCallback, clearTokens, getAccessToken, getRefreshToken, isDevAuthDisabled } from '../services/api/base';
+import { setAuthFailureCallback, clearTokens, getAccessToken, getRefreshToken } from '../services/api/base';
 import type { CurrentUser, LoginRequest, AuthResponse } from '../types/auth';
 
 interface AuthContextType {
@@ -20,53 +20,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Dev mode mock user
-const DEV_USER: CurrentUser = {
-  id: 1,
-  username: 'admin',
-  firstName: 'Dev',
-  lastName: 'Admin',
-  fullName: 'Dev Admin',
-  email: 'dev@local.com',
-  companyName: 'Development',
-  forcePasswordChange: false,
-  roles: ['Administrator'],
-  permissions: [
-    'dash_view',
-    'ship_view', 'ship_add', 'ship_edit', 'ship_delete', 'bl_view',
-    'cust_view', 'cust_add', 'cust_edit', 'cust_delete', 'cust_approve',
-    'leads_view', 'leads_add', 'leads_edit', 'leads_delete',
-    'ratereq_view', 'ratereq_add', 'ratereq_edit', 'ratereq_delete',
-    'quot_view', 'quot_add', 'quot_edit', 'quot_delete', 'quot_approve', 'quot_convert',
-    'invoice_view', 'invoice_add', 'invoice_edit', 'invoice_delete',
-    'purchase_view', 'purchase_add', 'purchase_edit', 'purchase_delete',
-    'receipt_view', 'receipt_add', 'receipt_edit', 'receipt_delete',
-    'paymentvoucher_view', 'paymentvoucher_add', 'paymentvoucher_edit', 'paymentvoucher_delete',
-    'creditnote_view', 'creditnote_add', 'creditnote_edit', 'creditnote_delete',
-    'accrec_view', 'accpay_view',
-    'expense_view', 'expense_add', 'expense_edit', 'expense_delete',
-    'pdc_view',
-    'invoicenote_view', 'invoicenote_add', 'invoicenote_edit', 'invoicenote_delete',
-    'doc_view', 'doc_add', 'doc_delete',
-    'file_view', 'file_upload', 'file_delete',
-    'user_view', 'user_add', 'user_edit', 'user_delete',
-    'role_view', 'role_add', 'role_edit', 'role_delete',
-    'banks_view', 'banks_add', 'banks_edit', 'banks_delete',
-    'company_view', 'company_add', 'company_edit', 'company_delete',
-    'currency_view', 'currency_add', 'currency_edit', 'currency_delete',
-    'port_view', 'port_add', 'port_edit', 'port_delete',
-    'chargeitem_view', 'chargeitem_add', 'chargeitem_edit', 'chargeitem_delete',
-    'expensetype_view', 'expensetype_add', 'expensetype_edit', 'expensetype_delete',
-    'hr_emp_view', 'hr_emp_add', 'hr_emp_edit', 'hr_emp_delete',
-    'hr_salary_view', 'hr_salary_add', 'hr_salary_edit', 'hr_salary_delete',
-    'hr_payroll_view', 'hr_payroll_add', 'hr_payroll_edit',
-    'hr_advance_view', 'hr_advance_add', 'hr_advance_edit',
-    'hr_attend_view', 'hr_attend_add', 'hr_attend_edit',
-  ],
-  officeSlug: 'dev',
-  officeName: 'Development Office',
-};
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -74,23 +27,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [officeName, setOfficeName] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const isDevMode = isDevAuthDisabled();
-
   // Check if user is authenticated
-  const isAuthenticated = isDevMode ? true : !!user && !!getAccessToken();
+  const isAuthenticated = !!user && !!getAccessToken();
 
   // Load user on mount
   useEffect(() => {
     const loadUser = async () => {
-      // Dev mode - auto-login as admin
-      if (isDevMode) {
-        setUser(DEV_USER);
-        setOfficeSlug(DEV_USER.officeSlug || null);
-        setOfficeName(DEV_USER.officeName || null);
-        setIsLoading(false);
-        return;
-      }
-
       // Check if we have an access token
       let token = getAccessToken();
 
@@ -124,28 +66,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     loadUser();
-  }, [isDevMode]);
+  }, []);
 
   // Set up auth failure callback
   useEffect(() => {
-    if (!isDevMode) {
-      setAuthFailureCallback(() => {
-        setUser(null);
-        setOfficeSlug(null);
-        setOfficeName(null);
-        navigate('/login');
-      });
-    }
-  }, [navigate, isDevMode]);
+    setAuthFailureCallback(() => {
+      setUser(null);
+      setOfficeSlug(null);
+      setOfficeName(null);
+      navigate('/login');
+    });
+  }, [navigate]);
 
   const login = useCallback(async (request: LoginRequest) => {
-    if (isDevMode) {
-      setUser(DEV_USER);
-      setOfficeSlug(DEV_USER.officeSlug || null);
-      setOfficeName(DEV_USER.officeName || null);
-      return { success: true, forcePasswordChange: false };
-    }
-
     const result = await authApi.login(request);
     if (result.error) {
       return { success: false, error: result.error };
@@ -177,55 +110,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     return { success: false, error: 'Unknown error' };
-  }, [isDevMode]);
+  }, []);
 
   const logout = useCallback(async () => {
-    if (!isDevMode) {
-      await authApi.logout();
-    }
+    await authApi.logout();
     setUser(null);
     setOfficeSlug(null);
     setOfficeName(null);
     clearTokens();
     navigate('/login');
-  }, [navigate, isDevMode]);
+  }, [navigate]);
 
   const hasPermission = useCallback((code: string) => {
-    if (isDevMode) return true;
     return user?.permissions.includes(code) ?? false;
-  }, [user, isDevMode]);
+  }, [user]);
 
   const hasAnyPermission = useCallback((...codes: string[]) => {
-    if (isDevMode) return true;
     return codes.some(code => user?.permissions.includes(code));
-  }, [user, isDevMode]);
+  }, [user]);
 
   const refreshUser = useCallback(async () => {
-    if (isDevMode) {
-      setUser(DEV_USER);
-      setOfficeSlug(DEV_USER.officeSlug || null);
-      setOfficeName(DEV_USER.officeName || null);
-      return;
-    }
-
     const result = await authApi.getCurrentUser();
     if (result.data) {
       setUser(result.data);
       setOfficeSlug(result.data.officeSlug || null);
       setOfficeName(result.data.officeName || null);
     }
-  }, [isDevMode]);
+  }, []);
 
   // Get the first accessible route based on user permissions
   const getDefaultRoute = useCallback(() => {
-    if (isDevMode) return '/';
-
     // Priority ordered list of routes and their required permissions
     const routePermissions = [
       { route: '/', permission: 'dash_view' },
       { route: '/shipments', permission: 'ship_view' },
       { route: '/master-customers', permission: 'cust_view' },
-      { route: '/customer-approval', permission: 'cust_approve' },
       { route: '/sales/leads', permission: 'leads_view' },
       { route: '/sales/rate-requests', permission: 'ratereq_view' },
       { route: '/sales/quotations', permission: 'quot_view' },
@@ -255,7 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     return '/unauthorized';
-  }, [user, isDevMode]);
+  }, [user]);
 
   const value = {
     user,

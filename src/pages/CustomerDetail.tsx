@@ -85,6 +85,7 @@ const CustomerDetail = () => {
   const baseCurrencyCode = useBaseCurrency();
   const isViewMode = searchParams.get("mode") === "view";
   const isEditMode = !!id;
+  const [isPendingCustomer, setIsPendingCustomer] = useState(false);
 
   const [activeTab, setActiveTab] = useState("profile");
   const [contactModalOpen, setContactModalOpen] = useState(false);
@@ -173,7 +174,7 @@ const CustomerDetail = () => {
     status: "Active",
     carrierCode: "",
     currencyId: "",
-    assignedTo: "",
+    salesperson: "",
   });
 
   // Load category types and customer data
@@ -208,6 +209,7 @@ const CustomerDetail = () => {
           const customerResponse = await customerApi.getById(parseInt(id));
           if (customerResponse.data) {
             const customer = customerResponse.data;
+            setIsPendingCustomer(customer.isApproved === false);
             setProfileData({
               code: customer.code,
               masterType: customer.masterType as "Debtors" | "Creditors" | "Neutral",
@@ -224,7 +226,7 @@ const CustomerDetail = () => {
               status: customer.status || "Active",
               carrierCode: customer.carrierCode || "",
               currencyId: customer.currencyId?.toString() || "",
-              assignedTo: customer.assignedTo || "",
+              salesperson: customer.salesperson || "",
             });
             // Load account details currency from customer's base currency
             if (customer.currencyId && currencyResponse.data) {
@@ -567,7 +569,7 @@ const CustomerDetail = () => {
       }
 
       // Validate: total allocated cannot exceed total charges
-      const totalCharges = allCharges.reduce((sum, d) => sum + (parseFloat(d.amount as any) || 0), 0);
+      const totalCharges = allCharges.reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0);
       const totalAllocated = cnSelectedInvoices.reduce((sum, inv) => sum + inv.allocatedAmount, 0);
       if (totalAllocated > totalCharges) {
         toast({ title: "Error", description: "Allocated amount cannot exceed credit note total", variant: "destructive" });
@@ -587,10 +589,10 @@ const CustomerDetail = () => {
           chargeDetails: d.chargeDetails || undefined,
           bases: d.bases || undefined,
           currencyId: d.currencyId,
-          rate: parseFloat(d.rate as any) || 0,
-          roe: parseFloat(d.roe as any) || 1,
-          quantity: parseFloat(d.quantity as any) || 0,
-          amount: parseFloat(d.amount as any) || 0,
+          rate: parseFloat(d.rate) || 0,
+          roe: parseFloat(d.roe) || 1,
+          quantity: parseFloat(d.quantity) || 0,
+          amount: parseFloat(d.amount) || 0,
         })),
         invoices: cnSelectedInvoices.map(inv => ({
           invoiceId: inv.invoiceId,
@@ -669,7 +671,7 @@ const CustomerDetail = () => {
           taxPercentage: profileData.taxPercentage ? parseFloat(profileData.taxPercentage) : undefined,
           carrierCode: profileData.carrierCode || undefined,
           status: profileData.status,
-          assignedTo: profileData.assignedTo || undefined,
+          salesperson: profileData.salesperson || undefined,
         };
 
         const response = await customerApi.update(parseInt(id), updateData);
@@ -697,7 +699,7 @@ const CustomerDetail = () => {
           taxNo: profileData.ntnVatTaxNo || undefined,
           taxPercentage: profileData.taxPercentage ? parseFloat(profileData.taxPercentage) : undefined,
           carrierCode: profileData.carrierCode || undefined,
-          assignedTo: profileData.assignedTo || undefined,
+          salesperson: profileData.salesperson || undefined,
         };
 
         const response = await customerApi.create(createData);
@@ -707,7 +709,7 @@ const CustomerDetail = () => {
 
         toast({
           title: "Success",
-          description: "Customer created successfully",
+          description: "Customer created and sent for approval",
         });
         navigate("/master-customers");
       }
@@ -932,6 +934,8 @@ const CustomerDetail = () => {
     }
   };
 
+  const lockPendingEditableFields = isViewMode || (isEditMode && !isPendingCustomer);
+
   const renderProfileTab = () => (
     <div className="space-y-6">
       <h2 className="text-xl font-semibold text-primary">Profile</h2>
@@ -951,8 +955,8 @@ const CustomerDetail = () => {
             ]}
             value={profileData.masterType}
             onValueChange={v => setProfileData({...profileData, masterType: v as "Debtors" | "Creditors" | "Neutral"})}
-            disabled={isViewMode || isEditMode}
-            triggerClassName="bg-muted/50"
+            disabled={lockPendingEditableFields}
+            triggerClassName={lockPendingEditableFields ? "bg-muted/50" : undefined}
           />
         </div>
         <div className="space-y-2">
@@ -1032,11 +1036,11 @@ const CustomerDetail = () => {
           <Input value={profileData.carrierCode} onChange={e => setProfileData({...profileData, carrierCode: e.target.value})} disabled={isViewMode} />
         </div>
         <div className="space-y-2">
-          <Label className="text-sm">Assign To</Label>
+          <Label className="text-sm">Salesperson</Label>
           <SearchableSelect
             options={employees.map(emp => ({ value: emp.fullName, label: `${emp.fullName} (${emp.employeeCode})` }))}
-            value={profileData.assignedTo}
-            onValueChange={v => setProfileData({...profileData, assignedTo: v})}
+            value={profileData.salesperson}
+            onValueChange={v => setProfileData({...profileData, salesperson: v})}
             disabled={isViewMode}
             searchPlaceholder="Search employees..."
             placeholder="Select employee..."
@@ -1145,7 +1149,7 @@ const CustomerDetail = () => {
             options={currencyTypes.map(c => ({ value: c.code, label: c.code }))}
             value={accountDetails.currency}
             onValueChange={v => setAccountDetails({...accountDetails, currency: v})}
-            disabled={isViewMode || (isEditMode && !!accountDetails.currency)}
+            disabled={lockPendingEditableFields}
             searchPlaceholder="Search currencies..."
           />
         </div>
@@ -1555,7 +1559,7 @@ const CustomerDetail = () => {
                       <td className="px-4 py-3 text-sm">{ar.currencyCode} {ar.debit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                       <td className="px-4 py-3 text-sm">
                         <span className={balanceColorClass}>
-                          {ar.currencyCode} {ar.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {ar.currencyCode} {(ar.balance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm">
@@ -1696,7 +1700,7 @@ const CustomerDetail = () => {
                       <td className="px-4 py-3 text-sm">{ap.currencyCode} {ap.credit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                       <td className="px-4 py-3 text-sm">
                         <span className={balanceColorClass}>
-                          {ap.currencyCode} {ap.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {ap.currencyCode} {(ap.balance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm">
@@ -2436,7 +2440,7 @@ const CustomerDetail = () => {
                   .filter(ui => !cnSelectedInvoices.some(si => si.invoiceId === ui.id))
                   .map(ui => ({
                     value: ui.id.toString(),
-                    label: `${ui.invoiceNo} - Pending: ${ui.currencyCode || ''} ${ui.pendingAmount.toFixed(2)}`,
+                    label: `${ui.invoiceNo} - Pending: ${ui.currencyCode || ''} ${(ui.pendingAmount ?? 0).toFixed(2)}`,
                   }))}
                 value=""
                 onValueChange={(v) => {
@@ -2484,7 +2488,7 @@ const CustomerDetail = () => {
                           <td className="px-3 py-2 text-sm">{inv.invoiceDate ? new Date(inv.invoiceDate).toLocaleDateString() : '-'}</td>
                           <td className="px-3 py-2 text-sm">{inv.jobNo || '-'}</td>
                           <td className="px-3 py-2 text-sm">{inv.currencyCode || '-'}</td>
-                          <td className="px-3 py-2 text-sm text-right">{inv.pendingAmount.toFixed(2)}</td>
+                          <td className="px-3 py-2 text-sm text-right">{(inv.pendingAmount ?? 0).toFixed(2)}</td>
                           <td className="px-3 py-2">
                             <Input
                               type="number"

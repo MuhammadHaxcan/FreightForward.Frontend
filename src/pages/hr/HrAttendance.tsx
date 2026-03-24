@@ -5,8 +5,9 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { Save, Loader2, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { Save, Loader2, ChevronLeft, ChevronRight, Calendar, Lock, LockOpen } from "lucide-react";
 import { PermissionGate } from "@/components/auth/PermissionGate";
+import { useAuth } from "@/contexts/AuthContext";
 import { getTodayDateOnly } from "@/lib/utils";
 import {
   hrAttendanceApi,
@@ -19,7 +20,9 @@ const statusOptions = [
   { value: "Absent", label: "Absent" },
   { value: "Late", label: "Late" },
   { value: "HalfDay", label: "Half Day" },
-  { value: "OnLeave", label: "On Leave" },
+  { value: "SickLeave", label: "Sick Leave" },
+  { value: "PaidLeave", label: "Paid Leave" },
+  { value: "AnnualLeave", label: "Annual Leave" },
   { value: "Holiday", label: "Holiday" },
 ];
 
@@ -28,7 +31,9 @@ const statusColors: Record<string, string> = {
   Absent: "bg-red-500",
   Late: "bg-yellow-500",
   HalfDay: "bg-orange-500",
-  OnLeave: "bg-blue-500",
+  SickLeave: "bg-teal-500",
+  PaidLeave: "bg-blue-500",
+  AnnualLeave: "bg-cyan-500",
   Holiday: "bg-purple-500",
 };
 
@@ -43,8 +48,11 @@ interface LocalEntry {
 
 const HrAttendance = () => {
   const queryClient = useQueryClient();
+  const { hasPermission } = useAuth();
+  const canUnlock = hasPermission("hr_attend_unlock");
   const [selectedDate, setSelectedDate] = useState(getTodayDateOnly());
   const [entries, setEntries] = useState<LocalEntry[]>([]);
+  const [isUnlocked, setIsUnlocked] = useState(false);
 
   // Fetch daily attendance for selected date
   const { data: dailyData, isLoading } = useQuery({
@@ -125,6 +133,12 @@ const HrAttendance = () => {
   const goToToday = () => setSelectedDate(getTodayDateOnly());
 
   const isPastDate = selectedDate < getTodayDateOnly();
+  const isLocked = isPastDate && !isUnlocked;
+
+  // Reset unlock state when date changes
+  useEffect(() => {
+    setIsUnlocked(false);
+  }, [selectedDate]);
 
   const handleMarkAll = (status: string) => {
     setEntries((prev) => prev.map((e) => ({ ...e, status })));
@@ -161,7 +175,7 @@ const HrAttendance = () => {
             <Button
               className="btn-success gap-2"
               onClick={handleSave}
-              disabled={saveMutation.isPending || entries.length === 0}
+              disabled={saveMutation.isPending || entries.length === 0 || isLocked}
             >
               {saveMutation.isPending ? (
                 <Loader2 size={16} className="animate-spin" />
@@ -196,6 +210,18 @@ const HrAttendance = () => {
                 <Button variant="outline" size="sm" className="px-2" onClick={goToToday} title="Today">
                   <Calendar size={16} />
                 </Button>
+                {isPastDate && canUnlock && (
+                  <Button
+                    variant={isUnlocked ? "default" : "outline"}
+                    size="sm"
+                    className={`px-3 ${isUnlocked ? "bg-amber-600 hover:bg-amber-700" : ""}`}
+                    onClick={() => setIsUnlocked(!isUnlocked)}
+                    title={isUnlocked ? "Lock attendance" : "Unlock for editing"}
+                  >
+                    {isUnlocked ? <LockOpen size={16} /> : <Lock size={16} />}
+                    <span className="ml-1">{isUnlocked ? "Lock" : "Unlock"}</span>
+                  </Button>
+                )}
               </div>
             </div>
             <div>
@@ -207,6 +233,7 @@ const HrAttendance = () => {
                 value=""
                 onValueChange={(v) => { if (v) handleMarkAll(v); }}
                 placeholder="Set all to..."
+                disabled={isLocked}
               />
             </div>
             <div className="flex items-end">
@@ -216,8 +243,16 @@ const HrAttendance = () => {
             </div>
             {isPastDate && (
               <div className="flex items-end">
-                <p className="text-sm text-amber-600 font-medium">
-                  Recording attendance for a past date
+                <p className={`text-sm font-medium ${isLocked ? "text-red-600" : "text-amber-600"}`}>
+                  {isLocked ? (
+                    <span className="flex items-center gap-1">
+                      <Lock size={14} /> Attendance is locked for this date
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1">
+                      <LockOpen size={14} /> Attendance unlocked for editing
+                    </span>
+                  )}
                 </p>
               </div>
             )}
@@ -295,6 +330,7 @@ const HrAttendance = () => {
                               handleStatusChange(entry.employeeId, v)
                             }
                             triggerClassName="w-[140px] h-8"
+                            disabled={isLocked}
                           />
                         </div>
                       </td>
@@ -310,6 +346,7 @@ const HrAttendance = () => {
                           }
                           placeholder="Optional remarks..."
                           className="h-8"
+                          disabled={isLocked}
                         />
                       </td>
                     </tr>

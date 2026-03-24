@@ -336,10 +336,10 @@ export function RecordPaymentModal({
                     {inv.purchaseNo}
                     <X
                       className="h-3 w-3 ml-1 cursor-pointer"
-                      onClick={() => handleInvoiceSelect(
-                        unpaidInvoices.find(ui => ui.id === inv.purchaseInvoiceId)!,
-                        false
-                      )}
+                      onClick={() => {
+                        const invoice = unpaidInvoices.find(ui => ui.id === inv.purchaseInvoiceId);
+                        if (invoice) handleInvoiceSelect(invoice, false);
+                      }}
                     />
                   </span>
                 ))}
@@ -349,7 +349,7 @@ export function RecordPaymentModal({
                   .filter(inv => !selectedInvoices.some(si => si.purchaseInvoiceId === inv.id))
                   .map((invoice) => ({
                     value: invoice.id.toString(),
-                    label: `${invoice.purchaseNo} - Pending: ${invoice.currencyCode} ${invoice.pendingAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                    label: `${invoice.purchaseNo} - Pending: ${invoice.currencyCode} ${(invoice.pendingAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
                   }))}
                 value=""
                 onValueChange={(v) => {
@@ -527,10 +527,10 @@ export function RecordPaymentModal({
                   <TableRow key={inv.purchaseInvoiceId}>
                     <TableCell>{inv.purchaseNo}</TableCell>
                     <TableCell>
-                      {inv.currencyCode} {inv.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {inv.currencyCode} {(inv.totalAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell>
-                      {inv.currencyCode} {inv.pendingAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {inv.currencyCode} {(inv.pendingAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell>
                       <Input

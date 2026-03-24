@@ -26,7 +26,9 @@ const statusColors: Record<string, string> = {
   Absent: "bg-red-500",
   Late: "bg-yellow-500",
   HalfDay: "bg-orange-500",
-  OnLeave: "bg-blue-500",
+  SickLeave: "bg-teal-500",
+  PaidLeave: "bg-blue-500",
+  AnnualLeave: "bg-cyan-500",
   Holiday: "bg-purple-500",
 };
 
@@ -35,7 +37,9 @@ const statusLabels: Record<string, string> = {
   Absent: "Absent",
   Late: "Late",
   HalfDay: "Half Day",
-  OnLeave: "On Leave",
+  SickLeave: "Sick Leave",
+  PaidLeave: "Paid Leave",
+  AnnualLeave: "Annual Leave",
   Holiday: "Holiday",
 };
 
@@ -92,7 +96,9 @@ const HrAttendanceSummary = () => {
   });
 
   const summaryItems = summaryData || [];
-  const employeeRecords = employeeMonthlyData || [];
+  const employeeRecords = employeeMonthlyData?.records || [];
+  const empJoiningDate = employeeMonthlyData?.joiningDate || "";
+  const empLastWorkingDate = employeeMonthlyData?.lastWorkingDate;
   const isLoading = isEmployeeView ? employeeLoading : summaryLoading;
 
   // Build day-by-day data for employee view
@@ -118,7 +124,9 @@ const HrAttendanceSummary = () => {
     absent: employeeRecords.filter((r) => r.status === "Absent").length,
     late: employeeRecords.filter((r) => r.status === "Late").length,
     halfDay: employeeRecords.filter((r) => r.status === "HalfDay").length,
-    onLeave: employeeRecords.filter((r) => r.status === "OnLeave").length,
+    sickLeave: employeeRecords.filter((r) => r.status === "SickLeave").length,
+    paidLeave: employeeRecords.filter((r) => r.status === "PaidLeave").length,
+    annualLeave: employeeRecords.filter((r) => r.status === "AnnualLeave").length,
     holiday: employeeRecords.filter((r) => r.status === "Holiday").length,
   };
 
@@ -195,18 +203,21 @@ const HrAttendanceSummary = () => {
                     <th className="px-4 py-3 text-right text-sm font-semibold">Absent</th>
                     <th className="px-4 py-3 text-right text-sm font-semibold">Late</th>
                     <th className="px-4 py-3 text-right text-sm font-semibold">Half Day</th>
-                    <th className="px-4 py-3 text-right text-sm font-semibold">Leave</th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold">Sick Leave</th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold">Paid Leave</th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold">Annual Leave</th>
                     <th className="px-4 py-3 text-right text-sm font-semibold">Holiday</th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold">Eff. Absent</th>
                   </tr>
                 </thead>
                 <tbody>
                   {isLoading ? (
                     <tr>
-                      <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">Loading...</td>
+                      <td colSpan={12} className="px-4 py-8 text-center text-muted-foreground">Loading...</td>
                     </tr>
                   ) : summaryItems.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">No records found</td>
+                      <td colSpan={12} className="px-4 py-8 text-center text-muted-foreground">No records found</td>
                     </tr>
                   ) : (
                     summaryItems.map((item, index) => (
@@ -233,10 +244,19 @@ const HrAttendanceSummary = () => {
                           <span className={item.halfDays > 0 ? "text-orange-500 font-medium" : ""}>{item.halfDays}</span>
                         </td>
                         <td className="px-4 py-3 text-sm text-right">
-                          <span className={item.leaveDays > 0 ? "text-blue-500 font-medium" : ""}>{item.leaveDays}</span>
+                          <span className={item.sickLeaveDays > 0 ? "text-teal-500 font-medium" : ""}>{item.sickLeaveDays}</span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right">
+                          <span className={item.paidLeaveDays > 0 ? "text-blue-500 font-medium" : ""}>{item.paidLeaveDays}</span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right">
+                          <span className={item.annualLeaveDays > 0 ? "text-cyan-500 font-medium" : ""}>{item.annualLeaveDays}</span>
                         </td>
                         <td className="px-4 py-3 text-sm text-right">
                           <span className="text-purple-500">{item.holidays}</span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-right">
+                          <span className={item.effectiveAbsentDays > 0 ? "text-red-600 font-bold" : ""}>{item.effectiveAbsentDays}</span>
                         </td>
                       </tr>
                     ))
@@ -269,11 +289,14 @@ const HrAttendanceSummary = () => {
                   ) : (
                     dayRows.map(({ day, dateStr, dayName, record }, index) => {
                       const isSunday = dayName === "Sun";
+                      const isBeforeJoining = empJoiningDate && dateStr < empJoiningDate.split("T")[0];
+                      const isAfterLastWorking = empLastWorkingDate && dateStr > empLastWorkingDate.split("T")[0];
+                      const isNA = isBeforeJoining || isAfterLastWorking;
                       return (
                         <tr
                           key={day}
                           className={`border-b border-border ${
-                            isSunday ? "bg-red-50 dark:bg-red-950/20" : index % 2 === 0 ? "bg-card" : "bg-secondary/30"
+                            isNA ? "bg-gray-100 dark:bg-gray-800/30" : isSunday ? "bg-red-50 dark:bg-red-950/20" : index % 2 === 0 ? "bg-card" : "bg-secondary/30"
                           }`}
                         >
                           <td className="px-4 py-2 text-sm font-medium">{day}</td>
@@ -288,7 +311,9 @@ const HrAttendanceSummary = () => {
                             {dayName}
                           </td>
                           <td className="px-4 py-2 text-sm">
-                            {record ? getStatusBadge(record.status) : (
+                            {isNA ? (
+                              <span className="px-2 py-0.5 rounded text-xs font-medium text-white bg-gray-400">N/A</span>
+                            ) : record ? getStatusBadge(record.status) : (
                               <span className="text-xs text-muted-foreground">-</span>
                             )}
                           </td>
@@ -310,7 +335,9 @@ const HrAttendanceSummary = () => {
                           <span className="text-red-500">Absent: {empTotals.absent}</span>
                           <span className="text-yellow-600">Late: {empTotals.late}</span>
                           <span className="text-orange-500">Half Day: {empTotals.halfDay}</span>
-                          <span className="text-blue-500">Leave: {empTotals.onLeave}</span>
+                          <span className="text-teal-500">Sick Leave: {empTotals.sickLeave}</span>
+                          <span className="text-blue-500">Paid Leave: {empTotals.paidLeave}</span>
+                          <span className="text-cyan-500">Annual Leave: {empTotals.annualLeave}</span>
                           <span className="text-purple-500">Holiday: {empTotals.holiday}</span>
                         </div>
                       </td>

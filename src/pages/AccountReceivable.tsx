@@ -17,6 +17,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { CustomerReceivableDetailsModal } from "@/components/payments/CustomerReceivableDetailsModal";
 import { invoiceApi, customerApi, Customer, AccountReceivableSummaryItem, AccountReceivableCurrencyTotal } from "@/services/api";
 import { DateRange } from "react-day-picker";
 
@@ -31,6 +32,7 @@ export default function AccountReceivable() {
     from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
     to: new Date(),
   });
+  const [modalCustomer, setModalCustomer] = useState<{ id: number; name: string; currencyCode: string } | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [totalCount, setTotalCount] = useState(0);
@@ -54,7 +56,7 @@ export default function AccountReceivable() {
       const response = await invoiceApi.getAccountReceivableSummary({
         pageNumber,
         pageSize,
-        customerId: selectedCustomer !== "all" ? parseInt(selectedCustomer) : undefined,
+        customerId: selectedCustomer !== "all" ? parseInt(selectedCustomer, 10) : undefined,
         fromDate: dateRange?.from ? formatDateToISO(dateRange.from) : undefined,
         toDate: dateRange?.to ? formatDateToISO(dateRange.to) : undefined,
         searchTerm: searchTerm || undefined,
@@ -183,7 +185,7 @@ export default function AccountReceivable() {
                 { value: "100", label: "100" },
               ]}
               value={pageSize.toString()}
-              onValueChange={(v) => { setPageSize(parseInt(v)); setPageNumber(1); }}
+              onValueChange={(v) => { setPageSize(parseInt(v, 10)); setPageNumber(1); }}
               triggerClassName="w-[90px]"
             />
             <span className="text-sm">entries</span>
@@ -228,7 +230,10 @@ export default function AccountReceivable() {
               ) : (
                 items.map((item) => (
                   <TableRow key={`${item.customerId}-${item.currencyCode}`} className="hover:bg-muted/50">
-                    <TableCell className="text-green-600 font-medium">{item.customerName}</TableCell>
+                    <TableCell
+                      className="text-green-600 font-medium cursor-pointer hover:underline"
+                      onClick={() => setModalCustomer({ id: item.customerId, name: item.customerName, currencyCode: item.currencyCode })}
+                    >{item.customerName}</TableCell>
                     <TableCell className="text-right">{item.currencyCode} {formatAmount(item.totalInvoiced)}</TableCell>
                     <TableCell className="text-right">{item.currencyCode} {formatAmount(item.totalReceived)}</TableCell>
                     <TableCell className="text-right text-orange-600">{item.currencyCode} {formatAmount(item.totalCreditNotes)}</TableCell>
@@ -318,6 +323,14 @@ export default function AccountReceivable() {
           </div>
         </div>
       </div>
+
+      <CustomerReceivableDetailsModal
+        customerId={modalCustomer?.id ?? null}
+        customerName={modalCustomer?.name ?? ""}
+        currencyCode={modalCustomer?.currencyCode ?? ""}
+        open={!!modalCustomer}
+        onOpenChange={(open) => { if (!open) setModalCustomer(null); }}
+      />
     </MainLayout>
   );
 }

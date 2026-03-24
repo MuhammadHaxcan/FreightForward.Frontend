@@ -69,7 +69,9 @@ const Dashboard = () => {
   const modeDistribution = dashboardStats?.modeDistribution ?? [];
   const directionDistribution = dashboardStats?.directionDistribution ?? [];
 
-  const maxShipments = Math.max(...monthlyShipmentData.map(d => d.shipments), 80);
+  const maxShipments = monthlyShipmentData.length > 0
+    ? Math.max(...monthlyShipmentData.map(d => d.shipments ?? 0), 80)
+    : 80;
   const yAxisMax = Math.ceil(maxShipments / 20) * 20;
 
   return (

@@ -16,7 +16,7 @@ import {
 import { GeneralDocumentModal } from "./GeneralDocumentModal";
 import { useGeneralDocuments, useDeleteGeneralDocument } from "@/hooks/useGeneralDocuments";
 import { GeneralDocument, fileApi } from "@/services/api";
-import { getAccessToken, isDevAuthDisabled, attemptTokenRefresh } from "@/services/api/base";
+import { getAccessToken, attemptTokenRefresh } from "@/services/api/base";
 import { toast } from "sonner";
 
 export function GeneralDocumentsTable() {
@@ -28,7 +28,7 @@ export function GeneralDocumentsTable() {
 
   const { data, isLoading, error } = useGeneralDocuments({
     pageNumber: currentPage,
-    pageSize: parseInt(entriesPerPage),
+    pageSize: parseInt(entriesPerPage, 10) || 10,
     searchTerm: searchTerm || undefined,
   });
 
@@ -59,9 +59,9 @@ export function GeneralDocumentsTable() {
         return fetch(fileApi.getDownloadUrl(filePath), { headers });
       };
 
-      let response = await makeRequest(isDevAuthDisabled() ? null : getAccessToken());
+      let response = await makeRequest(getAccessToken());
 
-      if (response.status === 401 && !isDevAuthDisabled()) {
+      if (response.status === 401) {
         const refreshed = await attemptTokenRefresh();
         if (refreshed) {
           response = await makeRequest(getAccessToken());
@@ -214,7 +214,7 @@ export function GeneralDocumentsTable() {
         {/* Pagination */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4">
           <p className="text-sm text-muted-foreground">
-            Showing {documents.length > 0 ? ((currentPage - 1) * parseInt(entriesPerPage)) + 1 : 0} to {Math.min(currentPage * parseInt(entriesPerPage), totalCount)} of {totalCount} entries
+            Showing {documents.length > 0 ? ((currentPage - 1) * (parseInt(entriesPerPage, 10) || 10)) + 1 : 0} to {Math.min(currentPage * (parseInt(entriesPerPage, 10) || 10), totalCount)} of {totalCount} entries
           </p>
           <div className="flex items-center gap-1">
             <Button

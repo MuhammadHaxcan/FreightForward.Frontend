@@ -17,6 +17,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { VendorPayableDetailsModal } from "@/components/payments/VendorPayableDetailsModal";
 import { invoiceApi, customerApi, Customer, AccountPayableSummaryItem, AccountPayableCurrencyTotal } from "@/services/api";
 import { DateRange } from "react-day-picker";
 
@@ -27,6 +28,7 @@ export default function AccountPayable() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedVendor, setSelectedVendor] = useState<string>("all");
+  const [modalVendor, setModalVendor] = useState<{ id: number; name: string; currencyCode: string } | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
     to: new Date(),
@@ -54,7 +56,7 @@ export default function AccountPayable() {
       const response = await invoiceApi.getAccountPayableSummary({
         pageNumber,
         pageSize,
-        vendorId: selectedVendor !== "all" ? parseInt(selectedVendor) : undefined,
+        vendorId: selectedVendor !== "all" ? parseInt(selectedVendor, 10) : undefined,
         fromDate: dateRange?.from ? formatDateToISO(dateRange.from) : undefined,
         toDate: dateRange?.to ? formatDateToISO(dateRange.to) : undefined,
         searchTerm: searchTerm || undefined,
@@ -183,7 +185,7 @@ export default function AccountPayable() {
                 { value: "100", label: "100" },
               ]}
               value={pageSize.toString()}
-              onValueChange={(v) => { setPageSize(parseInt(v)); setPageNumber(1); }}
+              onValueChange={(v) => { setPageSize(parseInt(v, 10)); setPageNumber(1); }}
               triggerClassName="w-[90px]"
             />
             <span className="text-sm">entries</span>
@@ -227,7 +229,12 @@ export default function AccountPayable() {
               ) : (
                 items.map((item) => (
                   <TableRow key={`${item.vendorId}-${item.currencyCode}`} className="hover:bg-muted/50">
-                    <TableCell className="text-green-600 font-medium">{item.vendorName}</TableCell>
+                    <TableCell
+                      className="text-green-600 font-medium cursor-pointer hover:underline"
+                      onClick={() => setModalVendor({ id: item.vendorId, name: item.vendorName, currencyCode: item.currencyCode })}
+                    >
+                      {item.vendorName}
+                    </TableCell>
                     <TableCell className="text-right">{item.currencyCode} {formatAmount(item.totalAmount)}</TableCell>
                     <TableCell className="text-right">{item.currencyCode} {formatAmount(item.totalPaid)}</TableCell>
                     <TableCell className="text-right font-bold text-red-600">{item.currencyCode} {formatAmount(item.balance)}</TableCell>
@@ -315,6 +322,14 @@ export default function AccountPayable() {
           </div>
         </div>
       </div>
+
+      <VendorPayableDetailsModal
+        vendorId={modalVendor?.id ?? null}
+        vendorName={modalVendor?.name ?? ""}
+        currencyCode={modalVendor?.currencyCode ?? ""}
+        open={!!modalVendor}
+        onOpenChange={(open) => { if (!open) setModalVendor(null); }}
+      />
     </MainLayout>
   );
 }

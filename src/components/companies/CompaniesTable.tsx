@@ -29,7 +29,7 @@ export function CompaniesTable() {
 
   const { data, isLoading, error } = useCompanies({
     pageNumber: currentPage,
-    pageSize: parseInt(entriesPerPage),
+    pageSize: parseInt(entriesPerPage, 10) || 10,
     searchTerm: searchTerm || undefined,
   });
 
@@ -188,7 +188,7 @@ export function CompaniesTable() {
         {/* Pagination */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4">
           <p className="text-sm text-muted-foreground">
-            Showing {companies.length > 0 ? ((currentPage - 1) * parseInt(entriesPerPage)) + 1 : 0} to {Math.min(currentPage * parseInt(entriesPerPage), totalCount)} of {totalCount} entries
+            Showing {companies.length > 0 ? ((currentPage - 1) * (parseInt(entriesPerPage, 10) || 10)) + 1 : 0} to {Math.min(currentPage * (parseInt(entriesPerPage, 10) || 10), totalCount)} of {totalCount} entries
           </p>
           <div className="flex items-center gap-1">
             <Button

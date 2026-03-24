@@ -51,6 +51,8 @@ import {
   useDeleteShipmentCosting,
 } from "@/hooks/useShipments";
 import { useDeleteInvoice, useDeletePurchaseInvoice } from "@/hooks/useInvoices";
+import { CargoContainerTab, CargoFormEntry } from "@/components/shipments/CargoContainerTab";
+import { calculateCbm } from "@/lib/cargoCalculations";
 import { useCustomers } from "@/hooks/useCustomers";
 import {
   MasterType,
@@ -181,7 +183,7 @@ const emptyFormData = {
   carrier: "",
   freeTime: "",
   networkPartnerId: undefined as number | undefined,
-  assignedTo: "",
+  salesperson: "",
   placeOfReceiptId: undefined as number | undefined,
   placeOfReceiptName: "",
   placeOfDeliveryId: undefined as number | undefined,
@@ -238,7 +240,11 @@ const ShipmentDetail = () => {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
   const [cargoDetails, setCargoDetails] = useState<ShipmentCargo[]>([]);
-  const [newCargoEntry, setNewCargoEntry] = useState({ quantity: "", packageTypeId: "", totalCBM: "", totalWeight: "", description: "" });
+  const [newCargoEntry, setNewCargoEntry] = useState<CargoFormEntry>({
+    quantity: "", packageTypeId: "", loadType: "", length: "", width: "", height: "",
+    volumeUnit: "cm", weight: "", weightUnit: "kg", totalCBM: "", totalWeight: "", description: "",
+  });
+  const [cargoCalculationMode, setCargoCalculationMode] = useState("units");
   const [isSavingCargo, setIsSavingCargo] = useState(false);
   const [documents, setDocuments] = useState<ShipmentDocument[]>([]);
   const [documentModalOpen, setDocumentModalOpen] = useState(false);
@@ -414,7 +420,7 @@ const ShipmentDetail = () => {
         carrier: shipmentData.carrier || '',
         freeTime: shipmentData.freeTime || '',
         networkPartnerId: shipmentData.networkPartnerId,
-        assignedTo: shipmentData.assignedTo || '',
+        salesperson: shipmentData.salesperson || '',
         placeOfReceiptId: shipmentData.placeOfReceiptId,
         placeOfReceiptName: shipmentData.placeOfReceiptName || '',
         placeOfDeliveryId: shipmentData.placeOfDeliveryId,
@@ -683,28 +689,57 @@ const ShipmentDetail = () => {
     setIsSavingCargo(true);
     try {
       const selectedPackageType = packageTypes.find(pt => pt.id.toString() === newCargoEntry.packageTypeId);
+      const qty = parseInt(newCargoEntry.quantity) || 0;
+      const cbm = calculateCbm(
+        parseFloat(newCargoEntry.length) || undefined,
+        parseFloat(newCargoEntry.width) || undefined,
+        parseFloat(newCargoEntry.height) || undefined,
+        newCargoEntry.volumeUnit
+      );
       const request: AddShipmentCargoRequest = {
-        quantity: parseInt(newCargoEntry.quantity) || 0,
+        calculationMode: cargoCalculationMode,
+        quantity: qty,
         packageTypeId: newCargoEntry.packageTypeId ? parseInt(newCargoEntry.packageTypeId) : null,
-        totalCBM: newCargoEntry.totalCBM ? parseFloat(newCargoEntry.totalCBM) : null,
-        totalWeight: newCargoEntry.totalWeight ? parseFloat(newCargoEntry.totalWeight) : null,
+        loadType: newCargoEntry.loadType || undefined,
+        length: parseFloat(newCargoEntry.length) || null,
+        width: parseFloat(newCargoEntry.width) || null,
+        height: parseFloat(newCargoEntry.height) || null,
+        volumeUnit: newCargoEntry.volumeUnit || undefined,
+        cbm: cbm ?? null,
+        weight: parseFloat(newCargoEntry.weight) || null,
+        weightUnit: newCargoEntry.weightUnit || undefined,
+        totalCBM: cargoCalculationMode === "shipment"
+          ? (parseFloat(newCargoEntry.totalCBM) || null)
+          : (cbm != null ? cbm * qty : null),
+        totalWeight: parseFloat(newCargoEntry.totalWeight) || null,
         description: newCargoEntry.description || undefined,
       };
 
       const response = await shipmentApi.addCargo(shipmentId, request);
       if (response.data) {
-        // Add the new cargo to the local state
         const newCargo: ShipmentCargo = {
           id: response.data,
+          calculationMode: request.calculationMode,
           quantity: request.quantity,
           packageTypeId: request.packageTypeId || undefined,
           packageTypeName: selectedPackageType?.name,
+          loadType: request.loadType,
+          length: request.length || undefined,
+          width: request.width || undefined,
+          height: request.height || undefined,
+          volumeUnit: request.volumeUnit,
+          cbm: request.cbm || undefined,
+          weight: request.weight || undefined,
+          weightUnit: request.weightUnit,
           totalCBM: request.totalCBM || undefined,
           totalWeight: request.totalWeight || undefined,
           description: request.description,
         };
         setCargoDetails(prev => [...prev, newCargo]);
-        setNewCargoEntry({ quantity: "", packageTypeId: "", totalCBM: "", totalWeight: "", description: "" });
+        setNewCargoEntry({
+          quantity: "", packageTypeId: "", loadType: "", length: "", width: "", height: "",
+          volumeUnit: "cm", weight: "", weightUnit: "kg", totalCBM: "", totalWeight: "", description: "",
+        });
         toast.success("Cargo added successfully");
       }
     } catch (error) {
@@ -906,7 +941,7 @@ const ShipmentDetail = () => {
           carrier: formData.carrier || undefined,
           freeTime: formData.freeTime || undefined,
           networkPartnerId: formData.networkPartnerId,
-          assignedTo: formData.assignedTo || undefined,
+          salesperson: formData.salesperson || undefined,
           placeOfReceiptId: formData.placeOfReceiptId,
           placeOfDeliveryId: formData.placeOfDeliveryId,
           portOfReceiptId: formData.portOfReceiptId,
@@ -933,6 +968,23 @@ const ShipmentDetail = () => {
       setIsSaving(false);
     }
   };
+
+  const isFCL = formData.mode === 'Sea Freight FCL';
+
+  const totalContainerQty = containers.reduce((sum, c) => sum + (c.noOfPcs || 0), 0);
+  const containerSummary = containers.length > 0
+    ? (() => {
+        const typeCount: Record<string, number> = {};
+        containers.forEach(c => {
+          const typeName = c.containerTypeName || 'N/A';
+          typeCount[typeName] = (typeCount[typeName] || 0) + 1;
+        });
+        const typeSummary = Object.entries(typeCount)
+          .map(([type, count]) => `${count} x ${type}`)
+          .join(', ');
+        return `${typeSummary}, Total Quantity: ${totalContainerQty}`;
+      })()
+    : "No containers";
 
   return (
     <MainLayout>
@@ -1010,23 +1062,17 @@ const ShipmentDetail = () => {
             >
               Parties
             </TabsTrigger>
-            <TabsTrigger 
-              value="containers"
+            <TabsTrigger
+              value="cargo-containers"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
             >
-              Containers
+              {isFCL ? "Cargo & Containers" : "Cargo Details"}
             </TabsTrigger>
-            <TabsTrigger 
+            <TabsTrigger
               value="costing"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
             >
               Costing
-            </TabsTrigger>
-            <TabsTrigger 
-              value="cargo-details"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
-            >
-              Cargo Details
             </TabsTrigger>
             <TabsTrigger 
               value="documents"
@@ -1290,14 +1336,14 @@ const ShipmentDetail = () => {
                     />
                   </div>
                   <div>
-                    <Label className="text-sm">Assign To</Label>
+                    <Label className="text-sm">Salesperson</Label>
                     <SearchableSelect
                       options={employees.map(emp => ({
                         value: emp.fullName,
                         label: `${emp.employeeCode} - ${emp.fullName}`,
                       }))}
-                      value={formData.assignedTo}
-                      onValueChange={(v) => handleInputChange("assignedTo", v)}
+                      value={formData.salesperson}
+                      onValueChange={(v) => handleInputChange("salesperson", v)}
                       placeholder="Select"
                       searchPlaceholder="Search employees..."
                       emptyMessage={isLoadingEmployees ? "Loading..." : "No employees found"}
@@ -1637,119 +1683,26 @@ const ShipmentDetail = () => {
             </div>
           </TabsContent>
 
-          {/* Containers Tab */}
-          <TabsContent value="containers" className="mt-0">
-            <div className="bg-card border border-border rounded-lg p-6 space-y-6">
-              <div className="flex justify-between items-center">
-                <h3 className="text-emerald-600 font-semibold text-lg">Containers</h3>
-                <div className="flex items-center gap-4">
-                  <span className="text-sm text-muted-foreground">
-                    {containers.length > 0
-                      ? (() => {
-                          const typeCount: Record<string, number> = {};
-                          containers.forEach(c => {
-                            const typeName = c.containerTypeName || 'N/A';
-                            typeCount[typeName] = (typeCount[typeName] || 0) + 1;
-                          });
-                          const typeSummary = Object.entries(typeCount)
-                            .map(([type, count]) => `${count} x ${type}`)
-                            .join(', ');
-                          const totalQty = containers.reduce((sum, c) => sum + (c.noOfPcs || 0), 0);
-                          return `${typeSummary}, Total Quantity: ${totalQty}`;
-                        })()
-                      : 'No containers'}
-                  </span>
-                  <Button
-                    className="btn-success"
-                    onClick={() => {
-                      setEditingContainer(null);
-                      setContainerModalOpen(true);
-                    }}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add New Container
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">Show</span>
-                  <SearchableSelect
-                    options={[
-                      { value: "10", label: "10" },
-                      { value: "25", label: "25" },
-                    ]}
-                    value="10"
-                    onValueChange={() => {}}
-                    triggerClassName="w-[90px] h-8"
-                  />
-                  <span className="text-sm">entries</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Label className="text-sm">Search:</Label>
-                  <Input className="w-[200px] h-8" />
-                </div>
-              </div>
-
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-table-header">
-                    <TableHead className="text-table-header-foreground">S.No</TableHead>
-                    <TableHead className="text-table-header-foreground">Container</TableHead>
-                    <TableHead className="text-table-header-foreground">Type</TableHead>
-                    <TableHead className="text-table-header-foreground">Seal No.</TableHead>
-                    <TableHead className="text-table-header-foreground">No.of Pcs</TableHead>
-                    <TableHead className="text-table-header-foreground">Type of Packages</TableHead>
-                    <TableHead className="text-table-header-foreground">Gross Weight</TableHead>
-                    <TableHead className="text-table-header-foreground">Volume</TableHead>
-                    <TableHead className="text-table-header-foreground">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {containers.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center text-muted-foreground py-8">No containers</TableCell>
-                    </TableRow>
-                  ) : (
-                    containers.map((container, index) => (
-                      <TableRow key={container.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell className="text-emerald-600">{container.containerNumber}</TableCell>
-                        <TableCell>{container.containerTypeName || '-'}</TableCell>
-                        <TableCell className="text-emerald-600">{container.sealNo}</TableCell>
-                        <TableCell>{container.noOfPcs}</TableCell>
-                        <TableCell>{container.packageTypeName || '-'}</TableCell>
-                        <TableCell>{container.grossWeight?.toFixed(3) || '0.000'}</TableCell>
-                        <TableCell className="text-emerald-600">{container.volume?.toFixed(3) || '0.000'}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 btn-success rounded"
-                              onClick={() => handleEditContainer(container, index)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded"
-                              onClick={() => handleDeleteContainer(container.id, container.containerNumber)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-
-              <div className="text-sm text-emerald-600">Showing {containers.length} entries</div>
-            </div>
+          {/* Cargo & Containers Tab */}
+          <TabsContent value="cargo-containers" className="mt-0">
+            <CargoContainerTab
+              isFCL={isFCL}
+              containers={containers}
+              containerSummary={containerSummary}
+              onAddContainer={() => { setEditingContainer(null); setContainerModalOpen(true); }}
+              onEditContainer={handleEditContainer}
+              onDeleteContainer={handleDeleteContainer}
+              cargoDetails={cargoDetails}
+              newCargoEntry={newCargoEntry}
+              onNewCargoEntryChange={setNewCargoEntry}
+              cargoCalculationMode={cargoCalculationMode}
+              onCargoCalculationModeChange={setCargoCalculationMode}
+              onAddCargo={handleAddCargo}
+              onDeleteCargo={handleDeleteCargo}
+              isSavingCargo={isSavingCargo}
+              isShipmentSaved={true}
+              packageTypesByCategory={packageTypesByCategory}
+            />
           </TabsContent>
 
           {/* Costing Tab */}
@@ -1812,14 +1765,12 @@ const ShipmentDetail = () => {
                     <TableRow className="bg-table-header">
                       <TableHead className="text-table-header-foreground">S.No</TableHead>
                       <TableHead className="text-table-header-foreground">Description</TableHead>
-                      <TableHead className="text-table-header-foreground">Sale Quantity</TableHead>
-                      <TableHead className="text-table-header-foreground">Sale Unit</TableHead>
+                      <TableHead className="text-table-header-foreground">Sale (Qty × Unit)</TableHead>
                       <TableHead className="text-table-header-foreground">Currency</TableHead>
                       <TableHead className="text-table-header-foreground">Ex.Rate</TableHead>
                       <TableHead className="text-table-header-foreground">FCY Amount</TableHead>
                       <TableHead className="text-table-header-foreground">LCY Amount</TableHead>
-                      <TableHead className="text-table-header-foreground">Cost Quantity</TableHead>
-                      <TableHead className="text-table-header-foreground">Cost/Unit</TableHead>
+                      <TableHead className="text-table-header-foreground">Cost (Qty × Unit)</TableHead>
                       <TableHead className="text-table-header-foreground">Currency</TableHead>
                       <TableHead className="text-table-header-foreground">Ex.Rate</TableHead>
                       <TableHead className="text-table-header-foreground">FCY Amount</TableHead>
@@ -1832,7 +1783,7 @@ const ShipmentDetail = () => {
                   <TableBody>
                     {costings.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={17} className="text-center text-muted-foreground py-8">No costing entries</TableCell>
+                        <TableCell colSpan={15} className="text-center text-muted-foreground py-8">No costing entries</TableCell>
                       </TableRow>
                     ) : (
                       costings.map((cost, index) => {
@@ -1843,14 +1794,12 @@ const ShipmentDetail = () => {
                         <TableRow key={cost.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
                           <TableCell>{index + 1}</TableCell>
                           <TableCell className="text-emerald-600">{cost.description}</TableCell>
-                          <TableCell className={saleHighlight}>{cost.saleQty}</TableCell>
-                          <TableCell className={saleHighlight}>{cost.saleUnit}</TableCell>
+                          <TableCell className={saleHighlight}>{cost.saleQty} × {cost.saleUnit}</TableCell>
                           <TableCell className={saleHighlight}>{cost.saleCurrencyCode}</TableCell>
                           <TableCell className={saleHighlight}>{cost.saleExRate}</TableCell>
                           <TableCell className={saleHighlight}>{cost.saleFCY?.toFixed(2)}</TableCell>
                           <TableCell className={`${saleHighlight} text-emerald-600`}>{cost.saleLCY?.toFixed(2)}</TableCell>
-                          <TableCell className={costHighlight}>{cost.costQty}</TableCell>
-                          <TableCell className={costHighlight}>{cost.costUnit}</TableCell>
+                          <TableCell className={costHighlight}>{cost.costQty} × {cost.costUnit}</TableCell>
                           <TableCell className={costHighlight}>{cost.costCurrencyCode}</TableCell>
                           <TableCell className={costHighlight}>{cost.costExRate}</TableCell>
                           <TableCell className={costHighlight}>{cost.costFCY?.toFixed(2)}</TableCell>
@@ -2032,122 +1981,6 @@ const ShipmentDetail = () => {
             </div>
           </TabsContent>
 
-          {/* Cargo Details Tab */}
-          <TabsContent value="cargo-details" className="mt-0">
-            <div className="bg-card border border-border rounded-lg p-6 space-y-6">
-              <h3 className="text-emerald-600 font-semibold text-lg">Cargo Details</h3>
-
-              {/* Add New Cargo Entry Form */}
-              <div className="grid grid-cols-6 gap-4 items-end">
-                <div>
-                  <Label className="text-sm font-semibold">Quantity *</Label>
-                  <Input
-                    type="number"
-                    value={newCargoEntry.quantity}
-                    onChange={(e) => setNewCargoEntry(prev => ({ ...prev, quantity: e.target.value }))}
-                    placeholder="Enter quantity"
-                  />
-                </div>
-                <div>
-                  <Label className="text-sm font-semibold">Package Type</Label>
-                  <SearchableSelect
-                    options={Object.entries(packageTypesByCategory).flatMap(([category, types]) =>
-                      types.map(pt => ({
-                        value: pt.id.toString(),
-                        label: `${pt.code} - ${pt.name}`,
-                      }))
-                    )}
-                    value={newCargoEntry.packageTypeId}
-                    onValueChange={(v) => setNewCargoEntry(prev => ({ ...prev, packageTypeId: v }))}
-                    placeholder="Select package type"
-                    searchPlaceholder="Search package types..."
-                  />
-                </div>
-                <div>
-                  <Label className="text-sm font-semibold">Total CBM</Label>
-                  <Input
-                    type="number"
-                    step="0.001"
-                    value={newCargoEntry.totalCBM}
-                    onChange={(e) => setNewCargoEntry(prev => ({ ...prev, totalCBM: e.target.value }))}
-                    placeholder="0.000"
-                  />
-                </div>
-                <div>
-                  <Label className="text-sm font-semibold">Total Weight (KG)</Label>
-                  <Input
-                    type="number"
-                    step="0.001"
-                    value={newCargoEntry.totalWeight}
-                    onChange={(e) => setNewCargoEntry(prev => ({ ...prev, totalWeight: e.target.value }))}
-                    placeholder="0.000"
-                  />
-                </div>
-                <div>
-                  <Label className="text-sm font-semibold">Description</Label>
-                  <Textarea value={newCargoEntry.description} onChange={(e) => setNewCargoEntry(prev => ({ ...prev, description: e.target.value }))} placeholder="Description" className="min-h-[40px]" />
-                </div>
-                <div>
-                  <Button
-                    className="btn-success"
-                    onClick={handleAddCargo}
-                    disabled={isSavingCargo}
-                  >
-                    {isSavingCargo ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Plus className="h-4 w-4 mr-2" />
-                    )}
-                    Add Cargo
-                  </Button>
-                </div>
-              </div>
-
-              {/* Cargo List Table */}
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-table-header">
-                    <TableHead className="text-table-header-foreground">S.No</TableHead>
-                    <TableHead className="text-table-header-foreground">Quantity</TableHead>
-                    <TableHead className="text-table-header-foreground">Package Type</TableHead>
-                    <TableHead className="text-table-header-foreground">Total CBM</TableHead>
-                    <TableHead className="text-table-header-foreground">Total Weight</TableHead>
-                    <TableHead className="text-table-header-foreground">Description</TableHead>
-                    <TableHead className="text-table-header-foreground">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {cargoDetails.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">No cargo details</TableCell>
-                    </TableRow>
-                  ) : (
-                    cargoDetails.map((cargo, index) => (
-                      <TableRow key={cargo.id || index} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell>{cargo.quantity}</TableCell>
-                        <TableCell>{cargo.packageTypeName || '-'}</TableCell>
-                        <TableCell>{cargo.totalCBM?.toFixed(3) || '0.000'}</TableCell>
-                        <TableCell>{cargo.totalWeight?.toFixed(3) || '0.000'}</TableCell>
-                        <TableCell>{cargo.description || '-'}</TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded"
-                            onClick={() => handleDeleteCargo(cargo.id, cargo.description)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-
-            </div>
-          </TabsContent>
 
           {/* Documents Tab */}
           <TabsContent value="documents" className="mt-0">
@@ -2165,26 +1998,6 @@ const ShipmentDetail = () => {
                   <Plus className="h-4 w-4 mr-2" />
                   Create
                 </Button>
-              </div>
-
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">Show</span>
-                  <SearchableSelect
-                    options={[
-                      { value: "10", label: "10" },
-                      { value: "25", label: "25" },
-                    ]}
-                    value="10"
-                    onValueChange={() => {}}
-                    triggerClassName="w-[90px] h-8"
-                  />
-                  <span className="text-sm">entries</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Label className="text-sm">Search:</Label>
-                  <Input className="w-[200px] h-8" />
-                </div>
               </div>
 
               <Table>

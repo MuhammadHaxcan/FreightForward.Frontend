@@ -43,7 +43,7 @@ const Shipments = () => {
       toDate?: string;
     } = {
       pageNumber: currentPage,
-      pageSize: parseInt(entriesPerPage),
+      pageSize: parseInt(entriesPerPage, 10) || 10,
     };
 
     if (searchTerm) {
@@ -405,7 +405,7 @@ const Shipments = () => {
           <p className="text-sm text-muted-foreground">
             {totalCount > 0 ? (
               <>
-                Showing {((currentPage - 1) * parseInt(entriesPerPage)) + 1} to {Math.min(currentPage * parseInt(entriesPerPage), totalCount)} of {totalCount} entries
+                Showing {((currentPage - 1) * (parseInt(entriesPerPage, 10) || 10)) + 1} to {Math.min(currentPage * (parseInt(entriesPerPage, 10) || 10), totalCount)} of {totalCount} entries
               </>
             ) : (
               "No entries to show"

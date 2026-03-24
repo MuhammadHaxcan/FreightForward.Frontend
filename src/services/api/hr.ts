@@ -6,7 +6,9 @@ import { fetchApi, PaginatedList } from './base';
 export interface EmployeeListItem {
   id: number; userId: number; employeeCode: string; fullName: string;
   email?: string; contactNumber?: string; department?: string; designation?: string;
-  joiningDate: string; employmentStatus: string; createdAt: string;
+  joiningDate: string; employmentStatus: string;
+  annualLeaveDays: number; sickLeaveDays: number; paidLeaveDays: number;
+  createdAt: string;
 }
 export interface EmployeeDetail {
   id: number; userId: number; employeeCode: string; fullName: string;
@@ -15,7 +17,9 @@ export interface EmployeeDetail {
   employmentStatus: string; bankName?: string; bankAccountNumber?: string; bankIban?: string; bankBranch?: string;
   dateOfBirth?: string; gender?: string; nationalId?: string; passportNumber?: string; passportExpiry?: string;
   emergencyContactName?: string; emergencyContactNumber?: string; address?: string;
-  profilePictureUrl?: string; createdAt: string;
+  profilePictureUrl?: string;
+  annualLeaveDays: number; sickLeaveDays: number; paidLeaveDays: number;
+  createdAt: string;
 }
 export interface EmployeeDropdown { id: number; employeeCode: string; fullName: string; }
 export interface CreateEmployeeRequest {
@@ -25,6 +29,7 @@ export interface CreateEmployeeRequest {
   dateOfBirth?: string; gender?: string; nationalId?: string;
   passportNumber?: string; passportExpiry?: string;
   emergencyContactName?: string; emergencyContactNumber?: string; address?: string;
+  annualLeaveDays?: number; sickLeaveDays?: number; paidLeaveDays?: number;
 }
 export interface UpdateEmployeeRequest extends Omit<CreateEmployeeRequest, 'userId'> {
   resignationDate?: string; lastWorkingDate?: string;
@@ -99,14 +104,20 @@ export interface AttendanceSummary {
   employeeId: number; employeeCode: string; employeeName: string;
   year: number; month: number;
   presentDays: number; absentDays: number; lateDays: number; halfDays: number;
-  leaveDays: number; holidays: number; totalWorkingDays: number;
+  sickLeaveDays: number; paidLeaveDays: number; annualLeaveDays: number;
+  holidays: number; totalWorkingDays: number;
+  latesToAbsentConversions: number; effectiveAbsentDays: number;
 }
 export interface DailyAttendanceEmployee {
   employeeId: number; employeeCode: string; employeeName: string;
   attendanceId?: number; status: string; remarks?: string;
+  joiningDate: string; lastWorkingDate?: string;
 }
 export interface BulkAttendanceEntry { employeeId: number; status: string; remarks?: string; }
 export interface BulkAttendanceRequest { date: string; entries: BulkAttendanceEntry[]; }
+export interface AttendancePolicy { id: number; latesPerAbsent: number; }
+export interface UpdateAttendancePolicyRequest { latesPerAbsent: number; }
+export interface EmployeeMonthlyAttendance { joiningDate: string; lastWorkingDate?: string; records: AttendanceRecord[]; }
 
 // ==================== API ====================
 
@@ -173,5 +184,11 @@ export const hrAttendanceApi = {
   getDaily: (date: string) => fetchApi<DailyAttendanceEmployee[]>(`/hr/attendance/daily?date=${date}`),
   saveBulk: (data: BulkAttendanceRequest) => fetchApi<void>('/hr/attendance/bulk', { method: 'POST', body: JSON.stringify(data) }),
   getSummary: (year: number, month: number) => fetchApi<AttendanceSummary[]>(`/hr/attendance/summary?year=${year}&month=${month}`),
-  getEmployeeMonthly: (employeeId: number, year: number, month: number) => fetchApi<AttendanceRecord[]>(`/hr/attendance/employee-monthly?employeeId=${employeeId}&year=${year}&month=${month}`),
+  getEmployeeMonthly: (employeeId: number, year: number, month: number) => fetchApi<EmployeeMonthlyAttendance>(`/hr/attendance/employee-monthly?employeeId=${employeeId}&year=${year}&month=${month}`),
+};
+
+export const hrAttendancePolicyApi = {
+  get: () => fetchApi<AttendancePolicy>('/hr/attendance-policy'),
+  update: (data: UpdateAttendancePolicyRequest) =>
+    fetchApi<AttendancePolicy>('/hr/attendance-policy', { method: 'PUT', body: JSON.stringify(data) }),
 };

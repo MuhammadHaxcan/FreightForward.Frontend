@@ -1,6 +1,8 @@
 import { fetchApi, PaginatedList, MasterType, PaymentStatus } from './base';
 import type { CurrencyType } from './settings';
 
+export type CustomerApprovalStatus = 'approved' | 'pending' | 'all';
+
 // Customer Types
 export interface CustomerCategoryInfo {
   id: number;
@@ -23,7 +25,7 @@ export interface Customer {
   currencyCode?: string;
   taxNo?: string;
   status?: string;
-  assignedTo?: string;
+  salesperson?: string;
   isApproved?: boolean;
   createdAt: string;
 }
@@ -204,7 +206,7 @@ export interface CreateCustomerRequest {
   taxNo?: string;
   taxPercentage?: number;
   carrierCode?: string;
-  assignedTo?: string;
+  salesperson?: string;
 }
 
 export interface NextCustomerCodes {
@@ -229,7 +231,7 @@ export interface UpdateCustomerRequest {
   taxPercentage?: number;
   carrierCode?: string;
   status?: string;
-  assignedTo?: string;
+  salesperson?: string;
 }
 
 export interface CreateCustomerContactRequest {
@@ -273,6 +275,7 @@ export const customerApi = {
     searchTerm?: string;
     masterType?: MasterType;
     categoryId?: number;
+    approvalStatus?: CustomerApprovalStatus;
   }) => {
     const query = new URLSearchParams();
     if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
@@ -280,6 +283,7 @@ export const customerApi = {
     if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
     if (params?.masterType) query.append('masterType', params.masterType);
     if (params?.categoryId) query.append('categoryId', params.categoryId.toString());
+    if (params?.approvalStatus) query.append('approvalStatus', params.approvalStatus);
     return fetchApi<PaginatedList<Customer>>(`/customers?${query}`);
   },
   getById: (id: number) => fetchApi<CustomerDetail>(`/customers/${id}`),
@@ -370,21 +374,16 @@ export const customerApi = {
       `/customers/${customerId}/account-payables?${query}`
     );
   },
+  getAllAccountPayables: (customerId: number) =>
+    fetchApi<AccountPayable[]>(`/customers/${customerId}/account-payables/all`),
+  getAllAccountReceivables: (customerId: number) =>
+    fetchApi<AccountReceivable[]>(`/customers/${customerId}/account-receivables/all`),
 
   // Statement of Account
   getStatement: (customerId: number, fromDate: string, toDate: string) =>
     fetchApi<CustomerStatement>(
       `/customers/${customerId}/statement?fromDate=${fromDate}&toDate=${toDate}`
     ),
-
-  // Customer Approval
-  getPendingApproval: (params?: { pageNumber?: number; pageSize?: number; searchTerm?: string }) => {
-    const query = new URLSearchParams();
-    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
-    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
-    if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
-    return fetchApi<PaginatedList<Customer>>(`/customers/pending-approval?${query}`);
-  },
   approve: (id: number) =>
     fetchApi<void>(`/customers/${id}/approve`, { method: 'POST' }),
   deny: (id: number) =>

@@ -84,15 +84,17 @@ export function AddCreditNoteModal({ open, onOpenChange, onSuccess }: AddCreditN
   // Fetch customers, currencies, charge items on open
   useEffect(() => {
     if (!open) return;
+    let cancelled = false;
     customerApi.getAll({ pageSize: 1000, masterType: "Debtors" }).then((res) => {
-      if (res.data) setCustomers(res.data.items);
+      if (!cancelled && res.data) setCustomers(res.data.items);
     });
     settingsApi.getAllCurrencyTypes().then((res) => {
-      if (res.data) setCurrencyTypes(res.data);
+      if (!cancelled && res.data) setCurrencyTypes(res.data);
     });
     settingsApi.getAllChargeItems().then((res) => {
-      if (res.data) setChargeItemsList(res.data);
+      if (!cancelled && res.data) setChargeItemsList(res.data);
     });
+    return () => { cancelled = true; };
   }, [open]);
 
   // Fetch unpaid invoices when customer changes
@@ -146,8 +148,15 @@ export function AddCreditNoteModal({ open, onOpenChange, onSuccess }: AddCreditN
         allCharges.push({ ...newCharge, id: Date.now() } as ChargeDetail);
       }
 
+      // Validate: must have at least one charge
+      const totalCharges = allCharges.reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0);
+      if (allCharges.length === 0 || totalCharges <= 0) {
+        toast.error("Please add at least one charge line");
+        setSaving(false);
+        return;
+      }
+
       // Validate: total allocated cannot exceed total charges
-      const totalCharges = allCharges.reduce((sum, d) => sum + (parseFloat(d.amount as any) || 0), 0);
       const totalAllocated = selectedInvoices.reduce((sum, inv) => sum + inv.allocatedAmount, 0);
       if (totalAllocated > totalCharges) {
         toast.error("Allocated amount cannot exceed credit note total");
@@ -167,10 +176,10 @@ export function AddCreditNoteModal({ open, onOpenChange, onSuccess }: AddCreditN
           chargeDetails: d.chargeDetails || undefined,
           bases: d.bases || undefined,
           currencyId: d.currencyId,
-          rate: parseFloat(d.rate as any) || 0,
-          roe: parseFloat(d.roe as any) || 1,
-          quantity: parseFloat(d.quantity as any) || 0,
-          amount: parseFloat(d.amount as any) || 0,
+          rate: parseFloat(d.rate) || 0,
+          roe: parseFloat(d.roe) || 1,
+          quantity: parseFloat(d.quantity) || 0,
+          amount: parseFloat(d.amount) || 0,
         })),
         invoices: selectedInvoices.map((inv) => ({
           invoiceId: inv.invoiceId,
@@ -422,7 +431,7 @@ export function AddCreditNoteModal({ open, onOpenChange, onSuccess }: AddCreditN
                 .filter((ui) => !selectedInvoices.some((si) => si.invoiceId === ui.id))
                 .map((ui) => ({
                   value: ui.id.toString(),
-                  label: `${ui.invoiceNo} - Pending: ${ui.currencyCode || ""} ${ui.pendingAmount.toFixed(2)}`,
+                  label: `${ui.invoiceNo} - Pending: ${ui.currencyCode || ""} ${(ui.pendingAmount ?? 0).toFixed(2)}`,
                 }))}
               value=""
               onValueChange={(v) => {
@@ -478,7 +487,7 @@ export function AddCreditNoteModal({ open, onOpenChange, onSuccess }: AddCreditN
                         </td>
                         <td className="px-3 py-2 text-sm">{inv.jobNo || "-"}</td>
                         <td className="px-3 py-2 text-sm">{inv.currencyCode || "-"}</td>
-                        <td className="px-3 py-2 text-sm text-right">{inv.pendingAmount.toFixed(2)}</td>
+                        <td className="px-3 py-2 text-sm text-right">{(inv.pendingAmount ?? 0).toFixed(2)}</td>
                         <td className="px-3 py-2">
                           <Input
                             type="number"

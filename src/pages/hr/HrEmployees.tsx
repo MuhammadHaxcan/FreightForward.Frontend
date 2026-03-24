@@ -62,6 +62,9 @@ const HrEmployees = () => {
   const [address, setAddress] = useState("");
   const [emergencyContactName, setEmergencyContactName] = useState("");
   const [emergencyContactNumber, setEmergencyContactNumber] = useState("");
+  const [annualLeaveDays, setAnnualLeaveDays] = useState("30");
+  const [sickLeaveDays, setSickLeaveDays] = useState("10");
+  const [paidLeaveDays, setPaidLeaveDays] = useState("5");
 
   // Fetch employees
   const { data: empData, isLoading } = useQuery({
@@ -144,6 +147,9 @@ const HrEmployees = () => {
     setAddress("");
     setEmergencyContactName("");
     setEmergencyContactNumber("");
+    setAnnualLeaveDays("30");
+    setSickLeaveDays("10");
+    setPaidLeaveDays("5");
   };
 
   const handleAddNew = async () => {
@@ -188,6 +194,9 @@ const HrEmployees = () => {
       emergencyContactName: emergencyContactName || undefined,
       emergencyContactNumber: emergencyContactNumber || undefined,
       address: address || undefined,
+      annualLeaveDays: parseInt(annualLeaveDays) || 30,
+      sickLeaveDays: parseInt(sickLeaveDays) || 10,
+      paidLeaveDays: parseInt(paidLeaveDays) || 5,
     };
     createMutation.mutate(data);
   };
@@ -478,6 +487,22 @@ const HrEmployees = () => {
             <div className="space-y-2">
               <Label className="text-sm">Address</Label>
               <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Address" />
+            </div>
+
+            <h3 className="text-sm font-medium text-foreground pt-2 border-t border-border">Leave Entitlements (per year)</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm">Annual Leave Days</Label>
+                <Input type="number" min={0} value={annualLeaveDays} onChange={(e) => setAnnualLeaveDays(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Sick Leave Days</Label>
+                <Input type="number" min={0} value={sickLeaveDays} onChange={(e) => setSickLeaveDays(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Paid Leave Days</Label>
+                <Input type="number" min={0} value={paidLeaveDays} onChange={(e) => setPaidLeaveDays(e.target.value)} />
+              </div>
             </div>
 
             <div className="flex justify-end gap-2 pt-4 border-t border-border">

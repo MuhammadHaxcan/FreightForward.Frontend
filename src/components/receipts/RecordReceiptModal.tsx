@@ -355,7 +355,7 @@ export function RecordReceiptModal({
                   .filter(inv => !selectedInvoices.some(si => si.invoiceId === inv.id))
                   .map((invoice) => ({
                     value: invoice.id.toString(),
-                    label: `${invoice.invoiceNo} - Pending: ${invoice.currencyCode || baseCurrencyCode} ${invoice.pendingAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                    label: `${invoice.invoiceNo} - Pending: ${invoice.currencyCode || baseCurrencyCode} ${(invoice.pendingAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
                   }))}
                 value=""
                 onValueChange={(v) => {
@@ -534,10 +534,10 @@ export function RecordReceiptModal({
                   <TableRow key={inv.invoiceId}>
                     <TableCell>{inv.invoiceNo}</TableCell>
                     <TableCell>
-                      {inv.currency || baseCurrencyCode} {inv.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {inv.currency || baseCurrencyCode} {(inv.totalAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell>
-                      {inv.currency || baseCurrencyCode} {inv.pendingAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {inv.currency || baseCurrencyCode} {(inv.pendingAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell>
                       <Input

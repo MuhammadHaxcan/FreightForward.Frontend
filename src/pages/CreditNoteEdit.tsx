@@ -69,11 +69,15 @@ export default function CreditNoteEdit() {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!id) return;
+      const numericId = parseInt(id ?? '', 10);
+      if (!id || isNaN(numericId)) {
+        navigate('/accounts/credit-notes');
+        return;
+      }
       setLoading(true);
       try {
         const [cnRes, custRes, currRes, ciRes] = await Promise.all([
-          creditNoteApi.getById(parseInt(id)),
+          creditNoteApi.getById(numericId),
           customerApi.getAll({ pageSize: 1000, masterType: 'Debtors' }),
           settingsApi.getAllCurrencyTypes(),
           settingsApi.getAllChargeItems(),
@@ -432,7 +436,7 @@ export default function CreditNoteEdit() {
                 .filter(ui => !selectedInvoices.some(si => si.invoiceId === ui.id))
                 .map(ui => ({
                   value: ui.id.toString(),
-                  label: `${ui.invoiceNo} - Pending: ${ui.currencyCode || ''} ${ui.pendingAmount.toFixed(2)}`,
+                  label: `${ui.invoiceNo} - Pending: ${ui.currencyCode || ''} ${(ui.pendingAmount ?? 0).toFixed(2)}`,
                 }))}
               value=""
               onValueChange={(v) => {
@@ -481,7 +485,7 @@ export default function CreditNoteEdit() {
                         <td className="px-3 py-2 text-sm">{inv.invoiceDate ? new Date(inv.invoiceDate).toLocaleDateString() : '-'}</td>
                         <td className="px-3 py-2 text-sm">{inv.jobNo || '-'}</td>
                         <td className="px-3 py-2 text-sm">{inv.currencyCode || '-'}</td>
-                        <td className="px-3 py-2 text-sm text-right">{inv.pendingAmount.toFixed(2)}</td>
+                        <td className="px-3 py-2 text-sm text-right">{(inv.pendingAmount ?? 0).toFixed(2)}</td>
                         <td className="px-3 py-2">
                           <Input
                             type="number"

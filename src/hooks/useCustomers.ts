@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { customerApi, CreateCustomerRequest, UpdateCustomerRequest, MasterType } from '@/services/api';
+import { customerApi, CreateCustomerRequest, UpdateCustomerRequest, MasterType, CustomerApprovalStatus } from '@/services/api';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
 
@@ -9,6 +9,7 @@ export function useCustomers(params?: {
   searchTerm?: string;
   masterType?: MasterType;
   categoryId?: number;
+  approvalStatus?: CustomerApprovalStatus;
 }) {
   return useQuery({
     queryKey: ['customers', params],
@@ -50,7 +51,7 @@ export function useCreateCustomer() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
-      toast.success('Customer created successfully');
+      toast.success('Customer created and sent for approval');
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to create customer');
@@ -207,25 +208,6 @@ export function useSimilarCustomerCheck(name: string, excludeId?: number) {
     enabled: debouncedName.trim().length >= 3,
     staleTime: 60 * 1000,
     retry: false,
-  });
-}
-
-// Customer Approval hooks
-export function usePendingApprovalCustomers(params?: {
-  pageNumber?: number;
-  pageSize?: number;
-  searchTerm?: string;
-}) {
-  return useQuery({
-    queryKey: ['customers', 'pending-approval', params],
-    queryFn: async () => {
-      const response = await customerApi.getPendingApproval(params);
-      if (response.error) {
-        throw new Error(response.error);
-      }
-      return response.data!;
-    },
-    staleTime: 30 * 1000,
   });
 }
 

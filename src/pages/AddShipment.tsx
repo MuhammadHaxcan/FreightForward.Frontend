@@ -84,6 +84,8 @@ import {
 } from "@/hooks/useShipments";
 import { useDeleteInvoice, useDeletePurchaseInvoice } from "@/hooks/useInvoices";
 import { useQuotationForShipment, useConvertQuotationToShipment } from "@/hooks/useSales";
+import { CargoContainerTab, CargoFormEntry } from "@/components/shipments/CargoContainerTab";
+import { calculateCbm } from "@/lib/cargoCalculations";
 
 // Helper function to get payment status display and styling
 const getPaymentStatusDisplay = (status: PaymentStatus) => {
@@ -233,7 +235,7 @@ const AddShipment = () => {
     carrier: "",
     freeTime: "0",
     networkPartnerId: undefined as number | undefined,
-    assignedTo: "",
+    salesperson: "",
     placeOfReceipt: "",
     portOfReceiptId: undefined as number | undefined,
     portOfReceipt: "",
@@ -265,7 +267,11 @@ const AddShipment = () => {
   const [costing, setCosting] = useState<Array<Partial<ShipmentCosting>>>([]);
   const [documents, setDocuments] = useState<ShipmentDocument[]>([]);
   const [cargoDetails, setCargoDetails] = useState<ShipmentCargo[]>([]);
-  const [newCargoEntry, setNewCargoEntry] = useState({ quantity: "", packageTypeId: "", totalCBM: "", totalWeight: "", description: "" });
+  const [newCargoEntry, setNewCargoEntry] = useState<CargoFormEntry>({
+    quantity: "", packageTypeId: "", loadType: "", length: "", width: "", height: "",
+    volumeUnit: "cm", weight: "", weightUnit: "kg", totalCBM: "", totalWeight: "", description: "",
+  });
+  const [cargoCalculationMode, setCargoCalculationMode] = useState("units");
   const [isSavingCargo, setIsSavingCargo] = useState(false);
   const [statusLogs, setStatusLogs] = useState<ShipmentStatusLog[]>([]);
   const [statusLogModalOpen, setStatusLogModalOpen] = useState(false);
@@ -618,27 +624,52 @@ const AddShipment = () => {
           }
         }
 
-        // Add cargo details from quotation
+        // Add cargo details from quotation — branch on FCL vs non-FCL
         if (quotationForShipment.cargoDetails && quotationForShipment.cargoDetails.length > 0) {
+          const isQuotationFCL = quotationForShipment.mode === 'SeaFreightFCL';
           for (const cargo of quotationForShipment.cargoDetails) {
-            // Find container type ID from loadType name
-            const containerType = containerTypes?.find(ct => ct.name === cargo.loadType);
-
-            const containerData: AddShipmentContainerRequest = {
-              shipmentId: savedShipmentId,
-              containerNumber: '',
-              containerTypeId: containerType?.id || null,
-              sealNo: '',
-              noOfPcs: cargo.quantity || 0,
-              packageTypeId: cargo.packageTypeId || null,
-              grossWeight: cargo.totalWeight || cargo.weight || 0,
-              volume: cargo.totalCbm || cargo.cbm || 0,
-              description: cargo.cargoDescription || cargo.loadType || '',
-            };
-            try {
-              await addContainerMutation.mutateAsync({ shipmentId: savedShipmentId, data: containerData });
-            } catch (error) {
-              // Continue with next container/cargo
+            if (isQuotationFCL) {
+              // FCL: map cargo to container entry
+              const containerType = containerTypes?.find(ct => ct.name === cargo.loadType);
+              const containerData: AddShipmentContainerRequest = {
+                shipmentId: savedShipmentId,
+                containerNumber: '',
+                containerTypeId: containerType?.id || null,
+                sealNo: '',
+                noOfPcs: cargo.quantity || 0,
+                packageTypeId: cargo.packageTypeId || null,
+                grossWeight: cargo.totalWeight || cargo.weight || 0,
+                volume: cargo.totalCbm || cargo.cbm || 0,
+                description: cargo.cargoDescription || cargo.loadType || '',
+              };
+              try {
+                await addContainerMutation.mutateAsync({ shipmentId: savedShipmentId, data: containerData });
+              } catch (error) {
+                // Continue with next entry
+              }
+            } else {
+              // LCL / Air / BreakBulk / RoRo: map cargo to ShipmentCargo entry
+              const cargoData: AddShipmentCargoRequest = {
+                calculationMode: cargo.calculationMode || 'units',
+                quantity: cargo.quantity || 0,
+                packageTypeId: cargo.packageTypeId || null,
+                loadType: cargo.loadType || undefined,
+                length: cargo.length ?? null,
+                width: cargo.width ?? null,
+                height: cargo.height ?? null,
+                volumeUnit: cargo.volumeUnit || 'cm',
+                cbm: cargo.cbm ?? null,
+                weight: cargo.weight ?? null,
+                weightUnit: cargo.weightUnit || 'kg',
+                totalCBM: cargo.totalCbm ?? null,
+                totalWeight: cargo.totalWeight ?? null,
+                description: cargo.cargoDescription || undefined,
+              };
+              try {
+                await shipmentApi.addCargo(savedShipmentId, cargoData);
+              } catch (error) {
+                // Continue with next entry
+              }
             }
           }
         }
@@ -668,6 +699,8 @@ const AddShipment = () => {
   const [containerModalOpen, setContainerModalOpen] = useState(false);
   const [costingModalOpen, setCostingModalOpen] = useState(false);
   const [documentModalOpen, setDocumentModalOpen] = useState(false);
+  const [documentModalMode, setDocumentModalMode] = useState<"add" | "edit">("add");
+  const [editingDocument, setEditingDocument] = useState<ShipmentDocument | null>(null);
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
   const [editingContainer, setEditingContainer] = useState<(Partial<ShipmentContainer> & { sNo?: number | string }) | null>(null);
@@ -913,11 +946,29 @@ const AddShipment = () => {
     setIsSavingCargo(true);
     try {
       const selectedPackageType = packageTypes.find(pt => pt.id.toString() === newCargoEntry.packageTypeId);
+      const qty = parseInt(newCargoEntry.quantity) || 0;
+      const cbm = calculateCbm(
+        parseFloat(newCargoEntry.length) || undefined,
+        parseFloat(newCargoEntry.width) || undefined,
+        parseFloat(newCargoEntry.height) || undefined,
+        newCargoEntry.volumeUnit
+      );
       const request: AddShipmentCargoRequest = {
-        quantity: parseInt(newCargoEntry.quantity) || 0,
+        calculationMode: cargoCalculationMode,
+        quantity: qty,
         packageTypeId: newCargoEntry.packageTypeId ? parseInt(newCargoEntry.packageTypeId) : null,
-        totalCBM: newCargoEntry.totalCBM ? parseFloat(newCargoEntry.totalCBM) : null,
-        totalWeight: newCargoEntry.totalWeight ? parseFloat(newCargoEntry.totalWeight) : null,
+        loadType: newCargoEntry.loadType || undefined,
+        length: parseFloat(newCargoEntry.length) || null,
+        width: parseFloat(newCargoEntry.width) || null,
+        height: parseFloat(newCargoEntry.height) || null,
+        volumeUnit: newCargoEntry.volumeUnit || undefined,
+        cbm: cbm ?? null,
+        weight: parseFloat(newCargoEntry.weight) || null,
+        weightUnit: newCargoEntry.weightUnit || undefined,
+        totalCBM: cargoCalculationMode === "shipment"
+          ? (parseFloat(newCargoEntry.totalCBM) || null)
+          : (cbm != null ? cbm * qty : null),
+        totalWeight: parseFloat(newCargoEntry.totalWeight) || null,
         description: newCargoEntry.description || undefined,
       };
 
@@ -925,15 +976,27 @@ const AddShipment = () => {
       if (response.data) {
         const newCargo: ShipmentCargo = {
           id: response.data,
+          calculationMode: request.calculationMode,
           quantity: request.quantity,
           packageTypeId: request.packageTypeId || undefined,
           packageTypeName: selectedPackageType?.name,
+          loadType: request.loadType,
+          length: request.length || undefined,
+          width: request.width || undefined,
+          height: request.height || undefined,
+          volumeUnit: request.volumeUnit,
+          cbm: request.cbm || undefined,
+          weight: request.weight || undefined,
+          weightUnit: request.weightUnit,
           totalCBM: request.totalCBM || undefined,
           totalWeight: request.totalWeight || undefined,
           description: request.description,
         };
         setCargoDetails(prev => [...prev, newCargo]);
-        setNewCargoEntry({ quantity: "", packageTypeId: "", totalCBM: "", totalWeight: "", description: "" });
+        setNewCargoEntry({
+          quantity: "", packageTypeId: "", loadType: "", length: "", width: "", height: "",
+          volumeUnit: "cm", weight: "", weightUnit: "kg", totalCBM: "", totalWeight: "", description: "",
+        });
         toast.success("Cargo added successfully");
       }
     } catch (error) {
@@ -950,23 +1013,36 @@ const AddShipment = () => {
   };
 
   // Document handlers
-  const handleAddDocument = async (documentData: AddShipmentDocumentRequest) => {
+  const handleSaveDocument = async (documentData: AddShipmentDocumentRequest) => {
     if (!savedShipmentId) {
       toast.error("Please save the shipment first");
       return;
     }
 
     try {
-      const newDocumentId = await shipmentApi.addDocument(savedShipmentId, documentData);
-      if (newDocumentId.data) {
+      if (documentModalMode === "edit" && editingDocument) {
+        const result = await shipmentApi.updateDocument(editingDocument.id, documentData);
+        if (result.error) throw new Error(result.error);
         refetchShipment();
-        toast.success("Document added successfully");
+        toast.success("Document updated successfully");
+      } else {
+        const newDocumentId = await shipmentApi.addDocument(savedShipmentId, documentData);
+        if (newDocumentId.data) {
+          refetchShipment();
+          toast.success("Document added successfully");
+        }
       }
     } catch (error) {
-      console.error("Failed to add document:", error);
-      toast.error("Failed to add document");
+      console.error("Failed to save document:", error);
+      toast.error(documentModalMode === "edit" ? "Failed to update document" : "Failed to add document");
       throw error;
     }
+  };
+
+  const handleEditDocument = (doc: ShipmentDocument) => {
+    setEditingDocument(doc);
+    setDocumentModalMode("edit");
+    setDocumentModalOpen(true);
   };
 
   const handleDeleteDocument = (doc: ShipmentDocument) => {
@@ -1110,7 +1186,7 @@ const AddShipment = () => {
         direction: mapDirection(formData.direction),
         mode: mapMode(formData.mode),
         shipmentType: mapShipmentType(formData.shipmentType),
-        assignedTo: formData.assignedTo || undefined,
+        salesperson: formData.salesperson || undefined,
         incoTermId: formData.incoTermId ? parseInt(formData.incoTermId) : undefined,
         hblNo: formData.houseBLNo || undefined,
         hblDate: formData.houseBLDate || undefined,
@@ -1175,6 +1251,8 @@ const AddShipment = () => {
 
   const handleSaveAndContinue = () => handleSaveShipment("parties");
 
+  const isFCL = formData.mode === 'Sea Freight FCL';
+
   const totalContainerQty = containers.reduce((sum, c) => sum + (c.noOfPcs || 0), 0);
   const containerSummary = containers.length > 0
     ? (() => {
@@ -1225,11 +1303,11 @@ const AddShipment = () => {
               Parties
             </TabsTrigger>
             <TabsTrigger
-              value="containers"
+              value="cargo-containers"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={!savedShipmentId}
             >
-              Containers
+              {isFCL ? "Cargo & Containers" : "Cargo Details"}
             </TabsTrigger>
             <TabsTrigger
               value="costing"
@@ -1237,13 +1315,6 @@ const AddShipment = () => {
               disabled={!savedShipmentId}
             >
               Costing
-            </TabsTrigger>
-            <TabsTrigger
-              value="cargo-details"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={!savedShipmentId}
-            >
-              Cargo Details
             </TabsTrigger>
             <TabsTrigger
               value="documents"
@@ -1512,14 +1583,14 @@ const AddShipment = () => {
                     />
                   </div>
                   <div>
-                    <Label className="text-sm">Assign To</Label>
+                    <Label className="text-sm">Salesperson</Label>
                     <SearchableSelect
                       options={employees.map(emp => ({
                         value: emp.fullName,
                         label: `${emp.employeeCode} - ${emp.fullName}`,
                       }))}
-                      value={formData.assignedTo}
-                      onValueChange={(v) => handleInputChange("assignedTo", v)}
+                      value={formData.salesperson}
+                      onValueChange={(v) => handleInputChange("salesperson", v)}
                       placeholder="Select"
                       searchPlaceholder="Search employees..."
                       emptyMessage={isLoadingEmployees ? "Loading..." : "No employees found"}
@@ -1855,72 +1926,26 @@ const AddShipment = () => {
             </div>
           </TabsContent>
 
-          {/* Containers Tab */}
-          <TabsContent value="containers" className="mt-0">
-            <div className="bg-card border border-border rounded-lg p-6 space-y-6">
-              <div className="flex justify-between items-center">
-                <h3 className="text-emerald-600 font-semibold text-lg">Containers</h3>
-                <div className="flex items-center gap-4">
-                  <span className="text-sm text-muted-foreground">Containers - {containerSummary}</span>
-                  <Button 
-                    className="btn-success"
-                    onClick={() => {
-                      setEditingContainer(null);
-                      setContainerModalOpen(true);
-                    }}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add New Container
-                  </Button>
-                </div>
-              </div>
-
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-table-header">
-                    <TableHead className="text-table-header-foreground">S.No</TableHead>
-                    <TableHead className="text-table-header-foreground">Container</TableHead>
-                    <TableHead className="text-table-header-foreground">Type</TableHead>
-                    <TableHead className="text-table-header-foreground">Seal No.</TableHead>
-                    <TableHead className="text-table-header-foreground">No.of Pcs</TableHead>
-                    <TableHead className="text-table-header-foreground">Type of Packages</TableHead>
-                    <TableHead className="text-table-header-foreground">Gross Weight</TableHead>
-                    <TableHead className="text-table-header-foreground">Volume</TableHead>
-                    <TableHead className="text-table-header-foreground">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {containers.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={9} className="text-center text-muted-foreground py-8">No containers</TableCell>
-                    </TableRow>
-                  ) : (
-                    containers.map((container, index) => (
-                      <TableRow key={container.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell className="text-emerald-600">{container.containerNumber}</TableCell>
-                        <TableCell>{container.containerTypeName || '-'}</TableCell>
-                        <TableCell className="text-emerald-600">{container.sealNo}</TableCell>
-                        <TableCell>{container.noOfPcs}</TableCell>
-                        <TableCell>{container.packageTypeName || '-'}</TableCell>
-                        <TableCell>{(container.grossWeight || 0).toFixed(3)}</TableCell>
-                        <TableCell className="text-emerald-600">{(container.volume || 0).toFixed(3)}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8 btn-success rounded" onClick={() => handleEditContainer(container, index)}>
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded" onClick={() => handleDeleteContainer(container.id, container.containerNumber)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+          {/* Cargo & Containers Tab */}
+          <TabsContent value="cargo-containers" className="mt-0">
+            <CargoContainerTab
+              isFCL={isFCL}
+              containers={containers}
+              containerSummary={containerSummary}
+              onAddContainer={() => { setEditingContainer(null); setContainerModalOpen(true); }}
+              onEditContainer={handleEditContainer}
+              onDeleteContainer={handleDeleteContainer}
+              cargoDetails={cargoDetails}
+              newCargoEntry={newCargoEntry}
+              onNewCargoEntryChange={setNewCargoEntry}
+              cargoCalculationMode={cargoCalculationMode}
+              onCargoCalculationModeChange={setCargoCalculationMode}
+              onAddCargo={handleAddCargo}
+              onDeleteCargo={handleDeleteCargo}
+              isSavingCargo={isSavingCargo}
+              isShipmentSaved={!!savedShipmentId}
+              packageTypesByCategory={packageTypesByCategory}
+            />
           </TabsContent>
 
           {/* Costing Tab */}
@@ -1983,14 +2008,12 @@ const AddShipment = () => {
                   <TableRow className="bg-table-header">
                     <TableHead className="text-table-header-foreground">S.No</TableHead>
                     <TableHead className="text-table-header-foreground">Description</TableHead>
-                    <TableHead className="text-table-header-foreground">Sale Quantity</TableHead>
-                    <TableHead className="text-table-header-foreground">Sale Unit</TableHead>
+                    <TableHead className="text-table-header-foreground">Sale (Qty × Unit)</TableHead>
                     <TableHead className="text-table-header-foreground">Currency</TableHead>
                     <TableHead className="text-table-header-foreground">Ex.Rate</TableHead>
                     <TableHead className="text-table-header-foreground">FCY Amount</TableHead>
                     <TableHead className="text-table-header-foreground">LCY Amount</TableHead>
-                    <TableHead className="text-table-header-foreground">Cost Quantity</TableHead>
-                    <TableHead className="text-table-header-foreground">Cost/Unit</TableHead>
+                    <TableHead className="text-table-header-foreground">Cost (Qty × Unit)</TableHead>
                     <TableHead className="text-table-header-foreground">Currency</TableHead>
                     <TableHead className="text-table-header-foreground">Ex.Rate</TableHead>
                     <TableHead className="text-table-header-foreground">FCY Amount</TableHead>
@@ -2003,7 +2026,7 @@ const AddShipment = () => {
                 <TableBody>
                   {costing.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={17} className="text-center text-muted-foreground">No costing entries</TableCell>
+                      <TableCell colSpan={15} className="text-center text-muted-foreground">No costing entries</TableCell>
                     </TableRow>
                   ) : (
                     costing.map((cost, index) => {
@@ -2016,14 +2039,12 @@ const AddShipment = () => {
                         <TableRow key={cost.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
                           <TableCell>{index + 1}</TableCell>
                           <TableCell className="text-emerald-600">{cost.description}</TableCell>
-                          <TableCell className={saleHighlight}>{cost.saleQty}</TableCell>
-                          <TableCell className={saleHighlight}>{cost.saleUnit}</TableCell>
+                          <TableCell className={saleHighlight}>{cost.saleQty} × {cost.saleUnit}</TableCell>
                           <TableCell className={saleHighlight}>{cost.saleCurrencyCode}</TableCell>
                           <TableCell className={saleHighlight}>{cost.saleExRate}</TableCell>
                           <TableCell className={saleHighlight}>{cost.saleFCY?.toFixed(2)}</TableCell>
                           <TableCell className={`${saleHighlight} text-emerald-600`}>{cost.saleLCY?.toFixed(2)}</TableCell>
-                          <TableCell className={costHighlight}>{cost.costQty}</TableCell>
-                          <TableCell className={costHighlight}>{cost.costUnit}</TableCell>
+                          <TableCell className={costHighlight}>{cost.costQty} × {cost.costUnit}</TableCell>
                           <TableCell className={costHighlight}>{cost.costCurrencyCode}</TableCell>
                           <TableCell className={costHighlight}>{cost.costExRate}</TableCell>
                           <TableCell className={costHighlight}>{cost.costFCY?.toFixed(2)}</TableCell>
@@ -2198,130 +2219,6 @@ const AddShipment = () => {
             </div>
           </TabsContent>
 
-          {/* Cargo Details Tab */}
-          <TabsContent value="cargo-details" className="mt-0">
-            <div className="bg-card border border-border rounded-lg p-6 space-y-6">
-              <h3 className="text-emerald-600 font-semibold text-lg">Cargo Details</h3>
-
-              <div className="grid grid-cols-6 gap-4">
-                <div>
-                  <Label className="text-sm font-semibold">Quantity *</Label>
-                  <Input
-                    type="number"
-                    placeholder="Enter quantity"
-                    value={newCargoEntry.quantity}
-                    onChange={(e) => setNewCargoEntry(prev => ({ ...prev, quantity: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label className="text-sm font-semibold">Package Type</Label>
-                  <SearchableSelect
-                    options={Object.entries(packageTypesByCategory).flatMap(([category, types]) =>
-                      types.map(pt => ({
-                        value: pt.id.toString(),
-                        label: `${pt.code} - ${pt.name}`,
-                      }))
-                    )}
-                    value={newCargoEntry.packageTypeId}
-                    onValueChange={(v) => setNewCargoEntry(prev => ({ ...prev, packageTypeId: v }))}
-                    placeholder="Select package type"
-                    searchPlaceholder="Search package types..."
-                  />
-                </div>
-                <div>
-                  <Label className="text-sm font-semibold">Total CBM</Label>
-                  <Input
-                    type="number"
-                    step="0.001"
-                    placeholder="0.000"
-                    value={newCargoEntry.totalCBM}
-                    onChange={(e) => setNewCargoEntry(prev => ({ ...prev, totalCBM: e.target.value }))}
-                    className="bg-background border-border"
-                  />
-                </div>
-                <div>
-                  <Label className="text-sm font-semibold">Total Weight (KG)</Label>
-                  <Input
-                    type="number"
-                    step="0.001"
-                    placeholder="0.000"
-                    value={newCargoEntry.totalWeight}
-                    onChange={(e) => setNewCargoEntry(prev => ({ ...prev, totalWeight: e.target.value }))}
-                    className="bg-background border-border"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <Label className="text-sm font-semibold">Description</Label>
-                  <Textarea
-                    placeholder="Description"
-                    value={newCargoEntry.description}
-                    onChange={(e) => setNewCargoEntry(prev => ({ ...prev, description: e.target.value }))}
-                    className="bg-background border-border min-h-[38px] h-[38px]"
-                  />
-                </div>
-              </div>
-
-              <Button
-                className="btn-success"
-                onClick={handleAddCargo}
-                disabled={isSavingCargo || !savedShipmentId}
-              >
-                {isSavingCargo ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Adding...
-                  </>
-                ) : (
-                  <>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Cargo
-                  </>
-                )}
-              </Button>
-
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-table-header">
-                    <TableHead className="text-table-header-foreground">S.No</TableHead>
-                    <TableHead className="text-table-header-foreground">Quantity</TableHead>
-                    <TableHead className="text-table-header-foreground">Package Type</TableHead>
-                    <TableHead className="text-table-header-foreground">Total CBM</TableHead>
-                    <TableHead className="text-table-header-foreground">Total Weight</TableHead>
-                    <TableHead className="text-table-header-foreground">Description</TableHead>
-                    <TableHead className="text-table-header-foreground">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {cargoDetails.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">No cargo details</TableCell>
-                    </TableRow>
-                  ) : (
-                    cargoDetails.map((cargo, index) => (
-                      <TableRow key={cargo.id || index} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell>{cargo.quantity}</TableCell>
-                        <TableCell>{cargo.packageTypeName || '-'}</TableCell>
-                        <TableCell>{cargo.totalCBM?.toFixed(3) || '0.000'}</TableCell>
-                        <TableCell>{cargo.totalWeight?.toFixed(3) || '0.000'}</TableCell>
-                        <TableCell>{cargo.description || '-'}</TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded"
-                            onClick={() => handleDeleteCargo(cargo.id, cargo.description)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </TabsContent>
 
           {/* Documents Tab */}
           <TabsContent value="documents" className="mt-0">
@@ -2330,7 +2227,11 @@ const AddShipment = () => {
                 <h3 className="text-emerald-600 font-semibold text-lg">Documents</h3>
                 <Button
                   className="btn-success"
-                  onClick={() => setDocumentModalOpen(true)}
+                  onClick={() => {
+                    setEditingDocument(null);
+                    setDocumentModalMode("add");
+                    setDocumentModalOpen(true);
+                  }}
                   disabled={!savedShipmentId}
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -2377,6 +2278,14 @@ const AddShipment = () => {
                         <TableCell>{doc.remarks || '-'}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 btn-success rounded"
+                              onClick={() => handleEditDocument(doc)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="icon"
@@ -2481,7 +2390,9 @@ const AddShipment = () => {
       <DocumentModal
         open={documentModalOpen}
         onOpenChange={setDocumentModalOpen}
-        onSave={handleAddDocument}
+        onSave={handleSaveDocument}
+        document={editingDocument}
+        mode={documentModalMode}
       />
 
       <StatusLogModal

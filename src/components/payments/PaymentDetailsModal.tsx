@@ -65,16 +65,16 @@ export function PaymentDetailsModal({
                         {inv.purchaseNo}
                       </TableCell>
                       <TableCell>
-                        {inv.currencyCode || baseCurrencyCode} {inv.invoiceAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        {inv.currencyCode || baseCurrencyCode} {(inv.invoiceAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell className="text-green-600 font-medium">
-                        {inv.currencyCode || baseCurrencyCode} {inv.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        {inv.currencyCode || baseCurrencyCode} {(inv.amount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell>
-                        {inv.currencyCode || baseCurrencyCode} {inv.totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        {inv.currencyCode || baseCurrencyCode} {(inv.totalPaid ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell className={inv.balance > 0 ? "text-orange-500" : ""}>
-                        {inv.currencyCode || baseCurrencyCode} {inv.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        {inv.currencyCode || baseCurrencyCode} {(inv.balance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell>
                         {inv.purchaseDate ? formatDate(inv.purchaseDate, "dd MMM yyyy") : "-"}
@@ -88,7 +88,7 @@ export function PaymentDetailsModal({
                       {payment.currencyCode || baseCurrencyCode} {payment.purchaseInvoices?.reduce((sum, inv) => sum + inv.invoiceAmount, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell className="text-green-600">
-                      {payment.currencyCode || baseCurrencyCode} {payment.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {payment.currencyCode || baseCurrencyCode} {(payment.amount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell className="text-orange-500">
                       {payment.currencyCode || baseCurrencyCode} {payment.purchaseInvoices?.reduce((sum, inv) => sum + inv.totalPaid, 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
