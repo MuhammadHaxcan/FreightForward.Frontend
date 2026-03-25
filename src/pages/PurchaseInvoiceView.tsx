@@ -13,12 +13,14 @@ import {
 } from "@/components/ui/table";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { invoiceApi, AccountPurchaseInvoiceDetail } from "@/services/api";
+import { useAuth } from "@/contexts/AuthContext";
 import { API_BASE_URL, fetchBlob } from "@/services/api/base";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 
 export default function PurchaseInvoiceView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { officeName } = useAuth();
   const baseCurrencyCode = useBaseCurrency();
   const [invoice, setInvoice] = useState<AccountPurchaseInvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -97,7 +99,7 @@ export default function PurchaseInvoiceView() {
   // Calculate totals
   const subTotal = invoice.items?.reduce((sum, item) => sum + (item.localAmount || 0), 0) || 0;
   const totalTax = invoice.items?.reduce((sum, item) => sum + (item.taxAmount || 0), 0) || 0;
-  const total = invoice.amount || subTotal + totalTax;
+  const total = invoice.amount ?? (subTotal + totalTax);
 
   return (
     <MainLayout>
@@ -144,7 +146,6 @@ export default function PurchaseInvoiceView() {
               <div className="space-y-1 text-sm">
                 <p className="font-bold">{invoice.purchaseNo}</p>
                 <p>Date : {formatDate(invoice.purchaseDate)}</p>
-                <p>Due Date : {formatDate(invoice.purchaseDate)}</p>
               </div>
             </div>
           </div>
@@ -179,7 +180,7 @@ export default function PurchaseInvoiceView() {
                     <TableCell className="text-right">{(item.taxAmount ?? 0).toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
-                {invoice.items?.length === 0 && (
+                {(invoice.items?.length ?? 0) === 0 && (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center py-4 text-muted-foreground">
                       No charges found
@@ -217,7 +218,7 @@ export default function PurchaseInvoiceView() {
 
         {/* Footer */}
         <div className="text-center text-sm text-muted-foreground print:hidden">
-          Copyright &copy; TransParent {new Date().getFullYear()}
+          Copyright &copy; {officeName || "TransParent"} {new Date().getFullYear()}
         </div>
       </div>
     </MainLayout>

@@ -20,7 +20,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   receiptApi,
   customerApi,
@@ -231,7 +230,7 @@ export function RecordReceiptModal({
     setSelectedInvoices(
       selectedInvoices.map(si =>
         si.invoiceId === invoiceId
-          ? { ...si, payingAmount: Math.min(amount, si.pendingAmount) }
+          ? { ...si, payingAmount: Math.max(0, Math.min(amount, si.pendingAmount)) }
           : si
       )
     );
@@ -342,10 +341,11 @@ export function RecordReceiptModal({
                     {inv.invoiceNo}
                     <X
                       className="h-3 w-3 ml-1 cursor-pointer"
-                      onClick={() => handleInvoiceSelect(
-                        unpaidInvoices.find(ui => ui.id === inv.invoiceId)!,
-                        false
-                      )}
+                      onClick={() => {
+                        const found = unpaidInvoices.find(ui => ui.id === inv.invoiceId);
+                        if (found) handleInvoiceSelect(found, false);
+                        else setSelectedInvoices(prev => prev.filter(si => si.invoiceId !== inv.invoiceId));
+                      }}
                     />
                   </span>
                 ))}
@@ -545,6 +545,7 @@ export function RecordReceiptModal({
                         value={inv.payingAmount}
                         onChange={(e) => handlePayingAmountChange(inv.invoiceId, parseFloat(e.target.value) || 0)}
                         className="w-32"
+                        min="0"
                         max={inv.pendingAmount}
                         step="0.01"
                       />

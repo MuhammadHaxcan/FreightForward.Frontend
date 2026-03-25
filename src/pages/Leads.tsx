@@ -37,7 +37,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Edit, Send, Loader2, Plus, RotateCcw, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useLeads, usePortalLeads, useAcceptPortalLead, useRevertPortalLead } from "@/hooks/useSales";
 import { useAllDebtors } from "@/hooks/useCustomers";
 import { SendRateRequestModal } from "@/components/leads/SendRateRequestModal";
@@ -49,6 +49,7 @@ export default function Leads() {
 
   // Office Leads state
   const [searchTerm, setSearchTerm] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedLeadId, setSelectedLeadId] = useState<number | null>(null);
@@ -56,6 +57,7 @@ export default function Leads() {
 
   // Portal Leads state
   const [portalSearchTerm, setPortalSearchTerm] = useState("");
+  const [appliedPortalSearch, setAppliedPortalSearch] = useState("");
   const [portalEntriesPerPage, setPortalEntriesPerPage] = useState("10");
   const [portalCurrentPage, setPortalCurrentPage] = useState(1);
 
@@ -74,7 +76,7 @@ export default function Leads() {
   const { data, isLoading, error } = useLeads({
     pageNumber: currentPage,
     pageSize: parseInt(entriesPerPage, 10) || 10,
-    searchTerm: searchTerm || undefined,
+    searchTerm: appliedSearch || undefined,
   });
 
   // Portal Leads query
@@ -85,7 +87,7 @@ export default function Leads() {
   } = usePortalLeads({
     pageNumber: portalCurrentPage,
     pageSize: parseInt(portalEntriesPerPage),
-    searchTerm: portalSearchTerm || undefined,
+    searchTerm: appliedPortalSearch || undefined,
   });
 
   const acceptMutation = useAcceptPortalLead();
@@ -107,11 +109,7 @@ export default function Leads() {
 
   const handleSendRateRequest = () => {
     if (!selectedLeadId) {
-      toast({
-        title: "No lead selected",
-        description: "Please select a lead to send rate request",
-        variant: "destructive",
-      });
+      toast.error("Please select a lead to send rate request");
       return;
     }
     setSendRateRequestModalOpen(true);
@@ -265,10 +263,8 @@ export default function Leads() {
                   <Input
                     placeholder=""
                     value={searchTerm}
-                    onChange={(e) => {
-                      setSearchTerm(e.target.value);
-                      setCurrentPage(1);
-                    }}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { setAppliedSearch(searchTerm); setCurrentPage(1); } }}
                     className="w-64"
                   />
                 </div>
@@ -379,7 +375,19 @@ export default function Leads() {
                   >
                     Previous
                   </Button>
-                  {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((page) => (
+                  {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
+                    let pageNum: number;
+                    if (totalPages <= 7) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 4) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 3) {
+                      pageNum = totalPages - 6 + i;
+                    } else {
+                      pageNum = currentPage - 3 + i;
+                    }
+                    return pageNum;
+                  }).map((page) => (
                     <Button
                       key={page}
                       variant={page === currentPage ? "default" : "outline"}
@@ -433,10 +441,8 @@ export default function Leads() {
                   <Input
                     placeholder=""
                     value={portalSearchTerm}
-                    onChange={(e) => {
-                      setPortalSearchTerm(e.target.value);
-                      setPortalCurrentPage(1);
-                    }}
+                    onChange={(e) => setPortalSearchTerm(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { setAppliedPortalSearch(portalSearchTerm); setPortalCurrentPage(1); } }}
                     className="w-64"
                   />
                 </div>
@@ -530,7 +536,19 @@ export default function Leads() {
                   >
                     Previous
                   </Button>
-                  {Array.from({ length: Math.min(portalTotalPages, 5) }, (_, i) => i + 1).map((page) => (
+                  {Array.from({ length: Math.min(7, portalTotalPages) }, (_, i) => {
+                    let pageNum: number;
+                    if (portalTotalPages <= 7) {
+                      pageNum = i + 1;
+                    } else if (portalCurrentPage <= 4) {
+                      pageNum = i + 1;
+                    } else if (portalCurrentPage >= portalTotalPages - 3) {
+                      pageNum = portalTotalPages - 6 + i;
+                    } else {
+                      pageNum = portalCurrentPage - 3 + i;
+                    }
+                    return pageNum;
+                  }).map((page) => (
                     <Button
                       key={page}
                       variant={page === portalCurrentPage ? "default" : "outline"}

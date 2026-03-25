@@ -473,8 +473,8 @@ export const portalLeadApi = {
     searchTerm?: string;
   }) => {
     const query = new URLSearchParams();
-    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
-    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.pageNumber !== undefined) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize !== undefined) query.append('pageSize', params.pageSize.toString());
     if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
     return fetchApi<PaginatedList<PortalLead>>(`/sales/portal-leads?${query}`);
   },
@@ -496,8 +496,8 @@ export const leadApi = {
     status?: LeadStatus;
   }) => {
     const query = new URLSearchParams();
-    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
-    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.pageNumber !== undefined) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize !== undefined) query.append('pageSize', params.pageSize.toString());
     if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
     if (params?.status) query.append('status', params.status);
     return fetchApi<PaginatedList<Lead>>(`/sales/leads?${query}`);
@@ -517,8 +517,8 @@ export const rateRequestApi = {
     status?: RateRequestStatus;
   }) => {
     const query = new URLSearchParams();
-    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
-    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.pageNumber !== undefined) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize !== undefined) query.append('pageSize', params.pageSize.toString());
     if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
     if (params?.status) query.append('status', params.status);
     return fetchApi<PaginatedList<RateRequest>>(`/sales/rate-requests?${query}`);
@@ -539,8 +539,8 @@ export const quotationApi = {
     status?: QuotationStatus;
   }) => {
     const query = new URLSearchParams();
-    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
-    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.pageNumber !== undefined) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize !== undefined) query.append('pageSize', params.pageSize.toString());
     if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
     if (params?.status) query.append('status', params.status);
     return fetchApi<PaginatedList<Quotation>>(`/sales/quotations?${query}`);

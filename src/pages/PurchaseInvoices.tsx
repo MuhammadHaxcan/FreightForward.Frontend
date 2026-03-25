@@ -27,6 +27,7 @@ export default function PurchaseInvoices() {
   const [vendors, setVendors] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [selectedVendor, setSelectedVendor] = useState<string>("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
@@ -55,7 +56,7 @@ export default function PurchaseInvoices() {
       const response = await invoiceApi.getAllPurchaseInvoices({
         pageNumber,
         pageSize,
-        searchTerm: searchTerm || undefined,
+        searchTerm: appliedSearch || undefined,
         vendorId: selectedVendor !== "all" ? parseInt(selectedVendor) : undefined,
         fromDate: dateRange?.from ? formatDateToISO(dateRange.from) : undefined,
         toDate: dateRange?.to ? formatDateToISO(dateRange.to) : undefined,
@@ -70,13 +71,14 @@ export default function PurchaseInvoices() {
     } finally {
       setLoading(false);
     }
-  }, [pageNumber, pageSize, searchTerm, selectedVendor, dateRange]);
+  }, [pageNumber, pageSize, appliedSearch, selectedVendor, dateRange]);
 
   useEffect(() => {
     fetchInvoices();
   }, [fetchInvoices]);
 
   const handleSearch = () => {
+    setAppliedSearch(searchTerm);
     setPageNumber(1);
   };
 

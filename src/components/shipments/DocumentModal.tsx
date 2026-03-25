@@ -14,7 +14,7 @@ import { getTodayDateOnly } from "@/lib/utils";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { settingsApi, DocumentType } from "@/services/api/settings";
 import { fileApi, AddShipmentDocumentRequest, ShipmentDocument, FileUploadResponse } from "@/services/api/shipment";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Loader2, X } from "lucide-react";
 
 interface DocumentModalProps {
@@ -26,7 +26,6 @@ interface DocumentModalProps {
 }
 
 export function DocumentModal({ open, onOpenChange, onSave, document: editDocument, mode = "add" }: DocumentModalProps) {
-  const { toast } = useToast();
   const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([]);
   const [loadingDocTypes, setLoadingDocTypes] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -57,15 +56,11 @@ export function DocumentModal({ open, onOpenChange, onSave, document: editDocume
       }
     } catch (error) {
       console.error("Failed to load document types:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load document types",
-        variant: "destructive",
-      });
+      toast.error("Failed to load document types");
     } finally {
       setLoadingDocTypes(false);
     }
-  }, [toast]);
+  }, []);
 
   // Load document types and populate form when modal opens
   useEffect(() => {
@@ -115,17 +110,10 @@ export function DocumentModal({ open, onOpenChange, onSave, document: editDocume
           uploadedFileName: result.fileName,
           originalFileName: result.originalFileName,
         }));
-        toast({
-          title: "Success",
-          description: "File uploaded successfully",
-        });
+        toast.success("File uploaded successfully");
       } catch (error) {
         console.error("File upload failed:", error);
-        toast({
-          title: "Error",
-          description: "Failed to upload file",
-          variant: "destructive",
-        });
+        toast.error("Failed to upload file");
         setFormData(prev => ({ ...prev, file: null }));
       } finally {
         setUploading(false);
@@ -152,11 +140,7 @@ export function DocumentModal({ open, onOpenChange, onSave, document: editDocume
 
   const handleSave = async () => {
     if (!formData.documentNo.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Document No is required",
-        variant: "destructive",
-      });
+      toast.error("Document No is required");
       return;
     }
 
@@ -175,11 +159,7 @@ export function DocumentModal({ open, onOpenChange, onSave, document: editDocume
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to save document:", error);
-      toast({
-        title: "Error",
-        description: `Failed to ${isEdit ? "update" : "save"} document`,
-        variant: "destructive",
-      });
+      toast.error(`Failed to ${isEdit ? "update" : "save"} document`);
     } finally {
       setLoading(false);
     }

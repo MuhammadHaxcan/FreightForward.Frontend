@@ -11,7 +11,7 @@ export const calculateCbm = (
   const l = length || 0;
   const w = width || 0;
   const h = height || 0;
-  if (l === 0 || w === 0 || h === 0) return undefined;
+  if (l <= 0 || w <= 0 || h <= 0) return undefined;
   const raw = l * w * h;
   if (volumeUnit === "inch") return raw / 61_024;
   if (volumeUnit === "meter") return raw;

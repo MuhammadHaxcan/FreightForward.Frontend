@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
 export function usePermissions() {
@@ -10,10 +11,10 @@ export function usePermissions() {
     roles: user?.roles ?? [],
 
     // Convenience helpers for common checks
-    canView: (module: string) => hasPermission(`${module}_view`),
-    canAdd: (module: string) => hasPermission(`${module}_add`),
-    canEdit: (module: string) => hasPermission(`${module}_edit`),
-    canDelete: (module: string) => hasPermission(`${module}_delete`),
+    canView: useCallback((module: string) => hasPermission(`${module}_view`), [hasPermission]),
+    canAdd: useCallback((module: string) => hasPermission(`${module}_add`), [hasPermission]),
+    canEdit: useCallback((module: string) => hasPermission(`${module}_edit`), [hasPermission]),
+    canDelete: useCallback((module: string) => hasPermission(`${module}_delete`), [hasPermission]),
 
     // Module-specific shortcuts
     canViewShipments: hasPermission('ship_view'),

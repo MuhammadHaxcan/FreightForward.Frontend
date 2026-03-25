@@ -14,10 +14,12 @@ import {
 import { MainLayout } from "@/components/layout/MainLayout";
 import { invoiceApi, AccountInvoiceDetail } from "@/services/api";
 import { API_BASE_URL, fetchBlob } from "@/services/api/base";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function InvoiceView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { officeName } = useAuth();
   const [invoice, setInvoice] = useState<AccountInvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -168,9 +170,6 @@ export default function InvoiceView() {
                 )}
                 <p className="font-bold">{invoice.invoiceNo}</p>
                 <p>Date : {formatDate(invoice.invoiceDate)}</p>
-                {invoice.dueDate && (
-                  <p>Due Date : {formatDate(invoice.dueDate)}</p>
-                )}
               </div>
             </div>
           </div>
@@ -229,7 +228,7 @@ export default function InvoiceView() {
             <div className="w-80">
               <div className="bg-amber-50 dark:bg-amber-900/20 p-2 mb-2">
                 <div className="flex justify-between">
-                  <span>Total Sale</span>
+                  <span>Sub Total</span>
                   <span className="font-semibold">{formatCurrency(subTotal, invoice.currencyCode || '')}</span>
                 </div>
               </div>
@@ -241,7 +240,7 @@ export default function InvoiceView() {
               </div>
               <div className="bg-amber-50 dark:bg-amber-900/20 p-2 mt-2">
                 <div className="flex justify-between font-bold">
-                  <span>Sub Total</span>
+                  <span>Total</span>
                   <span>{formatCurrency(total, invoice.currencyCode || '')}</span>
                 </div>
               </div>
@@ -251,7 +250,7 @@ export default function InvoiceView() {
 
         {/* Footer */}
         <div className="text-center text-sm text-muted-foreground print:hidden">
-          Copyright &copy; TransParent {new Date().getFullYear()}
+          Copyright &copy; {officeName || "TransParent"} {new Date().getFullYear()}
         </div>
       </div>
     </MainLayout>

@@ -38,6 +38,7 @@ export default function PaymentVouchers() {
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [recordModalOpen, setRecordModalOpen] = useState(false);
   const [detailsModalPaymentId, setDetailsModalPaymentId] = useState<number | null>(null);
   const [editPaymentId, setEditPaymentId] = useState<number | null>(null);
@@ -48,13 +49,13 @@ export default function PaymentVouchers() {
   const { data, isLoading, refetch } = usePaymentVouchers({
     pageNumber,
     pageSize,
-    searchTerm: searchTerm || undefined,
+    searchTerm: appliedSearch || undefined,
   });
 
   const deletePaymentMutation = useDeletePaymentVoucher();
 
-  const handleSearch = (value: string) => {
-    setSearchTerm(value);
+  const handleSearch = () => {
+    setAppliedSearch(searchTerm);
     setPageNumber(1);
   };
 
@@ -142,7 +143,8 @@ export default function PaymentVouchers() {
             className="w-48"
             placeholder="Search..."
             value={searchTerm}
-            onChange={(e) => handleSearch(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
           />
         </div>
       </div>

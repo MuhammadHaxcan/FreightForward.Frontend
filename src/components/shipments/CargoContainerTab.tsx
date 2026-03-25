@@ -384,85 +384,92 @@ export function CargoContainerTab({
           <TableHeader>
             <TableRow className="bg-table-header">
               <TableHead className="text-table-header-foreground">S.No</TableHead>
-              {cargoCalculationMode === "units" ? (
-                <>
-                  <TableHead className="text-table-header-foreground">Qty</TableHead>
-                  <TableHead className="text-table-header-foreground">Package Type</TableHead>
-                  <TableHead className="text-table-header-foreground">L</TableHead>
-                  <TableHead className="text-table-header-foreground">W</TableHead>
-                  <TableHead className="text-table-header-foreground">H</TableHead>
-                  <TableHead className="text-table-header-foreground">Unit</TableHead>
-                  <TableHead className="text-table-header-foreground">CBM</TableHead>
-                  <TableHead className="text-table-header-foreground">Weight</TableHead>
-                  <TableHead className="text-table-header-foreground">Wt. Unit</TableHead>
-                  <TableHead className="text-table-header-foreground">Description</TableHead>
-                </>
-              ) : (
-                <>
-                  <TableHead className="text-table-header-foreground">Qty</TableHead>
-                  <TableHead className="text-table-header-foreground">Package Type</TableHead>
-                  <TableHead className="text-table-header-foreground">Total CBM</TableHead>
-                  <TableHead className="text-table-header-foreground">Total Weight</TableHead>
-                  <TableHead className="text-table-header-foreground">Description</TableHead>
-                </>
-              )}
+              <TableHead className="text-table-header-foreground">Qty</TableHead>
+              <TableHead className="text-table-header-foreground">Package Type</TableHead>
+              <TableHead className="text-table-header-foreground">L</TableHead>
+              <TableHead className="text-table-header-foreground">W</TableHead>
+              <TableHead className="text-table-header-foreground">H</TableHead>
+              <TableHead className="text-table-header-foreground">Unit</TableHead>
+              <TableHead className="text-table-header-foreground">CBM/Unit</TableHead>
+              <TableHead className="text-table-header-foreground">Total CBM</TableHead>
+              <TableHead className="text-table-header-foreground">Weight</TableHead>
+              <TableHead className="text-table-header-foreground">Wt. Unit</TableHead>
+              <TableHead className="text-table-header-foreground">Total Weight</TableHead>
+              <TableHead className="text-table-header-foreground">Description</TableHead>
               <TableHead className="text-table-header-foreground">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {cargoDetails.length === 0 ? (
               <TableRow>
-                <TableCell
-                  colSpan={cargoCalculationMode === "units" ? 12 : 7}
-                  className="text-center text-muted-foreground py-8"
-                >
+                <TableCell colSpan={14} className="text-center text-muted-foreground py-8">
                   No cargo details
                 </TableCell>
               </TableRow>
             ) : (
-              cargoDetails.map((cargo, index) => (
-                <TableRow key={cargo.id ?? `new-${index}`} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
-                  <TableCell>{index + 1}</TableCell>
-                  {(cargo.calculationMode || "units") === "units" ? (
-                    <>
-                      <TableCell>{cargo.quantity}</TableCell>
-                      <TableCell>{cargo.packageTypeName || "-"}</TableCell>
-                      <TableCell>{cargo.length?.toFixed(2) || "-"}</TableCell>
-                      <TableCell>{cargo.width?.toFixed(2) || "-"}</TableCell>
-                      <TableCell>{cargo.height?.toFixed(2) || "-"}</TableCell>
-                      <TableCell>{cargo.volumeUnit?.toUpperCase() || "CM"}</TableCell>
-                      <TableCell className="text-emerald-600">{cargo.cbm?.toFixed(6) || "-"}</TableCell>
-                      <TableCell>{cargo.weight?.toFixed(3) || "-"}</TableCell>
-                      <TableCell>{cargo.weightUnit?.toUpperCase() || "KG"}</TableCell>
-                      <TableCell>{cargo.description || "-"}</TableCell>
-                    </>
-                  ) : (
-                    <>
-                      <TableCell>{cargo.quantity}</TableCell>
-                      <TableCell>{cargo.packageTypeName || "-"}</TableCell>
-                      <TableCell className="text-emerald-600">{cargo.totalCBM?.toFixed(3) || "0.000"}</TableCell>
-                      <TableCell>{cargo.totalWeight?.toFixed(3) || "0.000"}</TableCell>
-                      <TableCell>{cargo.description || "-"}</TableCell>
-                    </>
-                  )}
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded"
-                      onClick={() => onDeleteCargo(cargo.id, cargo.description)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
+              cargoDetails.map((cargo, index) => {
+                const isUnitsMode = (cargo.calculationMode || "units") === "units";
+                const computedTotalCbm = isUnitsMode
+                  ? (cargo.cbm || 0) * cargo.quantity
+                  : (cargo.totalCBM || 0);
+                const computedTotalWeight = isUnitsMode
+                  ? (cargo.weight || 0) * cargo.quantity
+                  : (cargo.totalWeight || 0);
+                return (
+                  <TableRow key={cargo.id ?? `new-${index}`} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
+                    <TableCell>{index + 1}</TableCell>
+                    <TableCell>{cargo.quantity}</TableCell>
+                    <TableCell>{cargo.packageTypeName || "—"}</TableCell>
+                    {isUnitsMode ? (
+                      <>
+                        <TableCell>{cargo.length?.toFixed(2) || "—"}</TableCell>
+                        <TableCell>{cargo.width?.toFixed(2) || "—"}</TableCell>
+                        <TableCell>{cargo.height?.toFixed(2) || "—"}</TableCell>
+                        <TableCell>{cargo.volumeUnit?.toUpperCase() || "CM"}</TableCell>
+                        <TableCell className="text-emerald-600">{cargo.cbm?.toFixed(6) || "—"}</TableCell>
+                      </>
+                    ) : (
+                      <>
+                        <TableCell className="text-muted-foreground">—</TableCell>
+                        <TableCell className="text-muted-foreground">—</TableCell>
+                        <TableCell className="text-muted-foreground">—</TableCell>
+                        <TableCell className="text-muted-foreground">—</TableCell>
+                        <TableCell className="text-muted-foreground">—</TableCell>
+                      </>
+                    )}
+                    <TableCell className="text-emerald-600">{computedTotalCbm.toFixed(3)}</TableCell>
+                    {isUnitsMode ? (
+                      <>
+                        <TableCell>{cargo.weight?.toFixed(3) || "—"}</TableCell>
+                        <TableCell>{cargo.weightUnit?.toUpperCase() || "KG"}</TableCell>
+                      </>
+                    ) : (
+                      <>
+                        <TableCell className="text-muted-foreground">—</TableCell>
+                        <TableCell className="text-muted-foreground">—</TableCell>
+                      </>
+                    )}
+                    <TableCell>{computedTotalWeight.toFixed(3)}</TableCell>
+                    <TableCell>{cargo.description || "—"}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded"
+                        onClick={() => onDeleteCargo(cargo.id, cargo.description)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
 
-        {/* ── TOTALS (units mode only) ── */}
-        {cargoCalculationMode === "units" && cargoDetails.length > 0 && (
+        {/* ── TOTALS ── */}
+        {cargoDetails.length > 0 && (
           <div className="grid grid-cols-3 gap-4 pt-2">
             <div className="space-y-1">
               <Label className="text-sm text-muted-foreground">Total Volume (CBM × Qty)</Label>

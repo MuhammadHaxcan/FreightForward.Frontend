@@ -201,8 +201,8 @@ export const settingsApi = {
   // Currency Types
   getCurrencyTypes: (params?: { pageNumber?: number; pageSize?: number; searchTerm?: string }) => {
     const query = new URLSearchParams();
-    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
-    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.pageNumber !== undefined) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize !== undefined) query.append('pageSize', params.pageSize.toString());
     if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
     return fetchApi<PaginatedList<CurrencyType>>(`/settings/currency-types?${query}`);
   },
@@ -223,8 +223,8 @@ export const settingsApi = {
   // Ports
   getPorts: (params?: { pageNumber?: number; pageSize?: number; searchTerm?: string }) => {
     const query = new URLSearchParams();
-    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
-    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.pageNumber !== undefined) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize !== undefined) query.append('pageSize', params.pageSize.toString());
     if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
     return fetchApi<PaginatedList<Port>>(`/settings/ports?${query}`);
   },
@@ -238,8 +238,8 @@ export const settingsApi = {
   // Charge Items
   getChargeItems: (params?: { pageNumber?: number; pageSize?: number; searchTerm?: string }) => {
     const query = new URLSearchParams();
-    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
-    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.pageNumber !== undefined) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize !== undefined) query.append('pageSize', params.pageSize.toString());
     if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
     return fetchApi<PaginatedList<ChargeItem>>(`/settings/charge-items?${query}`);
   },
@@ -255,8 +255,8 @@ export const settingsApi = {
   // Expense Types
   getExpenseTypes: (params?: { pageNumber?: number; pageSize?: number; searchTerm?: string; paymentDirection?: PaymentType }) => {
     const query = new URLSearchParams();
-    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
-    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.pageNumber !== undefined) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize !== undefined) query.append('pageSize', params.pageSize.toString());
     if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
     if (params?.paymentDirection) query.append('paymentDirection', params.paymentDirection);
     return fetchApi<PaginatedList<ExpenseType>>(`/settings/expense-types?${query}`);
@@ -324,8 +324,8 @@ export const settingsApi = {
   // Invoice Notes
   getInvoiceNotes: (params?: { pageNumber?: number; pageSize?: number; searchTerm?: string }) => {
     const query = new URLSearchParams();
-    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
-    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.pageNumber !== undefined) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize !== undefined) query.append('pageSize', params.pageSize.toString());
     if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
     return fetchApi<PaginatedList<InvoiceNote>>(`/settings/invoice-notes?${query}`);
   },

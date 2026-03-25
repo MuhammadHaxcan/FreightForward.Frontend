@@ -24,12 +24,15 @@ import { PermissionGate } from "@/components/auth/PermissionGate";
 const Shipments = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [currentPage, setCurrentPage] = useState(1);
   const [searchBy, setSearchBy] = useState("jobNo");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [appliedFromDate, setAppliedFromDate] = useState("");
+  const [appliedToDate, setAppliedToDate] = useState("");
   const [reportsShipmentId, setReportsShipmentId] = useState<number | null>(null);
 
   // Build search params based on search type
@@ -46,30 +49,37 @@ const Shipments = () => {
       pageSize: parseInt(entriesPerPage, 10) || 10,
     };
 
-    if (searchTerm) {
-      params.searchTerm = searchTerm;
+    if (appliedSearch) {
+      params.searchTerm = appliedSearch;
     }
 
     if (statusFilter && statusFilter !== "all") {
       params.status = statusFilter as ShipmentStatus;
     }
 
-    if (fromDate) {
-      params.fromDate = fromDate;
+    if (appliedFromDate) {
+      params.fromDate = appliedFromDate;
     }
 
-    if (toDate) {
-      params.toDate = toDate;
+    if (appliedToDate) {
+      params.toDate = appliedToDate;
     }
 
     return params;
-  }, [currentPage, entriesPerPage, searchTerm, statusFilter, fromDate, toDate]);
+  }, [currentPage, entriesPerPage, appliedSearch, statusFilter, appliedFromDate, appliedToDate]);
 
   const { data, isLoading, isError, error } = useShipments(searchParams);
 
   const shipments = data?.items || [];
   const totalCount = data?.totalCount || 0;
   const totalPages = data?.totalPages || 1;
+
+  const handleSearch = () => {
+    setAppliedSearch(searchTerm);
+    setAppliedFromDate(fromDate);
+    setAppliedToDate(toDate);
+    setCurrentPage(1);
+  };
 
   const handleEdit = (shipment: Shipment) => {
     navigate(`/shipments/${shipment.id}/edit`);
@@ -109,23 +119,19 @@ const Shipments = () => {
 
   // Generate page numbers for pagination
   const getPageNumbers = () => {
-    const pages: number[] = [];
-    const maxVisiblePages = 5;
-
-    if (totalPages <= maxVisiblePages) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
+    return Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
+      let pageNum: number;
+      if (totalPages <= 7) {
+        pageNum = i + 1;
+      } else if (currentPage <= 4) {
+        pageNum = i + 1;
+      } else if (currentPage >= totalPages - 3) {
+        pageNum = totalPages - 6 + i;
+      } else {
+        pageNum = currentPage - 3 + i;
       }
-    } else {
-      const startPage = Math.max(1, currentPage - 2);
-      const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-
-      for (let i = startPage; i <= endPage; i++) {
-        pages.push(i);
-      }
-    }
-
-    return pages;
+      return pageNum;
+    });
   };
 
   return (
@@ -170,10 +176,8 @@ const Shipments = () => {
           <Input
             placeholder="Search..."
             value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1);
-            }}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
             className="w-[300px] bg-card"
           />
 
@@ -200,10 +204,7 @@ const Shipments = () => {
               <Input
                 type="date"
                 value={fromDate}
-                onChange={(e) => {
-                  setFromDate(e.target.value);
-                  setCurrentPage(1);
-                }}
+                onChange={(e) => setFromDate(e.target.value)}
                 className="border-0 p-0 h-auto bg-transparent focus-visible:ring-0 text-sm w-[130px]"
                 placeholder="From Date"
               />
@@ -214,10 +215,7 @@ const Shipments = () => {
               <Input
                 type="date"
                 value={toDate}
-                onChange={(e) => {
-                  setToDate(e.target.value);
-                  setCurrentPage(1);
-                }}
+                onChange={(e) => setToDate(e.target.value)}
                 className="border-0 p-0 h-auto bg-transparent focus-visible:ring-0 text-sm w-[130px]"
                 placeholder="To Date"
               />
@@ -226,7 +224,7 @@ const Shipments = () => {
 
           <Button
             className="btn-success gap-2"
-            onClick={() => setCurrentPage(1)}
+            onClick={handleSearch}
           >
             <Search size={16} />
             Search

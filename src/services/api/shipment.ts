@@ -445,8 +445,8 @@ export const shipmentApi = {
     toDate?: string;
   }) => {
     const query = new URLSearchParams();
-    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
-    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.pageNumber !== undefined) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize !== undefined) query.append('pageSize', params.pageSize.toString());
     if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
     if (params?.status) query.append('status', params.status);
     if (params?.fromDate) query.append('fromDate', params.fromDate);

@@ -16,7 +16,8 @@ import { formatDate } from "@/lib/utils";
 export default function PaymentView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const paymentId = id ? parseInt(id) : null;
+  const parsedId = id ? parseInt(id, 10) : NaN;
+  const paymentId = !isNaN(parsedId) ? parsedId : null;
 
   const { data: payment, isLoading } = usePaymentVoucher(paymentId);
 

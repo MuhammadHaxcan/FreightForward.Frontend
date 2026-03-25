@@ -232,7 +232,7 @@ export function RecordPaymentModal({
     setSelectedInvoices(
       selectedInvoices.map(si =>
         si.purchaseInvoiceId === purchaseInvoiceId
-          ? { ...si, payingAmount: Math.min(amount, si.pendingAmount) }
+          ? { ...si, payingAmount: Math.max(0, Math.min(amount, si.pendingAmount)) }
           : si
       )
     );
@@ -538,6 +538,7 @@ export function RecordPaymentModal({
                         value={inv.payingAmount}
                         onChange={(e) => handlePayingAmountChange(inv.purchaseInvoiceId, parseFloat(e.target.value) || 0)}
                         className="w-32"
+                        min="0"
                         max={inv.pendingAmount}
                         step="0.01"
                       />

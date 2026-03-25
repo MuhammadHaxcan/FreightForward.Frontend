@@ -8,6 +8,10 @@ export const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://localhost:7
 const ACCESS_TOKEN_KEY = 'ff_access_token';
 const REFRESH_TOKEN_KEY = 'ff_refresh_token';
 
+// Separate keys for system admin tokens to prevent cross-contamination with office user tokens
+const SYSTEM_ACCESS_TOKEN_KEY = 'ff_system_access_token';
+const SYSTEM_REFRESH_TOKEN_KEY = 'ff_system_refresh_token';
+
 // Common Types
 export interface PaginatedList<T> {
   items: T[];
@@ -48,6 +52,25 @@ export function clearTokens(): void {
   localStorage.removeItem(REFRESH_TOKEN_KEY);
 }
 
+// System admin token management — kept separate from office user tokens
+export function getSystemAccessToken(): string | null {
+  return sessionStorage.getItem(SYSTEM_ACCESS_TOKEN_KEY);
+}
+
+export function getSystemRefreshToken(): string | null {
+  return localStorage.getItem(SYSTEM_REFRESH_TOKEN_KEY);
+}
+
+export function setSystemTokens(accessToken: string, refreshToken: string): void {
+  sessionStorage.setItem(SYSTEM_ACCESS_TOKEN_KEY, accessToken);
+  localStorage.setItem(SYSTEM_REFRESH_TOKEN_KEY, refreshToken);
+}
+
+export function clearSystemTokens(): void {
+  sessionStorage.removeItem(SYSTEM_ACCESS_TOKEN_KEY);
+  localStorage.removeItem(SYSTEM_REFRESH_TOKEN_KEY);
+}
+
 // Callback for when auth fails and needs redirect
 let onAuthFailure: (() => void) | null = null;
 export function setAuthFailureCallback(callback: () => void): void {
@@ -65,7 +88,7 @@ export async function fetchApi<T>(
       ...options.headers,
     };
 
-    const accessToken = getAccessToken();
+    const accessToken = isSystemAdminRoute() ? getSystemAccessToken() : getAccessToken();
     if (accessToken) {
       (headers as Record<string, string>)['Authorization'] = `Bearer ${accessToken}`;
     }
@@ -81,7 +104,7 @@ export async function fetchApi<T>(
       const refreshResult = await attemptTokenRefresh();
       if (refreshResult) {
         // Retry the original request with new token
-        const newAccessToken = getAccessToken();
+        const newAccessToken = isSystemAdminRoute() ? getSystemAccessToken() : getAccessToken();
         (headers as Record<string, string>)['Authorization'] = `Bearer ${newAccessToken}`;
         const retryResponse = await fetch(`${API_BASE_URL}${endpoint}`, {
           ...options,
@@ -95,10 +118,19 @@ export async function fetchApi<T>(
           const data = await retryResponse.json();
           return { data };
         }
+
+        // Retry returned a non-auth error (403, 500, etc.) — token is valid, don't log out
+        if (retryResponse.status !== 401) {
+          const errorData = await retryResponse.json().catch(() => null);
+          return {
+            error: typeof errorData === 'string' ? errorData : (errorData?.error || errorData?.message || `HTTP error! status: ${retryResponse.status}`),
+            errors: errorData?.errors || [],
+          };
+        }
       }
 
-      // Refresh failed, clear tokens and redirect to login
-      clearTokens();
+      // Refresh failed or retry also returned 401 — session is truly expired
+      isSystemAdminRoute() ? clearSystemTokens() : clearTokens();
       if (onAuthFailure) {
         onAuthFailure();
       }
@@ -136,7 +168,7 @@ export async function fetchApi<T>(
 export async function fetchBlob(url: string): Promise<Response> {
   const headers: HeadersInit = {};
 
-  const token = getAccessToken();
+  const token = isSystemAdminRoute() ? getSystemAccessToken() : getAccessToken();
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
@@ -148,7 +180,7 @@ export async function fetchBlob(url: string): Promise<Response> {
     const refreshResult = await attemptTokenRefresh();
     if (refreshResult) {
       // Retry with new token
-      const newToken = getAccessToken();
+      const newToken = isSystemAdminRoute() ? getSystemAccessToken() : getAccessToken();
       if (newToken) {
         headers['Authorization'] = `Bearer ${newToken}`;
       }
@@ -156,7 +188,7 @@ export async function fetchBlob(url: string): Promise<Response> {
     }
 
     // Refresh failed, trigger auth failure callback
-    clearTokens();
+    isSystemAdminRoute() ? clearSystemTokens() : clearTokens();
     if (onAuthFailure) {
       onAuthFailure();
     }
@@ -189,14 +221,15 @@ function isSystemAdminRoute(): boolean {
 }
 
 async function doTokenRefresh(): Promise<boolean> {
-  const refreshToken = getRefreshToken();
+  const systemRoute = isSystemAdminRoute();
+  const refreshToken = systemRoute ? getSystemRefreshToken() : getRefreshToken();
   if (!refreshToken) {
     return false;
   }
 
   try {
     // Use different refresh endpoint for system admin vs office users
-    const refreshEndpoint = isSystemAdminRoute()
+    const refreshEndpoint = systemRoute
       ? `${API_BASE_URL}/auth/system/refresh`
       : `${API_BASE_URL}/auth/refresh`;
 
@@ -211,7 +244,11 @@ async function doTokenRefresh(): Promise<boolean> {
     }
 
     const data = await response.json();
-    setTokens(data.accessToken, data.refreshToken);
+    if (systemRoute) {
+      setSystemTokens(data.accessToken, data.refreshToken);
+    } else {
+      setTokens(data.accessToken, data.refreshToken);
+    }
     return true;
   } catch {
     return false;

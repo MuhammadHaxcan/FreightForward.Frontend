@@ -16,7 +16,7 @@ import { customerApi, settingsApi, CustomerCategoryType, CurrencyType, Invoice a
 import { getPaymentVouchers, PaymentVoucher } from "@/services/api/payment";
 import { invoiceApi, AccountPurchaseInvoice, creditNoteApi, UnpaidInvoice } from "@/services/api/invoice";
 import { hrEmployeeApi } from "@/services/api/hr";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 import { format } from "date-fns";
 
@@ -81,7 +81,6 @@ const CustomerDetail = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const baseCurrencyCode = useBaseCurrency();
   const isViewMode = searchParams.get("mode") === "view";
   const isEditMode = !!id;
@@ -278,18 +277,14 @@ const CustomerDetail = () => {
         }
       } catch (error) {
         console.error("Error loading data:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load data",
-          variant: "destructive",
-        });
+        toast.error("Failed to load data");
       } finally {
         setLoading(false);
       }
     };
 
     loadData();
-  }, [id, toast]);
+  }, [id]);
 
   // Fetch invoices when tab is active
   const fetchInvoices = async () => {
@@ -307,11 +302,7 @@ const CustomerDetail = () => {
       }
     } catch (error) {
       console.error("Error fetching invoices:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load invoices",
-        variant: "destructive",
-      });
+      toast.error("Failed to load invoices");
     } finally {
       setInvoicesLoading(false);
     }
@@ -340,11 +331,7 @@ const CustomerDetail = () => {
       }
     } catch (error) {
       console.error("Error fetching account receivables:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load account receivables",
-        variant: "destructive",
-      });
+      toast.error("Failed to load account receivables");
     } finally {
       setArLoading(false);
     }
@@ -372,11 +359,7 @@ const CustomerDetail = () => {
       }
     } catch (error) {
       console.error("Error fetching receipts:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load receipts",
-        variant: "destructive",
-      });
+      toast.error("Failed to load receipts");
     } finally {
       setReceiptsLoading(false);
     }
@@ -404,11 +387,7 @@ const CustomerDetail = () => {
       }
     } catch (error) {
       console.error("Error fetching account payables:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load account payables",
-        variant: "destructive",
-      });
+      toast.error("Failed to load account payables");
     } finally {
       setApLoading(false);
     }
@@ -436,11 +415,7 @@ const CustomerDetail = () => {
         setPvTotalPages(response.data.totalPages);
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load payment vouchers",
-        variant: "destructive",
-      });
+      toast.error("Failed to load payment vouchers");
     } finally {
       setPvLoading(false);
     }
@@ -468,11 +443,7 @@ const CustomerDetail = () => {
         setPiTotalPages(response.data.totalPages);
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load purchase invoices",
-        variant: "destructive",
-      });
+      toast.error("Failed to load purchase invoices");
     } finally {
       setPiLoading(false);
     }
@@ -497,11 +468,7 @@ const CustomerDetail = () => {
       }
     } catch (error) {
       console.error("Error fetching statement:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load statement",
-        variant: "destructive",
-      });
+      toast.error("Failed to load statement");
     } finally {
       setStatementLoading(false);
     }
@@ -534,6 +501,7 @@ const CustomerDetail = () => {
       }
     } catch (error) {
       console.error("Error fetching credit notes:", error);
+      toast.error("Failed to load credit notes");
     } finally {
       setCnLoading(false);
     }
@@ -557,7 +525,7 @@ const CustomerDetail = () => {
   // Save credit note handler
   const handleSaveCreditNote = async () => {
     if (!id || !creditNoteForm.creditNoteDate) {
-      toast({ title: "Error", description: "Please fill in required fields", variant: "destructive" });
+      toast.error("Please fill in required fields");
       return;
     }
     setCnSaving(true);
@@ -572,7 +540,7 @@ const CustomerDetail = () => {
       const totalCharges = allCharges.reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0);
       const totalAllocated = cnSelectedInvoices.reduce((sum, inv) => sum + inv.allocatedAmount, 0);
       if (totalAllocated > totalCharges) {
-        toast({ title: "Error", description: "Allocated amount cannot exceed credit note total", variant: "destructive" });
+        toast.error("Allocated amount cannot exceed credit note total");
         setCnSaving(false);
         return;
       }
@@ -601,9 +569,9 @@ const CustomerDetail = () => {
         })),
       });
       if (response.error) {
-        toast({ title: "Error", description: response.error, variant: "destructive" });
+        toast.error(response.error);
       } else {
-        toast({ title: "Success", description: "Credit note created successfully" });
+        toast.success("Credit note created successfully");
         setCreditNoteModalOpen(false);
         setChargeDetails([]);
         setAdditionalContents("");
@@ -612,7 +580,7 @@ const CustomerDetail = () => {
         fetchCreditNotes();
       }
     } catch (error) {
-      toast({ title: "Error", description: "Failed to create credit note", variant: "destructive" });
+      toast.error("Failed to create credit note");
     } finally {
       setCnSaving(false);
     }
@@ -639,11 +607,7 @@ const CustomerDetail = () => {
   // Save handler
   const handleSave = async () => {
     if (!profileData.name.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Customer name is required",
-        variant: "destructive",
-      });
+      toast.error("Customer name is required");
       return;
     }
 
@@ -679,10 +643,7 @@ const CustomerDetail = () => {
           throw new Error(response.error);
         }
 
-        toast({
-          title: "Success",
-          description: "Customer updated successfully",
-        });
+        toast.success("Customer updated successfully");
       } else {
         // Create new customer
         const createData = {
@@ -707,19 +668,12 @@ const CustomerDetail = () => {
           throw new Error(response.error);
         }
 
-        toast({
-          title: "Success",
-          description: "Customer created and sent for approval",
-        });
+        toast.success("Customer created and sent for approval");
         navigate("/master-customers");
       }
     } catch (error) {
       console.error("Error saving customer:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save customer",
-        variant: "destructive",
-      });
+      toast.error(error instanceof Error ? error.message : "Failed to save customer");
     } finally {
       setSaving(false);
     }
@@ -861,16 +815,12 @@ const CustomerDetail = () => {
         })));
       }
 
-      toast({ title: "Success", description: "Contact added successfully" });
+      toast.success("Contact added successfully");
       setContactForm({});
       setContactModalOpen(false);
     } catch (error) {
       console.error("Error saving contact:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to add contact",
-        variant: "destructive",
-      });
+      toast.error(error instanceof Error ? error.message : "Failed to add contact");
     }
   };
 
@@ -885,14 +835,10 @@ const CustomerDetail = () => {
       if (response.error) throw new Error(response.error);
 
       setContacts(contacts.filter(c => c.id !== contactId));
-      toast({ title: "Success", description: "Contact deleted successfully" });
+      toast.success("Contact deleted successfully");
     } catch (error) {
       console.error("Error deleting contact:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete contact",
-        variant: "destructive",
-      });
+      toast.error("Failed to delete contact");
     }
   };
 
@@ -921,14 +867,10 @@ const CustomerDetail = () => {
       const response = await customerApi.updateAccountDetail(parseInt(id), data);
       if (response.error) throw new Error(response.error);
 
-      toast({ title: "Success", description: "Account details saved successfully" });
+      toast.success("Account details saved successfully");
     } catch (error) {
       console.error("Error saving account details:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save account details",
-        variant: "destructive",
-      });
+      toast.error(error instanceof Error ? error.message : "Failed to save account details");
     } finally {
       setSaving(false);
     }
@@ -2497,7 +2439,7 @@ const CustomerDetail = () => {
                               min={0}
                               max={inv.pendingAmount}
                               onChange={e => {
-                                const val = Math.min(parseFloat(e.target.value) || 0, inv.pendingAmount);
+                                const val = Math.max(0, Math.min(parseFloat(e.target.value) || 0, inv.pendingAmount));
                                 setCnSelectedInvoices(cnSelectedInvoices.map(si =>
                                   si.invoiceId === inv.invoiceId ? { ...si, allocatedAmount: val } : si
                                 ));

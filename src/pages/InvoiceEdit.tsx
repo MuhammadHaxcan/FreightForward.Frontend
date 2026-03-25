@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { invoiceApi, shipmentApi, AccountInvoiceDetail, ShipmentDetail } from "@/services/api";
 import { InvoiceModal } from "@/components/shipments/InvoiceModal";
+import { toast } from "sonner";
 
 export default function InvoiceEdit() {
   const { id } = useParams<{ id: string }>();
@@ -33,6 +34,7 @@ export default function InvoiceEdit() {
         }
       } catch (error) {
         console.error("Error fetching data:", error);
+        toast.error("Failed to load invoice data");
       } finally {
         setLoading(false);
       }

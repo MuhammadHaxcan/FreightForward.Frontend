@@ -24,7 +24,7 @@ class ErrorBoundary extends Component<Props, State> {
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // Log error to console in development
-    if (process.env.NODE_ENV === "development") {
+    if (import.meta.env.DEV) {
       console.error("Uncaught error:", error, errorInfo);
     }
   }
@@ -55,7 +55,7 @@ class ErrorBoundary extends Component<Props, State> {
             <p className="text-muted-foreground">
               An unexpected error occurred. Please try again or refresh the page.
             </p>
-            {process.env.NODE_ENV === "development" && this.state.error && (
+            {import.meta.env.DEV && this.state.error && (
               <pre className="mt-4 p-4 bg-muted rounded-md text-left text-xs overflow-auto max-h-32">
                 {this.state.error.message}
               </pre>

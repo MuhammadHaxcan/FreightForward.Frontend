@@ -67,6 +67,7 @@ export function UpdateReceiptModal({
   // Fetch initial data
   useEffect(() => {
     if (open && receiptId) {
+      setFetchingData(true);
       fetchInitialData();
       fetchReceiptDetails();
     }
@@ -83,6 +84,7 @@ export function UpdateReceiptModal({
       if (paymentTypesRes.data) setPaymentTypes(paymentTypesRes.data);
     } catch (error) {
       console.error("Error fetching initial data:", error);
+      toast.error("Failed to load receipt data");
     }
   };
 
@@ -100,7 +102,7 @@ export function UpdateReceiptModal({
         setReceiptNo(data.receiptNo);
         setReceiptDate(format(new Date(data.receiptDate), "yyyy-MM-dd"));
         setNarration(data.narration || "");
-        setRemarks(data.narration || "");
+        setRemarks(data.remarks || "");
         setCurrencyId(data.currencyId || null);
         setCurrencyCode(data.currencyCode || "");
         setBankId(data.bankId || null);

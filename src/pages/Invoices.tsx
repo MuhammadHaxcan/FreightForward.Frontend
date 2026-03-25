@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { formatDate, formatDateToISO, formatDateForDisplay } from "@/lib/utils";
-import { Search, Calendar, Eye } from "lucide-react";
+import { Calendar, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -17,7 +17,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { invoiceApi, customerApi, AccountInvoice, Customer, PaginatedList } from "@/services/api";
+import { invoiceApi, customerApi, AccountInvoice, Customer } from "@/services/api";
 import { DateRange } from "react-day-picker";
 
 export default function Invoices() {
@@ -26,6 +26,7 @@ export default function Invoices() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<string>("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
@@ -54,7 +55,7 @@ export default function Invoices() {
       const response = await invoiceApi.getAll({
         pageNumber,
         pageSize,
-        searchTerm: searchTerm || undefined,
+        searchTerm: appliedSearch || undefined,
         customerId: selectedCustomer !== "all" ? parseInt(selectedCustomer) : undefined,
         fromDate: dateRange?.from ? formatDateToISO(dateRange.from) : undefined,
         toDate: dateRange?.to ? formatDateToISO(dateRange.to) : undefined,
@@ -69,7 +70,7 @@ export default function Invoices() {
     } finally {
       setLoading(false);
     }
-  }, [pageNumber, pageSize, searchTerm, selectedCustomer, dateRange]);
+  }, [pageNumber, pageSize, appliedSearch, selectedCustomer, dateRange]);
 
   // Fetch on pagination changes and initial load
   useEffect(() => {
@@ -77,16 +78,16 @@ export default function Invoices() {
   }, [fetchInvoices]);
 
   const handleSearch = () => {
+    setAppliedSearch(searchTerm);
     setPageNumber(1);
-    // fetchInvoices will be called by the useEffect when pageNumber changes
   };
 
   const handleViewInvoice = (invoiceNo: string) => {
     navigate(`/accounts/invoices/${encodeURIComponent(invoiceNo)}`);
   };
 
-  const formatCurrency = (amount: number, currency: string) => {
-    return `${currency} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formatCurrency = (amount: number | null | undefined, currency: string) => {
+    return `${currency} ${(amount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const getAgingDisplay = (days?: number) => {
@@ -106,7 +107,7 @@ export default function Invoices() {
     );
   };
 
-  const startEntry = (pageNumber - 1) * pageSize + 1;
+  const startEntry = totalCount > 0 ? (pageNumber - 1) * pageSize + 1 : 0;
   const endEntry = Math.min(pageNumber * pageSize, totalCount);
 
   return (
@@ -190,7 +191,7 @@ export default function Invoices() {
               { value: "100", label: "100" },
             ]}
             value={pageSize.toString()}
-            onValueChange={(v) => setPageSize(parseInt(v))}
+            onValueChange={(v) => { setPageSize(parseInt(v)); setPageNumber(1); }}
             triggerClassName="w-[90px]"
           />
           <span className="text-sm">entries</span>
@@ -216,7 +217,6 @@ export default function Invoices() {
               <TableHead className="text-table-header-foreground font-semibold">Job Number</TableHead>
               <TableHead className="text-table-header-foreground font-semibold">Customer</TableHead>
               <TableHead className="text-table-header-foreground font-semibold">Amount</TableHead>
-              <TableHead className="text-table-header-foreground font-semibold">Due Date</TableHead>
               <TableHead className="text-table-header-foreground font-semibold">Aging</TableHead>
               <TableHead className="text-table-header-foreground font-semibold">Added</TableHead>
               <TableHead className="text-table-header-foreground font-semibold">Payment Status</TableHead>
@@ -227,13 +227,13 @@ export default function Invoices() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-8">
+                <TableCell colSpan={9} className="text-center py-8">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : invoices.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-8">
+                <TableCell colSpan={9} className="text-center py-8">
                   No invoices found
                 </TableCell>
               </TableRow>
@@ -249,7 +249,6 @@ export default function Invoices() {
                   <TableCell>{invoice.jobNumber || "-"}</TableCell>
                   <TableCell className="text-blue-600">{invoice.customerName}</TableCell>
                   <TableCell>{formatCurrency(invoice.amount, invoice.currencyCode || '')}</TableCell>
-                  <TableCell>{formatDate(invoice.dueDate)}</TableCell>
                   <TableCell className="font-semibold">{getAgingDisplay(invoice.agingDays)}</TableCell>
                   <TableCell className="text-blue-600">{invoice.addedBy || "-"}</TableCell>
                   <TableCell>{getPaymentStatusBadge(invoice.paymentStatus)}</TableCell>
@@ -312,7 +311,7 @@ export default function Invoices() {
             variant="outline"
             size="sm"
             onClick={() => setPageNumber((p) => Math.min(totalPages, p + 1))}
-            disabled={pageNumber === totalPages}
+            disabled={pageNumber === totalPages || totalPages === 0}
           >
             Next
           </Button>

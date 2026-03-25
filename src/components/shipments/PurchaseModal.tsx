@@ -25,7 +25,6 @@ import { ShipmentParty, ShipmentCosting, CreatePurchaseInvoiceItemRequest, Updat
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 import { useCreatePurchaseInvoice, useUpdatePurchaseInvoice } from "@/hooks/useInvoices";
 import { useAddShipmentCosting, useUpdateShipmentCosting } from "@/hooks/useShipments";
-import { useToast } from "@/hooks/use-toast";
 import { CostingModal, type CostingModalData } from "@/components/shipments/CostingModal";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -73,8 +72,6 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
   const addCostingMutation = useAddShipmentCosting();
   const updateCostingMutation = useUpdateShipmentCosting();
   const queryClient = useQueryClient();
-  const { toast } = useToast();
-
   const isEditMode = !!editPurchaseInvoiceId;
 
   // Filter parties to only show Creditors and deduplicate by customerId

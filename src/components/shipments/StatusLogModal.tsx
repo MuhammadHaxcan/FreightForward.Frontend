@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { DateInput } from "@/components/ui/date-input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { AddShipmentStatusLogRequest, StatusEventType } from "@/services/api/shipment";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Loader2, X } from "lucide-react";
 import { getTodayDateOnly } from "@/lib/utils";
 import {
@@ -28,7 +28,6 @@ interface StatusLogModalProps {
 }
 
 export function StatusLogModal({ open, onOpenChange, onSave }: StatusLogModalProps) {
-  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     eventType: '' as StatusEventType | '',
@@ -69,29 +68,17 @@ export function StatusLogModal({ open, onOpenChange, onSave }: StatusLogModalPro
 
   const handleSave = async () => {
     if (!formData.eventType) {
-      toast({
-        title: "Validation Error",
-        description: "Please select an event type",
-        variant: "destructive",
-      });
+      toast.error("Please select an event type");
       return;
     }
 
     if (!formData.eventDescription?.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Please enter an event description",
-        variant: "destructive",
-      });
+      toast.error("Please enter an event description");
       return;
     }
 
     if (!formData.eventDate) {
-      toast({
-        title: "Validation Error",
-        description: "Please select a date",
-        variant: "destructive",
-      });
+      toast.error("Please select a date");
       return;
     }
 
@@ -114,11 +101,7 @@ export function StatusLogModal({ open, onOpenChange, onSave }: StatusLogModalPro
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to save status log:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save status log",
-        variant: "destructive",
-      });
+      toast.error("Failed to save status log");
     } finally {
       setLoading(false);
     }

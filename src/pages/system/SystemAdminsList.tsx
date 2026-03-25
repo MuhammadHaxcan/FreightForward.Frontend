@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../../components/ui/alert-dialog';
 import { Alert, AlertDescription } from '../../components/ui/alert';
 import { Switch } from '../../components/ui/switch';
 import { Loader2, Plus, Users, Pencil, Trash2 } from 'lucide-react';
@@ -34,6 +35,7 @@ export default function SystemAdminsList() {
     isActive: true,
   });
   const [formError, setFormError] = useState('');
+  const [deletingAdminId, setDeletingAdminId] = useState<number | null>(null);
 
   const { data: admins, isLoading } = useQuery({
     queryKey: ['system-admins'],
@@ -308,6 +310,32 @@ export default function SystemAdminsList() {
           </DialogContent>
         </Dialog>
 
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={!!deletingAdminId} onOpenChange={(open) => !open && setDeletingAdminId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Admin</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this admin? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={() => {
+                  if (deletingAdminId) {
+                    deleteAdminMutation.mutate(deletingAdminId);
+                    setDeletingAdminId(null);
+                  }
+                }}
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -365,11 +393,7 @@ export default function SystemAdminsList() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => {
-                              if (confirm('Are you sure you want to delete this admin?')) {
-                                deleteAdminMutation.mutate(admin.id);
-                              }
-                            }}
+                            onClick={() => setDeletingAdminId(admin.id)}
                             disabled={deleteAdminMutation.isPending}
                           >
                             <Trash2 className="h-4 w-4 text-red-600" />

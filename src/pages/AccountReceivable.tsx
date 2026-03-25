@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { formatDateToISO, formatDateForDisplay } from "@/lib/utils";
 import { Search, Calendar, Printer } from "lucide-react";
@@ -37,6 +37,12 @@ export default function AccountReceivable() {
   const [pageSize, setPageSize] = useState(25);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [appliedSearch, setAppliedSearch] = useState("");
+  const [appliedCustomer, setAppliedCustomer] = useState<string>("all");
+  const [appliedDateRange, setAppliedDateRange] = useState<DateRange | undefined>({
+    from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+    to: new Date(),
+  });
 
   // Fetch customers for filter
   useEffect(() => {
@@ -50,16 +56,16 @@ export default function AccountReceivable() {
   }, []);
 
   // Fetch account receivable data
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const response = await invoiceApi.getAccountReceivableSummary({
         pageNumber,
         pageSize,
-        customerId: selectedCustomer !== "all" ? parseInt(selectedCustomer, 10) : undefined,
-        fromDate: dateRange?.from ? formatDateToISO(dateRange.from) : undefined,
-        toDate: dateRange?.to ? formatDateToISO(dateRange.to) : undefined,
-        searchTerm: searchTerm || undefined,
+        customerId: appliedCustomer !== "all" ? parseInt(appliedCustomer, 10) : undefined,
+        fromDate: appliedDateRange?.from ? formatDateToISO(appliedDateRange.from) : undefined,
+        toDate: appliedDateRange?.to ? formatDateToISO(appliedDateRange.to) : undefined,
+        searchTerm: appliedSearch || undefined,
       });
       if (response.data) {
         setItems(response.data.items.items);
@@ -72,15 +78,17 @@ export default function AccountReceivable() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pageNumber, pageSize, appliedSearch, appliedCustomer, appliedDateRange]);
 
   useEffect(() => {
     fetchData();
-  }, [pageNumber, pageSize]);
+  }, [fetchData]);
 
   const handleSearch = () => {
+    setAppliedSearch(searchTerm);
+    setAppliedCustomer(selectedCustomer);
+    setAppliedDateRange(dateRange);
     setPageNumber(1);
-    fetchData();
   };
 
   const handlePrint = () => {
@@ -88,7 +96,7 @@ export default function AccountReceivable() {
     if (dateRange?.from) params.append('fromDate', formatDateToISO(dateRange.from));
     if (dateRange?.to) params.append('toDate', formatDateToISO(dateRange.to));
     if (selectedCustomer !== "all") params.append('customerId', selectedCustomer);
-    if (searchTerm) params.append('searchTerm', searchTerm);
+    if (appliedSearch) params.append('searchTerm', appliedSearch);
     window.open(`/accounts/account-receivable/print?${params.toString()}`, '_blank');
   };
 

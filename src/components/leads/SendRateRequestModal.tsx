@@ -14,7 +14,7 @@ import { Loader2 } from "lucide-react";
 import { useCustomers } from "@/hooks/useCustomers";
 import { useAllCustomerCategoryTypes } from "@/hooks/useSettings";
 import { useCreateRateRequest } from "@/hooks/useSales";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 interface SendRateRequestModalProps {
   open: boolean;
@@ -78,11 +78,7 @@ export function SendRateRequestModal({
 
   const handleSubmit = async () => {
     if (!vendorId) {
-      toast({
-        title: "Validation Error",
-        description: "Please select a vendor",
-        variant: "destructive",
-      });
+      toast.error("Please select a vendor");
       return;
     }
 
@@ -99,10 +95,7 @@ export function SendRateRequestModal({
         vendorEmail,
       });
 
-      toast({
-        title: "Success",
-        description: "Rate request sent successfully",
-      });
+      toast.success("Rate request sent successfully");
 
       onOpenChange(false);
       onSuccess?.();

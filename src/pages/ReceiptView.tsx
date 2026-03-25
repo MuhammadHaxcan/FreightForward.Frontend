@@ -28,7 +28,9 @@ export default function ReceiptView() {
       if (!id) return;
       setLoading(true);
       try {
-        const response = await receiptApi.getById(parseInt(id));
+        const parsedId = parseInt(id, 10);
+        if (isNaN(parsedId)) return;
+        const response = await receiptApi.getById(parsedId);
         if (response.data) {
           setReceipt(response.data);
         }

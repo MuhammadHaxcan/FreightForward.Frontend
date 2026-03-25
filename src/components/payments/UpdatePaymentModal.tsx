@@ -69,6 +69,7 @@ export function UpdatePaymentModal({
   // Fetch initial data
   useEffect(() => {
     if (open && paymentId) {
+      setFetchingData(true);
       fetchInitialData();
       fetchPaymentDetails();
     }
@@ -85,6 +86,7 @@ export function UpdatePaymentModal({
       if (paymentTypesRes.data) setPaymentTypes(paymentTypesRes.data);
     } catch (error) {
       console.error("Error fetching initial data:", error);
+      toast.error("Failed to load payment data");
     }
   };
 
@@ -102,7 +104,7 @@ export function UpdatePaymentModal({
         setPaymentNo(data.paymentNo);
         setPaymentDate(format(new Date(data.paymentDate), "yyyy-MM-dd"));
         setNarration(data.narration || "");
-        setRemarks(data.narration || "");
+        setRemarks(data.remarks || "");
         setCurrencyId(data.currencyId || null);
         setCurrencyCode(data.currencyCode || "");
         setBankId(data.bankId || null);
@@ -166,6 +168,7 @@ export function UpdatePaymentModal({
       onSuccess();
     } catch (error) {
       console.error("Error updating payment:", error);
+      toast.error("Failed to update payment");
     } finally {
       setLoading(false);
     }

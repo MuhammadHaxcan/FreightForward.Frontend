@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../../components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../../components/ui/alert-dialog';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert';
 import { Loader2, Plus, Building2, Power, PowerOff, Trash2, Copy, Check, Database, CheckCircle2, AlertCircle, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
@@ -35,6 +36,9 @@ export default function OfficesList() {
     creditNotePrefix: 'CNAE',
   });
   const [editFormError, setEditFormError] = useState('');
+
+  // Delete confirmation state
+  const [deletingOfficeId, setDeletingOfficeId] = useState<number | null>(null);
 
   // Migrations dialog state
   const [migrationsDialogOffice, setMigrationsDialogOffice] = useState<OfficeListItem | null>(null);
@@ -649,6 +653,32 @@ export default function OfficesList() {
           </DialogContent>
         </Dialog>
 
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={!!deletingOfficeId} onOpenChange={(open) => !open && setDeletingOfficeId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Office</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to permanently delete this office and ALL its data? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={() => {
+                  if (deletingOfficeId) {
+                    deleteMutation.mutate(deletingOfficeId);
+                    setDeletingOfficeId(null);
+                  }
+                }}
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -735,11 +765,7 @@ export default function OfficesList() {
                             size="sm"
                             variant="ghost"
                             title="Delete Office"
-                            onClick={() => {
-                              if (confirm('Are you sure you want to permanently delete this office and ALL its data?')) {
-                                deleteMutation.mutate(office.id);
-                              }
-                            }}
+                            onClick={() => setDeletingOfficeId(office.id)}
                             disabled={deleteMutation.isPending}
                           >
                             <Trash2 className="h-4 w-4 text-red-600" />

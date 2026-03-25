@@ -11,7 +11,7 @@ import { ArrowLeft, Plus, Pencil, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { customerApi, settingsApi, CustomerCategoryType, CurrencyType } from "@/services/api";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 
 interface Contact {
@@ -41,7 +41,6 @@ const NeutralDetail = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const baseCurrencyCode = useBaseCurrency();
   const isViewMode = searchParams.get("mode") === "view";
   const isEditMode = !!id;
@@ -180,27 +179,19 @@ const NeutralDetail = () => {
         }
       } catch (error) {
         console.error("Error loading data:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load data",
-          variant: "destructive",
-        });
+        toast.error("Failed to load data");
       } finally {
         setLoading(false);
       }
     };
 
     loadData();
-  }, [id, toast]);
+  }, [id]);
 
   // Save handler
   const handleSave = async () => {
     if (!profileData.name.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Customer name is required",
-        variant: "destructive",
-      });
+      toast.error("Customer name is required");
       return;
     }
 
@@ -234,10 +225,7 @@ const NeutralDetail = () => {
           throw new Error(response.error);
         }
 
-        toast({
-          title: "Success",
-          description: "Customer updated successfully",
-        });
+        toast.success("Customer updated successfully");
       } else {
         // Create new customer
         const createData = {
@@ -261,19 +249,12 @@ const NeutralDetail = () => {
           throw new Error(response.error);
         }
 
-        toast({
-          title: "Success",
-          description: "Customer created and sent for approval",
-        });
+        toast.success("Customer created and sent for approval");
         navigate("/master-customers");
       }
     } catch (error) {
       console.error("Error saving customer:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save customer",
-        variant: "destructive",
-      });
+      toast.error(error instanceof Error ? error.message : "Failed to save customer");
     } finally {
       setSaving(false);
     }
@@ -307,17 +288,10 @@ const NeutralDetail = () => {
         throw new Error(response.error);
       }
 
-      toast({
-        title: "Success",
-        description: "Account details saved successfully",
-      });
+      toast.success("Account details saved successfully");
     } catch (error) {
       console.error("Error saving account details:", error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save account details",
-        variant: "destructive",
-      });
+      toast.error(error instanceof Error ? error.message : "Failed to save account details");
     } finally {
       setSaving(false);
     }

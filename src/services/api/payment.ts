@@ -1,4 +1,5 @@
-import { PaymentMode, PaginatedList, ApiResponse, fetchApi, fetchBlob, API_BASE_URL } from './index';
+import { PaginatedList, ApiResponse, fetchApi, fetchBlob, API_BASE_URL } from './base';
+import type { PaymentMode } from './invoice';
 
 export interface PaymentVoucher {
   id: number;
@@ -11,6 +12,7 @@ export interface PaymentVoucher {
   currencyCode?: string;
   amount: number;
   narration?: string;
+  remarks?: string;
   bankId?: number;
   bankName?: string;
   chequeNo?: string;
@@ -115,7 +117,7 @@ export async function getPaymentVouchers(params: {
   const queryParams = new URLSearchParams();
   if (params.pageNumber) queryParams.append('pageNumber', params.pageNumber.toString());
   if (params.pageSize) queryParams.append('pageSize', params.pageSize.toString());
-  if (params.vendorId) queryParams.append('vendorId', params.vendorId.toString());
+  if (params.vendorId !== undefined) queryParams.append('vendorId', params.vendorId.toString());
   if (params.searchTerm) queryParams.append('searchTerm', params.searchTerm);
 
   return fetchApi<PaginatedList<PaymentVoucher>>(`/invoices/payments?${queryParams.toString()}`);

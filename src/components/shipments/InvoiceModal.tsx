@@ -25,7 +25,6 @@ import { ShipmentParty, ShipmentCosting, CreateInvoiceItemRequest, UpdateInvoice
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 import { useCreateInvoice, useUpdateInvoice } from "@/hooks/useInvoices";
 import { useAddShipmentCosting, useUpdateShipmentCosting } from "@/hooks/useShipments";
-import { useToast } from "@/hooks/use-toast";
 import { CostingModal, type CostingModalData } from "@/components/shipments/CostingModal";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -69,8 +68,6 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
   const addCostingMutation = useAddShipmentCosting();
   const updateCostingMutation = useUpdateShipmentCosting();
   const queryClient = useQueryClient();
-  const { toast } = useToast();
-
   const isEditMode = !!editInvoiceId;
 
   // Filter parties to only show Debtors and deduplicate by customerId

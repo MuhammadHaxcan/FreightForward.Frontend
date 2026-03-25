@@ -19,7 +19,7 @@ import { useAuth } from "@/contexts/AuthContext";
 export default function CreditNoteView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { hasPermission } = useAuth();
+  const { hasPermission, officeName } = useAuth();
   const [creditNote, setCreditNote] = useState<AccountCreditNoteDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -257,7 +257,7 @@ export default function CreditNoteView() {
 
         {/* Footer */}
         <div className="text-center text-sm text-muted-foreground print:hidden">
-          Copyright &copy; TransParent {new Date().getFullYear()}
+          Copyright &copy; {officeName || "TransParent"} {new Date().getFullYear()}
         </div>
       </div>
     </MainLayout>

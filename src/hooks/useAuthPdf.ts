@@ -12,6 +12,7 @@ export function useAuthPdf(pdfUrl: string | null) {
       return;
     }
 
+    let mounted = true;
     let currentBlobUrl: string | null = null;
 
     const fetchPdf = async () => {
@@ -24,18 +25,24 @@ export function useAuthPdf(pdfUrl: string | null) {
           throw new Error(`Failed to load PDF: ${response.status}`);
         }
         const blob = await response.blob();
+        if (!mounted) return;
         currentBlobUrl = URL.createObjectURL(blob);
         setBlobUrl(currentBlobUrl);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load PDF');
+        if (mounted) {
+          setError(err instanceof Error ? err.message : 'Failed to load PDF');
+        }
       } finally {
-        setIsLoading(false);
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
     };
 
     fetchPdf();
 
     return () => {
+      mounted = false;
       if (currentBlobUrl) {
         URL.revokeObjectURL(currentBlobUrl);
       }

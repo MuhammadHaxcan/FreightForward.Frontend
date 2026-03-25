@@ -1,10 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { formatDate } from "@/lib/utils";
 import { Eye, Plus, Trash2, Download, Printer, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Table,
   TableBody,
@@ -33,20 +43,23 @@ export default function ReceiptVouchers() {
   const [pageSize, setPageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedReceiptId, setSelectedReceiptId] = useState<number | null>(null);
   const [editReceiptId, setEditReceiptId] = useState<number | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [receiptToDelete, setReceiptToDelete] = useState<number | null>(null);
 
   // Fetch receipts
-  const fetchReceipts = async () => {
+  const fetchReceipts = useCallback(async () => {
     setLoading(true);
     try {
       const response = await receiptApi.getAll({
         pageNumber,
         pageSize,
-        searchTerm: searchTerm || undefined,
+        searchTerm: appliedSearch || undefined,
       });
       if (response.data) {
         setReceipts(response.data.items);
@@ -58,15 +71,15 @@ export default function ReceiptVouchers() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pageNumber, pageSize, appliedSearch]);
 
   useEffect(() => {
     fetchReceipts();
-  }, [pageNumber, pageSize]);
+  }, [fetchReceipts]);
 
   const handleSearch = () => {
+    setAppliedSearch(searchTerm);
     setPageNumber(1);
-    fetchReceipts();
   };
 
   const handleViewReceipt = (receiptId: number) => {
@@ -106,16 +119,18 @@ export default function ReceiptVouchers() {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (confirm("Are you sure you want to delete this receipt?")) {
-      try {
-        await receiptApi.delete(id);
-        toast.success("Receipt deleted successfully");
-        fetchReceipts();
-      } catch (error) {
-        console.error("Error deleting receipt:", error);
-        toast.error("Failed to delete receipt");
-      }
+  const handleDeleteConfirm = async () => {
+    if (!receiptToDelete) return;
+    try {
+      await receiptApi.delete(receiptToDelete);
+      toast.success("Receipt deleted successfully");
+      fetchReceipts();
+    } catch (error) {
+      console.error("Error deleting receipt:", error);
+      toast.error("Failed to delete receipt");
+    } finally {
+      setDeleteDialogOpen(false);
+      setReceiptToDelete(null);
     }
   };
 
@@ -273,7 +288,7 @@ export default function ReceiptVouchers() {
                             size="sm"
                             className="bg-red-500 hover:bg-red-600 text-white h-8 w-8 p-0"
                             title="Delete"
-                            onClick={() => handleDelete(receipt.id)}
+                            onClick={() => { setReceiptToDelete(receipt.id); setDeleteDialogOpen(true); }}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -393,6 +408,27 @@ export default function ReceiptVouchers() {
           fetchReceipts();
         }}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Receipt</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this receipt? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-500 hover:bg-red-600"
+              onClick={handleDeleteConfirm}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 }

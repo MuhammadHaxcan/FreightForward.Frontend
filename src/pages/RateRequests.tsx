@@ -32,6 +32,7 @@ import { RateRequest } from "@/services/api";
 export default function RateRequests() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedRateRequestId, setSelectedRateRequestId] = useState<number | null>(null);
@@ -41,7 +42,7 @@ export default function RateRequests() {
   const { data, isLoading, error } = useRateRequests({
     pageNumber: currentPage,
     pageSize: parseInt(entriesPerPage, 10) || 10,
-    searchTerm: searchTerm || undefined,
+    searchTerm: appliedSearch || undefined,
   });
 
   const updateMutation = useUpdateRateRequest();
@@ -146,10 +147,8 @@ export default function RateRequests() {
               <Input
                 placeholder=""
                 value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { setAppliedSearch(searchTerm); setCurrentPage(1); } }}
                 className="w-64"
               />
             </div>
@@ -276,17 +275,29 @@ export default function RateRequests() {
               >
                 Previous
               </Button>
-              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((page) => (
-                <Button
-                  key={page}
-                  variant={page === currentPage ? "default" : "outline"}
-                  size="sm"
-                  className={page === currentPage ? "btn-success" : ""}
-                  onClick={() => setCurrentPage(page)}
-                >
-                  {page}
-                </Button>
-              ))}
+              {(() => {
+                const getPageNumbers = (cp: number, tp: number): (number | '...')[] => {
+                  if (tp <= 7) return Array.from({ length: tp }, (_, i) => i + 1);
+                  if (cp <= 4) return [1, 2, 3, 4, 5, '...', tp];
+                  if (cp >= tp - 3) return [1, '...', tp-4, tp-3, tp-2, tp-1, tp];
+                  return [1, '...', cp-1, cp, cp+1, '...', tp];
+                };
+                return getPageNumbers(currentPage, totalPages).map((page, idx) =>
+                  page === '...'
+                    ? <span key={`ellipsis-${idx}`} className="px-2 flex items-center text-muted-foreground">...</span>
+                    : (
+                      <Button
+                        key={page}
+                        variant={page === currentPage ? "default" : "outline"}
+                        size="sm"
+                        className={page === currentPage ? "btn-success" : ""}
+                        onClick={() => setCurrentPage(page as number)}
+                      >
+                        {page}
+                      </Button>
+                    )
+                );
+              })()}
               <Button
                 variant="outline"
                 size="sm"

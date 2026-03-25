@@ -392,9 +392,10 @@ export function useConvertQuotationToShipment() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       queryClient.invalidateQueries({ queryKey: ['quotations'] });
+      toast.success('Quotation converted to shipment successfully');
     },
     onError: (error: Error) => {
-      console.error('Failed to update lead status:', error.message);
+      toast.error(error.message || 'Failed to convert quotation to shipment');
     },
   });
 }

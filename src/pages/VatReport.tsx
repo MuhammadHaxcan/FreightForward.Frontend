@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { formatDate, formatDateToISO, formatDateForDisplay } from "@/lib/utils";
 import { Calendar } from "lucide-react";
@@ -51,6 +51,9 @@ export default function VatReport() {
   const [outPageSize, setOutPageSize] = useState(10);
   const [outTotalCount, setOutTotalCount] = useState(0);
   const [outTotalPages, setOutTotalPages] = useState(0);
+  const [outAppliedSearch, setOutAppliedSearch] = useState("");
+  const [outAppliedCustomer, setOutAppliedCustomer] = useState<string>("all");
+  const [outAppliedDateRange, setOutAppliedDateRange] = useState<DateRange | undefined>(defaultDateRange());
 
   // --- VAT Input state ---
   const [inItems, setInItems] = useState<VatReportItem[]>([]);
@@ -65,6 +68,9 @@ export default function VatReport() {
   const [inTotalCount, setInTotalCount] = useState(0);
   const [inTotalPages, setInTotalPages] = useState(0);
   const [inInitialLoaded, setInInitialLoaded] = useState(false);
+  const [inAppliedSearch, setInAppliedSearch] = useState("");
+  const [inAppliedVendor, setInAppliedVendor] = useState<string>("all");
+  const [inAppliedDateRange, setInAppliedDateRange] = useState<DateRange | undefined>(defaultDateRange());
 
   // Fetch customers (Debtors) for VAT Output filter
   useEffect(() => {
@@ -89,16 +95,16 @@ export default function VatReport() {
   }, []);
 
   // --- VAT Output fetch ---
-  const fetchVatOutput = async () => {
+  const fetchVatOutput = useCallback(async () => {
     setOutLoading(true);
     try {
       const response = await invoiceApi.getVatReport({
         pageNumber: outPageNumber,
         pageSize: outPageSize,
-        customerId: outSelectedCustomer !== "all" ? parseInt(outSelectedCustomer) : undefined,
-        fromDate: outDateRange?.from ? formatDateToISO(outDateRange.from) : undefined,
-        toDate: outDateRange?.to ? formatDateToISO(outDateRange.to) : undefined,
-        searchTerm: outSearchTerm || undefined,
+        customerId: outAppliedCustomer !== "all" ? parseInt(outAppliedCustomer) : undefined,
+        fromDate: outAppliedDateRange?.from ? formatDateToISO(outAppliedDateRange.from) : undefined,
+        toDate: outAppliedDateRange?.to ? formatDateToISO(outAppliedDateRange.to) : undefined,
+        searchTerm: outAppliedSearch || undefined,
       });
       if (response.data) {
         setOutItems(response.data.items.items);
@@ -111,28 +117,30 @@ export default function VatReport() {
     } finally {
       setOutLoading(false);
     }
-  };
+  }, [outPageNumber, outPageSize, outAppliedSearch, outAppliedCustomer, outAppliedDateRange]);
 
   useEffect(() => {
     fetchVatOutput();
-  }, [outPageNumber, outPageSize]);
+  }, [fetchVatOutput]);
 
   const handleOutSearch = () => {
+    setOutAppliedSearch(outSearchTerm);
+    setOutAppliedCustomer(outSelectedCustomer);
+    setOutAppliedDateRange(outDateRange);
     setOutPageNumber(1);
-    fetchVatOutput();
   };
 
   // --- VAT Input fetch ---
-  const fetchVatInput = async () => {
+  const fetchVatInput = useCallback(async () => {
     setInLoading(true);
     try {
       const response = await invoiceApi.getVatInputReport({
         pageNumber: inPageNumber,
         pageSize: inPageSize,
-        vendorId: inSelectedVendor !== "all" ? parseInt(inSelectedVendor) : undefined,
-        fromDate: inDateRange?.from ? formatDateToISO(inDateRange.from) : undefined,
-        toDate: inDateRange?.to ? formatDateToISO(inDateRange.to) : undefined,
-        searchTerm: inSearchTerm || undefined,
+        vendorId: inAppliedVendor !== "all" ? parseInt(inAppliedVendor) : undefined,
+        fromDate: inAppliedDateRange?.from ? formatDateToISO(inAppliedDateRange.from) : undefined,
+        toDate: inAppliedDateRange?.to ? formatDateToISO(inAppliedDateRange.to) : undefined,
+        searchTerm: inAppliedSearch || undefined,
       });
       if (response.data) {
         setInItems(response.data.items.items);
@@ -145,13 +153,13 @@ export default function VatReport() {
     } finally {
       setInLoading(false);
     }
-  };
+  }, [inPageNumber, inPageSize, inAppliedSearch, inAppliedVendor, inAppliedDateRange]);
 
   useEffect(() => {
     if (inInitialLoaded) {
       fetchVatInput();
     }
-  }, [inPageNumber, inPageSize]);
+  }, [fetchVatInput, inInitialLoaded]);
 
   // Load VAT Input data on first tab switch
   useEffect(() => {
@@ -162,8 +170,10 @@ export default function VatReport() {
   }, [activeTab]);
 
   const handleInSearch = () => {
+    setInAppliedSearch(inSearchTerm);
+    setInAppliedVendor(inSelectedVendor);
+    setInAppliedDateRange(inDateRange);
     setInPageNumber(1);
-    fetchVatInput();
   };
 
   const formatAmount = (amount: number) => {

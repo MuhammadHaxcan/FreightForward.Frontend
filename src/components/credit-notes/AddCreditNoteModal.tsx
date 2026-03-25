@@ -496,7 +496,7 @@ export function AddCreditNoteModal({ open, onOpenChange, onSuccess }: AddCreditN
                             min={0}
                             max={inv.pendingAmount}
                             onChange={(e) => {
-                              const val = Math.min(parseFloat(e.target.value) || 0, inv.pendingAmount);
+                              const val = Math.max(0, Math.min(parseFloat(e.target.value) || 0, inv.pendingAmount));
                               setSelectedInvoices(
                                 selectedInvoices.map((si) =>
                                   si.invoiceId === inv.invoiceId ? { ...si, allocatedAmount: val } : si

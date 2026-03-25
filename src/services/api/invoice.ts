@@ -118,7 +118,6 @@ export interface AccountInvoice {
   amount: number;
   currencyId?: number;
   currencyCode?: string;
-  dueDate?: string;
   agingDays?: number;
   addedBy?: string;
   paymentStatus: PaymentStatus;
@@ -154,7 +153,6 @@ export interface AccountInvoiceDetail {
   id: number;
   invoiceNo: string;
   invoiceDate: string;
-  dueDate?: string;
   customerId?: number;
   shipmentId?: number;
   jobNumber?: string;
@@ -318,10 +316,10 @@ export const invoiceApi = {
     toDate?: string;
   }) => {
     const query = new URLSearchParams();
-    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
-    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.pageNumber !== undefined) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize !== undefined) query.append('pageSize', params.pageSize.toString());
     if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
-    if (params?.customerId) query.append('customerId', params.customerId.toString());
+    if (params?.customerId !== undefined) query.append('customerId', params.customerId.toString());
     if (params?.fromDate) query.append('fromDate', params.fromDate);
     if (params?.toDate) query.append('toDate', params.toDate);
     return fetchApi<PaginatedList<AccountInvoice>>(`/invoices?${query}`);
@@ -377,10 +375,10 @@ export const invoiceApi = {
     toDate?: string;
   }) => {
     const query = new URLSearchParams();
-    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
-    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.pageNumber !== undefined) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize !== undefined) query.append('pageSize', params.pageSize.toString());
     if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
-    if (params?.vendorId) query.append('vendorId', params.vendorId.toString());
+    if (params?.vendorId !== undefined) query.append('vendorId', params.vendorId.toString());
     if (params?.fromDate) query.append('fromDate', params.fromDate);
     if (params?.toDate) query.append('toDate', params.toDate);
     return fetchApi<PaginatedList<AccountPurchaseInvoice>>(`/invoices/purchases?${query}`);
@@ -393,9 +391,9 @@ export const invoiceApi = {
     searchTerm?: string;
   }) => {
     const query = new URLSearchParams();
-    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
-    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
-    if (params?.customerId) query.append('customerId', params.customerId.toString());
+    if (params?.pageNumber !== undefined) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize !== undefined) query.append('pageSize', params.pageSize.toString());
+    if (params?.customerId !== undefined) query.append('customerId', params.customerId.toString());
     if (params?.fromDate) query.append('fromDate', params.fromDate);
     if (params?.toDate) query.append('toDate', params.toDate);
     if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
@@ -407,9 +405,9 @@ export const invoiceApi = {
     searchTerm?: string;
   }) => {
     const query = new URLSearchParams();
-    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
-    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
-    if (params?.vendorId) query.append('vendorId', params.vendorId.toString());
+    if (params?.pageNumber !== undefined) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize !== undefined) query.append('pageSize', params.pageSize.toString());
+    if (params?.vendorId !== undefined) query.append('vendorId', params.vendorId.toString());
     if (params?.fromDate) query.append('fromDate', params.fromDate);
     if (params?.toDate) query.append('toDate', params.toDate);
     if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
@@ -421,9 +419,9 @@ export const invoiceApi = {
     searchTerm?: string;
   }) => {
     const query = new URLSearchParams();
-    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
-    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
-    if (params?.customerId) query.append('customerId', params.customerId.toString());
+    if (params?.pageNumber !== undefined) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize !== undefined) query.append('pageSize', params.pageSize.toString());
+    if (params?.customerId !== undefined) query.append('customerId', params.customerId.toString());
     if (params?.fromDate) query.append('fromDate', params.fromDate);
     if (params?.toDate) query.append('toDate', params.toDate);
     if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
@@ -435,9 +433,9 @@ export const invoiceApi = {
     searchTerm?: string;
   }) => {
     const query = new URLSearchParams();
-    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
-    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
-    if (params?.vendorId) query.append('vendorId', params.vendorId.toString());
+    if (params?.pageNumber !== undefined) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize !== undefined) query.append('pageSize', params.pageSize.toString());
+    if (params?.vendorId !== undefined) query.append('vendorId', params.vendorId.toString());
     if (params?.fromDate) query.append('fromDate', params.fromDate);
     if (params?.toDate) query.append('toDate', params.toDate);
     if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
@@ -457,6 +455,7 @@ export interface Receipt {
   currencyCode?: string;
   amount: number;
   narration?: string;
+  remarks?: string;
   bankId?: number;
   bankName?: string;
   chequeNo?: string;
@@ -538,10 +537,10 @@ export const receiptApi = {
     customerId?: number;
   }) => {
     const query = new URLSearchParams();
-    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
-    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.pageNumber !== undefined) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize !== undefined) query.append('pageSize', params.pageSize.toString());
     if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
-    if (params?.customerId) query.append('customerId', params.customerId.toString());
+    if (params?.customerId !== undefined) query.append('customerId', params.customerId.toString());
     return fetchApi<PaginatedList<Receipt>>(`/invoices/receipts?${query}`);
   },
   getById: (id: number) => fetchApi<ReceiptDetail>(`/invoices/receipts/${id}`),
@@ -678,16 +677,16 @@ export const creditNoteApi = {
     searchTerm?: string;
   }) => {
     const query = new URLSearchParams();
-    if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
-    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
-    if (params?.customerId) query.append('customerId', params.customerId.toString());
+    if (params?.pageNumber !== undefined) query.append('pageNumber', params.pageNumber.toString());
+    if (params?.pageSize !== undefined) query.append('pageSize', params.pageSize.toString());
+    if (params?.customerId !== undefined) query.append('customerId', params.customerId.toString());
     if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
     return fetchApi<PaginatedList<AccountCreditNote>>(`/invoices/credit-notes?${query}`);
   },
   getById: (id: number) => fetchApi<AccountCreditNoteDetail>(`/invoices/credit-notes/${id}`),
   getUnpaidInvoices: (customerId: number, excludeCreditNoteId?: number) => {
     const query = new URLSearchParams();
-    if (excludeCreditNoteId) query.append('excludeCreditNoteId', excludeCreditNoteId.toString());
+    if (excludeCreditNoteId !== undefined) query.append('excludeCreditNoteId', excludeCreditNoteId.toString());
     return fetchApi<UnpaidInvoice[]>(`/invoices/credit-notes/customer/${customerId}/unpaid-invoices?${query}`);
   },
   create: (data: CreateAccountCreditNoteRequest) =>

@@ -41,6 +41,7 @@ const HrEmployees = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [filterStatus, setFilterStatus] = useState("");
@@ -68,12 +69,12 @@ const HrEmployees = () => {
 
   // Fetch employees
   const { data: empData, isLoading } = useQuery({
-    queryKey: ["hr-employees", pageNumber, pageSize, searchTerm, filterStatus],
+    queryKey: ["hr-employees", pageNumber, pageSize, appliedSearch, filterStatus],
     queryFn: async () => {
       const result = await hrEmployeeApi.getAll({
         pageNumber,
         pageSize,
-        searchTerm: searchTerm || undefined,
+        searchTerm: appliedSearch || undefined,
         status: filterStatus || undefined,
       });
       if (result.error) throw new Error(result.error);
@@ -248,7 +249,8 @@ const HrEmployees = () => {
               <label className="text-sm font-medium text-green-600 mb-1 block">Search</label>
               <Input
                 value={searchTerm}
-                onChange={(e) => { setSearchTerm(e.target.value); setPageNumber(1); }}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { setAppliedSearch(searchTerm); setPageNumber(1); } }}
                 placeholder="Search by name, code, email..."
               />
             </div>

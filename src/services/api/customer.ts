@@ -282,7 +282,7 @@ export const customerApi = {
     if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
     if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
     if (params?.masterType) query.append('masterType', params.masterType);
-    if (params?.categoryId) query.append('categoryId', params.categoryId.toString());
+    if (params?.categoryId !== undefined) query.append('categoryId', params.categoryId.toString());
     if (params?.approvalStatus) query.append('approvalStatus', params.approvalStatus);
     return fetchApi<PaginatedList<Customer>>(`/customers?${query}`);
   },
@@ -290,7 +290,7 @@ export const customerApi = {
   getNextCodes: () => fetchApi<NextCustomerCodes>('/customers/next-codes'),
   checkSimilarNames: (name: string, excludeId?: number) => {
     const query = new URLSearchParams({ name });
-    if (excludeId) query.append('excludeId', excludeId.toString());
+    if (excludeId !== undefined) query.append('excludeId', excludeId.toString());
     return fetchApi<SimilarCustomer[]>(`/customers/check-similar?${query}`);
   },
   create: (data: CreateCustomerRequest) =>

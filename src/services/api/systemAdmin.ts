@@ -1,4 +1,4 @@
-import { fetchApi, API_BASE_URL, setTokens, clearTokens, getRefreshToken } from './base';
+import { fetchApi, API_BASE_URL, setSystemTokens, clearSystemTokens, getSystemRefreshToken } from './base';
 import type {
   SystemAdminAuthResponse,
   SystemAdminLoginRequest,
@@ -30,12 +30,12 @@ export const systemAdminAuthApi = {
     }
 
     const data: SystemAdminAuthResponse = await response.json();
-    setTokens(data.accessToken, data.refreshToken);
+    setSystemTokens(data.accessToken, data.refreshToken);
     return { data };
   },
 
   refresh: async () => {
-    const refreshToken = getRefreshToken();
+    const refreshToken = getSystemRefreshToken();
     if (!refreshToken) {
       return { error: 'No refresh token' };
     }
@@ -51,13 +51,13 @@ export const systemAdminAuthApi = {
     }
 
     const data: SystemAdminAuthResponse = await response.json();
-    setTokens(data.accessToken, data.refreshToken);
+    setSystemTokens(data.accessToken, data.refreshToken);
     return { data };
   },
 
   logout: async () => {
     const result = await fetchApi<void>('/auth/system/logout', { method: 'POST' });
-    clearTokens();
+    clearSystemTokens();
     return result;
   },
 

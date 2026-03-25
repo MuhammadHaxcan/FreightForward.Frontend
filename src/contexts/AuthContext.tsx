@@ -33,36 +33,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Load user on mount
   useEffect(() => {
     const loadUser = async () => {
-      // Check if we have an access token
-      let token = getAccessToken();
+      try {
+        // Check if we have an access token
+        let token = getAccessToken();
 
-      // No access token but have refresh token? Try to refresh
-      if (!token && getRefreshToken()) {
-        const refreshResult = await authApi.refresh();
-        if (refreshResult.data) {
-          token = getAccessToken();
-          // Update office context from refresh response
-          setOfficeSlug(refreshResult.data.officeSlug || null);
-          setOfficeName(refreshResult.data.officeName || null);
+        // No access token but have refresh token? Try to refresh
+        if (!token && getRefreshToken()) {
+          const refreshResult = await authApi.refresh();
+          if (refreshResult.data) {
+            token = getAccessToken();
+            // Update office context from refresh response
+            setOfficeSlug(refreshResult.data.officeSlug || null);
+            setOfficeName(refreshResult.data.officeName || null);
+          }
         }
-      }
 
-      if (!token) {
-        setIsLoading(false);
-        return;
-      }
+        if (!token) {
+          return;
+        }
 
-      // Fetch current user
-      const result = await authApi.getCurrentUser();
-      if (result.data) {
-        setUser(result.data);
-        setOfficeSlug(result.data.officeSlug || null);
-        setOfficeName(result.data.officeName || null);
-      } else {
-        // Token invalid, clear it
+        // Fetch current user
+        const result = await authApi.getCurrentUser();
+        if (result.data) {
+          setUser(result.data);
+          setOfficeSlug(result.data.officeSlug || null);
+          setOfficeName(result.data.officeName || null);
+        } else {
+          // Token invalid, clear it
+          clearTokens();
+        }
+      } catch {
+        // Network or unexpected error — clear any invalid tokens
         clearTokens();
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     loadUser();
@@ -98,7 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         forcePasswordChange: authData.user.forcePasswordChange,
         baseCurrencySet: authData.user.baseCurrencySet,
         profilePictureUrl: authData.user.profilePictureUrl,
-        roles: authData.user.roles.map(r => r.name),
+        roles: (authData.user.roles ?? []).map(r => r.name),
         permissions: authData.user.permissions,
         officeSlug: authData.officeSlug,
         officeName: authData.officeName,
@@ -122,11 +127,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [navigate]);
 
   const hasPermission = useCallback((code: string) => {
-    return user?.permissions.includes(code) ?? false;
+    return (user?.permissions ?? []).includes(code);
   }, [user]);
 
   const hasAnyPermission = useCallback((...codes: string[]) => {
-    return codes.some(code => user?.permissions.includes(code));
+    return codes.some(code => (user?.permissions ?? []).includes(code));
   }, [user]);
 
   const refreshUser = useCallback(async () => {

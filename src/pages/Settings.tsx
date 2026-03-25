@@ -87,6 +87,14 @@ const Settings = () => {
   const [bankSearch, setBankSearch] = useState("");
   const [noteSearch, setNoteSearch] = useState("");
 
+  // Applied search state
+  const [appliedCurrencySearch, setAppliedCurrencySearch] = useState("");
+  const [appliedPortSearch, setAppliedPortSearch] = useState("");
+  const [appliedChargeSearch, setAppliedChargeSearch] = useState("");
+  const [appliedExpenseSearch, setAppliedExpenseSearch] = useState("");
+  const [appliedBankSearch, setAppliedBankSearch] = useState("");
+  const [appliedNoteSearch, setAppliedNoteSearch] = useState("");
+
   // Modal states
   const [addCurrencyModalOpen, setAddCurrencyModalOpen] = useState(false);
   const [addPortModalOpen, setAddPortModalOpen] = useState(false);
@@ -189,37 +197,37 @@ const Settings = () => {
   const { data: currencyData, isLoading: currencyLoading } = useCurrencyTypes({
     pageNumber: currencyPage,
     pageSize: parseInt(currencyPageSize),
-    searchTerm: currencySearch || undefined,
+    searchTerm: appliedCurrencySearch || undefined,
   });
 
   const { data: portData, isLoading: portLoading } = usePorts({
     pageNumber: portPage,
     pageSize: parseInt(portPageSize),
-    searchTerm: portSearch || undefined,
+    searchTerm: appliedPortSearch || undefined,
   });
 
   const { data: chargeData, isLoading: chargeLoading } = useChargeItems({
     pageNumber: chargePage,
     pageSize: parseInt(chargePageSize),
-    searchTerm: chargeSearch || undefined,
+    searchTerm: appliedChargeSearch || undefined,
   });
 
   const { data: expenseData, isLoading: expenseLoading } = useExpenseTypes({
     pageNumber: expensePage,
     pageSize: parseInt(expensePageSize),
-    searchTerm: expenseSearch || undefined,
+    searchTerm: appliedExpenseSearch || undefined,
   });
 
   const { data: bankData, isLoading: bankLoading } = useBanks({
     pageNumber: bankPage,
     pageSize: parseInt(bankPageSize),
-    searchTerm: bankSearch || undefined,
+    searchTerm: appliedBankSearch || undefined,
   });
 
   const { data: noteData, isLoading: noteLoading } = useInvoiceNotes({
     pageNumber: notePage,
     pageSize: parseInt(notePageSize),
-    searchTerm: noteSearch || undefined,
+    searchTerm: appliedNoteSearch || undefined,
   });
 
   // Mutations
@@ -721,6 +729,7 @@ const Settings = () => {
                       placeholder=""
                       value={currencySearch}
                       onChange={(e) => setCurrencySearch(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { setAppliedCurrencySearch(currencySearch); setCurrencyPage(1); } }}
                       className="h-9 w-48"
                     />
                   </div>
@@ -815,7 +824,7 @@ const Settings = () => {
               {currencyData && (
                 <div className="flex items-center justify-between p-4">
                   <p className="text-sm text-muted-foreground">
-                    Showing {((currencyPage - 1) * parseInt(currencyPageSize)) + 1} to {Math.min(currencyPage * parseInt(currencyPageSize), currencyData.totalCount)} of {currencyData.totalCount} entries
+                    Showing {currencyData.totalCount > 0 ? ((currencyPage - 1) * parseInt(currencyPageSize)) + 1 : 0} to {Math.min(currencyPage * parseInt(currencyPageSize), currencyData.totalCount)} of {currencyData.totalCount} entries
                   </p>
                   <div className="flex items-center gap-1">
                     <Button
@@ -870,6 +879,7 @@ const Settings = () => {
                       placeholder=""
                       value={portSearch}
                       onChange={(e) => setPortSearch(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { setAppliedPortSearch(portSearch); setPortPage(1); } }}
                       className="h-9 w-48"
                     />
                   </div>
@@ -948,7 +958,7 @@ const Settings = () => {
               {portData && (
                 <div className="flex items-center justify-between p-4">
                   <p className="text-sm text-muted-foreground">
-                    Showing {((portPage - 1) * parseInt(portPageSize)) + 1} to {Math.min(portPage * parseInt(portPageSize), portData.totalCount)} of {portData.totalCount} entries
+                    Showing {portData.totalCount > 0 ? ((portPage - 1) * parseInt(portPageSize)) + 1 : 0} to {Math.min(portPage * parseInt(portPageSize), portData.totalCount)} of {portData.totalCount} entries
                   </p>
                   <div className="flex items-center gap-1">
                     <Button
@@ -1003,6 +1013,7 @@ const Settings = () => {
                       placeholder=""
                       value={chargeSearch}
                       onChange={(e) => setChargeSearch(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { setAppliedChargeSearch(chargeSearch); setChargePage(1); } }}
                       className="h-9 w-48"
                     />
                   </div>
@@ -1075,7 +1086,7 @@ const Settings = () => {
               {chargeData && (
                 <div className="flex items-center justify-between p-4">
                   <p className="text-sm text-muted-foreground">
-                    Showing {((chargePage - 1) * parseInt(chargePageSize)) + 1} to {Math.min(chargePage * parseInt(chargePageSize), chargeData.totalCount)} of {chargeData.totalCount} entries
+                    Showing {chargeData.totalCount > 0 ? ((chargePage - 1) * parseInt(chargePageSize)) + 1 : 0} to {Math.min(chargePage * parseInt(chargePageSize), chargeData.totalCount)} of {chargeData.totalCount} entries
                   </p>
                   <div className="flex items-center gap-1">
                     <Button
@@ -1130,6 +1141,7 @@ const Settings = () => {
                       placeholder=""
                       value={expenseSearch}
                       onChange={(e) => setExpenseSearch(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { setAppliedExpenseSearch(expenseSearch); setExpensePage(1); } }}
                       className="h-9 w-48"
                     />
                   </div>
@@ -1204,7 +1216,7 @@ const Settings = () => {
               {expenseData && (
                 <div className="flex items-center justify-between p-4">
                   <p className="text-sm text-muted-foreground">
-                    Showing {((expensePage - 1) * parseInt(expensePageSize)) + 1} to {Math.min(expensePage * parseInt(expensePageSize), expenseData.totalCount)} of {expenseData.totalCount} entries
+                    Showing {expenseData.totalCount > 0 ? ((expensePage - 1) * parseInt(expensePageSize)) + 1 : 0} to {Math.min(expensePage * parseInt(expensePageSize), expenseData.totalCount)} of {expenseData.totalCount} entries
                   </p>
                   <div className="flex items-center gap-1">
                     <Button
@@ -1490,6 +1502,7 @@ const Settings = () => {
                       placeholder=""
                       value={bankSearch}
                       onChange={(e) => setBankSearch(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { setAppliedBankSearch(bankSearch); setBankPage(1); } }}
                       className="h-9 w-48"
                     />
                   </div>
@@ -1572,7 +1585,7 @@ const Settings = () => {
               {bankData && (
                 <div className="flex items-center justify-between p-4">
                   <p className="text-sm text-muted-foreground">
-                    Showing {((bankPage - 1) * parseInt(bankPageSize)) + 1} to {Math.min(bankPage * parseInt(bankPageSize), bankData.totalCount)} of {bankData.totalCount} entries
+                    Showing {bankData.totalCount > 0 ? ((bankPage - 1) * parseInt(bankPageSize)) + 1 : 0} to {Math.min(bankPage * parseInt(bankPageSize), bankData.totalCount)} of {bankData.totalCount} entries
                   </p>
                   <div className="flex items-center gap-1">
                     <Button
@@ -1627,6 +1640,7 @@ const Settings = () => {
                       placeholder=""
                       value={noteSearch}
                       onChange={(e) => setNoteSearch(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { setAppliedNoteSearch(noteSearch); setNotePage(1); } }}
                       className="h-9 w-48"
                     />
                   </div>
@@ -1719,7 +1733,7 @@ const Settings = () => {
               {noteData && (
                 <div className="flex items-center justify-between p-4">
                   <p className="text-sm text-muted-foreground">
-                    Showing {((notePage - 1) * parseInt(notePageSize)) + 1} to {Math.min(notePage * parseInt(notePageSize), noteData.totalCount)} of {noteData.totalCount} entries
+                    Showing {noteData.totalCount > 0 ? ((notePage - 1) * parseInt(notePageSize)) + 1 : 0} to {Math.min(notePage * parseInt(notePageSize), noteData.totalCount)} of {noteData.totalCount} entries
                   </p>
                   <div className="flex items-center gap-1">
                     <Button

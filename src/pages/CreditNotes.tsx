@@ -29,6 +29,7 @@ export default function CreditNotes() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<string>("all");
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -55,7 +56,7 @@ export default function CreditNotes() {
       const response = await creditNoteApi.getAll({
         pageNumber,
         pageSize,
-        searchTerm: searchTerm || undefined,
+        searchTerm: appliedSearch || undefined,
         customerId: selectedCustomer !== "all" ? parseInt(selectedCustomer) : undefined,
       });
       if (response.data) {
@@ -68,13 +69,14 @@ export default function CreditNotes() {
     } finally {
       setLoading(false);
     }
-  }, [pageNumber, pageSize, searchTerm, selectedCustomer]);
+  }, [pageNumber, pageSize, appliedSearch, selectedCustomer]);
 
   useEffect(() => {
     fetchCreditNotes();
   }, [fetchCreditNotes]);
 
   const handleSearch = () => {
+    setAppliedSearch(searchTerm);
     setPageNumber(1);
   };
 
@@ -144,7 +146,7 @@ export default function CreditNotes() {
               { value: "100", label: "100" },
             ]}
             value={pageSize.toString()}
-            onValueChange={(v) => setPageSize(parseInt(v))}
+            onValueChange={(v) => { setPageSize(parseInt(v)); setPageNumber(1); }}
             triggerClassName="w-[90px]"
           />
           <span className="text-sm">entries</span>

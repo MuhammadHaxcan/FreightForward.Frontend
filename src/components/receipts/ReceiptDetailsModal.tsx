@@ -18,6 +18,7 @@ import { receiptApi, ReceiptDetail, ReceiptInvoice } from "@/services/api";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 import { formatDate } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface ReceiptDetailsModalProps {
   open: boolean;
@@ -40,6 +41,7 @@ export function ReceiptDetailsModal({ open, onOpenChange, receiptId }: ReceiptDe
       }
     } catch (error) {
       console.error("Error fetching receipt details:", error);
+      toast.error("Failed to load receipt details");
     } finally {
       setLoading(false);
     }

@@ -130,6 +130,7 @@ export function useUpdatePaymentVoucher() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['paymentVouchers'] });
       queryClient.invalidateQueries({ queryKey: ['paymentVoucher'] });
+      queryClient.invalidateQueries({ queryKey: ['unpaidPurchaseInvoices'] });
       toast.success('Payment voucher updated successfully');
     },
     onError: (error: Error) => {
