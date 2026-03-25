@@ -56,9 +56,9 @@ const baseTabs = [
 const debtorTabs = [
   { id: "receipt", label: "Receipt" },
   { id: "invoices", label: "Invoices" },
-  { id: "account-receivable", label: "Account Receivable" },
+  { id: "account-receivable", label: "Statement of Account" },
   { id: "credit-notes", label: "Credit Notes" },
-  { id: "statement-account", label: "Statement Account" },
+  { id: "statement-account", label: "Customer Ledger" },
 ];
 
 // Tabs specific to Creditors
@@ -1816,7 +1816,7 @@ const CustomerDetail = () => {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-primary">Statement of Account</h2>
+          <h2 className="text-xl font-semibold text-primary">Customer Ledger</h2>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               <CalendarIcon className="h-4 w-4 text-muted-foreground" />

@@ -555,11 +555,20 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
     const isBaseCurrencyCharge =
       isBaseCurrency(chargeCurrencyCode) ||
       (!!baseCurrency && charge.costCurrencyId === baseCurrency.id);
+    const taxPercentage = parseFloat(String(charge.costTaxPercentage ?? 0)) || 0;
+
+    // When charge currency matches invoice currency, use FCY directly (no conversion needed)
+    if (charge.costCurrencyId === formData.currencyId) {
+      // Preserve base-currency zero-FCY behavior: use LCY if FCY is 0
+      const effectiveAmount = (isBaseCurrencyCharge && costFCY === 0) ? costLCY : costFCY;
+      const taxAmount = (effectiveAmount * taxPercentage) / 100;
+      return { costFCY, exRate: 1, localAmount: effectiveAmount, taxPercentage, taxAmount };
+    }
+
     // Preserve the pre-zero-FCY behavior for base-currency charges by using LCY directly.
     const localAmount = isBaseCurrencyCharge && costFCY === 0
       ? costLCY
       : costFCY * exRate;
-    const taxPercentage = parseFloat(String(charge.costTaxPercentage ?? 0)) || 0;
     const taxAmount = (localAmount * taxPercentage) / 100;
 
     return { costFCY, exRate, localAmount, taxPercentage, taxAmount };
@@ -726,7 +735,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
                       <TableCell className="text-xs py-2">{currencies.find(c => c.id === charge.costCurrencyId)?.code || charge.costCurrencyCode || ""}</TableCell>
                       <TableCell className="text-xs py-2">{charge.costFCY}</TableCell>
                       <TableCell className="text-xs py-2">{getChargeExRate(charge).toFixed(3)}</TableCell>
-                      <TableCell className="text-xs py-2">{getCostLineValues(charge).localAmount.toFixed(2)}</TableCell>
+                      <TableCell className="text-xs py-2">{(parseFloat(String(charge.costFCY ?? 0)) * getChargeExRate(charge)).toFixed(2)}</TableCell>
                     </TableRow>
                   ))
                 )}

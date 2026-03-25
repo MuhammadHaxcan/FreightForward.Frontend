@@ -49,7 +49,7 @@ const allSidebarItems: SidebarItem[] = [
       { title: "Bill of Lading", path: "/shipments/bill-of-lading", permission: "bl_view" },
     ]
   },
-  { title: "Customers", icon: Users, path: "/master-customers", permission: "cust_view" },
+  { title: "Master Customers", icon: Users, path: "/master-customers", permission: "cust_view" },
   {
     title: "Sales",
     icon: TrendingUp,

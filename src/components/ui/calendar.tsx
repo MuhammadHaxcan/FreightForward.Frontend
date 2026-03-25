@@ -26,7 +26,7 @@ const MONTH_ABBREVIATIONS = [
 function CustomCaption({ displayMonth }: CaptionProps) {
   const { goToMonth } = useNavigation();
   const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 21 }, (_, i) => currentYear - 10 + i);
+  const years = Array.from({ length: 41 }, (_, i) => currentYear - 30 + i);
 
   const handleMonthChange = (value: string) => {
     const newDate = setMonth(displayMonth, parseInt(value));

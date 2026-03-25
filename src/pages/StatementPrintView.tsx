@@ -19,7 +19,7 @@ export default function StatementPrintView() {
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading Statement of Account...</p>
+            <p className="text-gray-600">Loading Customer Ledger...</p>
           </div>
         </div>
       )}
@@ -40,7 +40,7 @@ export default function StatementPrintView() {
         <iframe
           src={blobUrl}
           className="w-full h-full border-0"
-          title="Statement of Account"
+          title="Customer Ledger"
         />
       )}
     </div>
