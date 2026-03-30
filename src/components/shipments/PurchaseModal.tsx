@@ -707,37 +707,42 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
                   <TableHead className="text-table-header-foreground text-xs">FCY Amount</TableHead>
                   <TableHead className="text-table-header-foreground text-xs">Ex.Rate</TableHead>
                   <TableHead className="text-table-header-foreground text-xs">Local Amount</TableHead>
+                  <TableHead className="text-table-header-foreground text-xs">VAT</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredCharges.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center text-muted-foreground text-xs py-4">
+                    <TableCell colSpan={11} className="text-center text-muted-foreground text-xs py-4">
                       {!formData.customerId
                         ? "Select a creditor to see available charges"
                         : "No uninvoiced charges assigned to this creditor"}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredCharges.map((charge, index) => (
-                    <TableRow key={charge.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
-                      <TableCell className="py-2">
-                        <Checkbox
-                          checked={formData.selectedCharges.includes(charge.id)}
-                          onCheckedChange={(checked) => handleCheckCharge(charge.id, checked as boolean)}
-                        />
-                      </TableCell>
-                      <TableCell className="text-xs py-2">{(index + 1) * 10}</TableCell>
-                      <TableCell className="text-xs py-2">{charge.description}</TableCell>
-                      <TableCell className="text-xs py-2">{charge.costQty}</TableCell>
-                      <TableCell className="text-xs py-2">{charge.ppcc || "Postpaid"}</TableCell>
-                      <TableCell className="text-xs py-2">{charge.costUnit}</TableCell>
-                      <TableCell className="text-xs py-2">{currencies.find(c => c.id === charge.costCurrencyId)?.code || charge.costCurrencyCode || ""}</TableCell>
-                      <TableCell className="text-xs py-2">{charge.costFCY}</TableCell>
-                      <TableCell className="text-xs py-2">{getChargeExRate(charge).toFixed(3)}</TableCell>
-                      <TableCell className="text-xs py-2">{(parseFloat(String(charge.costFCY ?? 0)) * getChargeExRate(charge)).toFixed(2)}</TableCell>
-                    </TableRow>
-                  ))
+                  filteredCharges.map((charge, index) => {
+                    const lineValues = getCostLineValues(charge);
+                    return (
+                      <TableRow key={charge.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
+                        <TableCell className="py-2">
+                          <Checkbox
+                            checked={formData.selectedCharges.includes(charge.id)}
+                            onCheckedChange={(checked) => handleCheckCharge(charge.id, checked as boolean)}
+                          />
+                        </TableCell>
+                        <TableCell className="text-xs py-2">{(index + 1) * 10}</TableCell>
+                        <TableCell className="text-xs py-2">{charge.description}</TableCell>
+                        <TableCell className="text-xs py-2">{charge.costQty}</TableCell>
+                        <TableCell className="text-xs py-2">{charge.ppcc || "Postpaid"}</TableCell>
+                        <TableCell className="text-xs py-2">{charge.costUnit}</TableCell>
+                        <TableCell className="text-xs py-2">{currencies.find(c => c.id === charge.costCurrencyId)?.code || charge.costCurrencyCode || ""}</TableCell>
+                        <TableCell className="text-xs py-2">{lineValues.costFCY.toFixed(2)}</TableCell>
+                        <TableCell className="text-xs py-2">{lineValues.exRate.toFixed(3)}</TableCell>
+                        <TableCell className="text-xs py-2">{lineValues.localAmount.toFixed(2)}</TableCell>
+                        <TableCell className="text-xs py-2">{lineValues.taxAmount.toFixed(2)}</TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
