@@ -10,17 +10,20 @@ export function useCustomers(params?: {
   masterType?: MasterType;
   categoryId?: number;
   approvalStatus?: CustomerApprovalStatus;
+  enabled?: boolean;
 }) {
+  const { enabled = true, ...queryParams } = params ?? {};
   return useQuery({
-    queryKey: ['customers', params],
+    queryKey: ['customers', queryParams],
     queryFn: async () => {
-      const response = await customerApi.getAll(params);
+      const response = await customerApi.getAll(queryParams);
       if (response.error) {
         throw new Error(response.error);
       }
       return response.data!;
     },
     staleTime: 30 * 1000, // 30 seconds
+    enabled,
   });
 }
 

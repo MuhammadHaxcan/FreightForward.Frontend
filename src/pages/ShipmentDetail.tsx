@@ -111,6 +111,7 @@ const mapModeToDisplay = (mode: string): string => {
     'AirFreight': 'Air Freight',
     'BreakBulk': 'Break-Bulk',
     'RoRo': 'RO-RO',
+    'Courier': 'Courier',
   };
   return modeMap[mode] || mode;
 };
@@ -126,6 +127,7 @@ const mapDisplayToMode = (mode: string): string => {
     'Air Freight': 'AirFreight',
     'Break-Bulk': 'BreakBulk',
     'RO-RO': 'RoRo',
+    'Courier': 'Courier',
   };
   return map[mode] || mode;
 };
@@ -377,14 +379,18 @@ const ShipmentDetail = () => {
   // Parse selected category ID for customer filtering
   const parsedCategoryId = selectedCategoryId ? parseInt(selectedCategoryId) : undefined;
 
-  // Fetch customers filtered by the selected category ID
+  // Fetch customers filtered by the selected category ID (only when a type is selected)
   const { data: customersData, isLoading: isLoadingCustomers } = useCustomers({
-    pageSize: 100,
+    pageSize: 1000,
     categoryId: parsedCategoryId,
+    enabled: !!selectedCategoryId,
   });
 
   // Get the list of customers
-  const customers = useMemo(() => customersData?.items || [], [customersData]);
+  const customers = useMemo(
+    () => (customersData?.items || []).filter((customer) => (customer.status || "Active").toLowerCase() !== "inactive"),
+    [customersData]
+  );
 
   // Get the selected customer details
   const selectedCustomer = useMemo(() =>
@@ -1136,6 +1142,7 @@ const ShipmentDetail = () => {
                         { value: "Sea Freight LCL", label: "Sea Freight LCL" },
                         { value: "Break-Bulk", label: "Break-Bulk" },
                         { value: "RO-RO", label: "RO-RO" },
+                        { value: "Courier", label: "Courier" },
                       ]}
                       value={formData.mode}
                       onValueChange={(v) => {
@@ -1597,14 +1604,15 @@ const ShipmentDetail = () => {
                 <div>
                   <Label className="text-sm text-red-500">* Customer Name</Label>
                   <SearchableSelect
-                    options={customers.map(customer => ({
+                    options={selectedCategoryId ? customers.map(customer => ({
                       value: customer.id.toString(),
                       label: `${customer.name} (${customer.code})`,
-                    }))}
+                    })) : []}
                     value={selectedCustomerId}
                     onValueChange={setSelectedCustomerId}
-                    disabled={isLoadingCustomers}
+                    disabled={!selectedCategoryId || isLoadingCustomers}
                     placeholder={
+                      !selectedCategoryId ? "Select a customer type first" :
                       isLoadingCustomers ? "Loading..." :
                       customers.length === 0 ? "No customers found" :
                       "Select a customer"

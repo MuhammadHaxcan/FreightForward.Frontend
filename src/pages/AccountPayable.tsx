@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
-import { formatDateToISO, formatDateForDisplay } from "@/lib/utils";
-import { Search, Calendar, Printer } from "lucide-react";
+import { formatDateToISO } from "@/lib/utils";
+import { Search, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -14,12 +14,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { DateRangePicker, DateRangeValue } from "@/components/ui/date-range-picker";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { VendorPayableDetailsModal } from "@/components/payments/VendorPayableDetailsModal";
 import { invoiceApi, customerApi, Customer, AccountPayableSummaryItem, AccountPayableCurrencyTotal } from "@/services/api";
-import { DateRange } from "react-day-picker";
 
 export default function AccountPayable() {
   const [items, setItems] = useState<AccountPayableSummaryItem[]>([]);
@@ -29,7 +27,7 @@ export default function AccountPayable() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedVendor, setSelectedVendor] = useState<string>("all");
   const [modalVendor, setModalVendor] = useState<{ id: number; name: string; currencyCode: string } | null>(null);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+  const [dateRange, setDateRange] = useState<DateRangeValue | undefined>({
     from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
     to: new Date(),
   });
@@ -39,7 +37,7 @@ export default function AccountPayable() {
   const [totalPages, setTotalPages] = useState(0);
   const [appliedSearch, setAppliedSearch] = useState("");
   const [appliedVendor, setAppliedVendor] = useState<string>("all");
-  const [appliedDateRange, setAppliedDateRange] = useState<DateRange | undefined>({
+  const [appliedDateRange, setAppliedDateRange] = useState<DateRangeValue | undefined>({
     from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
     to: new Date(),
   });
@@ -134,38 +132,11 @@ export default function AccountPayable() {
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-green-600">Date</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal"
-                  >
-                    <Calendar className="mr-2 h-4 w-4" />
-                    {dateRange?.from ? (
-                      dateRange.to ? (
-                        <>
-                          {formatDateForDisplay(dateRange.from, "MMM d, yyyy")} -{" "}
-                          {formatDateForDisplay(dateRange.to, "MMM d, yyyy")}
-                        </>
-                      ) : (
-                        formatDateForDisplay(dateRange.from, "MMM d, yyyy")
-                      )
-                    ) : (
-                      <span>Pick a date range</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <CalendarComponent
-                    initialFocus
-                    mode="range"
-                    defaultMonth={dateRange?.from}
-                    selected={dateRange}
-                    onSelect={setDateRange}
-                    numberOfMonths={2}
-                  />
-                </PopoverContent>
-              </Popover>
+              <DateRangePicker
+                value={dateRange}
+                onApply={setDateRange}
+                className="w-full"
+              />
             </div>
 
             <div className="flex items-end gap-2">

@@ -11,7 +11,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { ArrowLeft, Plus, CalendarIcon, Pencil, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { formatDate, cn } from "@/lib/utils";
+import { formatDate, formatDateToISO, cn } from "@/lib/utils";
 import { customerApi, settingsApi, CustomerCategoryType, CurrencyType, Invoice as ApiInvoice, AccountReceivable as ApiAccountReceivable, AccountPayable as ApiAccountPayable, PaymentStatus, Receipt as ApiReceipt, CustomerStatement } from "@/services/api";
 import { getPaymentVouchers, PaymentVoucher } from "@/services/api/payment";
 import { invoiceApi, AccountPurchaseInvoice, creditNoteApi, UnpaidInvoice } from "@/services/api/invoice";
@@ -19,6 +19,7 @@ import { hrEmployeeApi } from "@/services/api/hr";
 import { toast } from "sonner";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 import { format } from "date-fns";
+import { DateRangePicker, DateRangeValue } from "@/components/ui/date-range-picker";
 
 interface Contact {
   id: number;
@@ -147,10 +148,13 @@ const CustomerDetail = () => {
   // Statement of Account state
   const [statementData, setStatementData] = useState<CustomerStatement | null>(null);
   const [statementLoading, setStatementLoading] = useState(false);
-  const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
-    from: new Date(2020, 9, 2),
-    to: new Date()
+  const [dateRange, setDateRange] = useState<DateRangeValue>({
+    from: new Date(new Date().getFullYear() - 5, 0, 1),
+    to: new Date(),
   });
+
+  // SOA (Account Receivable) date range state
+  const [soaDateRange, setSoaDateRange] = useState<DateRangeValue | undefined>(undefined);
 
   // Contacts list
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -321,7 +325,9 @@ const CustomerDetail = () => {
     try {
       const response = await customerApi.getAccountReceivables(parseInt(id), {
         pageNumber: arPageNumber,
-        pageSize: arPageSize
+        pageSize: arPageSize,
+        fromDate: soaDateRange?.from ? formatDateToISO(soaDateRange.from) : undefined,
+        toDate: soaDateRange?.to ? formatDateToISO(soaDateRange.to) : undefined,
       });
       if (response.data) {
         // Backend now filters by payment status (Pending, PartiallyPaid, Paid)
@@ -341,7 +347,7 @@ const CustomerDetail = () => {
     if (activeTab === 'account-receivable' && id) {
       fetchAccountReceivables();
     }
-  }, [activeTab, id, arPageNumber, arPageSize]);
+  }, [activeTab, id, arPageNumber, arPageSize, soaDateRange]);
 
   // Fetch receipts when tab is active
   const fetchReceipts = async () => {
@@ -460,8 +466,8 @@ const CustomerDetail = () => {
     if (!id) return;
     setStatementLoading(true);
     try {
-      const fromDateStr = dateRange.from.toISOString().split('T')[0];
-      const toDateStr = dateRange.to.toISOString().split('T')[0];
+      const fromDateStr = dateRange.from ? formatDateToISO(dateRange.from) : "";
+      const toDateStr = dateRange.to ? formatDateToISO(dateRange.to) : "";
       const response = await customerApi.getStatement(parseInt(id), fromDateStr, toDateStr);
       if (response.data) {
         setStatementData(response.data);
@@ -1437,7 +1443,15 @@ const CustomerDetail = () => {
 
     return (
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-primary">Account Receivable (Unpaid Invoices)</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-primary">Statement of Account</h2>
+          <DateRangePicker
+            value={soaDateRange}
+            onApply={setSoaDateRange}
+            placeholder="Filter by date range"
+            className="min-w-[240px]"
+          />
+        </div>
 
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
@@ -1805,8 +1819,8 @@ const CustomerDetail = () => {
 
   const handlePrintStatement = () => {
     if (!id) return;
-    const fromDateStr = dateRange.from.toISOString().split('T')[0];
-    const toDateStr = dateRange.to.toISOString().split('T')[0];
+    const fromDateStr = dateRange.from ? formatDateToISO(dateRange.from) : "";
+    const toDateStr = dateRange.to ? formatDateToISO(dateRange.to) : "";
     window.open(`/master-customers/${id}/statement/print?fromDate=${fromDateStr}&toDate=${toDateStr}`, '_blank');
   };
 
@@ -1817,11 +1831,15 @@ const CustomerDetail = () => {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold text-primary">Customer Ledger</h2>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm">{format(dateRange.from, "MMMM d, yyyy")} - {format(dateRange.to, "MMMM d, yyyy")}</span>
-            </div>
+          <div className="flex items-center gap-3">
+            <DateRangePicker
+              value={dateRange}
+              onApply={(range) => {
+                if (range?.from && range?.to) setDateRange(range);
+              }}
+              excludePresets={["all"]}
+              className="min-w-[240px]"
+            />
             <Button className="btn-success" onClick={handlePrintStatement}>PRINT</Button>
           </div>
         </div>

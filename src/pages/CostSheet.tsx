@@ -4,7 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { DateInput } from "@/components/ui/date-input";
+import { DateRangePicker, DateRangeValue } from "@/components/ui/date-range-picker";
+import { formatDateToISO } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -17,17 +18,6 @@ import { Eye, Printer, Loader2 } from "lucide-react";
 import { costSheetApi, CostSheetSummaryDto } from "@/services/api";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 
-// Helper to get first day of current year
-const getFirstDayOfYear = () => {
-  const now = new Date();
-  return `${now.getFullYear()}-01-01`;
-};
-
-// Helper to get today's date
-const getTodayDate = () => {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-};
 
 // Format mode for display
 const formatMode = (mode?: string) => {
@@ -37,6 +27,7 @@ const formatMode = (mode?: string) => {
     case "AirFreight": return "Air Freight";
     case "BreakBulk": return "Break Bulk";
     case "RoRo": return "RoRo";
+    case "Courier": return "Courier";
     default: return mode || "";
   }
 };
@@ -44,21 +35,28 @@ const formatMode = (mode?: string) => {
 export const CostSheet = () => {
   const navigate = useNavigate();
   const baseCurrencyCode = useBaseCurrency();
-  const [fromDate, setFromDate] = useState(getFirstDayOfYear());
-  const [toDate, setToDate] = useState(getTodayDate());
+  const [appliedDateRange, setAppliedDateRange] = useState<DateRangeValue>({
+    from: new Date(new Date().getFullYear(), 0, 1),
+    to: new Date(),
+  });
 
   // Fetch cost sheet data
   const { data: costSheetResponse, isLoading } = useQuery({
-    queryKey: ["cost-sheet", fromDate, toDate],
-    queryFn: () => costSheetApi.getList(fromDate, toDate),
-    enabled: !!fromDate && !!toDate,
+    queryKey: ["cost-sheet", appliedDateRange.from, appliedDateRange.to],
+    queryFn: () => costSheetApi.getList(
+      appliedDateRange.from ? formatDateToISO(appliedDateRange.from) : "",
+      appliedDateRange.to ? formatDateToISO(appliedDateRange.to) : ""
+    ),
+    enabled: !!appliedDateRange.from && !!appliedDateRange.to,
   });
 
   const costSheetData = costSheetResponse?.data || [];
 
   // Handle print PDF - opens in new tab
   const handlePrint = () => {
-    window.open(`/accounts/cost-sheet/print?fromDate=${fromDate}&toDate=${toDate}`, '_blank');
+    const from = appliedDateRange.from ? formatDateToISO(appliedDateRange.from) : "";
+    const to = appliedDateRange.to ? formatDateToISO(appliedDateRange.to) : "";
+    window.open(`/accounts/cost-sheet/print?fromDate=${from}&toDate=${to}`, '_blank');
   };
 
   // Handle view detail
@@ -78,21 +76,14 @@ export const CostSheet = () => {
 
         {/* Filters */}
         <div className="bg-muted/30 border rounded-lg p-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
             <div>
-              <Label className="text-xs font-medium">From Date</Label>
-              <DateInput
-                value={fromDate}
-                onChange={setFromDate}
-                className="h-9"
-              />
-            </div>
-            <div>
-              <Label className="text-xs font-medium">To Date</Label>
-              <DateInput
-                value={toDate}
-                onChange={setToDate}
-                className="h-9"
+              <Label className="text-xs font-medium">Date Range</Label>
+              <DateRangePicker
+                value={appliedDateRange}
+                onApply={(range) => range && setAppliedDateRange(range)}
+                excludePresets={["all"]}
+                className="w-full"
               />
             </div>
             <div className="flex gap-2">

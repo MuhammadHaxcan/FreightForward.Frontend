@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatDateToISO } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,13 +13,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { Edit, Search, Calendar, CheckCircle, Loader2, Plus, MapPin, FileText } from "lucide-react";
+import { Edit, Search, CheckCircle, Loader2, Plus, MapPin, FileText } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useShipments } from "@/hooks/useShipments";
 import { Shipment, ShipmentStatus } from "@/services/api";
 import { formatEventDateOnly } from "@/lib/status-event-utils";
 import { PermissionGate } from "@/components/auth/PermissionGate";
+import { DateRangePicker, DateRangeValue } from "@/components/ui/date-range-picker";
 
 const Shipments = () => {
   const navigate = useNavigate();
@@ -29,10 +30,8 @@ const Shipments = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchBy, setSearchBy] = useState("jobNo");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
-  const [appliedFromDate, setAppliedFromDate] = useState("");
-  const [appliedToDate, setAppliedToDate] = useState("");
+  const [dateRange, setDateRange] = useState<DateRangeValue | undefined>(undefined);
+  const [appliedDateRange, setAppliedDateRange] = useState<DateRangeValue | undefined>(undefined);
   const [reportsShipmentId, setReportsShipmentId] = useState<number | null>(null);
 
   // Build search params based on search type
@@ -57,16 +56,16 @@ const Shipments = () => {
       params.status = statusFilter as ShipmentStatus;
     }
 
-    if (appliedFromDate) {
-      params.fromDate = appliedFromDate;
+    if (appliedDateRange?.from) {
+      params.fromDate = formatDateToISO(appliedDateRange.from);
     }
 
-    if (appliedToDate) {
-      params.toDate = appliedToDate;
+    if (appliedDateRange?.to) {
+      params.toDate = formatDateToISO(appliedDateRange.to);
     }
 
     return params;
-  }, [currentPage, entriesPerPage, appliedSearch, statusFilter, appliedFromDate, appliedToDate]);
+  }, [currentPage, entriesPerPage, appliedSearch, statusFilter, appliedDateRange]);
 
   const { data, isLoading, isError, error } = useShipments(searchParams);
 
@@ -76,8 +75,7 @@ const Shipments = () => {
 
   const handleSearch = () => {
     setAppliedSearch(searchTerm);
-    setAppliedFromDate(fromDate);
-    setAppliedToDate(toDate);
+    setAppliedDateRange(dateRange);
     setCurrentPage(1);
   };
 
@@ -198,29 +196,12 @@ const Shipments = () => {
             triggerClassName="w-[150px] bg-card"
           />
 
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 border border-border rounded-md px-3 py-2 bg-card">
-              <Calendar size={16} className="text-muted-foreground" />
-              <Input
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                className="border-0 p-0 h-auto bg-transparent focus-visible:ring-0 text-sm w-[130px]"
-                placeholder="From Date"
-              />
-            </div>
-            <span className="text-muted-foreground">to</span>
-            <div className="flex items-center gap-2 border border-border rounded-md px-3 py-2 bg-card">
-              <Calendar size={16} className="text-muted-foreground" />
-              <Input
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                className="border-0 p-0 h-auto bg-transparent focus-visible:ring-0 text-sm w-[130px]"
-                placeholder="To Date"
-              />
-            </div>
-          </div>
+          <DateRangePicker
+            value={dateRange}
+            onApply={setDateRange}
+            placeholder="Select date range"
+            className="min-w-[240px]"
+          />
 
           <Button
             className="btn-success gap-2"
@@ -338,7 +319,12 @@ const Shipments = () => {
                         </div>
                       </TableCell>
                       <TableCell className="max-w-[200px]">
-                        <span className="text-emerald-600">{shipment.customerName || "-"}</span>
+                        {shipment.customerNames && shipment.customerNames.length > 0
+                          ? shipment.customerNames.map((name, i) => (
+                              <div key={i} className="text-emerald-600 text-sm">{name}</div>
+                            ))
+                          : <span className="text-emerald-600">-</span>
+                        }
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">

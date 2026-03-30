@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
-import { formatDate, formatDateToISO, formatDateForDisplay } from "@/lib/utils";
-import { Calendar } from "lucide-react";
+import { formatDate, formatDateToISO } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -15,11 +14,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { DateRangePicker, DateRangeValue } from "@/components/ui/date-range-picker";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { invoiceApi, customerApi, Customer, VatReportItem, VatReportTotals } from "@/services/api";
-import { DateRange } from "react-day-picker";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 
 const defaultTotals: VatReportTotals = {
@@ -30,7 +27,7 @@ const defaultTotals: VatReportTotals = {
   totalInvoiceAmount: 0,
 };
 
-const defaultDateRange = (): DateRange => ({
+const defaultDateRange = (): DateRangeValue => ({
   from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
   to: new Date(),
 });
@@ -46,14 +43,14 @@ export default function VatReport() {
   const [outLoading, setOutLoading] = useState(true);
   const [outSearchTerm, setOutSearchTerm] = useState("");
   const [outSelectedCustomer, setOutSelectedCustomer] = useState<string>("all");
-  const [outDateRange, setOutDateRange] = useState<DateRange | undefined>(defaultDateRange());
+  const [outDateRange, setOutDateRange] = useState<DateRangeValue | undefined>(defaultDateRange());
   const [outPageNumber, setOutPageNumber] = useState(1);
   const [outPageSize, setOutPageSize] = useState(10);
   const [outTotalCount, setOutTotalCount] = useState(0);
   const [outTotalPages, setOutTotalPages] = useState(0);
   const [outAppliedSearch, setOutAppliedSearch] = useState("");
   const [outAppliedCustomer, setOutAppliedCustomer] = useState<string>("all");
-  const [outAppliedDateRange, setOutAppliedDateRange] = useState<DateRange | undefined>(defaultDateRange());
+  const [outAppliedDateRange, setOutAppliedDateRange] = useState<DateRangeValue | undefined>(defaultDateRange());
 
   // --- VAT Input state ---
   const [inItems, setInItems] = useState<VatReportItem[]>([]);
@@ -62,7 +59,7 @@ export default function VatReport() {
   const [inLoading, setInLoading] = useState(true);
   const [inSearchTerm, setInSearchTerm] = useState("");
   const [inSelectedVendor, setInSelectedVendor] = useState<string>("all");
-  const [inDateRange, setInDateRange] = useState<DateRange | undefined>(defaultDateRange());
+  const [inDateRange, setInDateRange] = useState<DateRangeValue | undefined>(defaultDateRange());
   const [inPageNumber, setInPageNumber] = useState(1);
   const [inPageSize, setInPageSize] = useState(10);
   const [inTotalCount, setInTotalCount] = useState(0);
@@ -70,7 +67,7 @@ export default function VatReport() {
   const [inInitialLoaded, setInInitialLoaded] = useState(false);
   const [inAppliedSearch, setInAppliedSearch] = useState("");
   const [inAppliedVendor, setInAppliedVendor] = useState<string>("all");
-  const [inAppliedDateRange, setInAppliedDateRange] = useState<DateRange | undefined>(defaultDateRange());
+  const [inAppliedDateRange, setInAppliedDateRange] = useState<DateRangeValue | undefined>(defaultDateRange());
 
   // Fetch customers (Debtors) for VAT Output filter
   useEffect(() => {
@@ -180,43 +177,6 @@ export default function VatReport() {
     return amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
-  const renderDatePicker = (
-    dateRange: DateRange | undefined,
-    setDateRange: (range: DateRange | undefined) => void
-  ) => (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          className="w-full justify-start text-left font-normal"
-        >
-          <Calendar className="mr-2 h-4 w-4" />
-          {dateRange?.from ? (
-            dateRange.to ? (
-              <>
-                {formatDateForDisplay(dateRange.from, "MMM d, yyyy")} -{" "}
-                {formatDateForDisplay(dateRange.to, "MMM d, yyyy")}
-              </>
-            ) : (
-              formatDateForDisplay(dateRange.from, "MMM d, yyyy")
-            )
-          ) : (
-            <span>Pick a date range</span>
-          )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
-        <CalendarComponent
-          initialFocus
-          mode="range"
-          defaultMonth={dateRange?.from}
-          selected={dateRange}
-          onSelect={setDateRange}
-          numberOfMonths={2}
-        />
-      </PopoverContent>
-    </Popover>
-  );
 
   const renderPagination = (
     pageNumber: number,
@@ -324,7 +284,11 @@ export default function VatReport() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-green-600">Date</label>
-                  {renderDatePicker(outDateRange, setOutDateRange)}
+                  <DateRangePicker
+                    value={outDateRange}
+                    onApply={setOutDateRange}
+                    className="w-full"
+                  />
                 </div>
                 <div className="flex items-end">
                   <Button onClick={handleOutSearch} className="bg-primary text-primary-foreground">
@@ -452,7 +416,11 @@ export default function VatReport() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-green-600">Date</label>
-                  {renderDatePicker(inDateRange, setInDateRange)}
+                  <DateRangePicker
+                    value={inDateRange}
+                    onApply={setInDateRange}
+                    className="w-full"
+                  />
                 </div>
                 <div className="flex items-end">
                   <Button onClick={handleInSearch} className="bg-primary text-primary-foreground">

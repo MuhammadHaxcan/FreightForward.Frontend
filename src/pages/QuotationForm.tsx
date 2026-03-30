@@ -580,6 +580,7 @@ export default function QuotationForm() {
                         { value: "SeaFreightLCL", label: "LCL-Sea Freight" },
                         { value: "BreakBulk", label: "Break-Bulk" },
                         { value: "RoRo", label: "RO-RO" },
+                        { value: "Courier", label: "Courier" },
                       ]}
                       value={formData.mode || ""}
                       onValueChange={(value) => setFormData({ ...formData, mode: value })}

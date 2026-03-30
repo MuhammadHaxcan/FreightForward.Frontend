@@ -1,18 +1,15 @@
 import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { Calendar as CalendarIcon, Search, Package, TrendingUp, CheckCircle, Clock, Loader2 } from "lucide-react";
+import { Search, Package, TrendingUp, CheckCircle, Clock, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell, Legend, Tooltip } from "recharts";
 import { useDashboardStats } from "@/hooks/useDashboard";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
-import type { DateRange } from "react-day-picker";
+import { DateRangePicker, DateRangeValue } from "@/components/ui/date-range-picker";
 
 const Dashboard = () => {
   const currentYear = new Date().getFullYear();
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+  const [dateRange, setDateRange] = useState<DateRangeValue | undefined>({
     from: new Date(currentYear, 0, 1),
     to: new Date(currentYear, 11, 31),
   });
@@ -118,40 +115,11 @@ const Dashboard = () => {
 
         {/* Date Range Filter */}
         <div className="flex justify-end items-center gap-2">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-[280px] justify-start text-left font-normal",
-                  !dateRange && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {dateRange?.from ? (
-                  dateRange.to ? (
-                    <>
-                      {format(dateRange.from, "MMM d, yyyy")} - {format(dateRange.to, "MMM d, yyyy")}
-                    </>
-                  ) : (
-                    format(dateRange.from, "MMM d, yyyy")
-                  )
-                ) : (
-                  <span>Pick a date range</span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
-              <Calendar
-                initialFocus
-                mode="range"
-                defaultMonth={dateRange?.from}
-                selected={dateRange}
-                onSelect={setDateRange}
-                numberOfMonths={2}
-              />
-            </PopoverContent>
-          </Popover>
+          <DateRangePicker
+            value={dateRange}
+            onApply={setDateRange}
+            className="w-[280px]"
+          />
           <Button variant="outline" size="sm" className="gap-1" onClick={handleSearch}>
             <Search size={14} />
             Search

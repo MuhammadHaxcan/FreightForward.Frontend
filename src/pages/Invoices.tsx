@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { formatDate, formatDateToISO, formatDateForDisplay } from "@/lib/utils";
-import { Calendar, Eye } from "lucide-react";
+import { formatDate, formatDateToISO } from "@/lib/utils";
+import { Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -14,11 +14,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { invoiceApi, customerApi, AccountInvoice, Customer } from "@/services/api";
-import { DateRange } from "react-day-picker";
+import { DateRangePicker, DateRangeValue } from "@/components/ui/date-range-picker";
 
 export default function Invoices() {
   const navigate = useNavigate();
@@ -28,7 +26,7 @@ export default function Invoices() {
   const [searchTerm, setSearchTerm] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<string>("all");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+  const [dateRange, setDateRange] = useState<DateRangeValue | undefined>({
     from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
     to: new Date(),
   });
@@ -137,38 +135,11 @@ export default function Invoices() {
 
           <div className="space-y-2">
             <label className="text-sm font-medium text-green-600">Date</label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start text-left font-normal"
-                >
-                  <Calendar className="mr-2 h-4 w-4" />
-                  {dateRange?.from ? (
-                    dateRange.to ? (
-                      <>
-                        {formatDateForDisplay(dateRange.from, "MMM d, yyyy")} -{" "}
-                        {formatDateForDisplay(dateRange.to, "MMM d, yyyy")}
-                      </>
-                    ) : (
-                      formatDateForDisplay(dateRange.from, "MMM d, yyyy")
-                    )
-                  ) : (
-                    <span>Pick a date range</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent
-                  initialFocus
-                  mode="range"
-                  defaultMonth={dateRange?.from}
-                  selected={dateRange}
-                  onSelect={setDateRange}
-                  numberOfMonths={2}
-                />
-              </PopoverContent>
-            </Popover>
+            <DateRangePicker
+              value={dateRange}
+              onApply={setDateRange}
+              className="w-full"
+            />
           </div>
 
           <div className="flex items-end">

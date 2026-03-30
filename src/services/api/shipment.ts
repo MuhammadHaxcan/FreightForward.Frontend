@@ -3,7 +3,7 @@ import { fetchApi, PaginatedList, MasterType, PaymentStatus, getAccessToken, att
 // Shipment Types
 export type ShipmentStatus = 'Opened' | 'Closed' | 'Cancelled';
 export type ShipmentDirection = 'Import' | 'Export' | 'CrossTrade';
-export type ShipmentMode = 'SeaFreightFCL' | 'SeaFreightLCL' | 'AirFreight' | 'BreakBulk' | 'RoRo';
+export type ShipmentMode = 'SeaFreightFCL' | 'SeaFreightLCL' | 'AirFreight' | 'BreakBulk' | 'RoRo' | 'Courier';
 export type BLServiceType = 'FCLFCL' | 'LCLLCL' | 'LCLFCL' | 'FCLLCL';
 export type FreightType = 'Prepaid' | 'Collect';
 export type ShipmentType = 'ConsoleShipment' | 'NonConsoleShipment';
@@ -24,7 +24,7 @@ export interface Shipment {
   shipmentTypeDisplay: string;
   houseBLNo?: string;
   mblNumber?: string;
-  customerName?: string;
+  customerNames?: string[];
   placeOfReceiptId?: number;
   placeOfDeliveryId?: number;
   portOfReceiptId?: number;

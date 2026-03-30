@@ -352,11 +352,13 @@ export const customerApi = {
   // Account Receivables
   getAccountReceivables: (
     customerId: number,
-    params?: { pageNumber?: number; pageSize?: number }
+    params?: { pageNumber?: number; pageSize?: number; fromDate?: string; toDate?: string }
   ) => {
     const query = new URLSearchParams();
     if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
     if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.fromDate) query.append('fromDate', params.fromDate);
+    if (params?.toDate) query.append('toDate', params.toDate);
     return fetchApi<PaginatedList<AccountReceivable>>(
       `/customers/${customerId}/account-receivables?${query}`
     );
