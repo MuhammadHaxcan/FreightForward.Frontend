@@ -108,6 +108,17 @@ const ConditionalAuthProvider = ({ children }: { children: React.ReactNode }) =>
   return <AuthProvider>{children}</AuthProvider>;
 };
 
+// Route wrappers with explicit location-based keys for deterministic remount behavior.
+const AddShipmentRoute = () => {
+  const location = useLocation();
+  return <AddShipment key={location.pathname} />;
+};
+
+const ShipmentDetailRoute = () => {
+  const location = useLocation();
+  return <ShipmentDetail key={location.pathname} />;
+};
+
 const AppRoutes = () => (
   <ConditionalAuthProvider>
     <Routes>
@@ -150,12 +161,12 @@ const AppRoutes = () => (
       } />
       <Route path="/shipments/add" element={
         <ProtectedRoute permission="ship_add">
-          <AddShipment />
+          <AddShipmentRoute />
         </ProtectedRoute>
       } />
       <Route path="/shipments/:id/edit" element={
         <ProtectedRoute permission="ship_view">
-          <ShipmentDetail />
+          <ShipmentDetailRoute />
         </ProtectedRoute>
       } />
       <Route path="/shipments/:shipmentId/reports/:reportType" element={

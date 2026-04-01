@@ -467,7 +467,8 @@ export const shipmentApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  deleteParty: (id: number) => fetchApi<void>(`/shipments/parties/${id}`, { method: 'DELETE' }),
+  deleteParty: (shipmentId: number, id: number) =>
+    fetchApi<void>(`/shipments/${shipmentId}/parties/${id}`, { method: 'DELETE' }),
 
   // Containers
   addContainer: (shipmentId: number, data: AddShipmentContainerRequest) =>

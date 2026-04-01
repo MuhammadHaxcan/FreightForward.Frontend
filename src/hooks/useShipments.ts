@@ -139,7 +139,7 @@ export function useDeleteShipmentParty() {
 
   return useMutation({
     mutationFn: async ({ partyId, shipmentId }: { partyId: number; shipmentId: number }) => {
-      const response = await shipmentApi.deleteParty(partyId);
+      const response = await shipmentApi.deleteParty(shipmentId, partyId);
       if (response.error) {
         throw new Error(response.error);
       }

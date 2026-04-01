@@ -214,6 +214,21 @@ const emptyFormData = {
   internalNotes: "",
 };
 
+const emptyCargoEntry: CargoFormEntry = {
+  quantity: "",
+  packageTypeId: "",
+  loadType: "",
+  length: "",
+  width: "",
+  height: "",
+  volumeUnit: "cm",
+  weight: "",
+  weightUnit: "kg",
+  totalCBM: "",
+  totalWeight: "",
+  description: "",
+};
+
 
 const ShipmentDetail = () => {
   const { id } = useParams();
@@ -242,10 +257,7 @@ const ShipmentDetail = () => {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
   const [cargoDetails, setCargoDetails] = useState<ShipmentCargo[]>([]);
-  const [newCargoEntry, setNewCargoEntry] = useState<CargoFormEntry>({
-    quantity: "", packageTypeId: "", loadType: "", length: "", width: "", height: "",
-    volumeUnit: "cm", weight: "", weightUnit: "kg", totalCBM: "", totalWeight: "", description: "",
-  });
+  const [newCargoEntry, setNewCargoEntry] = useState<CargoFormEntry>(emptyCargoEntry);
   const [cargoCalculationMode, setCargoCalculationMode] = useState("units");
   const [isSavingCargo, setIsSavingCargo] = useState(false);
   const [documents, setDocuments] = useState<ShipmentDocument[]>([]);
@@ -286,6 +298,35 @@ const ShipmentDetail = () => {
   // Warning modal state
   const [warningModalOpen, setWarningModalOpen] = useState(false);
   const [warningMessage, setWarningMessage] = useState("");
+
+  // Reset transient UI state when route switches to a different shipment id.
+  useEffect(() => {
+    setActiveTab("shipment-info");
+    setSelectedCategoryId("");
+    setSelectedCustomerId("");
+    setContainerModalOpen(false);
+    setCostingModalOpen(false);
+    setInvoiceModalOpen(false);
+    setPurchaseModalOpen(false);
+    setDocumentModalOpen(false);
+    setDocumentModalMode("add");
+    setEditingDocument(null);
+    setEditingContainer(null);
+    setEditingCosting(null);
+    setEditInvoiceId(null);
+    setEditPurchaseInvoiceId(null);
+    setDeleteModalOpen(false);
+    setDeleteModalConfig(null);
+    setWarningModalOpen(false);
+    setWarningMessage("");
+    setShowReportsDialog(false);
+    setStatusLogModalOpen(false);
+    setCargoCalculationMode("units");
+    setNewCargoEntry(emptyCargoEntry);
+    setIsSaving(false);
+    setIsSavingCargo(false);
+    setIsDeleting(false);
+  }, [shipmentId]);
 
   // Fetch shipment invoices
   const { data: shipmentInvoicesResponse } = useQuery({
