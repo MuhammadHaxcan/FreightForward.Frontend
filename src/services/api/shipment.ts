@@ -404,6 +404,30 @@ export interface UpdateShipmentCostingRequest {
   ppcc?: string;
 }
 
+// Customs Types
+export interface ShipmentCustomsDto {
+  id?: number;
+  edBoeNo?: string;
+  edBoeDate?: string;
+  docsType?: string;
+  processBy?: string;
+  vatInspectionNo?: string;
+  claimNo?: string;
+  deliveryOrderNo?: string;
+  deliveryOrderIssueDate?: string;
+}
+
+export interface UpsertShipmentCustomsRequest {
+  edBoeNo?: string;
+  edBoeDate?: string;
+  docsType?: string;
+  processBy?: string;
+  vatInspectionNo?: string;
+  claimNo?: string;
+  deliveryOrderNo?: string;
+  deliveryOrderIssueDate?: string;
+}
+
 // Shipment Invoice Types
 export interface ShipmentInvoiceDto {
   id: number;
@@ -533,6 +557,15 @@ export const shipmentApi = {
   // Invoices
   getInvoices: (shipmentId: number) =>
     fetchApi<ShipmentInvoicesResult>(`/shipments/${shipmentId}/invoices`),
+
+  // Customs
+  getCustoms: (shipmentId: number) =>
+    fetchApi<ShipmentCustomsDto | null>(`/shipments/${shipmentId}/customs`),
+  upsertCustoms: (shipmentId: number, data: UpsertShipmentCustomsRequest) =>
+    fetchApi<ShipmentCustomsDto>(`/shipments/${shipmentId}/customs`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
 };
 
 // File Upload API - Import base URL from base module

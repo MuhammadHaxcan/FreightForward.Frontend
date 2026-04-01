@@ -9,6 +9,7 @@ const REPORT_TITLES: Record<string, string> = {
   "freight-certificate": "Freight Certificate",
   "mbl-shipping-instruction": "MBL Shipping Instruction",
   "bill-of-lading": "Bill of Lading",
+  "customs-declaration": "Customs Declaration",
 };
 
 export default function ShipmentReportPrintView() {

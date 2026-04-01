@@ -114,7 +114,7 @@ const Dashboard = () => {
         </div>
 
         {/* Date Range Filter */}
-        <div className="flex justify-end items-center gap-2">
+        <div className="flex justify-start items-center gap-2">
           <DateRangePicker
             value={dateRange}
             onApply={setDateRange}

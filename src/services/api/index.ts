@@ -113,6 +113,8 @@ export {
   type ShipmentInvoiceDto,
   type ShipmentPurchaseInvoiceDto,
   type ShipmentInvoicesResult,
+  type ShipmentCustomsDto,
+  type UpsertShipmentCustomsRequest,
 } from './shipment';
 
 // Settings

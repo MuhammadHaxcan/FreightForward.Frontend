@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CustomsTab } from "@/components/shipments/CustomsTab";
 import { Edit, Trash2, Plus, Loader2, AlertTriangle, Eye } from "lucide-react";
 import {
   AlertDialog,
@@ -190,6 +191,7 @@ const createInitialFormData = () => ({
   freeTime: "0",
   networkPartnerId: undefined as number | undefined,
   salesperson: "",
+  placeOfReceiptId: undefined as number | undefined,
   placeOfReceipt: "",
   portOfReceiptId: undefined as number | undefined,
   portOfReceipt: "",
@@ -199,6 +201,7 @@ const createInitialFormData = () => ({
   portOfDischarge: "",
   portOfFinalDestinationId: undefined as number | undefined,
   portOfFinalDestination: "",
+  placeOfDeliveryId: undefined as number | undefined,
   placeOfDelivery: "",
   vessel: "",
   voyage: "",
@@ -1276,6 +1279,8 @@ const AddShipment = () => {
         carrier: formData.carrier || undefined,
         freeTime: formData.freeTime || undefined,
         networkPartnerId: formData.networkPartnerId,
+        placeOfReceiptId: formData.placeOfReceiptId,
+        placeOfDeliveryId: formData.placeOfDeliveryId,
         portOfLoadingId: formData.portOfLoadingId,
         portOfDischargeId: formData.portOfDischargeId,
         portOfReceiptId: formData.portOfReceiptId,
@@ -1394,6 +1399,13 @@ const AddShipment = () => {
               disabled={!savedShipmentId}
             >
               Documents
+            </TabsTrigger>
+            <TabsTrigger
+              value="customs"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!savedShipmentId}
+            >
+              Customs
             </TabsTrigger>
             <TabsTrigger
               value="shipment-status"
@@ -1688,7 +1700,11 @@ const AddShipment = () => {
                           label: getPortLabel(port, formData.mode),
                         }))}
                         value={formData.placeOfReceipt}
-                        onValueChange={(v) => handleInputChange("placeOfReceipt", v)}
+                        onValueChange={(v) => {
+                          handleInputChange("placeOfReceipt", v);
+                          const selectedPort = ports.find(p => p.id.toString() === v);
+                          setFormData(prev => ({ ...prev, placeOfReceiptId: selectedPort?.id }));
+                        }}
                         placeholder="Select"
                         searchPlaceholder="Search ports..."
                         emptyMessage={isLoadingPorts ? "Loading..." : "No ports found"}
@@ -1781,7 +1797,11 @@ const AddShipment = () => {
                           label: getPortLabel(port, formData.mode),
                         }))}
                         value={formData.placeOfDelivery}
-                        onValueChange={(v) => handleInputChange("placeOfDelivery", v)}
+                        onValueChange={(v) => {
+                          handleInputChange("placeOfDelivery", v);
+                          const selectedPort = ports.find(p => p.id.toString() === v);
+                          setFormData(prev => ({ ...prev, placeOfDeliveryId: selectedPort?.id }));
+                        }}
                         placeholder="Select"
                         searchPlaceholder="Search ports..."
                         emptyMessage={isLoadingPorts ? "Loading..." : "No ports found"}
@@ -2376,6 +2396,11 @@ const AddShipment = () => {
                 </TableBody>
               </Table>
             </div>
+          </TabsContent>
+
+          {/* Customs Tab */}
+          <TabsContent value="customs" className="mt-0">
+            {savedShipmentId && <CustomsTab shipmentId={savedShipmentId} />}
           </TabsContent>
 
           {/* Shipment Status Tab */}

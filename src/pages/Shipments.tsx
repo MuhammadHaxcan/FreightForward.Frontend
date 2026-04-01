@@ -449,6 +449,7 @@ const Shipments = () => {
                   { no: 3, name: "CARGO ARRIVAL", slug: "cargo-arrival-notice" },
                   { no: 4, name: "FREIGHT CERTIFICATE", slug: "freight-certificate" },
                   { no: 5, name: "MBL SHIPPING", slug: "mbl-shipping-instruction" },
+                  { no: 6, name: "CUSTOMS DECLARATION", slug: "customs-declaration" },
                 ].map((report) => (
                   <tr key={report.slug} className="border-b hover:bg-muted/50">
                     <td className="py-2 px-2 text-sm">{report.no}</td>

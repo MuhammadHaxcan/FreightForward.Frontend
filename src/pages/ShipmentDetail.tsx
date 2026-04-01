@@ -35,6 +35,7 @@ import { PurchaseModal } from "@/components/shipments/PurchaseModal";
 import { DocumentModal } from "@/components/shipments/DocumentModal";
 import { StatusLogModal } from "@/components/shipments/StatusLogModal";
 import { StatusTimeline } from "@/components/shipments/StatusTimeline";
+import { CustomsTab } from "@/components/shipments/CustomsTab";
 import { DeleteConfirmationModal } from "@/components/ui/delete-confirmation-modal";
 import { toast } from "sonner";
 import { getTodayDateOnly } from "@/lib/utils";
@@ -1127,7 +1128,13 @@ const ShipmentDetail = () => {
             >
               Documents
             </TabsTrigger>
-            <TabsTrigger 
+            <TabsTrigger
+              value="customs"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
+            >
+              Customs
+            </TabsTrigger>
+            <TabsTrigger
               value="shipment-status"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
             >
@@ -1416,7 +1423,11 @@ const ShipmentDetail = () => {
                           label: getPortLabel(port, formData.mode),
                         }))}
                         value={formData.placeOfReceipt}
-                        onValueChange={(v) => handleInputChange("placeOfReceipt", v)}
+                        onValueChange={(v) => {
+                          handleInputChange("placeOfReceipt", v);
+                          const selectedPort = ports.find(p => p.id.toString() === v);
+                          setFormData(prev => ({ ...prev, placeOfReceiptId: selectedPort?.id }));
+                        }}
                         placeholder="Select"
                         searchPlaceholder="Search ports..."
                         emptyMessage={isLoadingPorts ? "Loading..." : "No ports found"}
@@ -1509,7 +1520,11 @@ const ShipmentDetail = () => {
                           label: getPortLabel(port, formData.mode),
                         }))}
                         value={formData.placeOfDelivery}
-                        onValueChange={(v) => handleInputChange("placeOfDelivery", v)}
+                        onValueChange={(v) => {
+                          handleInputChange("placeOfDelivery", v);
+                          const selectedPort = ports.find(p => p.id.toString() === v);
+                          setFormData(prev => ({ ...prev, placeOfDeliveryId: selectedPort?.id }));
+                        }}
                         placeholder="Select"
                         searchPlaceholder="Search ports..."
                         emptyMessage={isLoadingPorts ? "Loading..." : "No ports found"}
@@ -2117,6 +2132,11 @@ const ShipmentDetail = () => {
           </TabsContent>
 
           {/* Shipment Status Tab */}
+          {/* Customs Tab */}
+          <TabsContent value="customs" className="mt-0">
+            <CustomsTab shipmentId={shipmentId} />
+          </TabsContent>
+
           <TabsContent value="shipment-status" className="mt-0">
             <div className="bg-card border border-border rounded-lg p-6 space-y-6">
               {/* Master Status Section */}
@@ -2306,6 +2326,7 @@ const ShipmentDetail = () => {
                   { no: 3, name: "CARGO ARRIVAL", slug: "cargo-arrival-notice" },
                   { no: 4, name: "FREIGHT CERTIFICATE", slug: "freight-certificate" },
                   { no: 5, name: "MBL SHIPPING", slug: "mbl-shipping-instruction" },
+                  { no: 6, name: "CUSTOMS DECLARATION", slug: "customs-declaration" },
                 ].map((report) => (
                   <tr key={report.slug} className="border-b hover:bg-muted/50">
                     <td className="py-2 px-2 text-sm">{report.no}</td>
