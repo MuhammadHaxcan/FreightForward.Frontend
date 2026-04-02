@@ -311,12 +311,12 @@ export default function OfficesList() {
                           <span className="font-medium">Login as:</span>
                           <div className="flex items-center gap-2">
                             <code className="bg-white px-2 py-1 rounded border">
-                              {createdOffice.office.slug}|{createdOffice.adminCredentials.username}
+                              {createdOffice.office.slug}/{createdOffice.adminCredentials.username}
                             </code>
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => copyToClipboard(`${createdOffice.office.slug}|${createdOffice.adminCredentials.username}`, 'login')}
+                              onClick={() => copyToClipboard(`${createdOffice.office.slug}/${createdOffice.adminCredentials.username}`, 'login')}
                             >
                               {copiedField === 'login' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                             </Button>

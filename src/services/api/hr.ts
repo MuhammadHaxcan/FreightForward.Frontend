@@ -4,14 +4,14 @@ import { fetchApi, PaginatedList } from './base';
 
 // Employee
 export interface EmployeeListItem {
-  id: number; userId: number; employeeCode: string; fullName: string;
+  id: number; userId?: number; employeeCode: string; fullName: string;
   email?: string; contactNumber?: string; department?: string; designation?: string;
   joiningDate: string; employmentStatus: string;
   annualLeaveDays: number; sickLeaveDays: number; paidLeaveDays: number;
   createdAt: string;
 }
 export interface EmployeeDetail {
-  id: number; userId: number; employeeCode: string; fullName: string;
+  id: number; userId?: number; employeeCode: string; fullName: string;
   email?: string; contactNumber?: string; department?: string; designation?: string;
   joiningDate: string; confirmationDate?: string; resignationDate?: string; lastWorkingDate?: string;
   employmentStatus: string; bankName?: string; bankAccountNumber?: string; bankIban?: string; bankBranch?: string;
@@ -21,9 +21,13 @@ export interface EmployeeDetail {
   annualLeaveDays: number; sickLeaveDays: number; paidLeaveDays: number;
   createdAt: string;
 }
-export interface EmployeeDropdown { id: number; employeeCode: string; fullName: string; }
+export interface EmployeeDropdown {
+  id: number; employeeCode: string; fullName: string;
+  firstName: string; lastName: string; email?: string; contactNumber?: string;
+}
 export interface CreateEmployeeRequest {
-  userId: number; employeeCode: string; department?: string; designation?: string;
+  firstName: string; lastName: string; email?: string; contactNumber?: string;
+  employeeCode: string; department?: string; designation?: string;
   joiningDate: string; confirmationDate?: string; employmentStatus: string;
   bankName?: string; bankAccountNumber?: string; bankIban?: string; bankBranch?: string;
   dateOfBirth?: string; gender?: string; nationalId?: string;
@@ -31,7 +35,7 @@ export interface CreateEmployeeRequest {
   emergencyContactName?: string; emergencyContactNumber?: string; address?: string;
   annualLeaveDays?: number; sickLeaveDays?: number; paidLeaveDays?: number;
 }
-export interface UpdateEmployeeRequest extends Omit<CreateEmployeeRequest, 'userId'> {
+export interface UpdateEmployeeRequest extends Omit<CreateEmployeeRequest, 'firstName' | 'lastName' | 'email' | 'contactNumber'> {
   resignationDate?: string; lastWorkingDate?: string;
 }
 
@@ -131,6 +135,7 @@ export const hrEmployeeApi = {
   getAll: (p?: { pageNumber?: number; pageSize?: number; searchTerm?: string; status?: string }) =>
     fetchApi<PaginatedList<EmployeeListItem>>(`/hr/employees?${buildQuery(p || {})}`),
   getDropdown: () => fetchApi<EmployeeDropdown[]>('/hr/employees/dropdown'),
+  getUnlinkedDropdown: () => fetchApi<EmployeeDropdown[]>('/hr/employees/unlinked-dropdown'),
   getById: (id: number) => fetchApi<EmployeeDetail>(`/hr/employees/${id}`),
   getNextCode: () => fetchApi<string>('/hr/employees/next-code'),
   create: (data: CreateEmployeeRequest) => fetchApi<number>('/hr/employees', { method: 'POST', body: JSON.stringify(data) }),

@@ -22,7 +22,6 @@ import {
   EmployeeListItem,
   CreateEmployeeRequest,
 } from "@/services/api/hr";
-import { usersApi } from "@/services/api/auth";
 
 const employmentStatuses = [
   { value: "Active", label: "Active" },
@@ -50,7 +49,10 @@ const HrEmployees = () => {
   const [itemToDelete, setItemToDelete] = useState<EmployeeListItem | null>(null);
 
   // Form state
-  const [userId, setUserId] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [contactNumber, setContactNumber] = useState("");
   const [employeeCode, setEmployeeCode] = useState("");
   const [department, setDepartment] = useState("");
   const [designation, setDesignation] = useState("");
@@ -59,7 +61,6 @@ const HrEmployees = () => {
   const [gender, setGender] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [nationalId, setNationalId] = useState("");
-  const [contactNumber, setContactNumber] = useState("");
   const [address, setAddress] = useState("");
   const [emergencyContactName, setEmergencyContactName] = useState("");
   const [emergencyContactNumber, setEmergencyContactNumber] = useState("");
@@ -80,17 +81,6 @@ const HrEmployees = () => {
       if (result.error) throw new Error(result.error);
       return result.data;
     },
-  });
-
-  // Fetch users for dropdown (all active users - we'll use them for selection)
-  const { data: usersData } = useQuery({
-    queryKey: ["users-for-employee"],
-    queryFn: async () => {
-      const result = await usersApi.getAll({ pageSize: 500, isActive: true });
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    enabled: modalOpen,
   });
 
   // Create mutation
@@ -132,10 +122,12 @@ const HrEmployees = () => {
   const items = empData?.items || [];
   const totalCount = empData?.totalCount || 0;
   const totalPages = empData?.totalPages || 1;
-  const users = usersData?.items || [];
 
   const resetForm = () => {
-    setUserId("");
+    setFirstName("");
+    setLastName("");
+    setEmail("");
+    setContactNumber("");
     setEmployeeCode("");
     setDepartment("");
     setDesignation("");
@@ -144,7 +136,6 @@ const HrEmployees = () => {
     setGender("");
     setDateOfBirth("");
     setNationalId("");
-    setContactNumber("");
     setAddress("");
     setEmergencyContactName("");
     setEmergencyContactNumber("");
@@ -174,8 +165,12 @@ const HrEmployees = () => {
   };
 
   const handleSave = () => {
-    if (!userId) {
-      toast.error("Please select a user");
+    if (!firstName.trim()) {
+      toast.error("First name is required");
+      return;
+    }
+    if (!lastName.trim()) {
+      toast.error("Last name is required");
       return;
     }
     if (!joiningDate) {
@@ -183,7 +178,10 @@ const HrEmployees = () => {
       return;
     }
     const data: CreateEmployeeRequest = {
-      userId: parseInt(userId),
+      firstName,
+      lastName,
+      email: email || undefined,
+      contactNumber: contactNumber || undefined,
       employeeCode,
       department: department || undefined,
       designation: designation || undefined,
@@ -406,15 +404,27 @@ const HrEmployees = () => {
           <div className="p-6 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-sm">User <span className="text-destructive">*</span></Label>
-                <SearchableSelect
-                  options={users.map((u) => ({ value: u.id.toString(), label: `${u.fullName} (${u.username})` }))}
-                  value={userId}
-                  onValueChange={setUserId}
-                  placeholder="Select user..."
-                  searchPlaceholder="Search users..."
-                />
+                <Label className="text-sm">First Name <span className="text-destructive">*</span></Label>
+                <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="First Name" />
               </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Last Name <span className="text-destructive">*</span></Label>
+                <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Last Name" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm">Email</Label>
+                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Contact Number</Label>
+                <Input value={contactNumber} onChange={(e) => setContactNumber(e.target.value)} placeholder="Contact Number" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">Employee Code <span className="text-destructive">*</span></Label>
                 <Input value={employeeCode} readOnly className="bg-muted" placeholder="Auto-generated" />
@@ -468,10 +478,6 @@ const HrEmployees = () => {
               <div className="space-y-2">
                 <Label className="text-sm">National ID</Label>
                 <Input value={nationalId} onChange={(e) => setNationalId(e.target.value)} placeholder="National ID" />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm">Contact Number</Label>
-                <Input value={contactNumber} onChange={(e) => setContactNumber(e.target.value)} placeholder="Contact Number" />
               </div>
             </div>
 

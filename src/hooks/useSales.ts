@@ -8,6 +8,7 @@ import {
   UpdateLeadRequest,
   CreateRateRequestRequest,
   UpdateRateRequestRequest,
+  RateRequestSendEmailRequest,
   CreateQuotationRequest,
   UpdateQuotationRequest,
   LeadStatus,
@@ -401,6 +402,19 @@ export function useConvertQuotationToShipment() {
 }
 
 // Quotation for Shipment conversion
+export function useSendRateRequestEmail() {
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: RateRequestSendEmailRequest }) => {
+      const response = await rateRequestApi.sendEmail(id, data);
+      if (response.error) throw new Error(response.error);
+      return response.data;
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to send email');
+    },
+  });
+}
+
 export function useQuotationForShipment(id: number) {
   return useQuery({
     queryKey: ['quotations', id, 'forShipment'],

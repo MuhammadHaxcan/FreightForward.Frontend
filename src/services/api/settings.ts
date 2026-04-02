@@ -337,4 +337,34 @@ export const settingsApi = {
     fetchApi<void>(`/settings/invoice-notes/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteInvoiceNote: (id: number) =>
     fetchApi<void>(`/settings/invoice-notes/${id}`, { method: 'DELETE' }),
+
+  // SMTP Settings
+  getSmtpSettings: () =>
+    fetchApi<SmtpSettings>('/settings/smtp'),
+  saveSmtpSettings: (data: SaveSmtpSettingsRequest) =>
+    fetchApi<void>('/settings/smtp', { method: 'POST', body: JSON.stringify(data) }),
+  testSmtpConnection: () =>
+    fetchApi<{ message: string }>('/settings/smtp/test', { method: 'POST' }),
 };
+
+export interface SmtpSettings {
+  id?: number;
+  smtpHost: string;
+  smtpPort: number;
+  smtpUsername: string;
+  hasPassword: boolean;
+  fromEmail: string;
+  fromName: string;
+  enableSsl: boolean;
+  isConfigured: boolean;
+}
+
+export interface SaveSmtpSettingsRequest {
+  smtpHost: string;
+  smtpPort: number;
+  smtpUsername: string;
+  smtpPassword: string;
+  fromEmail: string;
+  fromName: string;
+  enableSsl: boolean;
+}

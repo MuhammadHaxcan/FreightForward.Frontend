@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { SmtpSettingsTab } from "@/components/settings/SmtpSettingsTab";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +35,7 @@ import {
   useCreateInvoiceNote,
   useUpdateInvoiceNote,
   useDeleteInvoiceNote,
+  useSmtpSettings,
 } from "@/hooks/useSettings";
 import {
   useBanks,
@@ -229,6 +231,9 @@ const Settings = () => {
     pageSize: parseInt(notePageSize),
     searchTerm: appliedNoteSearch || undefined,
   });
+
+  // Prefetch SMTP settings so the tab loads instantly from cache
+  useSmtpSettings();
 
   // Mutations
   const createCurrencyMutation = useCreateCurrencyType();
@@ -699,6 +704,12 @@ const Settings = () => {
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
             >
               Notes
+            </TabsTrigger>
+            <TabsTrigger
+              value="smtp"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
+            >
+              Email / SMTP
             </TabsTrigger>
           </TabsList>
 
@@ -1758,6 +1769,13 @@ const Settings = () => {
                   </div>
                 </div>
               )}
+            </div>
+          </TabsContent>
+
+          {/* SMTP Tab */}
+          <TabsContent value="smtp">
+            <div className="p-4">
+              <SmtpSettingsTab />
             </div>
           </TabsContent>
         </Tabs>

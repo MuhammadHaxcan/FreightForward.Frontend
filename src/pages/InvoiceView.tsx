@@ -3,6 +3,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { formatDate } from "@/lib/utils";
 import { ArrowLeft, Mail, Pencil, FileText, Download, File } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { invoiceApi, AccountInvoiceDetail } from "@/services/api";
+import { SendEmailModal } from "@/components/common/SendEmailModal";
 import {
   Table,
   TableBody,
@@ -12,16 +16,31 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { invoiceApi, AccountInvoiceDetail } from "@/services/api";
 import { API_BASE_URL, fetchBlob } from "@/services/api/base";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function InvoiceView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { officeName } = useAuth();
+  const { officeName, user } = useAuth();
   const [invoice, setInvoice] = useState<AccountInvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+
+  const sendEmailMutation = useMutation({
+    mutationFn: async (req: { recipientEmail: string; sendToCustomer: boolean; subject: string }) => {
+      if (!invoice?.id) throw new Error("Invoice not loaded");
+      const response = await invoiceApi.sendEmail(invoice.id, req);
+      if (response.error) throw new Error(response.error);
+    },
+    onSuccess: () => {
+      toast.success("Email sent successfully");
+      setEmailModalOpen(false);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to send email");
+    },
+  });
 
   useEffect(() => {
     const fetchInvoice = async () => {
@@ -72,8 +91,7 @@ export default function InvoiceView() {
   };
 
   const handleSendEmail = () => {
-    if (!invoice?.customerEmail) return;
-    window.location.href = `mailto:${invoice.customerEmail}?subject=Invoice ${invoice.invoiceNo}`;
+    setEmailModalOpen(true);
   };
 
   if (loading) {
@@ -253,6 +271,18 @@ export default function InvoiceView() {
           Copyright &copy; {officeName || "TransParent"} {new Date().getFullYear()}
         </div>
       </div>
+
+      <SendEmailModal
+        open={emailModalOpen}
+        onOpenChange={setEmailModalOpen}
+        recipientEmail={invoice?.customerEmail ?? ""}
+        recipientLabel="Customer"
+        subject={`Invoice ${invoice?.invoiceNo ?? ""}`}
+        currentUserEmail={user?.email ?? ""}
+        onSend={async (req) => { await sendEmailMutation.mutateAsync(req); }}
+        isSending={sendEmailMutation.isPending}
+        title={`Send Invoice ${invoice?.invoiceNo ?? ""}`}
+      />
     </MainLayout>
   );
 }

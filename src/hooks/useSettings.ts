@@ -12,6 +12,7 @@ import {
   CreateInvoiceNoteRequest,
   UpdateInvoiceNoteRequest,
   PaymentType,
+  SaveSmtpSettingsRequest,
 } from '@/services/api';
 import { toast } from 'sonner';
 
@@ -393,6 +394,51 @@ export function useAllCountries() {
         throw new Error(response.error);
       }
       return response.data!;
+    },
+  });
+}
+
+// SMTP Hooks
+export function useSmtpSettings() {
+  return useQuery({
+    queryKey: ['smtpSettings'],
+    queryFn: async () => {
+      const response = await settingsApi.getSmtpSettings();
+      if (response.error) throw new Error(response.error);
+      return response.data!;
+    },
+  });
+}
+
+export function useSaveSmtpSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: SaveSmtpSettingsRequest) => {
+      const response = await settingsApi.saveSmtpSettings(data);
+      if (response.error) throw new Error(response.error);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['smtpSettings'] });
+      toast.success('Email settings saved successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to save email settings');
+    },
+  });
+}
+
+export function useTestSmtpConnection() {
+  return useMutation({
+    mutationFn: async () => {
+      const response = await settingsApi.testSmtpConnection();
+      if (response.error) throw new Error(response.error);
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success('SMTP connection successful!');
+    },
+    onError: (error: Error) => {
+      toast.error(`Connection failed: ${error.message}`);
     },
   });
 }

@@ -13,8 +13,10 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Loader2 } from "lucide-react";
 import { useCustomers } from "@/hooks/useCustomers";
 import { useAllCustomerCategoryTypes } from "@/hooks/useSettings";
-import { useCreateRateRequest } from "@/hooks/useSales";
+import { useCreateRateRequest, useSendRateRequestEmail } from "@/hooks/useSales";
 import { toast } from "sonner";
+import { SendEmailModal } from "@/components/common/SendEmailModal";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SendRateRequestModalProps {
   open: boolean;
@@ -32,6 +34,10 @@ export function SendRateRequestModal({
   const [vendorType, setVendorType] = useState<string>("");
   const [vendorId, setVendorId] = useState<string>("");
   const [vendorEmail, setVendorEmail] = useState<string>("");
+  const [step, setStep] = useState<"form" | "email">("form");
+  const [newRateRequestId, setNewRateRequestId] = useState<number | null>(null);
+
+  const { user } = useAuth();
 
   // Load customer category types (for Vendor Type dropdown)
   const { data: categoryTypes, isLoading: loadingCategoryTypes } =
@@ -44,6 +50,7 @@ export function SendRateRequestModal({
   });
 
   const createRateRequest = useCreateRateRequest();
+  const sendEmail = useSendRateRequestEmail();
 
   // Filter vendors by selected category type
   const filteredVendors = useMemo(() => {
@@ -73,6 +80,8 @@ export function SendRateRequestModal({
       setVendorType("");
       setVendorId("");
       setVendorEmail("");
+      setStep("form");
+      setNewRateRequestId(null);
     }
   }, [open]);
 
@@ -87,7 +96,7 @@ export function SendRateRequestModal({
     );
 
     try {
-      await createRateRequest.mutateAsync({
+      const result = await createRateRequest.mutateAsync({
         leadId,
         vendorId: parseInt(vendorId),
         vendorName: selectedVendor?.name || "",
@@ -95,16 +104,41 @@ export function SendRateRequestModal({
         vendorEmail,
       });
 
-      toast.success("Rate request sent successfully");
-
-      onOpenChange(false);
+      setNewRateRequestId(result);
+      setStep("email");
       onSuccess?.();
     } catch (error) {
       // Error is handled by the mutation
     }
   };
 
+  const handleSkipEmail = () => {
+    toast.success("Rate request created successfully");
+    onOpenChange(false);
+  };
+
   const isLoading = loadingCategoryTypes || loadingCustomers;
+
+  if (step === "email" && newRateRequestId !== null) {
+    return (
+      <SendEmailModal
+        open={open}
+        onOpenChange={onOpenChange}
+        recipientEmail={vendorEmail}
+        recipientLabel="Vendor"
+        subject={`Rate Request`}
+        currentUserEmail={user?.email ?? ""}
+        onSend={async (req) => {
+          await sendEmail.mutateAsync({ id: newRateRequestId, data: req });
+          toast.success("Email sent successfully");
+          onOpenChange(false);
+        }}
+        isSending={sendEmail.isPending}
+        title="Send Rate Request Email"
+        onSkip={handleSkipEmail}
+      />
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

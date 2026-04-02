@@ -529,7 +529,16 @@ export const rateRequestApi = {
     fetchApi<number>('/sales/rate-requests', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: number, data: UpdateRateRequestRequest) =>
     fetchApi<void>(`/sales/rate-requests/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  sendEmail: (id: number, data: RateRequestSendEmailRequest) =>
+    fetchApi<{ message: string }>(`/sales/rate-requests/${id}/send-email`, { method: 'POST', body: JSON.stringify(data) }),
 };
+
+export interface RateRequestSendEmailRequest {
+  recipientEmail: string;
+  sendToCustomer: boolean;
+  subject: string;
+  body?: string;
+}
 
 export const quotationApi = {
   getAll: (params?: {

@@ -147,6 +147,8 @@ export {
   type InvoiceNote,
   type CreateInvoiceNoteRequest,
   type UpdateInvoiceNoteRequest,
+  type SmtpSettings,
+  type SaveSmtpSettingsRequest,
 } from './settings';
 
 // Invoice

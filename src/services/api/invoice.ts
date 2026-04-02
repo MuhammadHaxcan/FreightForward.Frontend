@@ -441,6 +441,8 @@ export const invoiceApi = {
     if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
     return fetchApi<AccountPayableSummaryResult>(`/invoices/account-payable-summary?${query}`);
   },
+  sendEmail: (id: number, data: SendEmailRequest) =>
+    fetchApi<{ message: string }>(`/invoices/${id}/send-email`, { method: 'POST', body: JSON.stringify(data) }),
 };
 
 // Receipt Types
@@ -695,4 +697,13 @@ export const creditNoteApi = {
     fetchApi<void>(`/invoices/credit-notes/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: number) =>
     fetchApi<void>(`/invoices/credit-notes/${id}`, { method: 'DELETE' }),
+  sendEmail: (id: number, data: SendEmailRequest) =>
+    fetchApi<{ message: string }>(`/invoices/credit-notes/${id}/send-email`, { method: 'POST', body: JSON.stringify(data) }),
 };
+
+export interface SendEmailRequest {
+  recipientEmail: string;
+  sendToCustomer: boolean;
+  subject: string;
+  body?: string;
+}

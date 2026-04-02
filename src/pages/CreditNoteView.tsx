@@ -15,13 +15,34 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { creditNoteApi, AccountCreditNoteDetail } from "@/services/api";
 import { API_BASE_URL, fetchBlob } from "@/services/api/base";
 import { useAuth } from "@/contexts/AuthContext";
+import { useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { SendEmailModal } from "@/components/common/SendEmailModal";
 
 export default function CreditNoteView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { hasPermission, officeName } = useAuth();
+  const { hasPermission, officeName, user } = useAuth();
   const [creditNote, setCreditNote] = useState<AccountCreditNoteDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+
+  const sendEmailMutation = useMutation({
+    mutationFn: async (req: { recipientEmail: string; sendToCustomer: boolean; subject: string }) => {
+      if (!id) throw new Error("No credit note ID");
+      const numericId = parseInt(id);
+      if (isNaN(numericId)) throw new Error("Invalid credit note ID");
+      const response = await creditNoteApi.sendEmail(numericId, req);
+      if (response.error) throw new Error(response.error);
+    },
+    onSuccess: () => {
+      toast.success("Email sent successfully");
+      setEmailModalOpen(false);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to send email");
+    },
+  });
 
   useEffect(() => {
     const fetchCreditNote = async () => {
@@ -67,8 +88,7 @@ export default function CreditNoteView() {
   };
 
   const handleSendEmail = () => {
-    if (!creditNote?.email) return;
-    window.location.href = `mailto:${creditNote.email}?subject=Credit Note ${creditNote.creditNoteNo}`;
+    setEmailModalOpen(true);
   };
 
   if (loading) {
@@ -260,6 +280,18 @@ export default function CreditNoteView() {
           Copyright &copy; {officeName || "TransParent"} {new Date().getFullYear()}
         </div>
       </div>
+
+      <SendEmailModal
+        open={emailModalOpen}
+        onOpenChange={setEmailModalOpen}
+        recipientEmail={creditNote?.email ?? ""}
+        recipientLabel="Customer"
+        subject={`Credit Note ${creditNote?.creditNoteNo ?? ""}`}
+        currentUserEmail={user?.email ?? ""}
+        onSend={async (req) => { await sendEmailMutation.mutateAsync(req); }}
+        isSending={sendEmailMutation.isPending}
+        title={`Send Credit Note ${creditNote?.creditNoteNo ?? ""}`}
+      />
     </MainLayout>
   );
 }
