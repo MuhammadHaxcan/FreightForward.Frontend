@@ -180,7 +180,7 @@ export default function Invoices() {
       </div>
 
       {/* Invoices Table */}
-      <div className="border rounded-lg overflow-hidden">
+      <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-table-header">
@@ -198,7 +198,7 @@ export default function Invoices() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-8">
+                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                   Loading...
                 </TableCell>
               </TableRow>
@@ -209,8 +209,8 @@ export default function Invoices() {
                 </TableCell>
               </TableRow>
             ) : (
-              invoices.map((invoice) => (
-                <TableRow key={invoice.id} className="hover:bg-table-row-hover">
+              invoices.map((invoice, index) => (
+                <TableRow key={invoice.id} className={`border-b border-border hover:bg-table-row-hover transition-colors ${index % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
                   <TableCell>
                     <div>
                       <div className="text-sm">Date - {formatDate(invoice.invoiceDate)}</div>

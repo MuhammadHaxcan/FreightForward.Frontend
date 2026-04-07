@@ -297,7 +297,7 @@ export default function DailyExpenses() {
             </div>
           </div>
 
-        <div className="border rounded-lg overflow-hidden">
+        <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
           {isLoading ? (
             <div className="flex items-center justify-center p-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -324,8 +324,8 @@ export default function DailyExpenses() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredExpenses.map((expense) => (
-                    <TableRow key={expense.id} className="hover:bg-table-row-hover">
+                  filteredExpenses.map((expense, index) => (
+                    <TableRow key={expense.id} className={`border-b border-border hover:bg-table-row-hover transition-colors ${index % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
                       <TableCell className="whitespace-nowrap">{formatDate(expense.expenseDate)}</TableCell>
                       <TableCell>{expense.paymentType} || {paymentModeLabels[expense.paymentMode] || expense.paymentMode}</TableCell>
                       <TableCell>{expense.category}</TableCell>
@@ -337,7 +337,7 @@ export default function DailyExpenses() {
                         <div className="flex items-center gap-1">
                           <Button
                             size="sm"
-                            className="bg-yellow-500 hover:bg-yellow-600 text-white h-8 w-8 p-0"
+                            className="bg-blue-500 hover:bg-blue-600 text-white h-8 w-8 p-0"
                             title="View"
                             onClick={() => setViewingExpense(expense)}
                           >
@@ -346,7 +346,7 @@ export default function DailyExpenses() {
                           <PermissionGate permission="expense_edit">
                             <Button
                               size="sm"
-                              className="bg-amber-500 hover:bg-amber-600 text-white h-8 w-8 p-0"
+                              className="bg-primary hover:bg-primary/90 text-primary-foreground h-8 w-8 p-0"
                               title="Edit"
                               onClick={() => openEditModal(expense)}
                             >
@@ -356,7 +356,7 @@ export default function DailyExpenses() {
                           <PermissionGate permission="expense_delete">
                             <Button
                               size="sm"
-                              className="bg-red-500 hover:bg-red-600 text-white h-8 w-8 p-0"
+                              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground h-8 w-8 p-0"
                               title="Delete"
                               onClick={() => handleDeleteExpense(expense.id)}
                               disabled={deleteExpense.isPending}

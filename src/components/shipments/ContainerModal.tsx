@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -86,11 +86,13 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
   }), [container, nextSNo]);
 
   const [formData, setFormData] = useState(getInitialFormData);
+  const isSavingRef = useRef(false);
 
   // Reset form data when container prop changes or modal opens
   useEffect(() => {
     if (open) {
       setFormData(getInitialFormData());
+      isSavingRef.current = false;
     }
   }, [open, getInitialFormData]);
 
@@ -99,6 +101,8 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
   };
 
   const handleSave = () => {
+    if (isSavingRef.current) return;
+    isSavingRef.current = true;
     // Find the selected container type and package type names for display
     const selectedContainerType = containerTypes.find(ct => ct.id.toString() === formData.containerTypeId);
     const selectedPackageType = packageTypes.find(pt => pt.id.toString() === formData.packageTypeId);

@@ -313,7 +313,7 @@ const HrEmployees = () => {
                         <div className="flex items-center gap-1">
                           <PermissionGate permission="hr_emp_view">
                             <button
-                              className="p-1.5 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition-colors"
+                              className="p-1.5 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
                               onClick={() => navigate(`/hr/employees/${emp.id}`)}
                               title="View"
                             >

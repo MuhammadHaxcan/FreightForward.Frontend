@@ -182,7 +182,7 @@ export default function AccountReceivable() {
         </div>
 
         {/* Account Receivable Table */}
-        <div className="border rounded-lg overflow-hidden">
+        <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow className="bg-table-header">
@@ -196,19 +196,19 @@ export default function AccountReceivable() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                     No records found
                   </TableCell>
                 </TableRow>
               ) : (
-                items.map((item) => (
-                  <TableRow key={`${item.customerId}-${item.currencyCode}`} className="hover:bg-muted/50">
+                items.map((item, index) => (
+                  <TableRow key={`${item.customerId}-${item.currencyCode}`} className={`border-b border-border hover:bg-table-row-hover transition-colors ${index % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
                     <TableCell
                       className="text-green-600 font-medium cursor-pointer hover:underline"
                       onClick={() => setModalCustomer({ id: item.customerId, name: item.customerName, currencyCode: item.currencyCode })}

@@ -145,7 +145,7 @@ export default function RateRequests() {
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Search:</span>
               <Input
-                placeholder=""
+                placeholder="Search..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") { setAppliedSearch(searchTerm); setCurrentPage(1); } }}
@@ -189,10 +189,10 @@ export default function RateRequests() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  rateRequests.map((request) => (
+                  rateRequests.map((request, index) => (
                     <TableRow
                       key={request.id}
-                      className={`hover:bg-table-row-hover ${selectedRateRequestId === request.id ? 'bg-primary/10' : ''}`}
+                      className={`border-b border-border hover:bg-table-row-hover transition-colors ${selectedRateRequestId === request.id ? 'bg-primary/10' : index % 2 === 0 ? 'bg-card' : 'bg-secondary/30'}`}
                     >
                       <TableCell>
                         <input

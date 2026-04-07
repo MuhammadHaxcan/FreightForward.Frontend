@@ -600,7 +600,7 @@ const HrPayroll = () => {
                         <div className="flex items-center gap-1">
                           {/* View */}
                           <button
-                            className="p-1.5 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition-colors"
+                            className="p-1.5 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
                             onClick={() => navigate(`/hr/payslip/${item.id}`)}
                             title="View Payslip"
                           >
@@ -624,7 +624,7 @@ const HrPayroll = () => {
                           {item.status !== "Paid" && (
                             <PermissionGate permission="hr_payroll_edit">
                               <button
-                                className="p-1.5 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+                                className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
                                 onClick={() => handleConfirmDelete(item.id)}
                                 title="Delete"
                               >

@@ -96,7 +96,7 @@ function PDCTable({ source, filterOptions, showTypeColumn = false, partyColumnLa
         </div>
       </div>
 
-      <div className="border rounded-lg overflow-hidden">
+      <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-table-header">
@@ -118,13 +118,13 @@ function PDCTable({ source, filterOptions, showTypeColumn = false, partyColumnLa
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={showTypeColumn ? 11 : 10} className="text-center py-8">
+                <TableCell colSpan={showTypeColumn ? 11 : 10} className="text-center py-8 text-muted-foreground">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : data?.items && data.items.length > 0 ? (
-              data.items.map((pdc) => (
-                <TableRow key={`${pdc.voucherNo}-${pdc.id}`} className="hover:bg-table-row-hover">
+              data.items.map((pdc, index) => (
+                <TableRow key={`${pdc.voucherNo}-${pdc.id}`} className={`border-b border-border hover:bg-table-row-hover transition-colors ${index % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
                   {showTypeColumn && (
                     <TableCell>
                       <span

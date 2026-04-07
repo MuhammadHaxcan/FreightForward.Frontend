@@ -261,7 +261,7 @@ export default function Leads() {
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">Search:</span>
                   <Input
-                    placeholder=""
+                    placeholder="Search..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") { setAppliedSearch(searchTerm); setCurrentPage(1); } }}
@@ -305,8 +305,8 @@ export default function Leads() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      leads.map((lead) => (
-                        <TableRow key={lead.id} className="hover:bg-table-row-hover">
+                      leads.map((lead, index) => (
+                        <TableRow key={lead.id} className={`border-b border-border hover:bg-table-row-hover transition-colors ${index % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
                           <TableCell>
                             <Checkbox
                               checked={selectedLeadId === lead.id}

@@ -157,7 +157,7 @@ export default function InvoiceView() {
             <FileText className="h-4 w-4 mr-2" />
             Tax Invoice
           </Button>
-          <Button className="bg-amber-500 hover:bg-amber-600 text-white" onClick={handleDownload}>
+          <Button className="bg-orange-500 hover:bg-orange-600 text-white" onClick={handleDownload}>
             <Download className="h-4 w-4 mr-2" />
             Download
           </Button>

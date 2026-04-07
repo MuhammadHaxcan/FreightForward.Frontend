@@ -30,10 +30,11 @@ export default function OfficesList() {
     email: '',
     jobPrefix: 'JAE',
     invoicePrefix: 'INVAE',
-    purchaseInvoicePrefix: 'PVAE',
+    purchaseInvoicePrefix: 'PURAE',
     receiptVoucherPrefix: 'RVAE',
     paymentVoucherPrefix: 'PVAE',
     creditNotePrefix: 'CNAE',
+    employeePrefix: 'EMPAE',
   });
   const [editFormError, setEditFormError] = useState('');
 
@@ -54,10 +55,11 @@ export default function OfficesList() {
     email: '',
     jobPrefix: 'JAE',
     invoicePrefix: 'INVAE',
-    purchaseInvoicePrefix: 'PVAE',
+    purchaseInvoicePrefix: 'PURAE',
     receiptVoucherPrefix: 'RVAE',
     paymentVoucherPrefix: 'PVAE',
     creditNotePrefix: 'CNAE',
+    employeePrefix: 'EMPAE',
   });
   const [formError, setFormError] = useState('');
 
@@ -79,7 +81,7 @@ export default function OfficesList() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['offices'] });
       setCreatedOffice(data!);
-      setFormData({ name: '', slug: '', location: '', phone: '', email: '', jobPrefix: 'JAE', invoicePrefix: 'INVAE', purchaseInvoicePrefix: 'PVAE', receiptVoucherPrefix: 'RVAE', paymentVoucherPrefix: 'PVAE', creditNotePrefix: 'CNAE' });
+      setFormData({ name: '', slug: '', location: '', phone: '', email: '', jobPrefix: 'JAE', invoicePrefix: 'INVAE', purchaseInvoicePrefix: 'PURAE', receiptVoucherPrefix: 'RVAE', paymentVoucherPrefix: 'PVAE', creditNotePrefix: 'CNAE', employeePrefix: 'EMPAE' });
     },
     onError: (error: Error) => {
       setFormError(error.message);
@@ -167,6 +169,7 @@ export default function OfficesList() {
       receiptVoucherPrefix: full.receiptVoucherPrefix,
       paymentVoucherPrefix: full.paymentVoucherPrefix,
       creditNotePrefix: full.creditNotePrefix,
+      employeePrefix: full.employeePrefix,
     });
     setEditingOffice(office);
   };
@@ -427,6 +430,10 @@ export default function OfficesList() {
                             <Label htmlFor="creditNotePrefix" className="text-xs text-muted-foreground">Credit Note Prefix</Label>
                             <Input id="creditNotePrefix" value={formData.creditNotePrefix} onChange={(e) => setFormData({ ...formData, creditNotePrefix: e.target.value })} placeholder="CNAE" />
                           </div>
+                          <div className="space-y-1">
+                            <Label htmlFor="employeePrefix" className="text-xs text-muted-foreground">Employee Prefix</Label>
+                            <Input id="employeePrefix" value={formData.employeePrefix} onChange={(e) => setFormData({ ...formData, employeePrefix: e.target.value })} placeholder="EMPAE" />
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -628,6 +635,10 @@ export default function OfficesList() {
                     <div className="space-y-1">
                       <Label htmlFor="edit-creditNotePrefix" className="text-xs text-muted-foreground">Credit Note Prefix</Label>
                       <Input id="edit-creditNotePrefix" value={editFormData.creditNotePrefix} onChange={(e) => setEditFormData({ ...editFormData, creditNotePrefix: e.target.value })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="edit-employeePrefix" className="text-xs text-muted-foreground">Employee Prefix</Label>
+                      <Input id="edit-employeePrefix" value={editFormData.employeePrefix} onChange={(e) => setEditFormData({ ...editFormData, employeePrefix: e.target.value })} />
                     </div>
                   </div>
                 </div>

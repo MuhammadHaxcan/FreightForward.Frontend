@@ -164,7 +164,7 @@ export default function CreditNotes() {
       </div>
 
       {/* Credit Notes Table */}
-      <div className="border rounded-lg overflow-hidden">
+      <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-table-header">
@@ -181,7 +181,7 @@ export default function CreditNotes() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   Loading...
                 </TableCell>
               </TableRow>
@@ -192,8 +192,8 @@ export default function CreditNotes() {
                 </TableCell>
               </TableRow>
             ) : (
-              creditNotes.map((cn) => (
-                <TableRow key={cn.id} className="hover:bg-table-row-hover">
+              creditNotes.map((cn, index) => (
+                <TableRow key={cn.id} className={`border-b border-border hover:bg-table-row-hover transition-colors ${index % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
                   <TableCell className="text-primary font-medium">{cn.creditNoteNo}</TableCell>
                   <TableCell>{formatDate(cn.creditNoteDate)}</TableCell>
                   <TableCell className="text-blue-600">{cn.customerName}</TableCell>

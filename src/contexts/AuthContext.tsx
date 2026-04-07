@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { authApi } from '../services/api/auth';
 import { setAuthFailureCallback, clearTokens, getAccessToken, getRefreshToken } from '../services/api/base';
 import type { CurrentUser, LoginRequest, AuthResponse } from '../types/auth';
@@ -26,6 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [officeSlug, setOfficeSlug] = useState<string | null>(null);
   const [officeName, setOfficeName] = useState<string | null>(null);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // Check if user is authenticated
   const isAuthenticated = !!user && !!getAccessToken();
@@ -79,9 +81,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       setOfficeSlug(null);
       setOfficeName(null);
+      queryClient.clear();
       navigate('/login');
     });
-  }, [navigate]);
+  }, [navigate, queryClient]);
 
   const login = useCallback(async (request: LoginRequest) => {
     const result = await authApi.login(request);
@@ -108,6 +111,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         officeSlug: authData.officeSlug,
         officeName: authData.officeName,
       };
+      // Clear all cached data from any previous office before setting new session
+      queryClient.clear();
       setUser(currentUser);
       setOfficeSlug(authData.officeSlug || null);
       setOfficeName(authData.officeName || null);
@@ -123,8 +128,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setOfficeSlug(null);
     setOfficeName(null);
     clearTokens();
+    queryClient.clear();
     navigate('/login');
-  }, [navigate]);
+  }, [navigate, queryClient]);
 
   const hasPermission = useCallback((code: string) => {
     return (user?.permissions ?? []).includes(code);

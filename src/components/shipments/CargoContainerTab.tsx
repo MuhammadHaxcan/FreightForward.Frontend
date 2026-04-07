@@ -32,7 +32,7 @@ export interface CargoFormEntry {
 }
 
 export interface CargoContainerTabProps {
-  isFCL: boolean;
+  showContainers: boolean;
   // Container props
   containers: Array<Partial<ShipmentContainer> & { sNo?: number | string }>;
   containerSummary: string;
@@ -53,7 +53,7 @@ export interface CargoContainerTabProps {
 }
 
 export function CargoContainerTab({
-  isFCL,
+  showContainers,
   containers,
   containerSummary,
   onAddContainer,
@@ -98,8 +98,8 @@ export function CargoContainerTab({
 
   return (
     <div className="bg-card border border-border rounded-lg p-6 space-y-6">
-      {/* ── CONTAINERS SECTION (FCL only) ── */}
-      {isFCL && (
+      {/* ── CONTAINERS SECTION (FCL and LCL) ── */}
+      {showContainers && (
         <>
           <div className="space-y-4">
             <div className="flex justify-between items-center">

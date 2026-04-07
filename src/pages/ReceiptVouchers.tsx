@@ -200,7 +200,7 @@ export default function ReceiptVouchers() {
         </div>
 
         {/* Receipts Table */}
-        <div className="border rounded-lg overflow-hidden">
+        <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow className="bg-table-header">
@@ -218,7 +218,7 @@ export default function ReceiptVouchers() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8">
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                     Loading...
                   </TableCell>
                 </TableRow>
@@ -229,8 +229,8 @@ export default function ReceiptVouchers() {
                   </TableCell>
                 </TableRow>
               ) : (
-                receipts.map((receipt) => (
-                  <TableRow key={receipt.id} className="hover:bg-table-row-hover">
+                receipts.map((receipt, index) => (
+                  <TableRow key={receipt.id} className={`border-b border-border hover:bg-table-row-hover transition-colors ${index % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
                     <TableCell>
                       {formatDate(receipt.receiptDate)}
                     </TableCell>
@@ -267,7 +267,7 @@ export default function ReceiptVouchers() {
                       <div className="flex items-center gap-1">
                         <Button
                           size="sm"
-                          className="bg-yellow-500 hover:bg-yellow-600 text-white h-8 w-8 p-0"
+                          className="bg-blue-500 hover:bg-blue-600 text-white h-8 w-8 p-0"
                           title="View"
                           onClick={() => handleViewReceipt(receipt.id)}
                         >
@@ -276,7 +276,7 @@ export default function ReceiptVouchers() {
                         <PermissionGate permission="receipt_edit">
                           <Button
                             size="sm"
-                            className="bg-amber-500 hover:bg-amber-600 text-white h-8 w-8 p-0"
+                            className="bg-primary hover:bg-primary/90 text-primary-foreground h-8 w-8 p-0"
                             title="Edit"
                             onClick={() => handleEdit(receipt.id)}
                           >
@@ -286,7 +286,7 @@ export default function ReceiptVouchers() {
                         <PermissionGate permission="receipt_delete">
                           <Button
                             size="sm"
-                            className="bg-red-500 hover:bg-red-600 text-white h-8 w-8 p-0"
+                            className="bg-destructive hover:bg-destructive/90 text-destructive-foreground h-8 w-8 p-0"
                             title="Delete"
                             onClick={() => { setReceiptToDelete(receipt.id); setDeleteDialogOpen(true); }}
                           >
@@ -295,7 +295,7 @@ export default function ReceiptVouchers() {
                         </PermissionGate>
                         <Button
                           size="sm"
-                          className="bg-yellow-500 hover:bg-yellow-600 text-white h-8 w-8 p-0"
+                          className="bg-orange-500 hover:bg-orange-600 text-white h-8 w-8 p-0"
                           title="Download"
                           onClick={() => handleDownload(receipt.id, receipt.receiptNo)}
                         >
@@ -421,7 +421,7 @@ export default function ReceiptVouchers() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-500 hover:bg-red-600"
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
               onClick={handleDeleteConfirm}
             >
               Delete

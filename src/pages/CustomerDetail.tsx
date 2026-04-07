@@ -1909,7 +1909,7 @@ const CustomerDetail = () => {
       <div className="flex justify-between items-center">
         <Input placeholder="Search payment vouchers..." className="w-1/3" />
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">Entries:</span>
+          <span className="text-sm text-muted-foreground">Entries:</span>
           <SearchableSelect
             options={[
               { value: "10", label: "10" },
@@ -1924,26 +1924,26 @@ const CustomerDetail = () => {
         </div>
       </div>
 
-      <div className="border rounded-lg overflow-hidden">
+      <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50">
+          <thead className="bg-table-header">
             <tr>
-              <th className="px-4 py-3 text-left font-medium">Date</th>
-              <th className="px-4 py-3 text-left font-medium">Payment Voucher No.</th>
-              <th className="px-4 py-3 text-left font-medium">Type</th>
-              <th className="px-4 py-3 text-left font-medium">Purchases</th>
-              <th className="px-4 py-3 text-right font-medium">Amount</th>
-              <th className="px-4 py-3 text-left font-medium">Narration</th>
+              <th className="px-4 py-3 text-left font-medium text-table-header-foreground">Date</th>
+              <th className="px-4 py-3 text-left font-medium text-table-header-foreground">Payment Voucher No.</th>
+              <th className="px-4 py-3 text-left font-medium text-table-header-foreground">Type</th>
+              <th className="px-4 py-3 text-left font-medium text-table-header-foreground">Purchases</th>
+              <th className="px-4 py-3 text-right font-medium text-table-header-foreground">Amount</th>
+              <th className="px-4 py-3 text-left font-medium text-table-header-foreground">Narration</th>
             </tr>
           </thead>
           <tbody>
             {pvLoading ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center">Loading...</td></tr>
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Loading...</td></tr>
             ) : paymentVouchers.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">No payment vouchers found</td></tr>
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">No payment vouchers found</td></tr>
             ) : (
-              paymentVouchers.map((pv) => (
-                <tr key={pv.id} className="border-t hover:bg-gray-50">
+              paymentVouchers.map((pv, index) => (
+                <tr key={pv.id} className={`border-b border-border hover:bg-table-row-hover transition-colors ${index % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
                   <td className="px-4 py-3">{formatDate(pv.paymentDate)}</td>
                   <td className="px-4 py-3 font-medium">{pv.paymentNo}</td>
                   <td className="px-4 py-3">
@@ -1952,12 +1952,12 @@ const CustomerDetail = () => {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="text-sm text-gray-600">{pv.purchaseInvoiceCount} invoice(s)</span>
+                    <span className="text-sm text-muted-foreground">{pv.purchaseInvoiceCount} invoice(s)</span>
                   </td>
                   <td className="px-4 py-3 text-right font-medium">
                     {pv.currencyCode} {pv.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </td>
-                  <td className="px-4 py-3 text-gray-600 max-w-[200px] truncate">{pv.narration || '-'}</td>
+                  <td className="px-4 py-3 text-muted-foreground max-w-[200px] truncate">{pv.narration || '-'}</td>
                 </tr>
               ))
             )}
@@ -1968,7 +1968,7 @@ const CustomerDetail = () => {
       {/* Pagination */}
       {pvTotalPages > 1 && (
         <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-muted-foreground">
             Showing {((pvPageNumber - 1) * pvPageSize) + 1} to {Math.min(pvPageNumber * pvPageSize, pvTotalCount)} of {pvTotalCount}
           </span>
           <div className="flex gap-2">
@@ -1985,7 +1985,7 @@ const CustomerDetail = () => {
       <div className="flex justify-between items-center">
         <Input placeholder="Search purchase invoices..." className="w-1/3" />
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">Entries:</span>
+          <span className="text-sm text-muted-foreground">Entries:</span>
           <SearchableSelect
             options={[
               { value: "10", label: "10" },
@@ -2000,26 +2000,26 @@ const CustomerDetail = () => {
         </div>
       </div>
 
-      <div className="border rounded-lg overflow-hidden">
+      <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50">
+          <thead className="bg-table-header">
             <tr>
-              <th className="px-4 py-3 text-left font-medium">Date</th>
-              <th className="px-4 py-3 text-left font-medium">Purchase No.</th>
-              <th className="px-4 py-3 text-left font-medium">Vendor Inv. No.</th>
-              <th className="px-4 py-3 text-left font-medium">Job No.</th>
-              <th className="px-4 py-3 text-right font-medium">Amount</th>
-              <th className="px-4 py-3 text-left font-medium">Payment Status</th>
+              <th className="px-4 py-3 text-left font-medium text-table-header-foreground">Date</th>
+              <th className="px-4 py-3 text-left font-medium text-table-header-foreground">Purchase No.</th>
+              <th className="px-4 py-3 text-left font-medium text-table-header-foreground">Vendor Inv. No.</th>
+              <th className="px-4 py-3 text-left font-medium text-table-header-foreground">Job No.</th>
+              <th className="px-4 py-3 text-right font-medium text-table-header-foreground">Amount</th>
+              <th className="px-4 py-3 text-left font-medium text-table-header-foreground">Payment Status</th>
             </tr>
           </thead>
           <tbody>
             {piLoading ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center">Loading...</td></tr>
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Loading...</td></tr>
             ) : purchaseInvoices.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-500">No purchase invoices found</td></tr>
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">No purchase invoices found</td></tr>
             ) : (
-              purchaseInvoices.map((pi) => (
-                <tr key={pi.id} className="border-t hover:bg-gray-50">
+              purchaseInvoices.map((pi, index) => (
+                <tr key={pi.id} className={`border-b border-border hover:bg-table-row-hover transition-colors ${index % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
                   <td className="px-4 py-3">{formatDate(pi.purchaseDate)}</td>
                   <td className="px-4 py-3 font-medium">{pi.purchaseNo}</td>
                   <td className="px-4 py-3">{pi.vendorInvoiceNo || '-'}</td>
@@ -2047,7 +2047,7 @@ const CustomerDetail = () => {
       {/* Pagination */}
       {piTotalPages > 1 && (
         <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-muted-foreground">
             Showing {((piPageNumber - 1) * piPageSize) + 1} to {Math.min(piPageNumber * piPageSize, piTotalCount)} of {piTotalCount}
           </span>
           <div className="flex gap-2">

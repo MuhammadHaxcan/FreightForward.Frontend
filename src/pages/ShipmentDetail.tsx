@@ -1018,6 +1018,7 @@ const ShipmentDetail = () => {
   };
 
   const isFCL = formData.mode === 'Sea Freight FCL';
+  const isLCL = formData.mode === 'Sea Freight LCL';
 
   const totalContainerQty = containers.reduce((sum, c) => sum + (c.noOfPcs || 0), 0);
   const containerSummary = containers.length > 0
@@ -1114,7 +1115,7 @@ const ShipmentDetail = () => {
               value="cargo-containers"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
             >
-              {isFCL ? "Cargo & Containers" : "Cargo Details"}
+              {(isFCL || isLCL) ? "Cargo & Containers" : "Cargo Details"}
             </TabsTrigger>
             <TabsTrigger
               value="costing"
@@ -1731,7 +1732,7 @@ const ShipmentDetail = () => {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded"
+                              className="h-8 w-8 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded"
                               onClick={() => handleDeleteParty(party.id, party.customerName)}
                               disabled={deletePartyMutation.isPending}
                             >
@@ -1750,7 +1751,7 @@ const ShipmentDetail = () => {
           {/* Cargo & Containers Tab */}
           <TabsContent value="cargo-containers" className="mt-0">
             <CargoContainerTab
-              isFCL={isFCL}
+              showContainers={isFCL || isLCL}
               containers={containers}
               containerSummary={containerSummary}
               onAddContainer={() => { setEditingContainer(null); setContainerModalOpen(true); }}
@@ -1883,7 +1884,7 @@ const ShipmentDetail = () => {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded"
+                                className="h-8 w-8 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded"
                                 onClick={() => handleDeleteCosting(cost.id, cost.description)}
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -2114,7 +2115,7 @@ const ShipmentDetail = () => {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded"
+                              className="h-8 w-8 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded"
                               onClick={() => handleDeleteDocument(doc)}
                             >
                               <Trash2 className="h-4 w-4" />

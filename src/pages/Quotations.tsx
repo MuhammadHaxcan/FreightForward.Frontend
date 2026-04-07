@@ -144,7 +144,7 @@ export default function Quotations() {
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">Search:</span>
                   <Input
-                    placeholder=""
+                    placeholder="Search..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") { setAppliedSearch(searchTerm); setCurrentPage(1); } }}
@@ -186,8 +186,8 @@ export default function Quotations() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      quotations.map((quotation) => (
-                        <TableRow key={quotation.id} className="hover:bg-table-row-hover">
+                      quotations.map((quotation, index) => (
+                        <TableRow key={quotation.id} className={`border-b border-border hover:bg-table-row-hover transition-colors ${index % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
                           <TableCell>{formatDate(quotation.quotationDate, "dd-MM-yyyy")}</TableCell>
                           <TableCell className="font-medium">{quotation.quotationNo}</TableCell>
                           <TableCell className="text-green-600">{quotation.customerName}</TableCell>
@@ -261,7 +261,7 @@ export default function Quotations() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-8 w-8 bg-red-500 hover:bg-red-600 text-white rounded"
+                                  className="h-8 w-8 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded"
                                   onClick={() => {
                                     setQuotationToDelete(quotation);
                                     setDeleteModalOpen(true);
@@ -463,7 +463,7 @@ export default function Quotations() {
             </AlertDialogCancel>
             {quotationToDelete?.quotationStatus !== "Approved" && (
               <AlertDialogAction
-                className="bg-red-500 hover:bg-red-600 text-white"
+                className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                 onClick={async () => {
                   if (quotationToDelete) {
                     await deleteMutation.mutateAsync(quotationToDelete.id);

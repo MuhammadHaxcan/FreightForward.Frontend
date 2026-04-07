@@ -203,6 +203,7 @@ export interface Office {
   receiptVoucherPrefix: string;
   paymentVoucherPrefix: string;
   creditNotePrefix: string;
+  employeePrefix: string;
   isActive: boolean;
   createdAt: string;
   updatedAt?: string;
@@ -221,6 +222,7 @@ export interface OfficeListItem {
   receiptVoucherPrefix: string;
   paymentVoucherPrefix: string;
   creditNotePrefix: string;
+  employeePrefix: string;
   isActive: boolean;
   createdAt: string;
 }
@@ -237,6 +239,7 @@ export interface CreateOfficeRequest {
   receiptVoucherPrefix: string;
   paymentVoucherPrefix: string;
   creditNotePrefix: string;
+  employeePrefix: string;
 }
 
 export interface UpdateOfficeRequest {
@@ -250,6 +253,7 @@ export interface UpdateOfficeRequest {
   receiptVoucherPrefix: string;
   paymentVoucherPrefix: string;
   creditNotePrefix: string;
+  employeePrefix: string;
 }
 
 export interface OfficeAdminCredentials {

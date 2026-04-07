@@ -142,11 +142,13 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
   const [formData, setFormData] = useState(getDefaultFormData());
   const [errors, setErrors] = useState<Record<string, string>>({});
   const formInitializedRef = useRef(false);
+  const isSavingRef = useRef(false);
 
-  // Reset ref when modal closes, set active tab when opening
+  // Reset refs when modal closes, set active tab when opening
   useEffect(() => {
     if (!open) {
       formInitializedRef.current = false;
+      isSavingRef.current = false;
     } else {
       setErrors({});
       setActiveTab(defaultActiveTab || "cost");
@@ -511,12 +513,14 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
   };
 
   const handleSave = () => {
+    if (isSavingRef.current) return;
     // Validate charge selection
     if (!formData.charge) {
       setErrors({ charge: "Please select a charge" });
       return;
     }
     setErrors({});
+    isSavingRef.current = true;
 
     // Get the actual customer IDs - prefer the stored customer ID, fallback to party ID
     const vendorCustomerId = formData.costVendor === "_none" || !formData.costVendorCustomerId

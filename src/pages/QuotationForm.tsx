@@ -906,7 +906,7 @@ export default function QuotationForm() {
                               <Button
                                 variant="destructive"
                                 size="icon"
-                                className="h-10 w-full bg-red-500 hover:bg-red-600"
+                                className="h-10 w-full"
                                 onClick={() => deleteCargoRow(row.id)}
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -1188,7 +1188,7 @@ export default function QuotationForm() {
                           <Button
                             variant="destructive"
                             size="icon"
-                            className="h-10 w-full bg-red-500 hover:bg-red-600"
+                            className="h-10 w-full"
                             onClick={() => deleteChargeRow(row.id)}
                           >
                             <Trash2 className="h-4 w-4" />

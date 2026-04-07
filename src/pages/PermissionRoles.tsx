@@ -8,13 +8,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { rolesApi, permissionsApi } from "../services/api/auth";
 import { PermissionGate } from "../components/auth/PermissionGate";
 import type { Permission, RoleListItem, CreateRoleRequest, UpdateRoleRequest } from "../types/auth";
 
-// Minimum required permissions - these are always selected and cannot be unchecked
+// Minimum required permissions - always selected, cannot be unchecked
 // Settings view permissions are required for dropdowns to work in shipments, customers, etc.
 const MINIMUM_REQUIRED_PERMISSION_CODES = [
   'banks_view',
@@ -25,12 +26,91 @@ const MINIMUM_REQUIRED_PERMISSION_CODES = [
   'expensetype_view',
 ];
 
-interface PermissionGroupState {
-  [module: string]: {
-    expanded: boolean;
-    permissions: Permission[];
-  };
-}
+// Sidebar-mirrored module grouping: maps sidebar sections → backend module keys
+const SIDEBAR_GROUPS = [
+  {
+    key: "Dashboard",
+    label: "Dashboard",
+    modules: [{ backendKey: "Dashboard", label: "Dashboard" }],
+  },
+  {
+    key: "Shipments",
+    label: "Shipments",
+    modules: [{ backendKey: "Shipments", label: "Shipments" }],
+  },
+  {
+    key: "MasterCustomers",
+    label: "Master Customers",
+    modules: [{ backendKey: "Customers", label: "Customers" }],
+  },
+  {
+    key: "Sales",
+    label: "Sales",
+    modules: [
+      { backendKey: "Sales-Leads", label: "Leads" },
+      { backendKey: "Sales-RateRequests", label: "Rate Requests" },
+      { backendKey: "Sales-Quotations", label: "Quotations" },
+    ],
+  },
+  {
+    key: "Accounts",
+    label: "Accounts",
+    modules: [
+      { backendKey: "Accounts-Invoices", label: "Invoices" },
+      { backendKey: "Accounts-PurchaseInvoices", label: "Purchase Invoices" },
+      { backendKey: "Accounts-Receipts", label: "Receipt Vouchers" },
+      { backendKey: "Accounts-PaymentVouchers", label: "Payment Vouchers" },
+      { backendKey: "Accounts-CreditNotes", label: "Credit Notes" },
+      { backendKey: "Accounts-AccountReceivable", label: "Account Receivable" },
+      { backendKey: "Accounts-AccountPayable", label: "Account Payable" },
+      { backendKey: "Accounts-Expenses", label: "Daily Expenses" },
+      { backendKey: "Accounts-PDC", label: "Post Dated Cheques" },
+    ],
+  },
+  {
+    key: "Users",
+    label: "Users",
+    modules: [
+      { backendKey: "Users", label: "All Users" },
+      { backendKey: "Roles", label: "Permission Roles" },
+    ],
+  },
+  {
+    key: "HR",
+    label: "HR",
+    modules: [
+      { backendKey: "HR-Employees", label: "Employees" },
+      { backendKey: "HR-Salary", label: "Salary Components" },
+      { backendKey: "HR-Payroll", label: "Payroll" },
+      { backendKey: "HR-Advances", label: "Advances" },
+      { backendKey: "HR-Attendance", label: "Attendance" },
+    ],
+  },
+  {
+    key: "Settings",
+    label: "Settings",
+    modules: [
+      { backendKey: "Settings-Banks", label: "Banks" },
+      { backendKey: "Settings-Companies", label: "Companies" },
+      { backendKey: "Settings-Currencies", label: "Currencies" },
+      { backendKey: "Settings-Ports", label: "Ports" },
+      { backendKey: "Settings-ChargeItems", label: "Charge Items" },
+      { backendKey: "Settings-ExpenseTypes", label: "Expense Types" },
+      { backendKey: "Settings-InvoiceNotes", label: "Invoice Notes" },
+      { backendKey: "Settings-SMTP", label: "SMTP" },
+    ],
+  },
+  {
+    key: "GeneralDocuments",
+    label: "General Documents",
+    modules: [{ backendKey: "General-Documents", label: "General Documents" }],
+  },
+  {
+    key: "Files",
+    label: "Files",
+    modules: [{ backendKey: "Files", label: "Files" }],
+  },
+];
 
 const PermissionRoles = () => {
   const queryClient = useQueryClient();
@@ -42,7 +122,7 @@ const PermissionRoles = () => {
   const [roleName, setRoleName] = useState("");
   const [roleDescription, setRoleDescription] = useState("");
   const [selectedPermissionIds, setSelectedPermissionIds] = useState<Set<number>>(new Set());
-  const [permissionGroupState, setPermissionGroupState] = useState<PermissionGroupState>({});
+  const [expandedSidebarGroups, setExpandedSidebarGroups] = useState<Set<string>>(new Set());
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [roleToDelete, setRoleToDelete] = useState<RoleListItem | null>(null);
 
@@ -138,60 +218,56 @@ const PermissionRoles = () => {
 
   const minimumRequiredIds = getMinimumRequiredPermissionIds(permissionGroups);
 
-  // Initialize permission group state when permissions load
-  const initializePermissionGroupState = (groups: Record<string, Permission[]>) => {
-    const state: PermissionGroupState = {};
-    Object.entries(groups).forEach(([module, permissions]) => {
-      state[module] = {
-        expanded: false,
-        permissions,
-      };
-    });
-    return state;
-  };
-
-  const toggleGroup = (module: string) => {
-    setPermissionGroupState((prev) => ({
-      ...prev,
-      [module]: {
-        ...prev[module],
-        expanded: !prev[module]?.expanded,
-      },
-    }));
-  };
-
   const togglePermission = (permissionId: number) => {
-    // Don't allow unchecking minimum required permissions
     if (minimumRequiredIds.has(permissionId)) return;
-
     setSelectedPermissionIds((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(permissionId)) {
-        newSet.delete(permissionId);
-      } else {
-        newSet.add(permissionId);
-      }
-      return newSet;
+      const next = new Set(prev);
+      next.has(permissionId) ? next.delete(permissionId) : next.add(permissionId);
+      return next;
     });
   };
 
-  const toggleAllInGroup = (module: string) => {
-    const groupPermissions = permissionGroups?.[module] || [];
+  // Toggle all permissions in a single backend module (used by sub-module row checkbox)
+  const toggleAllInGroup = (backendKey: string) => {
+    const groupPermissions = permissionGroups?.[backendKey] || [];
     const allSelected = groupPermissions.every((p) => selectedPermissionIds.has(p.id));
-
     setSelectedPermissionIds((prev) => {
-      const newSet = new Set(prev);
+      const next = new Set(prev);
       groupPermissions.forEach((p) => {
         if (allSelected) {
-          // Don't uncheck minimum required permissions
-          if (!minimumRequiredIds.has(p.id)) {
-            newSet.delete(p.id);
-          }
+          if (!minimumRequiredIds.has(p.id)) next.delete(p.id);
         } else {
-          newSet.add(p.id);
+          next.add(p.id);
         }
       });
-      return newSet;
+      return next;
+    });
+  };
+
+  // Toggle all permissions across all backend modules in a sidebar group
+  const toggleAllInSidebarGroup = (groupKey: string) => {
+    const group = SIDEBAR_GROUPS.find((g) => g.key === groupKey);
+    if (!group) return;
+    const allPerms = group.modules.flatMap((m) => permissionGroups?.[m.backendKey] ?? []);
+    const allSelected = allPerms.every((p) => selectedPermissionIds.has(p.id));
+    setSelectedPermissionIds((prev) => {
+      const next = new Set(prev);
+      allPerms.forEach((p) => {
+        if (allSelected) {
+          if (!minimumRequiredIds.has(p.id)) next.delete(p.id);
+        } else {
+          next.add(p.id);
+        }
+      });
+      return next;
+    });
+  };
+
+  const toggleSidebarGroup = (groupKey: string) => {
+    setExpandedSidebarGroups((prev) => {
+      const next = new Set(prev);
+      next.has(groupKey) ? next.delete(groupKey) : next.add(groupKey);
+      return next;
     });
   };
 
@@ -201,20 +277,15 @@ const PermissionRoles = () => {
     setRoleName("");
     setRoleDescription("");
     setSelectedPermissionIds(new Set());
-    if (permissionGroups) {
-      setPermissionGroupState(initializePermissionGroupState(permissionGroups));
-    }
+    setExpandedSidebarGroups(new Set());
   };
 
   const openAddModal = () => {
     setEditingRole(null);
     setRoleName("");
     setRoleDescription("");
-    // Pre-select minimum required permissions
     setSelectedPermissionIds(new Set(minimumRequiredIds));
-    if (permissionGroups) {
-      setPermissionGroupState(initializePermissionGroupState(permissionGroups));
-    }
+    setExpandedSidebarGroups(new Set());
     setRoleModalOpen(true);
   };
 
@@ -223,7 +294,6 @@ const PermissionRoles = () => {
     setRoleName(role.name);
     setRoleDescription(role.description || "");
 
-    // Fetch full role details to get assigned permissions
     const result = await rolesApi.getById(role.id);
     if (result.error) {
       toast.error("Failed to load role details");
@@ -232,13 +302,9 @@ const PermissionRoles = () => {
 
     const fullRole = result.data!;
     const permIds = new Set<number>(fullRole.permissions?.map((p) => p.id) || []);
-    // Always include minimum required permissions
     minimumRequiredIds.forEach((id) => permIds.add(id));
     setSelectedPermissionIds(permIds);
-
-    if (permissionGroups) {
-      setPermissionGroupState(initializePermissionGroupState(permissionGroups));
-    }
+    setExpandedSidebarGroups(new Set());
     setRoleModalOpen(true);
   };
 
@@ -284,63 +350,6 @@ const PermissionRoles = () => {
   const totalPages = rolesData?.totalPages || 1;
 
   const isSaving = createRoleMutation.isPending || updateRoleMutation.isPending;
-
-  // Split permission groups into 3 columns
-  const groupEntries = Object.entries(permissionGroups || {});
-  const colSize = Math.ceil(groupEntries.length / 3);
-  const column1 = groupEntries.slice(0, colSize);
-  const column2 = groupEntries.slice(colSize, colSize * 2);
-  const column3 = groupEntries.slice(colSize * 2);
-
-  const renderPermissionColumn = (entries: [string, Permission[]][]) => (
-    <div className="space-y-3">
-      {entries.map(([module, permissions]) => {
-        const allSelected = permissions.every((p) => selectedPermissionIds.has(p.id));
-        const isExpanded = permissionGroupState[module]?.expanded || false;
-
-        return (
-          <div key={module} className="space-y-1">
-            <div
-              className="flex items-center gap-2 cursor-pointer hover:bg-secondary/50 p-1 rounded"
-              onClick={() => toggleGroup(module)}
-            >
-              <span className="text-muted-foreground text-sm w-4">{isExpanded ? "-" : "+"}</span>
-              <Checkbox
-                checked={allSelected}
-                onCheckedChange={() => toggleAllInGroup(module)}
-                onClick={(e) => e.stopPropagation()}
-              />
-              <span className="font-medium text-sm">{module}</span>
-            </div>
-            {isExpanded && (
-              <div className="ml-8 space-y-1">
-                {permissions.map((perm) => {
-                  const isRequired = minimumRequiredIds.has(perm.id);
-                  return (
-                    <div key={perm.id} className="flex items-center gap-2">
-                      <Checkbox
-                        checked={selectedPermissionIds.has(perm.id)}
-                        onCheckedChange={() => togglePermission(perm.id)}
-                        disabled={isRequired}
-                        className={isRequired ? "opacity-70" : ""}
-                      />
-                      <span
-                        className={`text-sm ${isRequired ? "text-muted-foreground" : ""}`}
-                        title={isRequired ? "Required - cannot be unchecked" : (perm.description || perm.code)}
-                      >
-                        {perm.action}
-                        {isRequired && <span className="ml-1 text-xs text-primary">(Required)</span>}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
 
   return (
     <MainLayout>
@@ -504,7 +513,7 @@ const PermissionRoles = () => {
           </DialogHeader>
 
           <div className="p-6 space-y-4">
-            {/* Form Fields */}
+            {/* Role name & description */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Role Name *</Label>
@@ -525,21 +534,166 @@ const PermissionRoles = () => {
               </div>
             </div>
 
-            {/* Permissions Grid */}
+            {/* Permissions — sidebar-style modular drill-down */}
             <div>
               <h3 className="text-sm font-semibold text-foreground mb-3">Page Permissions</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Column 1 */}
-                {renderPermissionColumn(column1)}
+              <div className="border border-border rounded-md overflow-hidden">
+                {SIDEBAR_GROUPS.map((group) => {
+                  const groupPermissions = group.modules.flatMap(
+                    (m) => permissionGroups?.[m.backendKey] ?? []
+                  );
+                  if (groupPermissions.length === 0) return null;
 
-                {/* Column 2 */}
-                {renderPermissionColumn(column2)}
+                  const isExpanded = expandedSidebarGroups.has(group.key);
+                  const selectedCount = groupPermissions.filter((p) =>
+                    selectedPermissionIds.has(p.id)
+                  ).length;
+                  const allSelected = selectedCount === groupPermissions.length;
+                  const someSelected = selectedCount > 0 && !allSelected;
+                  const isSingle = group.modules.length === 1;
 
-                {/* Column 3 */}
-                {renderPermissionColumn(column3)}
+                  return (
+                    <div key={group.key} className="border-b border-border last:border-b-0">
+                      {/* Level 1 — group header */}
+                      <div
+                        className="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-secondary/50 select-none"
+                        onClick={() => toggleSidebarGroup(group.key)}
+                      >
+                        <ChevronDown
+                          size={14}
+                          className={cn(
+                            "text-muted-foreground transition-transform flex-shrink-0",
+                            isExpanded && "rotate-180"
+                          )}
+                        />
+                        <Checkbox
+                          checked={allSelected}
+                          data-state={
+                            allSelected ? "checked" : someSelected ? "indeterminate" : "unchecked"
+                          }
+                          onCheckedChange={() => toggleAllInSidebarGroup(group.key)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <span className="font-semibold text-sm text-foreground">{group.label}</span>
+                        <span className="ml-auto text-xs text-muted-foreground">
+                          {selectedCount}/{groupPermissions.length}
+                        </span>
+                      </div>
+
+                      {/* Level 2 — grid table (shown when expanded) */}
+                      {isExpanded && (() => {
+                        const ACTION_ORDER = ['View', 'Add', 'Edit', 'Delete'];
+                        const allActions = [
+                          ...new Set(
+                            group.modules.flatMap(
+                              (m) => (permissionGroups?.[m.backendKey] ?? []).map((p) => p.action)
+                            )
+                          ),
+                        ].sort((a, b) => {
+                          const ia = ACTION_ORDER.indexOf(a);
+                          const ib = ACTION_ORDER.indexOf(b);
+                          if (ia !== -1 && ib !== -1) return ia - ib;
+                          if (ia !== -1) return -1;
+                          if (ib !== -1) return 1;
+                          return a.localeCompare(b);
+                        });
+
+                        const rows = group.modules
+                          .map((mod) => ({ mod, perms: permissionGroups?.[mod.backendKey] ?? [] }))
+                          .filter(({ perms }) => perms.length > 0);
+
+                        return (
+                          <div className="bg-secondary/20 border-t border-border overflow-x-auto">
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr className="border-b border-border">
+                                  {!isSingle && (
+                                    <th className="pl-8 pr-3 py-1.5 text-left w-44" />
+                                  )}
+                                  {allActions.map((action) => (
+                                    <th
+                                      key={action}
+                                      className="px-3 py-1.5 text-center font-medium text-muted-foreground min-w-[64px]"
+                                    >
+                                      {action}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-border/40">
+                                {rows.map(({ mod, perms }) => {
+                                  const modAllSelected = perms.every((p) =>
+                                    selectedPermissionIds.has(p.id)
+                                  );
+                                  const modSomeSelected =
+                                    perms.some((p) => selectedPermissionIds.has(p.id)) &&
+                                    !modAllSelected;
+                                  return (
+                                    <tr key={mod.backendKey}>
+                                      {!isSingle && (
+                                        <td className="pl-8 pr-3 py-2">
+                                          <div className="flex items-center gap-1.5">
+                                            <Checkbox
+                                              checked={modAllSelected}
+                                              data-state={
+                                                modAllSelected
+                                                  ? "checked"
+                                                  : modSomeSelected
+                                                  ? "indeterminate"
+                                                  : "unchecked"
+                                              }
+                                              onCheckedChange={() =>
+                                                toggleAllInGroup(mod.backendKey)
+                                              }
+                                            />
+                                            <span className="font-medium text-foreground">
+                                              {mod.label}
+                                            </span>
+                                          </div>
+                                        </td>
+                                      )}
+                                      {allActions.map((action) => {
+                                        const perm = perms.find((p) => p.action === action);
+                                        const isRequired = perm
+                                          ? minimumRequiredIds.has(perm.id)
+                                          : false;
+                                        return (
+                                          <td key={action} className="px-3 py-2 text-center">
+                                            {perm ? (
+                                              <div className="flex justify-center">
+                                                <Checkbox
+                                                  checked={selectedPermissionIds.has(perm.id)}
+                                                  onCheckedChange={() => togglePermission(perm.id)}
+                                                  disabled={isRequired}
+                                                  title={
+                                                    isRequired
+                                                      ? "Required — cannot be removed"
+                                                      : (perm.description || "")
+                                                  }
+                                                />
+                                              </div>
+                                            ) : (
+                                              <span className="text-muted-foreground/30">—</span>
+                                            )}
+                                          </td>
+                                        );
+                                      })}
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  );
+                })}
               </div>
+              <p className="text-xs text-muted-foreground mt-1.5">
+                * Required — cannot be removed
+              </p>
             </div>
-
 
             <div className="flex justify-end gap-2 pt-4 border-t border-border">
               <Button variant="outline" onClick={closeModal} disabled={isSaving}>

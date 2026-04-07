@@ -114,7 +114,7 @@ export default function PurchaseInvoiceView() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          <Button className="bg-amber-500 hover:bg-amber-600 text-white" onClick={() => navigate(`/accounts/purchase-invoices/${invoice ? encodeURIComponent(invoice.purchaseNo) : id}/edit`)}>
+          <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={() => navigate(`/accounts/purchase-invoices/${invoice ? encodeURIComponent(invoice.purchaseNo) : id}/edit`)}>
             <Edit className="h-4 w-4 mr-2" />
             Edit
           </Button>
