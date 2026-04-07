@@ -20,8 +20,6 @@ const statusOptions = [
   { value: "Absent", label: "Absent" },
   { value: "Late", label: "Late" },
   { value: "HalfDay", label: "Half Day" },
-  { value: "SickLeave", label: "Sick Leave" },
-  { value: "PaidLeave", label: "Paid Leave" },
   { value: "AnnualLeave", label: "Annual Leave" },
   { value: "Holiday", label: "Holiday" },
 ];

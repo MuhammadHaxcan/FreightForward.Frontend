@@ -469,14 +469,6 @@ const HrEmployeeDetail = () => {
                 <Label className="text-sm">Annual Leave Days</Label>
                 <Input type="number" min={0} value={annualLeaveDays} onChange={(e) => setAnnualLeaveDays(e.target.value)} />
               </div>
-              <div className="space-y-2">
-                <Label className="text-sm">Sick Leave Days</Label>
-                <Input type="number" min={0} value={sickLeaveDays} onChange={(e) => setSickLeaveDays(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm">Paid Leave Days</Label>
-                <Input type="number" min={0} value={paidLeaveDays} onChange={(e) => setPaidLeaveDays(e.target.value)} />
-              </div>
             </div>
 
             <PermissionGate permission="hr_emp_edit">

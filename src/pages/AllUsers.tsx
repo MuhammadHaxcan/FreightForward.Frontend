@@ -38,6 +38,7 @@ const AllUsers = () => {
 
   // Employee link state
   const [employeeId, setEmployeeId] = useState("");
+  const [currentLinkedEmployee, setCurrentLinkedEmployee] = useState<{ id: number; employeeCode: string; fullName: string; } | null>(null);
 
   // Fetch users
   const { data: usersData, isLoading: usersLoading } = useQuery({
@@ -63,7 +64,7 @@ const AllUsers = () => {
     },
   });
 
-  // Fetch unlinked employees for dropdown (add mode only)
+  // Fetch unlinked employees for dropdown (both add and edit mode)
   const { data: unlinkedEmployees } = useQuery({
     queryKey: ["unlinked-employees"],
     queryFn: async () => {
@@ -71,7 +72,7 @@ const AllUsers = () => {
       if (result.error) throw new Error(result.error);
       return result.data;
     },
-    enabled: modalOpen && modalMode === "add",
+    enabled: modalOpen,
   });
 
   // Create user mutation
@@ -84,6 +85,7 @@ const AllUsers = () => {
     onSuccess: () => {
       toast.success("User created successfully");
       queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["unlinked-employees"] });
       setModalOpen(false);
       resetForm();
     },
@@ -102,6 +104,7 @@ const AllUsers = () => {
     onSuccess: () => {
       toast.success("User updated successfully");
       queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["unlinked-employees"] });
       setModalOpen(false);
       resetForm();
     },
@@ -144,6 +147,7 @@ const AllUsers = () => {
     setSelectedRoleIds([]);
     setEditingUserId(null);
     setEmployeeId("");
+    setCurrentLinkedEmployee(null);
   };
 
   // Convert string[] to number[] for API calls
@@ -172,6 +176,13 @@ const AllUsers = () => {
     setPassword("");
     setIsActive(fullUser.isActive);
     setSelectedRoleIds(fullUser.roles.map(r => r.id.toString()));
+    if (fullUser.linkedEmployee) {
+      setCurrentLinkedEmployee(fullUser.linkedEmployee);
+      setEmployeeId(fullUser.linkedEmployee.id.toString());
+    } else {
+      setCurrentLinkedEmployee(null);
+      setEmployeeId("");
+    }
     setModalMode("edit");
     setEditingUserId(user.id);
     setModalOpen(true);
@@ -224,6 +235,7 @@ const AllUsers = () => {
         contactNumber: contactNumber || undefined,
         isActive,
         roleIds: getSelectedRoleIdsAsNumbers(),
+        employeeId: employeeId ? parseInt(employeeId) : undefined,
       };
       updateUserMutation.mutate({ id: editingUserId, data: updateData });
     }
@@ -400,40 +412,46 @@ const AllUsers = () => {
           </DialogHeader>
 
           <div className="p-6 space-y-6">
-            {/* Employee link dropdown - only shown when adding */}
-            {modalMode === "add" && (
-              <div className="space-y-2">
-                <Label className="text-sm">Employee <span className="text-destructive">*</span></Label>
-                <SearchableSelect
-                  options={[
-                    ...(unlinkedEmployees || []).map((e: EmployeeDropdown) => ({
+            {/* Employee link dropdown */}
+            <div className="space-y-2">
+              <Label className="text-sm">
+                Employee {modalMode === "add" && <span className="text-destructive">*</span>}
+              </Label>
+              <SearchableSelect
+                options={[
+                  // In edit mode, include the currently linked employee at the top if not already in unlinked list
+                  ...(modalMode === "edit" && currentLinkedEmployee
+                    ? [{ value: currentLinkedEmployee.id.toString(), label: `${currentLinkedEmployee.fullName} (${currentLinkedEmployee.employeeCode})` }]
+                    : []),
+                  ...(unlinkedEmployees || [])
+                    .filter((e: EmployeeDropdown) => !currentLinkedEmployee || e.id !== currentLinkedEmployee.id)
+                    .map((e: EmployeeDropdown) => ({
                       value: e.id.toString(),
                       label: `${e.firstName} ${e.lastName} (${e.employeeCode})`,
                     })),
-                  ]}
-                  value={employeeId}
-                  onValueChange={(val) => {
-                    setEmployeeId(val);
-                    if (val) {
-                      const emp = (unlinkedEmployees || []).find((e: EmployeeDropdown) => e.id.toString() === val);
-                      if (emp) {
-                        setFirstName(emp.firstName);
-                        setLastName(emp.lastName);
-                        setEmail(emp.email || "");
-                        setContactNumber(emp.contactNumber || "");
-                      }
-                    } else {
-                      setFirstName("");
-                      setLastName("");
-                      setEmail("");
-                      setContactNumber("");
+                ]}
+                value={employeeId}
+                onValueChange={(val) => {
+                  setEmployeeId(val);
+                  if (val && modalMode === "add") {
+                    const emp = (unlinkedEmployees || []).find((e: EmployeeDropdown) => e.id.toString() === val);
+                    if (emp) {
+                      setFirstName(emp.firstName);
+                      setLastName(emp.lastName);
+                      setEmail(emp.email || "");
+                      setContactNumber(emp.contactNumber || "");
                     }
-                  }}
-                  placeholder="Select employee to link..."
-                  searchPlaceholder="Search employees..."
-                />
-              </div>
-            )}
+                  } else if (!val && modalMode === "add") {
+                    setFirstName("");
+                    setLastName("");
+                    setEmail("");
+                    setContactNumber("");
+                  }
+                }}
+                placeholder="Select employee to link..."
+                searchPlaceholder="Search employees..."
+              />
+            </div>
 
             <div className="space-y-2">
               <Label className="text-sm">Username <span className="text-destructive">*</span></Label>

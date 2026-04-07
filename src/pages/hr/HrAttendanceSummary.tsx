@@ -1,10 +1,27 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Printer } from "lucide-react";
 import { hrAttendanceApi, hrEmployeeApi } from "@/services/api/hr";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 const monthOptions = [
   { value: "1", label: "January" },
@@ -43,13 +60,39 @@ const statusLabels: Record<string, string> = {
   Holiday: "Holiday",
 };
 
+const statusOptions = Object.entries(statusLabels)
+  .filter(([value]) => value !== "SickLeave" && value !== "PaidLeave")
+  .map(([value, label]) => ({ value, label }));
+
 const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+interface UnloadModalState {
+  open: boolean;
+  dateStr: string;
+  dayLabel: string;
+  recordId?: number;
+  employeeId: number;
+}
 
 const HrAttendanceSummary = () => {
   const currentDate = new Date();
+  const todayStr = currentDate.toISOString().split("T")[0];
+
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear().toString());
   const [selectedMonth, setSelectedMonth] = useState((currentDate.getMonth() + 1).toString());
   const [selectedEmployee, setSelectedEmployee] = useState("");
+
+  // Unload modal state
+  const [unloadModal, setUnloadModal] = useState<UnloadModalState>({
+    open: false,
+    dateStr: "",
+    dayLabel: "",
+    employeeId: 0,
+  });
+  const [unloadStatus, setUnloadStatus] = useState("Present");
+  const [unloadReason, setUnloadReason] = useState("");
+
+  const queryClient = useQueryClient();
 
   const yearOptions = Array.from({ length: 5 }, (_, i) => {
     const y = currentDate.getFullYear() - 2 + i;
@@ -93,6 +136,40 @@ const HrAttendanceSummary = () => {
       return result.data;
     },
     enabled: isEmployeeView,
+  });
+
+  // Unload mutation
+  const unloadMutation = useMutation({
+    mutationFn: async () => {
+      const { recordId, employeeId, dateStr } = unloadModal;
+      if (recordId) {
+        const result = await hrAttendanceApi.update(recordId, {
+          status: unloadStatus,
+          remarks: unloadReason,
+        });
+        if (result.error) throw new Error(result.error);
+      } else {
+        const result = await hrAttendanceApi.create({
+          employeeId,
+          date: dateStr,
+          status: unloadStatus,
+          remarks: unloadReason,
+        });
+        if (result.error) throw new Error(result.error);
+      }
+    },
+    onSuccess: () => {
+      toast.success("Attendance updated successfully");
+      queryClient.invalidateQueries({
+        queryKey: ["hr-attendance-employee-monthly", selectedEmployee, selectedYear, selectedMonth],
+      });
+      setUnloadModal({ open: false, dateStr: "", dayLabel: "", employeeId: 0 });
+      setUnloadReason("");
+      setUnloadStatus("Present");
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "Failed to update attendance");
+    },
   });
 
   const summaryItems = summaryData || [];
@@ -145,6 +222,18 @@ const HrAttendanceSummary = () => {
         {label}
       </span>
     );
+  };
+
+  const openUnloadModal = (dateStr: string, dayLabel: string, recordId?: number) => {
+    setUnloadStatus(recordId ? (employeeRecords.find((r) => r.id === recordId)?.status || "Present") : "Present");
+    setUnloadReason("");
+    setUnloadModal({
+      open: true,
+      dateStr,
+      dayLabel,
+      recordId,
+      employeeId: parseInt(selectedEmployee),
+    });
   };
 
   return (
@@ -279,12 +368,13 @@ const HrAttendanceSummary = () => {
                     <th className="px-4 py-3 text-left text-sm font-semibold w-[60px]">Day</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold w-[140px]">Status</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold">Remarks</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold w-[100px]">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {isLoading ? (
                     <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">Loading...</td>
+                      <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Loading...</td>
                     </tr>
                   ) : (
                     dayRows.map(({ day, dateStr, dayName, record }, index) => {
@@ -292,6 +382,8 @@ const HrAttendanceSummary = () => {
                       const isBeforeJoining = empJoiningDate && dateStr < empJoiningDate.split("T")[0];
                       const isAfterLastWorking = empLastWorkingDate && dateStr > empLastWorkingDate.split("T")[0];
                       const isNA = isBeforeJoining || isAfterLastWorking;
+                      const isPast = dateStr < todayStr;
+                      const showUnload = isPast && !isNA;
                       return (
                         <tr
                           key={day}
@@ -320,6 +412,18 @@ const HrAttendanceSummary = () => {
                           <td className="px-4 py-2 text-sm text-muted-foreground">
                             {record?.remarks || ""}
                           </td>
+                          <td className="px-4 py-2">
+                            {showUnload && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs px-2"
+                                onClick={() => openUnloadModal(dateStr, `${dayName} ${day}`, record?.id)}
+                              >
+                                Unload
+                              </Button>
+                            )}
+                          </td>
                         </tr>
                       );
                     })
@@ -329,7 +433,7 @@ const HrAttendanceSummary = () => {
                   <tfoot>
                     <tr className="bg-muted/50 font-semibold">
                       <td className="px-4 py-3 text-sm" colSpan={3}>Total ({daysInMonth} days)</td>
-                      <td className="px-4 py-3 text-sm" colSpan={2}>
+                      <td className="px-4 py-3 text-sm" colSpan={3}>
                         <div className="flex flex-wrap gap-3 text-xs">
                           <span className="text-green-600">Present: {empTotals.present}</span>
                           <span className="text-red-500">Absent: {empTotals.absent}</span>
@@ -349,6 +453,72 @@ const HrAttendanceSummary = () => {
           </div>
         )}
       </div>
+
+      {/* Unload Attendance Modal */}
+      <Dialog
+        open={unloadModal.open}
+        onOpenChange={(open) => {
+          if (!open) {
+            setUnloadModal({ open: false, dateStr: "", dayLabel: "", employeeId: 0 });
+            setUnloadReason("");
+            setUnloadStatus("Present");
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Unload Attendance</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Updating attendance for <span className="font-medium text-foreground">{unloadModal.dayLabel}</span>
+            </p>
+            <div className="space-y-1.5">
+              <Label>Attendance Status</Label>
+              <Select value={unloadStatus} onValueChange={setUnloadStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Reason</Label>
+              <Textarea
+                placeholder="Enter reason for updating this attendance..."
+                value={unloadReason}
+                onChange={(e) => setUnloadReason(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setUnloadModal({ open: false, dateStr: "", dayLabel: "", employeeId: 0 });
+                setUnloadReason("");
+                setUnloadStatus("Present");
+              }}
+              disabled={unloadMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => unloadMutation.mutate()}
+              disabled={unloadMutation.isPending || !unloadReason.trim()}
+            >
+              {unloadMutation.isPending ? "Saving..." : "Unload"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 };

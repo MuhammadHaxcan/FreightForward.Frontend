@@ -69,6 +69,8 @@ export interface Payslip {
   earnings: { componentName: string; amount: number; }[];
   deductions: { componentName: string; amount: number; }[];
   totalEarnings: number; totalDeductions: number; advanceDeduction: number;
+  lateDeduction: number; latesDaysDeducted: number;
+  paidLeavesConsumed: number; uncoveredAbsentDays: number; absentDeduction: number;
   netSalary: number; status: string; paidDate?: string; remarks?: string;
 }
 export interface UpdatePayrollRequest {
@@ -156,11 +158,20 @@ export const hrSalaryApi = {
     fetchApi<void>(`/hr/salary/employees/${employeeId}/structure`, { method: 'POST', body: JSON.stringify(data) }),
 };
 
+export interface PayrollPreGenerateInfo {
+  totalAnnualLeaves: number;
+  availablePaidLeaves: number;
+  consumedPaidLeaves: number;
+  totalAbsentsThisMonth: number;
+}
+
 export const hrPayrollApi = {
   getAll: (p?: { pageNumber?: number; pageSize?: number; year?: number; monthFrom?: number; monthTo?: number; employeeId?: number }) =>
     fetchApi<PaginatedList<PayrollListItem>>(`/hr/payroll?${buildQuery(p || {})}`),
   getPayslip: (id: number) => fetchApi<Payslip>(`/hr/payroll/${id}/payslip`),
-  generate: (employeeId: number, data: { year: number; month: number }) =>
+  getPreGenerateInfo: (employeeId: number, year: number, month: number) =>
+    fetchApi<PayrollPreGenerateInfo>(`/hr/payroll/pre-generate-info?employeeId=${employeeId}&year=${year}&month=${month}`),
+  generate: (employeeId: number, data: { year: number; month: number; paidLeavesToConsume?: number }) =>
     fetchApi<number>(`/hr/payroll/generate?employeeId=${employeeId}`, { method: 'POST', body: JSON.stringify(data) }),
   generateBulk: (data: { year: number; month: number }) =>
     fetchApi<number>('/hr/payroll/generate-bulk', { method: 'POST', body: JSON.stringify(data) }),

@@ -160,9 +160,28 @@ const HrPayslip = () => {
                       <td className="py-1 text-right">{formatAmount(payslip.advanceDeduction)}</td>
                     </tr>
                   )}
+                  {payslip.lateDeduction > 0 && (
+                    <tr className="border-b border-border/50">
+                      <td className="py-1">Late Deduction ({payslip.latesDaysDeducted} day{payslip.latesDaysDeducted !== 1 ? "s" : ""})</td>
+                      <td className="py-1 text-right">{formatAmount(payslip.lateDeduction)}</td>
+                    </tr>
+                  )}
+                  {payslip.absentDeduction > 0 && (
+                    <tr className="border-b border-border/50">
+                      <td className="py-1">
+                        Absent Deduction ({payslip.uncoveredAbsentDays} day{payslip.uncoveredAbsentDays !== 1 ? "s" : ""})
+                        {payslip.paidLeavesConsumed > 0 && (
+                          <span className="text-xs text-muted-foreground ml-1">
+                            ({payslip.paidLeavesConsumed} covered by paid leave)
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-1 text-right">{formatAmount(payslip.absentDeduction)}</td>
+                    </tr>
+                  )}
                   <tr className="font-semibold">
                     <td className="py-2">Total Deductions</td>
-                    <td className="py-2 text-right">{formatAmount(payslip.totalDeductions + payslip.advanceDeduction)}</td>
+                    <td className="py-2 text-right">{formatAmount(payslip.totalDeductions + payslip.advanceDeduction + payslip.lateDeduction + payslip.absentDeduction)}</td>
                   </tr>
                 </tbody>
               </table>

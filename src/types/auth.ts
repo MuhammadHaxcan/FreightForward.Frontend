@@ -18,6 +18,7 @@ export interface User {
   profilePictureUrl?: string;
   roles: Role[];
   permissions: string[];
+  linkedEmployee?: { id: number; employeeCode: string; fullName: string; };
 }
 
 export interface UserListItem {
@@ -77,6 +78,7 @@ export interface CurrentUser {
   permissions: string[];
   officeSlug?: string;
   officeName?: string;
+  linkedEmployeeId?: number;
 }
 
 export interface AuthResponse {
@@ -123,6 +125,7 @@ export interface UpdateUserRequest {
   isActive: boolean;
   profilePictureUrl?: string;
   roleIds: number[];
+  employeeId?: number;
 }
 
 export interface CreateRoleRequest {
