@@ -65,8 +65,6 @@ const HrEmployees = () => {
   const [emergencyContactName, setEmergencyContactName] = useState("");
   const [emergencyContactNumber, setEmergencyContactNumber] = useState("");
   const [annualLeaveDays, setAnnualLeaveDays] = useState("30");
-  const [sickLeaveDays, setSickLeaveDays] = useState("10");
-  const [paidLeaveDays, setPaidLeaveDays] = useState("5");
 
   // Fetch employees
   const { data: empData, isLoading } = useQuery({
@@ -140,8 +138,6 @@ const HrEmployees = () => {
     setEmergencyContactName("");
     setEmergencyContactNumber("");
     setAnnualLeaveDays("30");
-    setSickLeaveDays("10");
-    setPaidLeaveDays("5");
   };
 
   const handleAddNew = async () => {
@@ -194,8 +190,6 @@ const HrEmployees = () => {
       emergencyContactNumber: emergencyContactNumber || undefined,
       address: address || undefined,
       annualLeaveDays: parseInt(annualLeaveDays) || 30,
-      sickLeaveDays: parseInt(sickLeaveDays) || 10,
-      paidLeaveDays: parseInt(paidLeaveDays) || 5,
     };
     createMutation.mutate(data);
   };

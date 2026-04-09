@@ -22,6 +22,7 @@ export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [capsLockOn, setCapsLockOn] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -167,6 +168,8 @@ export default function Login() {
                   required
                   autoComplete="current-password"
                   className="pr-10"
+                  onKeyDown={(e) => setCapsLockOn(e.getModifierState("CapsLock"))}
+                  onKeyUp={(e) => setCapsLockOn(e.getModifierState("CapsLock"))}
                 />
                 <button
                   type="button"
@@ -177,6 +180,11 @@ export default function Login() {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+              {capsLockOn && (
+                <p className="text-xs text-amber-600 flex items-center gap-1 mt-1">
+                  ⇪ Caps Lock is on
+                </p>
+              )}
             </div>
 
             <Button

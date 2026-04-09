@@ -22,9 +22,22 @@ import {
   hrSalaryApi,
   hrAttendanceApi,
   hrAdvanceApi,
+  hrPayrollApi,
   UpdateEmployeeRequest,
   SetSalaryStructureRequest,
 } from "@/services/api/hr";
+
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+const payrollStatusColors: Record<string, string> = {
+  Draft: "bg-yellow-500",
+  Processed: "bg-blue-500",
+  Paid: "bg-green-500",
+  Cancelled: "bg-red-500",
+};
 
 const employmentStatuses = [
   { value: "Active", label: "Active" },
@@ -68,12 +81,15 @@ const HrEmployeeDetail = () => {
   const [bankIban, setBankIban] = useState("");
   const [bankBranch, setBankBranch] = useState("");
   const [annualLeaveDays, setAnnualLeaveDays] = useState("30");
-  const [sickLeaveDays, setSickLeaveDays] = useState("10");
-  const [paidLeaveDays, setPaidLeaveDays] = useState("5");
   const [profileLoaded, setProfileLoaded] = useState(false);
 
   // ========== Salary Tab State ==========
   const [salaryModalOpen, setSalaryModalOpen] = useState(false);
+
+  // ========== Attendance Summary Tab State ==========
+  const now = new Date();
+  const [summaryYear, setSummaryYear] = useState(now.getFullYear());
+  const [summaryMonth, setSummaryMonth] = useState(now.getMonth() + 1);
   const [salaryLines, setSalaryLines] = useState<{ salaryComponentId: string; amount: string }[]>([]);
   const [salaryEffectiveFrom, setSalaryEffectiveFrom] = useState(getTodayDateOnly());
 
@@ -111,8 +127,6 @@ const HrEmployeeDetail = () => {
     setBankIban(employee.bankIban || "");
     setBankBranch(employee.bankBranch || "");
     setAnnualLeaveDays(employee.annualLeaveDays?.toString() || "30");
-    setSickLeaveDays(employee.sickLeaveDays?.toString() || "10");
-    setPaidLeaveDays(employee.paidLeaveDays?.toString() || "5");
     setProfileLoaded(true);
   }
 
@@ -146,6 +160,28 @@ const HrEmployeeDetail = () => {
       return result.data;
     },
     enabled: activeTab === "attendance" && employeeId > 0,
+  });
+
+  // ========== Attendance Summary Tab Data ==========
+  const { data: attendanceSummaryData, isLoading: summaryLoading } = useQuery({
+    queryKey: ["hr-attendance-summary-emp", employeeId, summaryYear, summaryMonth],
+    queryFn: async () => {
+      const result = await hrAttendanceApi.getSummary(summaryYear, summaryMonth);
+      if (result.error) throw new Error(result.error);
+      return (result.data || []).find((s) => s.employeeId === employeeId) ?? null;
+    },
+    enabled: activeTab === "attendance-summary" && employeeId > 0,
+  });
+
+  // ========== Payroll Tab Data ==========
+  const { data: payrollData, isLoading: payrollLoading } = useQuery({
+    queryKey: ["hr-payroll-emp", employeeId],
+    queryFn: async () => {
+      const result = await hrPayrollApi.getAll({ employeeId, pageSize: 100 });
+      if (result.error) throw new Error(result.error);
+      return result.data;
+    },
+    enabled: activeTab === "payroll" && employeeId > 0,
   });
 
   // ========== Advances Tab Data ==========
@@ -218,8 +254,6 @@ const HrEmployeeDetail = () => {
       bankIban: bankIban || undefined,
       bankBranch: bankBranch || undefined,
       annualLeaveDays: parseInt(annualLeaveDays) || 30,
-      sickLeaveDays: parseInt(sickLeaveDays) || 10,
-      paidLeaveDays: parseInt(paidLeaveDays) || 5,
     };
     updateMutation.mutate(data);
   };
@@ -314,6 +348,8 @@ const HrEmployeeDetail = () => {
     { id: "profile", label: "Profile" },
     { id: "salary", label: "Salary" },
     { id: "attendance", label: "Attendance" },
+    { id: "attendance-summary", label: "Attendance Summary" },
+    { id: "payroll", label: "Payroll" },
     { id: "advances", label: "Advances" },
   ];
 
@@ -466,7 +502,7 @@ const HrEmployeeDetail = () => {
             <h3 className="text-lg font-medium border-b pb-2">Leave Entitlements (per year)</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label className="text-sm">Annual Leave Days</Label>
+                <Label className="text-sm">Annual Paid Leave Days</Label>
                 <Input type="number" min={0} value={annualLeaveDays} onChange={(e) => setAnnualLeaveDays(e.target.value)} />
               </div>
             </div>
@@ -561,6 +597,114 @@ const HrEmployeeDetail = () => {
                         <td className="px-4 py-3 text-sm text-right">{rec.workHours?.toFixed(1) || "-"}</td>
                         <td className="px-4 py-3">{getAttendanceStatusBadge(rec.status)}</td>
                         <td className="px-4 py-3 text-sm text-muted-foreground">{rec.remarks || "-"}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ========== Attendance Summary Tab ========== */}
+        {activeTab === "attendance-summary" && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <h2 className="text-lg font-medium">Attendance Summary</h2>
+              <div className="flex items-center gap-2 ml-auto">
+                <select
+                  className="border border-border rounded-md px-3 py-1.5 text-sm bg-background"
+                  value={summaryMonth}
+                  onChange={(e) => setSummaryMonth(parseInt(e.target.value))}
+                >
+                  {MONTHS.map((m, i) => (
+                    <option key={i} value={i + 1}>{m}</option>
+                  ))}
+                </select>
+                <select
+                  className="border border-border rounded-md px-3 py-1.5 text-sm bg-background"
+                  value={summaryYear}
+                  onChange={(e) => setSummaryYear(parseInt(e.target.value))}
+                >
+                  {Array.from({ length: 5 }, (_, i) => now.getFullYear() - i).map((y) => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            {summaryLoading ? (
+              <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+            ) : !attendanceSummaryData ? (
+              <div className="bg-card border border-border rounded-lg px-4 py-8 text-center text-muted-foreground text-sm">
+                No attendance summary found for {MONTHS[summaryMonth - 1]} {summaryYear}.
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                  { label: "Present", value: attendanceSummaryData.presentDays, color: "text-green-600" },
+                  { label: "Absent", value: attendanceSummaryData.absentDays, color: "text-red-600" },
+                  { label: "Late", value: attendanceSummaryData.lateDays, color: "text-yellow-600" },
+                  { label: "Half Day", value: attendanceSummaryData.halfDays, color: "text-orange-600" },
+                  { label: "Sick Leave", value: attendanceSummaryData.sickLeaveDays, color: "text-teal-600" },
+                  { label: "Paid Leave", value: attendanceSummaryData.paidLeaveDays, color: "text-blue-600" },
+                  { label: "Annual Leave", value: attendanceSummaryData.annualLeaveDays, color: "text-cyan-600" },
+                  { label: "Holidays", value: attendanceSummaryData.holidays, color: "text-purple-600" },
+                  { label: "Total Working Days", value: attendanceSummaryData.totalWorkingDays, color: "text-foreground" },
+                  { label: "Lates → Absent", value: attendanceSummaryData.latesToAbsentConversions, color: "text-yellow-700" },
+                  { label: "Effective Absents", value: attendanceSummaryData.effectiveAbsentDays, color: "text-red-700" },
+                ].map((item) => (
+                  <div key={item.label} className="bg-card border border-border rounded-lg p-4">
+                    <p className="text-xs text-muted-foreground">{item.label}</p>
+                    <p className={`text-2xl font-bold mt-1 ${item.color}`}>{item.value}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ========== Payroll Tab ========== */}
+        {activeTab === "payroll" && (
+          <div className="space-y-4">
+            <h2 className="text-lg font-medium">Payroll History</h2>
+            <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-table-header text-table-header-foreground">
+                    <th className="px-4 py-3 text-left text-sm font-semibold">Period</th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold">Earnings</th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold">Deductions</th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold">Advance</th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold">Net Salary</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">Status</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">Paid Date</th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold">Payslip</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {payrollLoading ? (
+                    <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">Loading...</td></tr>
+                  ) : !payrollData?.items || payrollData.items.length === 0 ? (
+                    <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">No payroll records found</td></tr>
+                  ) : (
+                    payrollData.items.map((p, i) => (
+                      <tr key={p.id} className={`border-b border-border hover:bg-table-row-hover ${i % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
+                        <td className="px-4 py-3 text-sm font-medium">{MONTHS[p.month - 1]} {p.year}</td>
+                        <td className="px-4 py-3 text-sm text-right">{formatAmount(p.totalEarnings)}</td>
+                        <td className="px-4 py-3 text-sm text-right">{formatAmount(p.totalDeductions)}</td>
+                        <td className="px-4 py-3 text-sm text-right">{formatAmount(p.advanceDeduction)}</td>
+                        <td className="px-4 py-3 text-sm text-right font-semibold">{formatAmount(p.netSalary)}</td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium text-white ${payrollStatusColors[p.status] || "bg-gray-500"}`}>
+                            {p.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-muted-foreground">{p.paidDate ? formatDate(p.paidDate) : "-"}</td>
+                        <td className="px-4 py-3 text-center">
+                          <Button variant="outline" size="sm" onClick={() => navigate(`/hr/payslip/${p.id}`)}>
+                            View
+                          </Button>
+                        </td>
                       </tr>
                     ))
                   )}

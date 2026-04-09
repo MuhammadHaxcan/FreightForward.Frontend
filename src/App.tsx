@@ -79,6 +79,7 @@ const HrEmployees = lazy(() => import("./pages/hr/HrEmployees"));
 const HrEmployeeDetail = lazy(() => import("./pages/hr/HrEmployeeDetail"));
 const HrSalaryComponents = lazy(() => import("./pages/hr/HrSalaryComponents"));
 const HrPayroll = lazy(() => import("./pages/hr/HrPayroll"));
+const HrPayrollGenerate = lazy(() => import("./pages/hr/HrPayrollGenerate"));
 const HrPayslip = lazy(() => import("./pages/hr/HrPayslip"));
 const HrAdvances = lazy(() => import("./pages/hr/HrAdvances"));
 const HrAttendance = lazy(() => import("./pages/hr/HrAttendance"));
@@ -446,6 +447,9 @@ const AppRoutes = () => (
             } />
             <Route path="/hr/payroll" element={
                 <ProtectedRoute permission="hr_payroll_view"><HrPayroll /></ProtectedRoute>
+            } />
+            <Route path="/hr/payroll/generate" element={
+                <ProtectedRoute permission="hr_payroll_add"><HrPayrollGenerate /></ProtectedRoute>
             } />
             <Route path="/hr/payslip/:id" element={
                 <ProtectedRoute permission="hr_payroll_view"><HrPayslip /></ProtectedRoute>

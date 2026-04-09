@@ -23,7 +23,6 @@ import {
   PayrollListItem,
   UpdatePayrollRequest,
   MarkPaidRequest,
-  PayrollPreGenerateInfo,
 } from "@/services/api/hr";
 import { useBanks } from "@/hooks/useBanks";
 
@@ -94,22 +93,6 @@ const HrPayroll = () => {
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // Generate section
-  const [generateOpen, setGenerateOpen] = useState(false);
-  const [generateEmployeeId, setGenerateEmployeeId] = useState("");
-  const [generateYear, setGenerateYear] = useState(
-    currentDate.getFullYear().toString()
-  );
-  const [generateMonth, setGenerateMonth] = useState(
-    (currentDate.getMonth() + 1).toString()
-  );
-
-  // Generate confirmation modal (for specific employee)
-  const [generateConfirmOpen, setGenerateConfirmOpen] = useState(false);
-  const [generateConfirmInfo, setGenerateConfirmInfo] = useState<PayrollPreGenerateInfo | null>(null);
-  const [generateConfirmLoading, setGenerateConfirmLoading] = useState(false);
-  const [paidLeavesToConsume, setPaidLeavesToConsume] = useState("0");
-
   // Edit modal
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<PayrollListItem | null>(null);
@@ -168,50 +151,6 @@ const HrPayroll = () => {
   const { data: banksData } = useBanks({ pageSize: 100 });
 
   // ==================== Mutations ====================
-
-  const generateMutation = useMutation({
-    mutationFn: async ({
-      employeeId,
-      year,
-      month,
-    }: {
-      employeeId: number;
-      year: number;
-      month: number;
-    }) => {
-      const result = await hrPayrollApi.generate(employeeId, { year, month });
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    onSuccess: () => {
-      toast.success("Payroll generated successfully");
-      queryClient.invalidateQueries({ queryKey: ["hr-payroll"] });
-      setGenerateOpen(false);
-      setGenerateConfirmOpen(false);
-      setGenerateConfirmInfo(null);
-      setGenerateEmployeeId("");
-      setPaidLeavesToConsume("0");
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to generate payroll");
-    },
-  });
-
-  const generateBulkMutation = useMutation({
-    mutationFn: async ({ year, month }: { year: number; month: number }) => {
-      const result = await hrPayrollApi.generateBulk({ year, month });
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    onSuccess: (count) => {
-      toast.success(`Payroll generated for ${count} employees`);
-      queryClient.invalidateQueries({ queryKey: ["hr-payroll"] });
-      setGenerateOpen(false);
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to generate bulk payroll");
-    },
-  });
 
   const updateMutation = useMutation({
     mutationFn: async ({
@@ -287,46 +226,6 @@ const HrPayroll = () => {
   const markPaidRequiresChequeDetails = paymentModeConfig[markPaidPaymentMode]?.requiresChequeDetails ?? false;
 
   // ==================== Handlers ====================
-
-  const handleGenerate = async () => {
-    if (!generateEmployeeId) {
-      toast.error("Please select an employee");
-      return;
-    }
-    const year = parseInt(generateYear);
-    const month = parseInt(generateMonth);
-    setGenerateConfirmLoading(true);
-    setGenerateConfirmInfo(null);
-    setPaidLeavesToConsume("0");
-    try {
-      const result = await hrPayrollApi.getPreGenerateInfo(parseInt(generateEmployeeId), year, month);
-      if (result.error) throw new Error(result.error);
-      setGenerateConfirmInfo(result.data!);
-      setGenerateConfirmOpen(true);
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to load payroll info");
-    } finally {
-      setGenerateConfirmLoading(false);
-    }
-  };
-
-  const handleConfirmGenerate = () => {
-    const year = parseInt(generateYear);
-    const month = parseInt(generateMonth);
-    const leaves = parseInt(paidLeavesToConsume) || 0;
-    generateMutation.mutate({
-      employeeId: parseInt(generateEmployeeId),
-      year,
-      month,
-      paidLeavesToConsume: leaves,
-    });
-  };
-
-  const handleGenerateAll = () => {
-    const year = parseInt(generateYear);
-    const month = parseInt(generateMonth);
-    generateBulkMutation.mutate({ year, month });
-  };
 
   const handleOpenEdit = (item: PayrollListItem) => {
     setEditingItem(item);
@@ -410,75 +309,13 @@ const HrPayroll = () => {
           <PermissionGate permission="hr_payroll_add">
             <Button
               className="btn-success gap-2"
-              onClick={() => setGenerateOpen(!generateOpen)}
+              onClick={() => navigate("/hr/payroll/generate")}
             >
               <Plus size={16} />
               Generate Payroll
             </Button>
           </PermissionGate>
         </div>
-
-        {/* Generate Section (collapsible) */}
-        {generateOpen && (
-          <div className="bg-muted/30 border rounded-lg p-4 space-y-4">
-            <h2 className="text-sm font-semibold text-foreground">
-              Generate Payroll
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <Label className="text-sm mb-1 block">Employee</Label>
-                <SearchableSelect
-                  options={employees.map((e) => ({
-                    value: e.id.toString(),
-                    label: `${e.employeeCode} - ${e.fullName}`,
-                  }))}
-                  value={generateEmployeeId}
-                  onValueChange={setGenerateEmployeeId}
-                  placeholder="Select employee..."
-                  searchPlaceholder="Search employees..."
-                />
-              </div>
-              <div>
-                <Label className="text-sm mb-1 block">Year</Label>
-                <Input
-                  type="number"
-                  value={generateYear}
-                  onChange={(e) => setGenerateYear(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label className="text-sm mb-1 block">Month</Label>
-                <SearchableSelect
-                  options={months}
-                  value={generateMonth}
-                  onValueChange={setGenerateMonth}
-                />
-              </div>
-              <div className="flex items-end gap-2">
-                <Button
-                  className="btn-success"
-                  onClick={handleGenerate}
-                  disabled={
-                    generateMutation.isPending || generateBulkMutation.isPending || generateConfirmLoading
-                  }
-                >
-                  {generateConfirmLoading ? "Loading..." : "Generate"}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleGenerateAll}
-                  disabled={
-                    generateMutation.isPending || generateBulkMutation.isPending
-                  }
-                >
-                  {generateBulkMutation.isPending
-                    ? "Generating..."
-                    : "Generate All"}
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Filters */}
         <div className="bg-muted/30 border rounded-lg p-4 space-y-4">
@@ -589,6 +426,15 @@ const HrPayroll = () => {
                     Advance Ded.
                   </th>
                   <th className="px-4 py-3 text-right text-sm font-semibold">
+                    Lates→Abs
+                  </th>
+                  <th className="px-4 py-3 text-right text-sm font-semibold">
+                    Paid Lv.
+                  </th>
+                  <th className="px-4 py-3 text-right text-sm font-semibold">
+                    Absent Days
+                  </th>
+                  <th className="px-4 py-3 text-right text-sm font-semibold">
                     Net Salary
                   </th>
                   <th className="px-4 py-3 text-left text-sm font-semibold">
@@ -603,7 +449,7 @@ const HrPayroll = () => {
                 {isLoading ? (
                   <tr>
                     <td
-                      colSpan={9}
+                      colSpan={12}
                       className="px-4 py-8 text-center text-muted-foreground"
                     >
                       Loading...
@@ -612,7 +458,7 @@ const HrPayroll = () => {
                 ) : items.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={9}
+                      colSpan={12}
                       className="px-4 py-8 text-center text-muted-foreground"
                     >
                       No records found
@@ -692,6 +538,23 @@ const HrPayroll = () => {
                       </td>
                       <td className="px-4 py-3 text-sm text-right">
                         {formatAmount(item.advanceDeduction)}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right">
+                        {item.latesDaysDeducted > 0 ? (
+                          <span className="text-yellow-600 font-medium">{item.latesDaysDeducted}d</span>
+                        ) : <span className="text-muted-foreground">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right">
+                        {item.paidLeavesConsumed > 0 ? (
+                          <span className="text-green-600 font-medium">{item.paidLeavesConsumed}d</span>
+                        ) : <span className="text-muted-foreground">—</span>}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right">
+                        {item.uncoveredAbsentDays > 0 ? (
+                          <span className="text-red-500 font-medium">{item.uncoveredAbsentDays}d</span>
+                        ) : (item.paidLeavesConsumed > 0 ? (
+                          <span className="text-green-600 text-xs">{item.paidLeavesConsumed}d ✓</span>
+                        ) : <span className="text-muted-foreground">—</span>)}
                       </td>
                       <td className="px-4 py-3 text-sm text-right font-medium">
                         {formatAmount(item.netSalary)}
@@ -1015,113 +878,6 @@ const HrPayroll = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Generate Payroll Confirmation Modal */}
-      <Dialog
-        open={generateConfirmOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            setGenerateConfirmOpen(false);
-            setGenerateConfirmInfo(null);
-            setPaidLeavesToConsume("0");
-          }
-        }}
-      >
-        <DialogContent className="sm:max-w-[460px] p-0 bg-card">
-          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
-            <DialogTitle className="text-white">Generate Payroll</DialogTitle>
-          </DialogHeader>
-          <div className="p-6 space-y-4">
-            {generateConfirmInfo && (
-              <>
-                {/* Employee + Period info */}
-                <div className="grid grid-cols-2 gap-3 p-3 bg-muted/50 rounded-lg border text-sm">
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-0.5">Employee</p>
-                    <p className="font-medium">
-                      {employees.find((e) => e.id.toString() === generateEmployeeId)?.fullName || "—"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-0.5">Period</p>
-                    <p className="font-medium">{monthNames[parseInt(generateMonth)]} {generateYear}</p>
-                  </div>
-                </div>
-
-                {/* Attendance Info */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-lg text-center">
-                    <p className="text-2xl font-bold text-red-600">{generateConfirmInfo.totalAbsentsThisMonth}</p>
-                    <p className="text-xs text-red-500 mt-0.5">Effective Absents</p>
-                  </div>
-                  <div className="p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-lg text-center">
-                    <p className="text-2xl font-bold text-green-600">{generateConfirmInfo.availablePaidLeaves}</p>
-                    <p className="text-xs text-green-500 mt-0.5">Remaining Annual Leaves</p>
-                    <div className="mt-1.5 flex justify-center gap-3 text-xs text-muted-foreground">
-                      <span>Total: <span className="font-medium text-foreground">{generateConfirmInfo.totalAnnualLeaves}</span></span>
-                      <span>Used: <span className="font-medium text-orange-500">{generateConfirmInfo.consumedPaidLeaves}</span></span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Paid leaves input */}
-                <div className="space-y-1.5">
-                  <Label className="text-sm">
-                    Paid Leaves to Consume
-                    <span className="text-muted-foreground font-normal ml-1">
-                      (max {Math.min(generateConfirmInfo.availablePaidLeaves, generateConfirmInfo.totalAbsentsThisMonth)})
-                    </span>
-                  </Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={Math.min(generateConfirmInfo.availablePaidLeaves, generateConfirmInfo.totalAbsentsThisMonth)}
-                    value={paidLeavesToConsume}
-                    onChange={(e) => {
-                      const maxVal = Math.min(generateConfirmInfo.availablePaidLeaves, generateConfirmInfo.totalAbsentsThisMonth);
-                      const val = Math.min(Math.max(0, parseInt(e.target.value) || 0), maxVal);
-                      setPaidLeavesToConsume(val.toString());
-                    }}
-                    placeholder="0"
-                  />
-                  {generateConfirmInfo.totalAbsentsThisMonth > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      Uncovered absents:{" "}
-                      <span className="font-medium text-red-500">
-                        {Math.max(0, generateConfirmInfo.totalAbsentsThisMonth - (parseInt(paidLeavesToConsume) || 0))} day(s)
-                      </span>
-                      {" "}will be deducted from salary.
-                    </p>
-                  )}
-                  {generateConfirmInfo.totalAbsentsThisMonth === 0 && (
-                    <p className="text-xs text-muted-foreground">No absents this month — no absent deduction will apply.</p>
-                  )}
-                </div>
-              </>
-            )}
-
-            <div className="flex justify-end gap-2 pt-4 border-t border-border">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setGenerateConfirmOpen(false);
-                  setGenerateConfirmInfo(null);
-                  setPaidLeavesToConsume("0");
-                }}
-                disabled={generateMutation.isPending}
-              >
-                Cancel
-              </Button>
-              <Button
-                className="btn-success"
-                onClick={handleConfirmGenerate}
-                disabled={generateMutation.isPending}
-              >
-                {generateMutation.isPending ? "Generating..." : "Generate Payroll"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </MainLayout>
   );
 };

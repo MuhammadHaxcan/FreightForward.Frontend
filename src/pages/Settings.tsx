@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { SmtpSettingsTab } from "@/components/settings/SmtpSettingsTab";
+import { Label } from "@/components/ui/label";
+import { hrAttendancePolicyApi } from "@/services/api/hr";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Edit, Trash2, Plus, Loader2, Upload, History } from "lucide-react";
+import { Edit, Trash2, Plus, Loader2, Upload, History, Save } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Dialog,
@@ -62,8 +65,65 @@ import { toast } from "sonner";
 import { CurrencyRateHistoryModal } from "@/components/settings/CurrencyRateHistoryModal";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 
+const DAYS_OF_WEEK = [
+  { value: 0, label: "Sun" },
+  { value: 1, label: "Mon" },
+  { value: 2, label: "Tue" },
+  { value: 3, label: "Wed" },
+  { value: 4, label: "Thu" },
+  { value: 5, label: "Fri" },
+  { value: 6, label: "Sat" },
+];
+
 const Settings = () => {
   const baseCurrency = useBaseCurrency();
+  const queryClient = useQueryClient();
+
+  // HR Settings state
+  const [hrLatesPerAbsent, setHrLatesPerAbsent] = useState("3");
+  const [hrWeeklyOffDays, setHrWeeklyOffDays] = useState<number[]>([]);
+
+  const { data: hrPolicy, isLoading: hrPolicyLoading } = useQuery({
+    queryKey: ["hr-attendance-policy"],
+    queryFn: async () => {
+      const result = await hrAttendancePolicyApi.get();
+      if (result.error) throw new Error(result.error);
+      return result.data;
+    },
+  });
+
+  useEffect(() => {
+    if (hrPolicy) {
+      setHrLatesPerAbsent(hrPolicy.latesPerAbsent.toString());
+      setHrWeeklyOffDays(hrPolicy.weeklyOffDays ?? []);
+    }
+  }, [hrPolicy]);
+
+  const hrPolicySaveMutation = useMutation({
+    mutationFn: async () => {
+      const lates = parseInt(hrLatesPerAbsent) || 3;
+      if (lates < 1) throw new Error("Lates per absent must be at least 1");
+      const result = await hrAttendancePolicyApi.update({
+        latesPerAbsent: lates,
+        weeklyOffDays: hrWeeklyOffDays,
+      });
+      if (result.error) throw new Error(result.error);
+      return result.data;
+    },
+    onSuccess: () => {
+      toast.success("HR settings saved successfully");
+      queryClient.invalidateQueries({ queryKey: ["hr-attendance-policy"] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to save HR settings");
+    },
+  });
+
+  const toggleOffDay = (day: number) => {
+    setHrWeeklyOffDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+    );
+  };
 
   // Pagination state
   const [currencyPage, setCurrencyPage] = useState(1);
@@ -710,6 +770,12 @@ const Settings = () => {
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
             >
               Email / SMTP
+            </TabsTrigger>
+            <TabsTrigger
+              value="hr-settings"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
+            >
+              HR Settings
             </TabsTrigger>
           </TabsList>
 
@@ -1777,6 +1843,79 @@ const Settings = () => {
             <div className="p-4">
               <SmtpSettingsTab />
             </div>
+          </TabsContent>
+
+          {/* HR Settings Tab */}
+          <TabsContent value="hr-settings">
+            {hrPolicyLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="space-y-6 max-w-lg">
+                {/* Attendance Policy */}
+                <div className="bg-card rounded-lg border border-border shadow-sm p-6 space-y-4">
+                  <h2 className="text-base font-semibold text-foreground">Attendance Policy</h2>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Lates per Absent</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={hrLatesPerAbsent}
+                      onChange={(e) => setHrLatesPerAbsent(e.target.value)}
+                      className="max-w-[160px]"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Number of "Late" marks that count as 1 "Absent" in the attendance summary.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Weekly Off Days */}
+                <div className="bg-card rounded-lg border border-border shadow-sm p-6 space-y-4">
+                  <h2 className="text-base font-semibold text-foreground">Weekly Off Days</h2>
+                  <p className="text-xs text-muted-foreground">
+                    Select the days that are considered off days. Employees will be defaulted to "Holiday" on these days in the attendance module.
+                  </p>
+                  <div className="flex gap-2">
+                    {DAYS_OF_WEEK.map((day) => {
+                      const isSelected = hrWeeklyOffDays.includes(day.value);
+                      return (
+                        <button
+                          key={day.value}
+                          type="button"
+                          onClick={() => toggleOffDay(day.value)}
+                          className={`flex flex-col items-center justify-center w-12 h-12 rounded-lg border-2 text-sm font-semibold transition-colors ${
+                            isSelected
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-background text-foreground border-border hover:border-primary/50"
+                          }`}
+                        >
+                          {day.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <PermissionGate permission="hr_attend_policy">
+                  <div className="flex justify-end">
+                    <Button
+                      className="btn-success gap-2"
+                      onClick={() => hrPolicySaveMutation.mutate()}
+                      disabled={hrPolicySaveMutation.isPending}
+                    >
+                      {hrPolicySaveMutation.isPending ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <Save size={16} />
+                      )}
+                      {hrPolicySaveMutation.isPending ? "Saving..." : "Save HR Settings"}
+                    </Button>
+                  </div>
+                </PermissionGate>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>

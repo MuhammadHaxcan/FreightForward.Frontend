@@ -62,7 +62,7 @@ const HrPayslip = () => {
       <MainLayout>
         <div className="p-6">
           <p className="text-muted-foreground">Payslip not found.</p>
-          <Button variant="outline" className="mt-4" onClick={() => navigate("/hr/payroll")}>
+          <Button variant="outline" className="mt-4" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-4 w-4 mr-2" /> Back to Payroll
           </Button>
         </div>
@@ -75,7 +75,7 @@ const HrPayslip = () => {
       <div className="p-6 space-y-4">
         {/* Header (hidden in print) */}
         <div className="flex items-center justify-between print:hidden">
-          <Button variant="outline" size="sm" onClick={() => navigate("/hr/payroll")}>
+          <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-4 w-4 mr-2" /> Back to Payroll
           </Button>
           <Button className="btn-success gap-2" onClick={handlePrint}>
@@ -99,10 +99,10 @@ const HrPayslip = () => {
             <div>
               <p><span className="font-medium text-muted-foreground">Employee Name:</span> {payslip.employeeName}</p>
               <p><span className="font-medium text-muted-foreground">Employee Code:</span> {payslip.employeeCode}</p>
-              <p><span className="font-medium text-muted-foreground">Department:</span> {payslip.departmentName || "-"}</p>
+              <p><span className="font-medium text-muted-foreground">Department:</span> {payslip.department || "-"}</p>
             </div>
             <div>
-              <p><span className="font-medium text-muted-foreground">Designation:</span> {payslip.designationTitle || "-"}</p>
+              <p><span className="font-medium text-muted-foreground">Designation:</span> {payslip.designation || "-"}</p>
               <p><span className="font-medium text-muted-foreground">Status:</span> {getStatusBadge(payslip.status)}</p>
               {payslip.paidDate && (
                 <p><span className="font-medium text-muted-foreground">Paid Date:</span> {formatDate(payslip.paidDate)}</p>
@@ -160,28 +160,62 @@ const HrPayslip = () => {
                       <td className="py-1 text-right">{formatAmount(payslip.advanceDeduction)}</td>
                     </tr>
                   )}
-                  {payslip.lateDeduction > 0 && (
+                  {/* Attendance breakdown — informational rows */}
+                  {payslip.latesDaysDeducted > 0 && (
                     <tr className="border-b border-border/50">
-                      <td className="py-1">Late Deduction ({payslip.latesDaysDeducted} day{payslip.latesDaysDeducted !== 1 ? "s" : ""})</td>
-                      <td className="py-1 text-right">{formatAmount(payslip.lateDeduction)}</td>
+                      <td className="py-1 text-yellow-700 dark:text-yellow-500">
+                        Lates Converted&nbsp;
+                        <span className="text-xs font-normal text-muted-foreground">
+                          ({payslip.latesDaysDeducted} day{payslip.latesDaysDeducted !== 1 ? "s" : ""} from late attendance)
+                        </span>
+                      </td>
+                      <td className="py-1 text-right text-muted-foreground">—</td>
                     </tr>
                   )}
-                  {payslip.absentDeduction > 0 && (
+                  {payslip.rawAbsentDays > 0 && (
                     <tr className="border-b border-border/50">
-                      <td className="py-1">
-                        Absent Deduction ({payslip.uncoveredAbsentDays} day{payslip.uncoveredAbsentDays !== 1 ? "s" : ""})
-                        {payslip.paidLeavesConsumed > 0 && (
-                          <span className="text-xs text-muted-foreground ml-1">
-                            ({payslip.paidLeavesConsumed} covered by paid leave)
-                          </span>
-                        )}
+                      <td className="py-1 text-orange-700 dark:text-orange-400">
+                        Actual Absents&nbsp;
+                        <span className="text-xs font-normal text-muted-foreground">
+                          ({payslip.rawAbsentDays} day{payslip.rawAbsentDays !== 1 ? "s" : ""})
+                        </span>
+                      </td>
+                      <td className="py-1 text-right text-muted-foreground">—</td>
+                    </tr>
+                  )}
+                  {payslip.paidLeavesConsumed > 0 && (
+                    <tr className="border-b border-border/50">
+                      <td className="py-1 text-green-700 dark:text-green-500">
+                        Paid Leave Used&nbsp;
+                        <span className="text-xs font-normal text-muted-foreground">
+                          ({payslip.paidLeavesConsumed} day{payslip.paidLeavesConsumed !== 1 ? "s" : ""} — offset against absents)
+                        </span>
+                      </td>
+                      <td className="py-1 text-right text-green-700 dark:text-green-500">0.00</td>
+                    </tr>
+                  )}
+                  {payslip.uncoveredAbsentDays > 0 && (
+                    <tr className="border-b border-border/50">
+                      <td className="py-1 text-red-700 dark:text-red-500">
+                        Absent Deduction&nbsp;
+                        <span className="text-xs font-normal text-muted-foreground">
+                          ({payslip.uncoveredAbsentDays} day{payslip.uncoveredAbsentDays !== 1 ? "s" : ""} uncovered)
+                        </span>
                       </td>
                       <td className="py-1 text-right">{formatAmount(payslip.absentDeduction)}</td>
                     </tr>
                   )}
+                  {payslip.uncoveredAbsentDays === 0 && payslip.paidLeavesConsumed > 0 && (
+                    <tr className="border-b border-border/50">
+                      <td className="py-1 text-green-700 dark:text-green-500 text-xs">
+                        All absents covered by paid leave
+                      </td>
+                      <td className="py-1 text-right">0.00</td>
+                    </tr>
+                  )}
                   <tr className="font-semibold">
                     <td className="py-2">Total Deductions</td>
-                    <td className="py-2 text-right">{formatAmount(payslip.totalDeductions + payslip.advanceDeduction + payslip.lateDeduction + payslip.absentDeduction)}</td>
+                    <td className="py-2 text-right">{formatAmount(payslip.totalDeductions + payslip.advanceDeduction + payslip.absentDeduction)}</td>
                   </tr>
                 </tbody>
               </table>

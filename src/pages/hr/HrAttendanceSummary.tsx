@@ -4,7 +4,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Printer } from "lucide-react";
-import { hrAttendanceApi, hrEmployeeApi } from "@/services/api/hr";
+import { hrAttendanceApi, hrEmployeeApi, hrAttendancePolicyApi } from "@/services/api/hr";
 import {
   Dialog,
   DialogContent,
@@ -66,7 +66,7 @@ const statusOptions = Object.entries(statusLabels)
 
 const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-interface UnloadModalState {
+interface UnlockModalState {
   open: boolean;
   dateStr: string;
   dayLabel: string;
@@ -82,17 +82,27 @@ const HrAttendanceSummary = () => {
   const [selectedMonth, setSelectedMonth] = useState((currentDate.getMonth() + 1).toString());
   const [selectedEmployee, setSelectedEmployee] = useState("");
 
-  // Unload modal state
-  const [unloadModal, setUnloadModal] = useState<UnloadModalState>({
+  // Unlock modal state
+  const [unlockModal, setUnlockModal] = useState<UnlockModalState>({
     open: false,
     dateStr: "",
     dayLabel: "",
     employeeId: 0,
   });
-  const [unloadStatus, setUnloadStatus] = useState("Present");
-  const [unloadReason, setUnloadReason] = useState("");
+  const [unlockStatus, setUnlockStatus] = useState("Present");
+  const [unlockReason, setUnlockReason] = useState("");
 
   const queryClient = useQueryClient();
+
+  const { data: hrPolicy } = useQuery({
+    queryKey: ["hr-attendance-policy"],
+    queryFn: async () => {
+      const result = await hrAttendancePolicyApi.get();
+      if (result.error) throw new Error(result.error);
+      return result.data;
+    },
+  });
+  const weeklyOffDays = hrPolicy?.weeklyOffDays ?? [];
 
   const yearOptions = Array.from({ length: 5 }, (_, i) => {
     const y = currentDate.getFullYear() - 2 + i;
@@ -138,22 +148,22 @@ const HrAttendanceSummary = () => {
     enabled: isEmployeeView,
   });
 
-  // Unload mutation
-  const unloadMutation = useMutation({
+  // Unlock mutation
+  const unlockMutation = useMutation({
     mutationFn: async () => {
-      const { recordId, employeeId, dateStr } = unloadModal;
+      const { recordId, employeeId, dateStr } = unlockModal;
       if (recordId) {
         const result = await hrAttendanceApi.update(recordId, {
-          status: unloadStatus,
-          remarks: unloadReason,
+          status: unlockStatus,
+          remarks: unlockReason,
         });
         if (result.error) throw new Error(result.error);
       } else {
         const result = await hrAttendanceApi.create({
           employeeId,
           date: dateStr,
-          status: unloadStatus,
-          remarks: unloadReason,
+          status: unlockStatus,
+          remarks: unlockReason,
         });
         if (result.error) throw new Error(result.error);
       }
@@ -163,9 +173,9 @@ const HrAttendanceSummary = () => {
       queryClient.invalidateQueries({
         queryKey: ["hr-attendance-employee-monthly", selectedEmployee, selectedYear, selectedMonth],
       });
-      setUnloadModal({ open: false, dateStr: "", dayLabel: "", employeeId: 0 });
-      setUnloadReason("");
-      setUnloadStatus("Present");
+      setUnlockModal({ open: false, dateStr: "", dayLabel: "", employeeId: 0 });
+      setUnlockReason("");
+      setUnlockStatus("Present");
     },
     onError: (err: Error) => {
       toast.error(err.message || "Failed to update attendance");
@@ -201,8 +211,6 @@ const HrAttendanceSummary = () => {
     absent: employeeRecords.filter((r) => r.status === "Absent").length,
     late: employeeRecords.filter((r) => r.status === "Late").length,
     halfDay: employeeRecords.filter((r) => r.status === "HalfDay").length,
-    sickLeave: employeeRecords.filter((r) => r.status === "SickLeave").length,
-    paidLeave: employeeRecords.filter((r) => r.status === "PaidLeave").length,
     annualLeave: employeeRecords.filter((r) => r.status === "AnnualLeave").length,
     holiday: employeeRecords.filter((r) => r.status === "Holiday").length,
   };
@@ -224,10 +232,10 @@ const HrAttendanceSummary = () => {
     );
   };
 
-  const openUnloadModal = (dateStr: string, dayLabel: string, recordId?: number) => {
-    setUnloadStatus(recordId ? (employeeRecords.find((r) => r.id === recordId)?.status || "Present") : "Present");
-    setUnloadReason("");
-    setUnloadModal({
+  const openUnlockModal = (dateStr: string, dayLabel: string, recordId?: number) => {
+    setUnlockStatus(recordId ? (employeeRecords.find((r) => r.id === recordId)?.status || "Present") : "Present");
+    setUnlockReason("");
+    setUnlockModal({
       open: true,
       dateStr,
       dayLabel,
@@ -292,8 +300,6 @@ const HrAttendanceSummary = () => {
                     <th className="px-4 py-3 text-right text-sm font-semibold">Absent</th>
                     <th className="px-4 py-3 text-right text-sm font-semibold">Late</th>
                     <th className="px-4 py-3 text-right text-sm font-semibold">Half Day</th>
-                    <th className="px-4 py-3 text-right text-sm font-semibold">Sick Leave</th>
-                    <th className="px-4 py-3 text-right text-sm font-semibold">Paid Leave</th>
                     <th className="px-4 py-3 text-right text-sm font-semibold">Annual Leave</th>
                     <th className="px-4 py-3 text-right text-sm font-semibold">Holiday</th>
                     <th className="px-4 py-3 text-right text-sm font-semibold">Eff. Absent</th>
@@ -302,11 +308,11 @@ const HrAttendanceSummary = () => {
                 <tbody>
                   {isLoading ? (
                     <tr>
-                      <td colSpan={12} className="px-4 py-8 text-center text-muted-foreground">Loading...</td>
+                      <td colSpan={10} className="px-4 py-8 text-center text-muted-foreground">Loading...</td>
                     </tr>
                   ) : summaryItems.length === 0 ? (
                     <tr>
-                      <td colSpan={12} className="px-4 py-8 text-center text-muted-foreground">No records found</td>
+                      <td colSpan={10} className="px-4 py-8 text-center text-muted-foreground">No records found</td>
                     </tr>
                   ) : (
                     summaryItems.map((item, index) => (
@@ -331,12 +337,6 @@ const HrAttendanceSummary = () => {
                         </td>
                         <td className="px-4 py-3 text-sm text-right">
                           <span className={item.halfDays > 0 ? "text-orange-500 font-medium" : ""}>{item.halfDays}</span>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-right">
-                          <span className={item.sickLeaveDays > 0 ? "text-teal-500 font-medium" : ""}>{item.sickLeaveDays}</span>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-right">
-                          <span className={item.paidLeaveDays > 0 ? "text-blue-500 font-medium" : ""}>{item.paidLeaveDays}</span>
                         </td>
                         <td className="px-4 py-3 text-sm text-right">
                           <span className={item.annualLeaveDays > 0 ? "text-cyan-500 font-medium" : ""}>{item.annualLeaveDays}</span>
@@ -378,17 +378,19 @@ const HrAttendanceSummary = () => {
                     </tr>
                   ) : (
                     dayRows.map(({ day, dateStr, dayName, record }, index) => {
-                      const isSunday = dayName === "Sun";
+                      const d = new Date(dateStr + "T00:00:00");
+                      const isOffDay = weeklyOffDays.includes(d.getDay());
                       const isBeforeJoining = empJoiningDate && dateStr < empJoiningDate.split("T")[0];
                       const isAfterLastWorking = empLastWorkingDate && dateStr > empLastWorkingDate.split("T")[0];
                       const isNA = isBeforeJoining || isAfterLastWorking;
                       const isPast = dateStr < todayStr;
-                      const showUnload = isPast && !isNA;
+                      const showUnlock = isPast && !isNA && !isOffDay;
+                      const effectiveStatus = record?.status ?? (isOffDay && !isNA ? "Holiday" : null);
                       return (
                         <tr
                           key={day}
                           className={`border-b border-border ${
-                            isNA ? "bg-gray-100 dark:bg-gray-800/30" : isSunday ? "bg-red-50 dark:bg-red-950/20" : index % 2 === 0 ? "bg-card" : "bg-secondary/30"
+                            isNA ? "bg-gray-100 dark:bg-gray-800/30" : isOffDay ? "bg-red-50 dark:bg-red-950/20" : index % 2 === 0 ? "bg-card" : "bg-secondary/30"
                           }`}
                         >
                           <td className="px-4 py-2 text-sm font-medium">{day}</td>
@@ -399,13 +401,13 @@ const HrAttendanceSummary = () => {
                               year: "numeric",
                             })}
                           </td>
-                          <td className={`px-4 py-2 text-sm font-medium ${isSunday ? "text-red-500" : ""}`}>
+                          <td className={`px-4 py-2 text-sm font-medium ${isOffDay ? "text-red-500" : ""}`}>
                             {dayName}
                           </td>
                           <td className="px-4 py-2 text-sm">
                             {isNA ? (
                               <span className="px-2 py-0.5 rounded text-xs font-medium text-white bg-gray-400">N/A</span>
-                            ) : record ? getStatusBadge(record.status) : (
+                            ) : effectiveStatus ? getStatusBadge(effectiveStatus) : (
                               <span className="text-xs text-muted-foreground">-</span>
                             )}
                           </td>
@@ -413,14 +415,14 @@ const HrAttendanceSummary = () => {
                             {record?.remarks || ""}
                           </td>
                           <td className="px-4 py-2">
-                            {showUnload && (
+                            {showUnlock && (
                               <Button
                                 size="sm"
                                 variant="outline"
                                 className="h-7 text-xs px-2"
-                                onClick={() => openUnloadModal(dateStr, `${dayName} ${day}`, record?.id)}
+                                onClick={() => openUnlockModal(dateStr, `${dayName} ${day}`, record?.id)}
                               >
-                                Unload
+                                Unlock
                               </Button>
                             )}
                           </td>
@@ -439,8 +441,6 @@ const HrAttendanceSummary = () => {
                           <span className="text-red-500">Absent: {empTotals.absent}</span>
                           <span className="text-yellow-600">Late: {empTotals.late}</span>
                           <span className="text-orange-500">Half Day: {empTotals.halfDay}</span>
-                          <span className="text-teal-500">Sick Leave: {empTotals.sickLeave}</span>
-                          <span className="text-blue-500">Paid Leave: {empTotals.paidLeave}</span>
                           <span className="text-cyan-500">Annual Leave: {empTotals.annualLeave}</span>
                           <span className="text-purple-500">Holiday: {empTotals.holiday}</span>
                         </div>
@@ -454,28 +454,28 @@ const HrAttendanceSummary = () => {
         )}
       </div>
 
-      {/* Unload Attendance Modal */}
+      {/* Unlock Attendance Modal */}
       <Dialog
-        open={unloadModal.open}
+        open={unlockModal.open}
         onOpenChange={(open) => {
           if (!open) {
-            setUnloadModal({ open: false, dateStr: "", dayLabel: "", employeeId: 0 });
-            setUnloadReason("");
-            setUnloadStatus("Present");
+            setUnlockModal({ open: false, dateStr: "", dayLabel: "", employeeId: 0 });
+            setUnlockReason("");
+            setUnlockStatus("Present");
           }
         }}
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Unload Attendance</DialogTitle>
+            <DialogTitle>Unlock Attendance</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <p className="text-sm text-muted-foreground">
-              Updating attendance for <span className="font-medium text-foreground">{unloadModal.dayLabel}</span>
+              Updating attendance for <span className="font-medium text-foreground">{unlockModal.dayLabel}</span>
             </p>
             <div className="space-y-1.5">
               <Label>Attendance Status</Label>
-              <Select value={unloadStatus} onValueChange={setUnloadStatus}>
+              <Select value={unlockStatus} onValueChange={setUnlockStatus}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
@@ -492,8 +492,8 @@ const HrAttendanceSummary = () => {
               <Label>Reason</Label>
               <Textarea
                 placeholder="Enter reason for updating this attendance..."
-                value={unloadReason}
-                onChange={(e) => setUnloadReason(e.target.value)}
+                value={unlockReason}
+                onChange={(e) => setUnlockReason(e.target.value)}
                 rows={3}
               />
             </div>
@@ -502,19 +502,19 @@ const HrAttendanceSummary = () => {
             <Button
               variant="outline"
               onClick={() => {
-                setUnloadModal({ open: false, dateStr: "", dayLabel: "", employeeId: 0 });
-                setUnloadReason("");
-                setUnloadStatus("Present");
+                setUnlockModal({ open: false, dateStr: "", dayLabel: "", employeeId: 0 });
+                setUnlockReason("");
+                setUnlockStatus("Present");
               }}
-              disabled={unloadMutation.isPending}
+              disabled={unlockMutation.isPending}
             >
               Cancel
             </Button>
             <Button
-              onClick={() => unloadMutation.mutate()}
-              disabled={unloadMutation.isPending || !unloadReason.trim()}
+              onClick={() => unlockMutation.mutate()}
+              disabled={unlockMutation.isPending || !unlockReason.trim()}
             >
-              {unloadMutation.isPending ? "Saving..." : "Unload"}
+              {unlockMutation.isPending ? "Saving..." : "Save"}
             </Button>
           </DialogFooter>
         </DialogContent>

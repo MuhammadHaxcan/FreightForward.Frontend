@@ -7,7 +7,7 @@ export interface EmployeeListItem {
   id: number; userId?: number; employeeCode: string; fullName: string;
   email?: string; contactNumber?: string; department?: string; designation?: string;
   joiningDate: string; employmentStatus: string;
-  annualLeaveDays: number; sickLeaveDays: number; paidLeaveDays: number;
+  annualLeaveDays: number;
   createdAt: string;
 }
 export interface EmployeeDetail {
@@ -18,7 +18,7 @@ export interface EmployeeDetail {
   dateOfBirth?: string; gender?: string; nationalId?: string; passportNumber?: string; passportExpiry?: string;
   emergencyContactName?: string; emergencyContactNumber?: string; address?: string;
   profilePictureUrl?: string;
-  annualLeaveDays: number; sickLeaveDays: number; paidLeaveDays: number;
+  annualLeaveDays: number;
   createdAt: string;
 }
 export interface EmployeeDropdown {
@@ -33,7 +33,7 @@ export interface CreateEmployeeRequest {
   dateOfBirth?: string; gender?: string; nationalId?: string;
   passportNumber?: string; passportExpiry?: string;
   emergencyContactName?: string; emergencyContactNumber?: string; address?: string;
-  annualLeaveDays?: number; sickLeaveDays?: number; paidLeaveDays?: number;
+  annualLeaveDays?: number;
 }
 export interface UpdateEmployeeRequest extends Omit<CreateEmployeeRequest, 'firstName' | 'lastName' | 'email' | 'contactNumber'> {
   resignationDate?: string; lastWorkingDate?: string;
@@ -61,6 +61,7 @@ export interface PayrollListItem {
   id: number; employeeId: number; employeeCode: string; employeeName: string;
   year: number; month: number; totalEarnings: number; totalDeductions: number;
   advanceDeduction: number; netSalary: number; status: string; paidDate?: string;
+  latesDaysDeducted: number; paidLeavesConsumed: number; uncoveredAbsentDays: number;
 }
 export interface Payslip {
   payrollId: number; employeeCode: string; employeeName: string;
@@ -70,6 +71,7 @@ export interface Payslip {
   deductions: { componentName: string; amount: number; }[];
   totalEarnings: number; totalDeductions: number; advanceDeduction: number;
   lateDeduction: number; latesDaysDeducted: number;
+  rawAbsentDays: number;
   paidLeavesConsumed: number; uncoveredAbsentDays: number; absentDeduction: number;
   netSalary: number; status: string; paidDate?: string; remarks?: string;
 }
@@ -121,8 +123,8 @@ export interface DailyAttendanceEmployee {
 }
 export interface BulkAttendanceEntry { employeeId: number; status: string; remarks?: string; }
 export interface BulkAttendanceRequest { date: string; entries: BulkAttendanceEntry[]; }
-export interface AttendancePolicy { id: number; latesPerAbsent: number; }
-export interface UpdateAttendancePolicyRequest { latesPerAbsent: number; }
+export interface AttendancePolicy { id: number; latesPerAbsent: number; weeklyOffDays: number[]; }
+export interface UpdateAttendancePolicyRequest { latesPerAbsent: number; weeklyOffDays: number[]; }
 export interface EmployeeMonthlyAttendance { joiningDate: string; lastWorkingDate?: string; records: AttendanceRecord[]; }
 
 // ==================== API ====================
@@ -162,7 +164,12 @@ export interface PayrollPreGenerateInfo {
   totalAnnualLeaves: number;
   availablePaidLeaves: number;
   consumedPaidLeaves: number;
+  rawAbsentDays: number;
+  latesDaysConverted: number;
   totalAbsentsThisMonth: number;
+  currentMonthLates: number;
+  previousCarryForwardLates: number;
+  carryForwardLatesAfter: number;
 }
 
 export const hrPayrollApi = {

@@ -13,6 +13,7 @@ import { getAccessToken } from '../../services/api/base';
 export default function SystemLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [capsLockOn, setCapsLockOn] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -113,7 +114,14 @@ export default function SystemLogin() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
+                onKeyDown={(e) => setCapsLockOn(e.getModifierState("CapsLock"))}
+                onKeyUp={(e) => setCapsLockOn(e.getModifierState("CapsLock"))}
               />
+              {capsLockOn && (
+                <p className="text-xs text-amber-600 flex items-center gap-1">
+                  ⇪ Caps Lock is on
+                </p>
+              )}
             </div>
 
             <Button

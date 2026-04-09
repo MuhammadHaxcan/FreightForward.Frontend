@@ -1,16 +1,20 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { format } from "date-fns";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { Save, Loader2, ChevronLeft, ChevronRight, Calendar, Lock, LockOpen } from "lucide-react";
+import { Save, Loader2, ChevronLeft, ChevronRight, CalendarIcon, Lock, LockOpen } from "lucide-react";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import { useAuth } from "@/contexts/AuthContext";
 import { getTodayDateOnly } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import {
   hrAttendanceApi,
+  hrAttendancePolicyApi,
   DailyAttendanceEmployee,
   BulkAttendanceEntry,
 } from "@/services/api/hr";
@@ -51,6 +55,17 @@ const HrAttendance = () => {
   const [selectedDate, setSelectedDate] = useState(getTodayDateOnly());
   const [entries, setEntries] = useState<LocalEntry[]>([]);
   const [isUnlocked, setIsUnlocked] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+
+  const { data: hrPolicy } = useQuery({
+    queryKey: ["hr-attendance-policy"],
+    queryFn: async () => {
+      const result = await hrAttendancePolicyApi.get();
+      if (result.error) throw new Error(result.error);
+      return result.data;
+    },
+  });
+  const weeklyOffDays = hrPolicy?.weeklyOffDays ?? [];
 
   // Fetch daily attendance for selected date
   const { data: dailyData, isLoading } = useQuery({
@@ -82,14 +97,54 @@ const HrAttendance = () => {
   // Save bulk mutation
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const bulkEntries: BulkAttendanceEntry[] = entries.map((e) => ({
-        employeeId: e.employeeId,
-        status: e.status,
-        remarks: e.remarks || undefined,
-      }));
+      const today = getTodayDateOnly();
+
+      // Auto-backfill consecutive preceding weekly-off days that have no saved records
+      if (selectedDate === today && weeklyOffDays.length > 0) {
+        const missedHolidayDates: string[] = [];
+        const cursor = new Date(selectedDate + "T00:00:00");
+
+        for (let i = 0; i < 14; i++) {
+          cursor.setDate(cursor.getDate() - 1);
+          if (!weeklyOffDays.includes(cursor.getDay())) break;
+
+          const y = cursor.getFullYear();
+          const m = String(cursor.getMonth() + 1).padStart(2, "0");
+          const d = String(cursor.getDate()).padStart(2, "0");
+          const dateStr = `${y}-${m}-${d}`;
+
+          const dailyResult = await hrAttendanceApi.getDaily(dateStr);
+          if (dailyResult.error || !dailyResult.data) break;
+
+          const hasAnyRecord = dailyResult.data.some((e) => e.attendanceId != null);
+          if (hasAnyRecord) break; // already saved — stop looking further back
+
+          missedHolidayDates.push(dateStr);
+        }
+
+        // Submit oldest first
+        for (const dateStr of missedHolidayDates.reverse()) {
+          const dailyResult = await hrAttendanceApi.getDaily(dateStr);
+          if (dailyResult.error || !dailyResult.data) continue;
+          await hrAttendanceApi.saveBulk({
+            date: dateStr,
+            entries: dailyResult.data.map((emp) => ({
+              employeeId: emp.employeeId,
+              status: "Holiday",
+              remarks: "Auto-marked holiday",
+            })),
+          });
+          // errors swallowed — main save must not be blocked by backfill failures
+        }
+      }
+
       const result = await hrAttendanceApi.saveBulk({
         date: selectedDate,
-        entries: bulkEntries,
+        entries: entries.map((e) => ({
+          employeeId: e.employeeId,
+          status: e.status,
+          remarks: e.remarks || undefined,
+        })),
       });
       if (result.error) throw new Error(result.error);
       return result.data;
@@ -121,17 +176,29 @@ const HrAttendance = () => {
 
   const navigateDay = (offset: number) => {
     const d = new Date(selectedDate + "T00:00:00");
-    d.setDate(d.getDate() + offset);
+    do {
+      d.setDate(d.getDate() + offset);
+    } while (weeklyOffDays.length > 0 && weeklyOffDays.includes(d.getDay()));
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
     setSelectedDate(`${year}-${month}-${day}`);
   };
 
+  const handleCalendarSelect = (date: Date | undefined) => {
+    if (!date) return;
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    setSelectedDate(`${year}-${month}-${day}`);
+    setCalendarOpen(false);
+  };
+
   const goToToday = () => setSelectedDate(getTodayDateOnly());
 
   const isPastDate = selectedDate < getTodayDateOnly();
   const isLocked = isPastDate && !isUnlocked;
+  const isOffDay = weeklyOffDays.includes(new Date(selectedDate + "T00:00:00").getDay());
 
   // Reset unlock state when date changes
   useEffect(() => {
@@ -196,17 +263,29 @@ const HrAttendance = () => {
                 <Button variant="outline" size="sm" className="px-2" onClick={() => navigateDay(-1)} title="Previous Day">
                   <ChevronLeft size={16} />
                 </Button>
-                <Input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="flex-1"
-                />
+                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="flex-1 justify-start text-left font-normal h-9 px-3">
+                      <CalendarIcon size={14} className="mr-2 text-muted-foreground" />
+                      {selectedDate ? format(new Date(selectedDate + "T00:00:00"), "dd MMM yyyy") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={new Date(selectedDate + "T00:00:00")}
+                      onSelect={handleCalendarSelect}
+                      disabled={(date) => weeklyOffDays.includes(date.getDay())}
+                      modifiers={{ offDay: (date) => weeklyOffDays.includes(date.getDay()) }}
+                      modifiersClassNames={{ offDay: "text-red-500 bg-red-50 dark:bg-red-950/30 line-through" }}
+                    />
+                  </PopoverContent>
+                </Popover>
                 <Button variant="outline" size="sm" className="px-2" onClick={() => navigateDay(1)} title="Next Day">
                   <ChevronRight size={16} />
                 </Button>
                 <Button variant="outline" size="sm" className="px-2" onClick={goToToday} title="Today">
-                  <Calendar size={16} />
+                  <CalendarIcon size={16} />
                 </Button>
                 {isPastDate && canUnlock && (
                   <Button
@@ -239,7 +318,14 @@ const HrAttendance = () => {
                 {entries.length} employee{entries.length !== 1 ? "s" : ""} found
               </p>
             </div>
-            {isPastDate && (
+            {isOffDay && (
+              <div className="flex items-end">
+                <p className="text-sm font-medium text-red-600 flex items-center gap-1">
+                  Weekly off day — all employees defaulted to Holiday
+                </p>
+              </div>
+            )}
+            {isPastDate && !isOffDay && (
               <div className="flex items-end">
                 <p className={`text-sm font-medium ${isLocked ? "text-red-600" : "text-amber-600"}`}>
                   {isLocked ? (
