@@ -35,12 +35,13 @@ import { PurchaseModal } from "@/components/shipments/PurchaseModal";
 import { DocumentModal } from "@/components/shipments/DocumentModal";
 import { StatusLogModal } from "@/components/shipments/StatusLogModal";
 import { StatusTimeline } from "@/components/shipments/StatusTimeline";
+import { ShipmentJourneyCalendar } from "@/components/shipments/ShipmentJourneyCalendar";
 import { CustomsTab } from "@/components/shipments/CustomsTab";
 import { DeleteConfirmationModal } from "@/components/ui/delete-confirmation-modal";
 import { toast } from "sonner";
 import { getTodayDateOnly } from "@/lib/utils";
 import {
-  useShipment,
+  useShipmentByIdentifier,
   useUpdateShipment,
   useAddShipmentParty,
   useDeleteShipmentParty,
@@ -84,7 +85,9 @@ import {
   PaymentStatus,
 } from "@/services/api";
 import { hrEmployeeApi } from "@/services/api/hr";
+import { interactionAuditApi } from "@/services/api/interactionAudit";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import type { OfficeInteractionAuditEventRequest } from "@/types/auth";
 
 // Helper function to get payment status display and styling
 const getPaymentStatusDisplay = (status: PaymentStatus) => {
@@ -161,6 +164,24 @@ const getPortLabel = (port: { seaPortName?: string; seaPortCode?: string; airPor
   return `${port.seaPortName || ''}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} - ${port.city}, ${port.country}`;
 };
 
+const createAuditCorrelationId = (): string => {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+};
+
+const getCurrentAuditRoute = (): string => {
+  if (typeof window === "undefined") {
+    return "/shipments";
+  }
+  return `${window.location.pathname}${window.location.search}`;
+};
+
+const postInteractionOutcome = (payload: OfficeInteractionAuditEventRequest): void => {
+  void interactionAuditApi.postOfficeInteractionEvent(payload);
+};
+
 // Empty initial form data
 const emptyFormData = {
   jobNumber: "",
@@ -234,12 +255,14 @@ const emptyCargoEntry: CargoFormEntry = {
 const ShipmentDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const shipmentId = parseInt(id || '0');
 
   const queryClient = useQueryClient();
 
   // Fetch shipment data from API
-  const { data: shipmentData, isLoading: isLoadingShipment, error: shipmentError, refetch: refetchShipment } = useShipment(shipmentId);
+  const { data: shipmentData, isLoading: isLoadingShipment, error: shipmentError, refetch: refetchShipment } = useShipmentByIdentifier(id || '');
+
+  // Numeric ID for mutations — derived from loaded shipment data
+  const shipmentId = shipmentData?.id ?? 0;
 
   // Mutations
   const updateShipmentMutation = useUpdateShipment();
@@ -300,7 +323,7 @@ const ShipmentDetail = () => {
   const [warningModalOpen, setWarningModalOpen] = useState(false);
   const [warningMessage, setWarningMessage] = useState("");
 
-  // Reset transient UI state when route switches to a different shipment id.
+  // Reset transient UI state when route switches to a different shipment.
   useEffect(() => {
     setActiveTab("shipment-info");
     setSelectedCategoryId("");
@@ -327,7 +350,7 @@ const ShipmentDetail = () => {
     setIsSaving(false);
     setIsSavingCargo(false);
     setIsDeleting(false);
-  }, [shipmentId]);
+  }, [id]);
 
   // Fetch shipment invoices
   const { data: shipmentInvoicesResponse } = useQuery({
@@ -520,7 +543,7 @@ const ShipmentDetail = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleAddParty = () => {
+  const handleAddParty = async () => {
     if (!selectedCustomer) {
       toast.error("Please select a customer");
       return;
@@ -540,21 +563,49 @@ const ShipmentDetail = () => {
       return;
     }
 
-    addPartyMutation.mutate({
-      shipmentId,
-      data: {
-        shipmentId,
-        masterType: selectedCustomer.masterType,
-        customerCategoryId: parsedCategoryId,
-        customerId: selectedCustomer.id,
-        customerName: selectedCustomer.name,
-        mobile: '',
-        phone: selectedCustomer.phone || '',
-        email: selectedCustomer.email || '',
-      }
-    });
+    const auditBase: OfficeInteractionAuditEventRequest = {
+      eventType: "ActionAttempted",
+      route: getCurrentAuditRoute(),
+      targetType: "button",
+      targetLabel: "Add Party",
+      entityType: "ShipmentParty",
+      entityReference: selectedCustomer.name,
+      correlationId: createAuditCorrelationId(),
+    };
 
-    setSelectedCustomerId("");
+    try {
+      const partyId = await addPartyMutation.mutateAsync({
+        shipmentId,
+        data: {
+          shipmentId,
+          masterType: selectedCustomer.masterType,
+          customerCategoryId: parsedCategoryId,
+          customerId: selectedCustomer.id,
+          customerName: selectedCustomer.name,
+          mobile: '',
+          phone: selectedCustomer.phone || '',
+          email: selectedCustomer.email || '',
+        }
+      });
+
+      postInteractionOutcome({
+        ...auditBase,
+        entityId: partyId.toString(),
+        outcome: "Succeeded",
+        outcomeStatusCode: 200,
+        outcomeMessage: `Party added (${selectedCustomer.masterType})`,
+      });
+
+      setSelectedCustomerId("");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to add party";
+      postInteractionOutcome({
+        ...auditBase,
+        outcome: "Failed",
+        outcomeStatusCode: 500,
+        outcomeMessage: errorMessage,
+      });
+    }
   };
 
   const handleDeleteParty = (partyId: number, partyName?: string) => {
@@ -635,6 +686,15 @@ const ShipmentDetail = () => {
     try {
       const saleLCY = parseFloat(costingData.saleLCY) || 0;
       const costLCY = parseFloat(costingData.costLCY) || 0;
+      const auditBase: OfficeInteractionAuditEventRequest = {
+        eventType: "ActionAttempted",
+        route: getCurrentAuditRoute(),
+        targetType: "button",
+        targetLabel: editingCosting ? "Update Costing" : "Add Costing",
+        entityType: "ShipmentCosting",
+        entityReference: costingData.description || undefined,
+        correlationId: createAuditCorrelationId(),
+      };
 
       if (editingCosting) {
         // Update existing costing
@@ -669,6 +729,14 @@ const ShipmentDetail = () => {
         };
 
         await updateCostingMutation.mutateAsync({ shipmentId, costingId: editingCosting.id, data });
+
+        postInteractionOutcome({
+          ...auditBase,
+          entityId: editingCosting.id.toString(),
+          outcome: "Succeeded",
+          outcomeStatusCode: 200,
+          outcomeMessage: "Costing updated",
+        });
       } else {
         // Add new costing
         const data: AddShipmentCostingRequest = {
@@ -700,13 +768,34 @@ const ShipmentDetail = () => {
           ppcc: costingData.ppcc || undefined,
         };
 
-        await addCostingMutation.mutateAsync({ shipmentId, data });
+        const costingId = await addCostingMutation.mutateAsync({ shipmentId, data });
+        postInteractionOutcome({
+          ...auditBase,
+          entityId: costingId.toString(),
+          outcome: "Succeeded",
+          outcomeStatusCode: 200,
+          outcomeMessage: "Costing added",
+        });
       }
       setCostingModalOpen(false);
       setEditingCosting(null);
       refetchShipment();
-    } catch (error) {
-      // Error handled by mutation
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to save costing";
+      postInteractionOutcome({
+        eventType: "ActionAttempted",
+        route: getCurrentAuditRoute(),
+        targetType: "button",
+        targetLabel: editingCosting ? "Update Costing" : "Add Costing",
+        entityType: "ShipmentCosting",
+        entityId: editingCosting?.id?.toString(),
+        entityReference: costingData.description || undefined,
+        correlationId: createAuditCorrelationId(),
+        outcome: "Failed",
+        outcomeStatusCode: 500,
+        outcomeMessage: errorMessage,
+      });
+      // Error toast already handled by mutation
     }
   };
 
@@ -1681,6 +1770,9 @@ const ShipmentDetail = () => {
                   <Button
                     className="btn-success"
                     onClick={handleAddParty}
+                    data-audit-track="action"
+                    data-audit-entity="ShipmentParty"
+                    data-audit-label="Add Party"
                     disabled={!selectedCustomer || addPartyMutation.isPending}
                   >
                     {addPartyMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
@@ -1944,10 +2036,7 @@ const ShipmentDetail = () => {
                                       variant="ghost"
                                       size="icon"
                                       className="h-7 w-7"
-                                      onClick={() => {
-                                        setEditInvoiceId(inv.id);
-                                        setInvoiceModalOpen(true);
-                                      }}
+                                      onClick={() => window.open(`/accounts/invoices/${encodeURIComponent(inv.invoiceNo)}/edit`, "_blank")}
                                     >
                                       <Edit className="h-3.5 w-3.5 text-primary" />
                                     </Button>
@@ -2170,6 +2259,12 @@ const ShipmentDetail = () => {
                   )}
                 </Button>
               </div>
+
+              {/* Journey Calendar */}
+              <ShipmentJourneyCalendar
+                etd={formData.etd || undefined}
+                eta={formData.eta || undefined}
+              />
 
               {/* Status History Header */}
               <div className="flex justify-between items-center">

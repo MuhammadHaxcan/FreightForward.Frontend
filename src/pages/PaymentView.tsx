@@ -10,20 +10,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { usePaymentVoucher } from "@/hooks/usePaymentVouchers";
+import { usePaymentVoucherByIdentifier } from "@/hooks/usePaymentVouchers";
 import { formatDate } from "@/lib/utils";
 
 export default function PaymentView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const parsedId = id ? parseInt(id, 10) : NaN;
-  const paymentId = !isNaN(parsedId) ? parsedId : null;
 
-  const { data: payment, isLoading } = usePaymentVoucher(paymentId);
+  const { data: payment, isLoading } = usePaymentVoucherByIdentifier(id || '');
 
   const handlePrintPdf = () => {
-    if (paymentId) {
-      window.open(`/accounts/payment-vouchers/${paymentId}/print`, "_blank");
+    if (payment) {
+      window.open(`/accounts/payment-vouchers/${encodeURIComponent(payment.paymentNo)}/print`, "_blank");
     }
   };
 

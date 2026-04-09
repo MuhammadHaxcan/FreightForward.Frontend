@@ -36,6 +36,7 @@ import { InvoiceModal } from "@/components/shipments/InvoiceModal";
 import { PurchaseModal } from "@/components/shipments/PurchaseModal";
 import { StatusLogModal } from "@/components/shipments/StatusLogModal";
 import { StatusTimeline } from "@/components/shipments/StatusTimeline";
+import { ShipmentJourneyCalendar } from "@/components/shipments/ShipmentJourneyCalendar";
 import { DeleteConfirmationModal } from "@/components/ui/delete-confirmation-modal";
 import { toast } from "sonner";
 import { useCustomers } from "@/hooks/useCustomers";
@@ -2178,6 +2179,7 @@ const AddShipment = () => {
                             <TableHead className="text-table-header-foreground text-xs">Bill To</TableHead>
                             <TableHead className="text-table-header-foreground text-xs">P.Sale</TableHead>
                             <TableHead className="text-table-header-foreground text-xs">Voucher Number</TableHead>
+                            <TableHead className="text-table-header-foreground text-xs">Remarks</TableHead>
                             <TableHead className="text-table-header-foreground text-xs">Status</TableHead>
                             <TableHead className="text-table-header-foreground text-xs w-20">Actions</TableHead>
                           </TableRow>
@@ -2185,7 +2187,7 @@ const AddShipment = () => {
                         <TableBody>
                           {!shipmentInvoices?.customerInvoices?.length ? (
                             <TableRow>
-                              <TableCell colSpan={5} className="text-center text-muted-foreground text-sm">No customer invoices</TableCell>
+                              <TableCell colSpan={6} className="text-center text-muted-foreground text-sm">No customer invoices</TableCell>
                             </TableRow>
                           ) : (
                             shipmentInvoices.customerInvoices.map((inv, index) => {
@@ -2199,6 +2201,7 @@ const AddShipment = () => {
                                       {inv.invoiceNo}
                                     </a>
                                   </TableCell>
+                                  <TableCell className="text-xs">{inv.remarks || "-"}</TableCell>
                                   <TableCell className="text-xs">
                                     <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${statusDisplay.className}`}>
                                       {statusDisplay.label}
@@ -2210,10 +2213,7 @@ const AddShipment = () => {
                                         variant="ghost"
                                         size="icon"
                                         className="h-7 w-7"
-                                        onClick={() => {
-                                          setEditInvoiceId(inv.id);
-                                          setInvoiceModalOpen(true);
-                                        }}
+                                        onClick={() => window.open(`/accounts/invoices/${encodeURIComponent(inv.invoiceNo)}/edit`, "_blank")}
                                       >
                                         <Edit className="h-3.5 w-3.5 text-primary" />
                                       </Button>
@@ -2437,6 +2437,12 @@ const AddShipment = () => {
                   )}
                 </Button>
               </div>
+
+              {/* Journey Calendar */}
+              <ShipmentJourneyCalendar
+                etd={formData.etd || undefined}
+                eta={formData.eta || undefined}
+              />
 
               {/* Status History Header */}
               <div className="flex justify-between items-center">

@@ -546,6 +546,7 @@ export const receiptApi = {
     return fetchApi<PaginatedList<Receipt>>(`/invoices/receipts?${query}`);
   },
   getById: (id: number) => fetchApi<ReceiptDetail>(`/invoices/receipts/${id}`),
+  getByIdentifier: (identifier: string) => fetchApi<ReceiptDetail>(`/invoices/receipts/${encodeURIComponent(identifier)}`),
   getNextNumber: async () => {
     try {
       const response = await fetchBlob(`${API_BASE_URL}/invoices/receipts/next-number`);

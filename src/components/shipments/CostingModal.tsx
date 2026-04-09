@@ -1090,6 +1090,9 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
               <Button
                 size="sm"
                 onClick={handleSave}
+                data-audit-track="action"
+                data-audit-entity="ShipmentCosting"
+                data-audit-label={costing ? "Update Costing" : "Add Costing"}
                 className="btn-success px-6 h-9"
               >
                 {costing ? "Update" : "Add"}

@@ -1,4 +1,4 @@
-import { fetchApi, PaginatedList, MasterType, PaymentStatus, getAccessToken, attemptTokenRefresh } from './base';
+import { fetchApi, PaginatedList, MasterType, PaymentStatus } from './base';
 
 // Shipment Types
 export type ShipmentStatus = 'Opened' | 'Closed' | 'Cancelled';
@@ -433,6 +433,7 @@ export interface ShipmentInvoiceDto {
   id: number;
   invoiceNo: string;
   partyName?: string;
+  remarks?: string;
   amount: number;
   totalTax: number;
   currencyId?: number;
@@ -478,6 +479,7 @@ export const shipmentApi = {
     return fetchApi<PaginatedList<Shipment>>(`/shipments?${query}`);
   },
   getById: (id: number) => fetchApi<ShipmentDetail>(`/shipments/${id}`),
+  getByIdentifier: (identifier: string) => fetchApi<ShipmentDetail>(`/shipments/${encodeURIComponent(identifier)}`),
   getNextJobNumber: () => fetchApi<{ jobNumber: string }>('/shipments/next-job-number'),
   create: (data: CreateShipmentRequest) =>
     fetchApi<number>('/shipments', { method: 'POST', body: JSON.stringify(data) }),
@@ -576,37 +578,19 @@ export const fileApi = {
     const formData = new FormData();
     formData.append('file', file);
 
-    const uploadUrl = subfolder
-      ? `${API_BASE_URL}/files/upload?subfolder=${encodeURIComponent(subfolder)}`
-      : `${API_BASE_URL}/files/upload`;
+    const uploadEndpoint = subfolder
+      ? `/files/upload?subfolder=${encodeURIComponent(subfolder)}`
+      : '/files/upload';
+    const result = await fetchApi<FileUploadResponse>(uploadEndpoint, {
+      method: 'POST',
+      body: formData,
+    });
 
-    const makeRequest = async (token: string | null) => {
-      const headers: HeadersInit = {};
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      return fetch(uploadUrl, {
-        method: 'POST',
-        headers,
-        body: formData,
-      });
-    };
-
-    let response = await makeRequest(getAccessToken());
-
-    // Handle 401 with token refresh
-    if (response.status === 401) {
-      const refreshed = await attemptTokenRefresh();
-      if (refreshed) {
-        response = await makeRequest(getAccessToken());
-      }
+    if (result.error || !result.data) {
+      throw new Error(result.error || 'File upload failed');
     }
 
-    if (!response.ok) {
-      throw new Error(`File upload failed: ${response.statusText}`);
-    }
-
-    return response.json();
+    return result.data;
   },
 
   getDownloadUrl: (fileName: string): string => {
@@ -616,30 +600,13 @@ export const fileApi = {
   },
 
   delete: async (fileName: string): Promise<void> => {
-    const makeRequest = async (token: string | null) => {
-      const headers: HeadersInit = {};
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      const encodedPath = fileName.split('/').map(encodeURIComponent).join('/');
-      return fetch(`${API_BASE_URL}/files/${encodedPath}`, {
-        method: 'DELETE',
-        headers,
-      });
-    };
+    const encodedPath = fileName.split('/').map(encodeURIComponent).join('/');
+    const result = await fetchApi<void>(`/files/${encodedPath}`, {
+      method: 'DELETE',
+    });
 
-    let response = await makeRequest(getAccessToken());
-
-    // Handle 401 with token refresh
-    if (response.status === 401) {
-      const refreshed = await attemptTokenRefresh();
-      if (refreshed) {
-        response = await makeRequest(getAccessToken());
-      }
-    }
-
-    if (!response.ok) {
-      throw new Error(`File delete failed: ${response.statusText}`);
+    if (result.error) {
+      throw new Error(result.error);
     }
   },
 };

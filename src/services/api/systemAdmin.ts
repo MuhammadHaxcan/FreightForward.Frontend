@@ -1,4 +1,4 @@
-import { fetchApi, API_BASE_URL, setSystemTokens, clearSystemTokens, getSystemRefreshToken } from './base';
+import { fetchApi, API_BASE_URL, setSystemTokens, clearSystemTokens, getSystemRefreshToken, PaginatedList } from './base';
 import type {
   SystemAdminAuthResponse,
   SystemAdminLoginRequest,
@@ -9,6 +9,7 @@ import type {
   UpdateOfficeRequest,
   OfficeCreatedResponse,
   OfficeAuditLog,
+  OfficeInteractionAuditLog,
   CreateSystemAdminRequest,
   UpdateSystemAdminRequest,
   MigrationsInfo,
@@ -102,6 +103,32 @@ export const officesApi = {
     if (officeId) query.append('officeId', officeId.toString());
     query.append('limit', limit.toString());
     return fetchApi<OfficeAuditLog[]>(`/system/offices/audit-logs?${query}`);
+  },
+
+  getOfficeInteractionLogs: (params: {
+    officeId: number;
+    pageNumber?: number;
+    pageSize?: number;
+    from?: string;
+    to?: string;
+    eventType?: string;
+    outcomeStatus?: string;
+    userId?: number;
+    username?: string;
+    routePrefix?: string;
+  }) => {
+    const query = new URLSearchParams();
+    query.append('officeId', params.officeId.toString());
+    if (params.pageNumber) query.append('pageNumber', params.pageNumber.toString());
+    if (params.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params.from) query.append('from', params.from);
+    if (params.to) query.append('to', params.to);
+    if (params.eventType) query.append('eventType', params.eventType);
+    if (params.outcomeStatus) query.append('outcomeStatus', params.outcomeStatus);
+    if (params.userId) query.append('userId', params.userId.toString());
+    if (params.username) query.append('username', params.username);
+    if (params.routePrefix) query.append('routePrefix', params.routePrefix);
+    return fetchApi<PaginatedList<OfficeInteractionAuditLog>>(`/system/offices/interaction-audits?${query}`);
   },
 };
 

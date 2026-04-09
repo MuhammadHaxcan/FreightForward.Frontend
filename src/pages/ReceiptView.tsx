@@ -28,9 +28,7 @@ export default function ReceiptView() {
       if (!id) return;
       setLoading(true);
       try {
-        const parsedId = parseInt(id, 10);
-        if (isNaN(parsedId)) return;
-        const response = await receiptApi.getById(parsedId);
+        const response = await receiptApi.getByIdentifier(id);
         if (response.data) {
           setReceipt(response.data);
         }
@@ -44,14 +42,14 @@ export default function ReceiptView() {
   }, [id]);
 
   const handlePrint = () => {
-    if (!id) return;
-    window.open(`/accounts/receipt-vouchers/${id}/print`, '_blank');
+    if (!receipt) return;
+    window.open(`/accounts/receipt-vouchers/${encodeURIComponent(receipt.receiptNo)}/print`, '_blank');
   };
 
   const handleDownload = async () => {
-    if (!id) return;
+    if (!receipt) return;
     try {
-      const response = await fetchBlob(`${API_BASE_URL}/invoices/receipts/${id}/pdf`);
+      const response = await fetchBlob(`${API_BASE_URL}/invoices/receipts/${encodeURIComponent(receipt.receiptNo)}/pdf`);
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);

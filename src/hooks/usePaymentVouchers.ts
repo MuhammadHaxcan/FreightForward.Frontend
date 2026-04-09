@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import {
   getPaymentVouchers,
   getPaymentVoucherById,
+  getPaymentVoucherByIdentifier,
   getNextPaymentNumber,
   getUnpaidPurchaseInvoices,
   getPaymentVoucherPaymentTypes,
@@ -39,6 +40,18 @@ export function usePaymentVoucher(id: number | null) {
       return response.data;
     },
     enabled: !!id,
+  });
+}
+
+export function usePaymentVoucherByIdentifier(identifier: string) {
+  return useQuery({
+    queryKey: ['paymentVoucher', identifier],
+    queryFn: async () => {
+      const response = await getPaymentVoucherByIdentifier(identifier);
+      if (response.error) throw new Error(response.error);
+      return response.data;
+    },
+    enabled: !!identifier,
   });
 }
 

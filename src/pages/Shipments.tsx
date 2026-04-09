@@ -80,7 +80,7 @@ const Shipments = () => {
   };
 
   const handleEdit = (shipment: Shipment) => {
-    navigate(`/shipments/${shipment.id}/edit`);
+    navigate(`/shipments/${shipment.jobNumber}/edit`);
   };
 
   const handleAddNew = () => {

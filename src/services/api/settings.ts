@@ -35,6 +35,7 @@ export interface Port {
   airPortCode?: string;
   city: string;
   country: string;
+  countryId?: number;
 }
 
 export interface ChargeItem {
@@ -171,6 +172,7 @@ export interface CreatePortRequest {
   airPortCode?: string;
   city: string;
   country: string;
+  countryId?: number;
 }
 
 export interface UpdatePortRequest extends CreatePortRequest {

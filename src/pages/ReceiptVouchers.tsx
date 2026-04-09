@@ -82,8 +82,8 @@ export default function ReceiptVouchers() {
     setPageNumber(1);
   };
 
-  const handleViewReceipt = (receiptId: number) => {
-    navigate(`/accounts/receipt-vouchers/${receiptId}`);
+  const handleViewReceipt = (receiptNo: string) => {
+    navigate(`/accounts/receipt-vouchers/${encodeURIComponent(receiptNo)}`);
   };
 
   const handleViewInvoiceDetails = (receiptId: number) => {
@@ -96,8 +96,8 @@ export default function ReceiptVouchers() {
     setIsUpdateModalOpen(true);
   };
 
-  const handlePrint = (id: number) => {
-    window.open(`/accounts/receipt-vouchers/${id}/print`, '_blank');
+  const handlePrint = (receiptNo: string) => {
+    window.open(`/accounts/receipt-vouchers/${encodeURIComponent(receiptNo)}/print`, '_blank');
   };
 
   const handleDownload = async (id: number, receiptNo: string) => {
@@ -237,7 +237,7 @@ export default function ReceiptVouchers() {
                     <TableCell>
                       <span
                         className="text-green-600 hover:underline cursor-pointer"
-                        onClick={() => handleViewReceipt(receipt.id)}
+                        onClick={() => handleViewReceipt(receipt.receiptNo)}
                       >
                         {receipt.receiptNo}
                       </span>
@@ -269,7 +269,7 @@ export default function ReceiptVouchers() {
                           size="sm"
                           className="bg-blue-500 hover:bg-blue-600 text-white h-8 w-8 p-0"
                           title="View"
-                          onClick={() => handleViewReceipt(receipt.id)}
+                          onClick={() => handleViewReceipt(receipt.receiptNo)}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -305,7 +305,7 @@ export default function ReceiptVouchers() {
                           size="sm"
                           className="btn-success h-8 w-8 p-0"
                           title="Print"
-                          onClick={() => handlePrint(receipt.id)}
+                          onClick={() => handlePrint(receipt.receiptNo)}
                         >
                           <Printer className="h-4 w-4" />
                         </Button>

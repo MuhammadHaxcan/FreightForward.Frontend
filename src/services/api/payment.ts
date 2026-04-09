@@ -127,6 +127,10 @@ export async function getPaymentVoucherById(id: number): Promise<ApiResponse<Pay
   return fetchApi<PaymentVoucherDetail>(`/invoices/payments/${id}`);
 }
 
+export async function getPaymentVoucherByIdentifier(identifier: string): Promise<ApiResponse<PaymentVoucherDetail>> {
+  return fetchApi<PaymentVoucherDetail>(`/invoices/payments/${encodeURIComponent(identifier)}`);
+}
+
 export async function getNextPaymentNumber(): Promise<ApiResponse<string>> {
   try {
     const response = await fetchBlob(`${API_BASE_URL}/invoices/payments/next-number`);
@@ -171,6 +175,6 @@ export async function updatePaymentVoucher(id: number, request: UpdatePaymentVou
   });
 }
 
-export function getPaymentVoucherPdfUrl(id: number): string {
-  return `${API_BASE_URL}/invoices/payments/${id}/pdf`;
+export function getPaymentVoucherPdfUrl(identifier: string | number): string {
+  return `${API_BASE_URL}/invoices/payments/${encodeURIComponent(String(identifier))}/pdf`;
 }

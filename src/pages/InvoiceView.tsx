@@ -192,6 +192,14 @@ export default function InvoiceView() {
             </div>
           </div>
 
+          {/* Remarks */}
+          {invoice.remarks && (
+            <div className="mb-4 p-3 bg-muted/50 rounded-lg">
+              <p className="text-sm font-semibold mb-1">Remarks:</p>
+              <p className="text-sm text-muted-foreground">{invoice.remarks}</p>
+            </div>
+          )}
+
           {/* Charges Table */}
           <div className="border rounded-lg overflow-hidden mb-4">
             <Table>
@@ -232,14 +240,6 @@ export default function InvoiceView() {
               </TableBody>
             </Table>
           </div>
-
-          {/* Remarks Section */}
-          {invoice.remarks && (
-            <div className="mb-4 p-3 bg-muted/50 rounded-lg">
-              <p className="text-sm font-semibold mb-1">Remarks:</p>
-              <p className="text-sm text-muted-foreground">{invoice.remarks}</p>
-            </div>
-          )}
 
           {/* Totals Section */}
           <div className="flex justify-end">

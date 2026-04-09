@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DateInput } from "@/components/ui/date-input";
 import { getTodayDateOnly } from "@/lib/utils";
@@ -46,6 +47,7 @@ interface InvoiceModalProps {
   parties: ShipmentParty[];
   onSave: (invoice: InvoiceSaveResult) => void | Promise<void>;
   editInvoiceId?: number | null;
+  asPage?: boolean;
 }
 
 // Helper function to deduplicate parties by customerId
@@ -59,7 +61,7 @@ const deduplicateByCustomerId = (partyList: ShipmentParty[]): ShipmentParty[] =>
   });
 };
 
-export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, parties, onSave, editInvoiceId }: InvoiceModalProps) {
+export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, parties, onSave, editInvoiceId, asPage = false }: InvoiceModalProps) {
   const baseCurrencyCode = useBaseCurrency();
   const isBaseCurrency = (currencyCode?: string): boolean =>
     (currencyCode || "").trim().toUpperCase() === (baseCurrencyCode || "").trim().toUpperCase();
@@ -100,8 +102,10 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
   });
 
   // Reset form and fetch data when modal opens
+  const isActive = asPage ? true : open;
+
   useEffect(() => {
-    if (open) {
+    if (isActive) {
       // Reset form data first
       setFormData({
         invoiceId: "",
@@ -178,7 +182,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
         });
       }
     }
-  }, [open, editInvoiceId]);
+  }, [isActive, editInvoiceId]);
 
   // Filter charges: show uninvoiced charges + charges from this invoice
   const filteredCharges = useMemo(() => {
@@ -487,7 +491,6 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
           invoiceDate: formData.invoiceDate,
           currencyId: formData.currencyId,
           baseCurrencyId,
-          remarks: formData.remarks || undefined,
           items,
         });
 
@@ -567,21 +570,14 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
   );
   const totalWithTax = totalSale + totalTax;
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto bg-card border border-border p-0">
-        <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
-          <DialogTitle className="text-white text-lg font-semibold">
-            {isEditMode ? "Edit Invoice" : "New Invoice"}
-          </DialogTitle>
-        </DialogHeader>
-
-        {isLoadingEdit ? (
-          <div className="flex items-center justify-center p-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : (
-        <div className="space-y-4 p-6 pt-4">
+  const modalContent = (
+    <>
+      {isLoadingEdit ? (
+        <div className="flex items-center justify-center p-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : (
+      <div className="space-y-4 p-6 pt-4">
           {/* Invoice Section Header */}
           <h3 className="text-primary font-semibold">Invoice</h3>
 
@@ -634,6 +630,19 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
               </div>
             </div>
           </div>
+
+          {/* Remarks — edit mode only */}
+          {isEditMode && (
+            <div className="space-y-1">
+              <Label className="text-xs font-medium">Remarks</Label>
+              <Textarea
+                value={formData.remarks}
+                onChange={(e) => handleInputChange("remarks", e.target.value)}
+                placeholder="Enter remarks (optional)"
+                className="min-h-20"
+              />
+            </div>
+          )}
 
           {/* Charges Details */}
           <div className="space-y-3">
@@ -807,8 +816,31 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
             </Button>
           </div>
         </div>
-        )}
-      </DialogContent>
+      )}
+    </>
+  );
+
+  return (
+    <>
+      {asPage ? (
+        <div className="bg-card border border-border rounded-lg">
+          <div className="bg-modal-header text-white p-4 rounded-t-lg">
+            <h2 className="text-white text-lg font-semibold">{isEditMode ? "Edit Invoice" : "New Invoice"}</h2>
+          </div>
+          {modalContent}
+        </div>
+      ) : (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto bg-card border border-border p-0">
+            <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+              <DialogTitle className="text-white text-lg font-semibold">
+                {isEditMode ? "Edit Invoice" : "New Invoice"}
+              </DialogTitle>
+            </DialogHeader>
+            {modalContent}
+          </DialogContent>
+        </Dialog>
+      )}
 
       {isEditMode && (
         <CostingModal
@@ -828,6 +860,6 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
           defaultActiveTab={editingCostingForModal ? "sale" : undefined}
         />
       )}
-    </Dialog>
+    </>
   );
 }

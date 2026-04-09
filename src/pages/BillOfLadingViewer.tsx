@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { shipmentApi } from "@/services/api/shipment";
+import { settingsApi } from "@/services/api/settings";
 import type { ShipmentParty } from "@/services/api/shipment";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Input } from "@/components/ui/input";
@@ -49,6 +50,23 @@ function formatDate(dateStr?: string) {
   }
 }
 
+function normalizeBlPortDisplay(
+  value: string | undefined,
+  countryCodeByName: Map<string, string>
+) {
+  if (!value) return "";
+  const parts = value.split(",").map((p) => p.trim()).filter(Boolean);
+  if (parts.length < 2) return value;
+
+  const countryPartRaw = parts[parts.length - 1];
+  const portPartRaw = parts.slice(0, -1).join(", ");
+  if (!portPartRaw || !countryPartRaw) return value;
+
+  const matchedCode = countryCodeByName.get(countryPartRaw.toLowerCase());
+  const normalizedCountry = (matchedCode ?? countryPartRaw).toUpperCase();
+  return `${portPartRaw}, ${normalizedCountry}`;
+}
+
 // Truncate text at maxLines, return [visible, overflow]
 function splitOverflow(
   text: string,
@@ -85,6 +103,19 @@ export default function BillOfLadingViewer() {
   const [lineHeight, setLineHeight] = useState(1.5);
   const [topOffset, setTopOffset] = useState(0);
   const [leftOffset, setLeftOffset] = useState(0);
+  const { data: countriesRes } = useQuery({
+    queryKey: ["bl-countries-all"],
+    queryFn: () => settingsApi.getAllCountries(),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const countryCodeByName = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of countriesRes?.data || []) {
+      if (c.name && c.code) map.set(c.name.trim().toLowerCase(), c.code.trim());
+    }
+    return map;
+  }, [countriesRes?.data]);
 
   // Search by job number
   const { data: searchRes, isLoading: searching } = useQuery({
@@ -226,6 +257,8 @@ export default function BillOfLadingViewer() {
   const [marksShow, marksOver] = splitOverflow(cargo.marks, maxLines);
   const [descShow, descOver] = splitOverflow(cargo.desc, maxLines);
   const hasOverflow = !!(marksOver || descOver);
+  const loadingPortDisplay = normalizeBlPortDisplay(ship?.portOfLoadingName, countryCodeByName);
+  const dischargePortDisplay = normalizeBlPortDisplay(ship?.portOfDischargeName, countryCodeByName);
 
   return (
     <MainLayout>
@@ -564,7 +597,7 @@ export default function BillOfLadingViewer() {
                     <div className="bl-lbl" style={lbl}>
                       Port of Loading
                     </div>
-                    <div>{ship.portOfLoadingName || ""}</div>
+                    <div>{loadingPortDisplay}</div>
                   </div>
                 </div>
               </div>
@@ -591,7 +624,7 @@ export default function BillOfLadingViewer() {
                 <div className="bl-lbl" style={lbl}>
                   Port of Discharge
                 </div>
-                <div>{ship.portOfDischargeName || ""}</div>
+                <div>{dischargePortDisplay}</div>
               </div>
               <div
                 className="bl-border"
@@ -616,9 +649,9 @@ export default function BillOfLadingViewer() {
                 </div>
                 <div>
                   {ship.hblFreight === "Prepaid"
-                    ? ship.portOfLoadingName || "ORIGIN"
+                    ? loadingPortDisplay || "ORIGIN"
                     : ship.hblFreight === "Collect"
-                      ? ship.portOfDischargeName || "DESTINATION"
+                      ? dischargePortDisplay || "DESTINATION"
                       : ""}
                 </div>
               </div>

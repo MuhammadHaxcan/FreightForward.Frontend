@@ -67,8 +67,8 @@ export default function PaymentVouchers() {
     }
   };
 
-  const handlePrintPdf = (id: number) => {
-    window.open(`/accounts/payment-vouchers/${id}/print`, "_blank");
+  const handlePrintPdf = (paymentNo: string) => {
+    window.open(`/accounts/payment-vouchers/${encodeURIComponent(paymentNo)}/print`, "_blank");
   };
 
   const handleEdit = (paymentId: number) => {
@@ -76,9 +76,9 @@ export default function PaymentVouchers() {
     setIsUpdateModalOpen(true);
   };
 
-  const handleDownload = async (id: number, paymentNo: string) => {
+  const handleDownload = async (paymentNo: string) => {
     try {
-      const response = await fetchBlob(`${API_BASE_URL}/invoices/payments/${id}/pdf`);
+      const response = await fetchBlob(`${API_BASE_URL}/invoices/payments/${encodeURIComponent(paymentNo)}/pdf`);
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
@@ -206,7 +206,7 @@ export default function PaymentVouchers() {
                       <Button
                         size="sm"
                         className="bg-blue-500 hover:bg-blue-600 text-white h-8 w-8 p-0"
-                        onClick={() => navigate(`/accounts/payment-vouchers/${payment.id}`)}
+                        onClick={() => navigate(`/accounts/payment-vouchers/${encodeURIComponent(payment.paymentNo)}`)}
                         title="View"
                       >
                         <Eye className="h-4 w-4" />
@@ -237,7 +237,7 @@ export default function PaymentVouchers() {
                       <Button
                         size="sm"
                         className="bg-orange-500 hover:bg-orange-600 text-white h-8 w-8 p-0"
-                        onClick={() => handleDownload(payment.id, payment.paymentNo)}
+                        onClick={() => handleDownload(payment.paymentNo)}
                         title="Download"
                       >
                         <Download className="h-4 w-4" />
@@ -245,7 +245,7 @@ export default function PaymentVouchers() {
                       <Button
                         size="sm"
                         className="btn-success h-8 w-8 p-0"
-                        onClick={() => handlePrintPdf(payment.id)}
+                        onClick={() => handlePrintPdf(payment.paymentNo)}
                         title="Print"
                       >
                         <Printer className="h-4 w-4" />

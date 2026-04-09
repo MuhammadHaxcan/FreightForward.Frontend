@@ -283,6 +283,63 @@ export interface OfficeAuditLog {
   timestamp: string;
 }
 
+export type OfficeInteractionEventType =
+  | 'RouteOpened'
+  | 'NavigationClicked'
+  | 'ButtonClicked'
+  | 'TabOpened'
+  | 'ModalOpened'
+  | 'ModalClosed'
+  | 'ActionAttempted';
+
+export type OfficeInteractionOutcomeStatus =
+  | 'Succeeded'
+  | 'Failed'
+  | 'ValidationFailed'
+  | 'Unauthorized'
+  | 'Canceled';
+
+export interface OfficeInteractionAuditEventRequest {
+  eventType: OfficeInteractionEventType;
+  route: string;
+  targetType?: string;
+  targetId?: string;
+  targetLabel?: string;
+  entityType?: string;
+  entityId?: string;
+  entityReference?: string;
+  outcome?: OfficeInteractionOutcomeStatus;
+  outcomeStatusCode?: number;
+  outcomeMessage?: string;
+  sessionId?: string;
+  correlationId?: string;
+}
+
+export interface OfficeInteractionAuditLog {
+  id: number;
+  officeId: number;
+  officeName: string;
+  officeSchema: string;
+  occurredAt: string;
+  userId?: number;
+  username: string;
+  eventType: OfficeInteractionEventType;
+  route: string;
+  targetType?: string;
+  targetId?: string;
+  targetLabel?: string;
+  entityType?: string;
+  entityId?: string;
+  entityReference?: string;
+  outcome?: OfficeInteractionOutcomeStatus | 'Attempted' | string;
+  outcomeStatusCode?: number;
+  outcomeMessage?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  sessionId?: string;
+  correlationId?: string;
+}
+
 export interface CreateSystemAdminRequest {
   firstName: string;
   lastName: string;

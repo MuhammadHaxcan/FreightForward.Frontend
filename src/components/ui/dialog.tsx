@@ -4,7 +4,22 @@ import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-const Dialog = DialogPrimitive.Root;
+type DialogProps = React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root> & {
+  auditName?: string;
+};
+
+const Dialog = ({ onOpenChange, auditName, ...props }: DialogProps) => {
+  const handleOpenChange = (open: boolean) => {
+    if (typeof window !== 'undefined') {
+      const detail = { open, title: auditName };
+      window.dispatchEvent(new CustomEvent('ff:dialog-state', { detail }));
+    }
+
+    onOpenChange?.(open);
+  };
+
+  return <DialogPrimitive.Root {...props} onOpenChange={handleOpenChange} />;
+};
 
 const DialogTrigger = DialogPrimitive.Trigger;
 
@@ -67,6 +82,7 @@ const DialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
+    data-audit-dialog-title
     className={cn("text-lg font-semibold leading-none tracking-tight", className)}
     {...props}
   />

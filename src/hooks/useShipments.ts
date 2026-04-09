@@ -48,6 +48,21 @@ export function useShipment(id: number) {
   });
 }
 
+export function useShipmentByIdentifier(identifier: string) {
+  return useQuery({
+    queryKey: ['shipments', identifier],
+    queryFn: async () => {
+      const response = await shipmentApi.getByIdentifier(identifier);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+    enabled: !!identifier,
+    staleTime: 30 * 1000,
+  });
+}
+
 export function useCreateShipment() {
   const queryClient = useQueryClient();
 

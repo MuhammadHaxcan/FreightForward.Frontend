@@ -13,7 +13,6 @@ export default function InvoiceEdit() {
   const [invoice, setInvoice] = useState<AccountInvoiceDetail | null>(null);
   const [shipment, setShipment] = useState<ShipmentDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -42,15 +41,7 @@ export default function InvoiceEdit() {
     fetchData();
   }, [id]);
 
-  // Auto-open modal once data is loaded
-  useEffect(() => {
-    if (!loading && invoice && shipment) {
-      setModalOpen(true);
-    }
-  }, [loading, invoice, shipment]);
-
   const handleModalClose = (open: boolean) => {
-    setModalOpen(open);
     if (!open) {
       const invoiceNo = invoice?.invoiceNo;
       navigate(invoiceNo ? `/accounts/invoices/${encodeURIComponent(invoiceNo)}` : `/accounts/invoices/${id}`);
@@ -105,13 +96,14 @@ export default function InvoiceEdit() {
     <MainLayout>
       <div className="p-6">
         <InvoiceModal
-          open={modalOpen}
+          open
           onOpenChange={handleModalClose}
           shipmentId={shipment.id}
           chargesDetails={shipment.costings}
           parties={shipment.parties}
           onSave={handleSave}
           editInvoiceId={invoice.id}
+          asPage
         />
       </div>
     </MainLayout>

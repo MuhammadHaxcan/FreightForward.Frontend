@@ -26,10 +26,7 @@ export default function Invoices() {
   const [searchTerm, setSearchTerm] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<string>("all");
-  const [dateRange, setDateRange] = useState<DateRangeValue | undefined>({
-    from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-    to: new Date(),
-  });
+  const [dateRange, setDateRange] = useState<DateRangeValue | undefined>(undefined);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);

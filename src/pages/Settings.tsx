@@ -228,6 +228,7 @@ const Settings = () => {
     airPortCode: "",
     city: "",
     country: "",
+    countryId: null as number | null,
   });
 
   const [chargeForm, setChargeForm] = useState({
@@ -369,6 +370,7 @@ const Settings = () => {
   };
 
   const handleAddPort = () => {
+    const selectedCountry = countriesData?.find((c) => c.id === portForm.countryId);
     createPortMutation.mutate(
       {
         seaPortName: portForm.seaPortName,
@@ -376,7 +378,8 @@ const Settings = () => {
         airPortName: portForm.airPortName,
         airPortCode: portForm.airPortCode || undefined,
         city: portForm.city,
-        country: portForm.country,
+        country: selectedCountry?.name || portForm.country,
+        countryId: portForm.countryId || undefined,
       },
       {
         onSuccess: () => {
@@ -389,6 +392,7 @@ const Settings = () => {
 
   const handleUpdatePort = () => {
     if (!editPort) return;
+    const selectedCountry = countriesData?.find((c) => c.id === editPort.countryId);
     updatePortMutation.mutate(
       {
         id: editPort.id,
@@ -399,7 +403,8 @@ const Settings = () => {
           airPortName: editPort.airPortName,
           airPortCode: editPort.airPortCode || undefined,
           city: editPort.city,
-          country: editPort.country,
+          country: selectedCountry?.name || editPort.country,
+          countryId: editPort.countryId || undefined,
         },
       },
       {
@@ -593,7 +598,7 @@ const Settings = () => {
   };
 
   const resetPortForm = () => {
-    setPortForm({ seaPortName: "", seaPortCode: "", airPortName: "", airPortCode: "", city: "", country: "" });
+    setPortForm({ seaPortName: "", seaPortCode: "", airPortName: "", airPortCode: "", city: "", country: "", countryId: null });
   };
 
   const resetChargeForm = () => {
@@ -2097,9 +2102,9 @@ const Settings = () => {
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Country</label>
                 <SearchableSelect
-                  options={countries.map((country) => ({ value: country, label: country }))}
-                  value={portForm.country}
-                  onValueChange={(value) => setPortForm({ ...portForm, country: value })}
+                  options={(countriesData || []).map((c) => ({ value: String(c.id), label: `${c.name} (${c.code})` }))}
+                  value={portForm.countryId ? String(portForm.countryId) : ""}
+                  onValueChange={(value) => setPortForm({ ...portForm, countryId: value ? parseInt(value) : null })}
                   placeholder="Select Country"
                   searchPlaceholder="Search countries..."
                 />
@@ -2156,9 +2161,9 @@ const Settings = () => {
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1">Country</label>
                   <SearchableSelect
-                    options={countries.map((country) => ({ value: country, label: country }))}
-                    value={editPort.country}
-                    onValueChange={(value) => setEditPort({ ...editPort, country: value })}
+                    options={(countriesData || []).map((c) => ({ value: String(c.id), label: `${c.name} (${c.code})` }))}
+                    value={editPort.countryId ? String(editPort.countryId) : ""}
+                    onValueChange={(value) => setEditPort({ ...editPort, countryId: value ? parseInt(value) : undefined })}
                     placeholder="Select Country"
                     searchPlaceholder="Search countries..."
                   />

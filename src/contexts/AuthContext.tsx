@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { authApi } from '../services/api/auth';
 import { setAuthFailureCallback, clearTokens, getAccessToken, getRefreshToken } from '../services/api/base';
 import type { CurrentUser, LoginRequest, AuthResponse } from '../types/auth';
+import OfficeInteractionTracker from '../components/audit/OfficeInteractionTracker';
 
 interface AuthContextType {
   user: CurrentUser | null;
@@ -201,7 +202,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     getDefaultRoute,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      <OfficeInteractionTracker
+        isAuthenticated={isAuthenticated}
+        officeSlug={officeSlug}
+      />
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
