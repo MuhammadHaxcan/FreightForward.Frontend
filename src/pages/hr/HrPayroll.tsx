@@ -167,6 +167,8 @@ const HrPayroll = () => {
     onSuccess: () => {
       toast.success("Payroll updated successfully");
       queryClient.invalidateQueries({ queryKey: ["hr-payroll"] });
+      queryClient.invalidateQueries({ queryKey: ["hr-payroll-pregenerate"] });
+      queryClient.invalidateQueries({ queryKey: ["hr-payroll-exists"] });
       setEditModalOpen(false);
       setEditingItem(null);
     },
@@ -184,6 +186,8 @@ const HrPayroll = () => {
     onSuccess: () => {
       toast.success("Payroll deleted successfully");
       queryClient.invalidateQueries({ queryKey: ["hr-payroll"] });
+      queryClient.invalidateQueries({ queryKey: ["hr-payroll-pregenerate"] });
+      queryClient.invalidateQueries({ queryKey: ["hr-payroll-exists"] });
       setDeleteDialogOpen(false);
       setDeletingId(null);
     },
@@ -201,6 +205,8 @@ const HrPayroll = () => {
     onSuccess: () => {
       toast.success("Payroll marked as paid");
       queryClient.invalidateQueries({ queryKey: ["hr-payroll"] });
+      queryClient.invalidateQueries({ queryKey: ["hr-payroll-pregenerate"] });
+      queryClient.invalidateQueries({ queryKey: ["hr-payroll-exists"] });
       setMarkPaidModalOpen(false);
       setMarkPaidPayroll(null);
     },

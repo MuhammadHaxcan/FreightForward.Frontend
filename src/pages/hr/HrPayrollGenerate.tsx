@@ -95,6 +95,8 @@ const HrPayrollGenerate = () => {
     onSuccess: () => {
       toast.success("Payroll generated successfully");
       queryClient.invalidateQueries({ queryKey: ["hr-payroll"] });
+      queryClient.invalidateQueries({ queryKey: ["hr-payroll-pregenerate"] });
+      queryClient.invalidateQueries({ queryKey: ["hr-payroll-exists"] });
       navigate("/hr/payroll");
     },
     onError: (error: Error) => {
