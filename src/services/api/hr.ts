@@ -67,13 +67,31 @@ export interface Payslip {
   payrollId: number; employeeCode: string; employeeName: string;
   department?: string; designation?: string;
   year: number; month: number;
-  earnings: { componentName: string; amount: number; }[];
-  deductions: { componentName: string; amount: number; }[];
+  earnings: { salaryComponentId: number; componentName: string; amount: number; }[];
+  deductions: { salaryComponentId: number; componentName: string; amount: number; }[];
   totalEarnings: number; totalDeductions: number; advanceDeduction: number;
   lateDeduction: number; latesDaysDeducted: number;
   rawAbsentDays: number;
   annualLeavesConsumed: number; uncoveredAbsentDays: number; absentDeduction: number;
   netSalary: number; status: string; paidDate?: string; remarks?: string;
+}
+export interface PayrollDetailEditItem {
+  salaryComponentId: number;
+  amount: number;
+}
+export interface UpdatePayrollWithComponentsRequest {
+  earnings: PayrollDetailEditItem[];
+  deductions: PayrollDetailEditItem[];
+  advanceDeduction: number;
+  remarks?: string;
+  isAdvanceManualOverride: boolean;
+}
+export interface PayrollEditResponse {
+  payrollId: number;
+  totalEarnings: number;
+  totalDeductions: number;
+  advanceDeduction: number;
+  netSalary: number;
 }
 export interface UpdatePayrollRequest {
   totalEarnings: number; totalDeductions: number; advanceDeduction: number; netSalary: number; remarks?: string;
@@ -182,6 +200,8 @@ export const hrPayrollApi = {
     fetchApi<number>(`/hr/payroll/generate?employeeId=${employeeId}`, { method: 'POST', body: JSON.stringify(data) }),
   update: (id: number, data: UpdatePayrollRequest) =>
     fetchApi<void>(`/hr/payroll/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  updateWithComponents: (id: number, data: UpdatePayrollWithComponentsRequest) =>
+    fetchApi<PayrollEditResponse>(`/hr/payroll/${id}/components`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: number) => fetchApi<void>(`/hr/payroll/${id}`, { method: 'DELETE' }),
   markPaid: (id: number, data: MarkPaidRequest) => fetchApi<void>(`/hr/payroll/${id}/mark-paid`, { method: 'POST', body: JSON.stringify(data) }),
   cancel: (id: number) => fetchApi<void>(`/hr/payroll/${id}/cancel`, { method: 'POST' }),

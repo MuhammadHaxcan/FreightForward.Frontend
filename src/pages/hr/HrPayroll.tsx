@@ -31,7 +31,9 @@ import {
   hrPayrollApi,
   hrEmployeeApi,
   PayrollListItem,
-  UpdatePayrollRequest,
+  Payslip,
+  PayrollDetailEditItem,
+  UpdatePayrollWithComponentsRequest,
   MarkPaidRequest,
 } from "@/services/api/hr";
 import { useBanks } from "@/hooks/useBanks";
@@ -106,9 +108,11 @@ const HrPayroll = () => {
   // Edit modal
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<PayrollListItem | null>(null);
-  const [editEarnings, setEditEarnings] = useState("");
-  const [editDeductions, setEditDeductions] = useState("");
+  const [payslipData, setPayslipData] = useState<Payslip | null>(null);
+  const [editEarnings, setEditEarnings] = useState<PayrollDetailEditItem[]>([]);
+  const [editDeductions, setEditDeductions] = useState<PayrollDetailEditItem[]>([]);
   const [editAdvance, setEditAdvance] = useState("");
+  const [isAdvanceManualOverride, setIsAdvanceManualOverride] = useState(false);
   const [editRemarks, setEditRemarks] = useState("");
 
   // Delete confirmation
@@ -164,7 +168,7 @@ const HrPayroll = () => {
 
   // ==================== Mutations ====================
 
-  const updateMutation = useMutation({
+  const updateWithComponentsMutation = useMutation({
     mutationFn: async ({
       id,
       empId,
@@ -174,9 +178,9 @@ const HrPayroll = () => {
       id: number;
       empId: number;
       payrollId: number;
-      data: UpdatePayrollRequest;
+      data: UpdatePayrollWithComponentsRequest;
     }) => {
-      const result = await hrPayrollApi.update(id, data);
+      const result = await hrPayrollApi.updateWithComponents(id, data);
       if (result.error) throw new Error(result.error);
       return { empId, payrollId };
     },
@@ -247,35 +251,54 @@ const HrPayroll = () => {
   const employees = empDropdown || [];
   const banks = banksData?.items || [];
 
-  const editNetSalary =
-    (parseFloat(editEarnings) || 0) -
-    (parseFloat(editDeductions) || 0) -
-    (parseFloat(editAdvance) || 0);
+  const editTotalEarnings = editEarnings.reduce((sum, e) => sum + e.amount, 0);
+  const editTotalDeductions = editDeductions.reduce((sum, d) => sum + d.amount, 0);
+  const editNetSalary = editTotalEarnings - editTotalDeductions - (parseFloat(editAdvance) || 0);
 
   const markPaidRequiresBank = paymentModeConfig[markPaidPaymentMode]?.requiresBank ?? false;
   const markPaidRequiresChequeDetails = paymentModeConfig[markPaidPaymentMode]?.requiresChequeDetails ?? false;
 
   // ==================== Handlers ====================
 
-  const handleOpenEdit = (item: PayrollListItem) => {
+  const handleOpenEdit = async (item: PayrollListItem) => {
     setEditingItem(item);
-    setEditEarnings(item.totalEarnings.toString());
-    setEditDeductions(item.totalDeductions.toString());
-    setEditAdvance(item.advanceDeduction.toString());
     setEditRemarks("");
+    setIsAdvanceManualOverride(false);
+
+    // Fetch payslip to get per-component detail
+    const result = await hrPayrollApi.getPayslip(item.id);
+    if (result.error) {
+      toast.error("Failed to load payroll details");
+      return;
+    }
+
+    const payslip = result.data as Payslip;
+    setPayslipData(payslip);
+
+    // Seed earnings and deductions from payslip per-component data
+    setEditEarnings(payslip.earnings.map(e => ({
+      salaryComponentId: e.salaryComponentId,
+      amount: e.amount,
+    })));
+    setEditDeductions(payslip.deductions.map(d => ({
+      salaryComponentId: d.salaryComponentId,
+      amount: d.amount,
+    })));
+    setEditAdvance(payslip.advanceDeduction.toString());
     setEditModalOpen(true);
   };
 
   const handleSaveEdit = () => {
     if (!editingItem) return;
-    const data: UpdatePayrollRequest = {
-      totalEarnings: parseFloat(editEarnings) || 0,
-      totalDeductions: parseFloat(editDeductions) || 0,
+
+    const data: UpdatePayrollWithComponentsRequest = {
+      earnings: editEarnings,
+      deductions: editDeductions,
       advanceDeduction: parseFloat(editAdvance) || 0,
-      netSalary: editNetSalary,
       remarks: editRemarks || undefined,
+      isAdvanceManualOverride,
     };
-    updateMutation.mutate({ id: editingItem.id, empId: editingItem.employeeId, payrollId: editingItem.id, data });
+    updateWithComponentsMutation.mutate({ id: editingItem.id, empId: editingItem.employeeId, payrollId: editingItem.id, data });
   };
 
   const handleConfirmDelete = (item: PayrollListItem) => {
@@ -692,34 +715,86 @@ const HrPayroll = () => {
                 </div>
 
                 <div className="border-t border-border pt-4 space-y-4">
+                  {/* Earnings Section */}
                   <div className="space-y-2">
-                    <Label className="text-sm">Total Earnings</Label>
-                    <Input
-                      type="number"
-                      value={editEarnings}
-                      onChange={(e) => setEditEarnings(e.target.value)}
-                      placeholder="0.00"
-                    />
+                    <Label className="text-sm font-semibold">Earnings</Label>
+                    <div className="space-y-2">
+                      {editEarnings.map((item, idx) => (
+                        <div key={idx} className="grid grid-cols-2 gap-2 items-center">
+                          <span className="text-sm text-muted-foreground">
+                            {payslipData?.earnings[idx]?.componentName ?? `Component ${idx + 1}`}
+                          </span>
+                          <Input
+                            type="number"
+                            value={item.amount}
+                            onChange={(e) => {
+                              const updated = [...editEarnings];
+                              updated[idx] = { ...updated[idx], amount: parseFloat(e.target.value) || 0 };
+                              setEditEarnings(updated);
+                            }}
+                            className="text-right"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-end border-t pt-2 mt-2">
+                      <span className="text-sm font-medium">
+                        Total: {formatAmount(editTotalEarnings)}
+                      </span>
+                    </div>
                   </div>
+
+                  {/* Deductions Section */}
                   <div className="space-y-2">
-                    <Label className="text-sm">Total Deductions</Label>
-                    <Input
-                      type="number"
-                      value={editDeductions}
-                      onChange={(e) => setEditDeductions(e.target.value)}
-                      placeholder="0.00"
-                    />
+                    <Label className="text-sm font-semibold">Deductions</Label>
+                    <div className="space-y-2">
+                      {editDeductions.map((item, idx) => (
+                        <div key={idx} className="grid grid-cols-2 gap-2 items-center">
+                          <span className="text-sm text-muted-foreground">
+                            {payslipData?.deductions[idx]?.componentName ?? `Component ${idx + 1}`}
+                          </span>
+                          <Input
+                            type="number"
+                            value={item.amount}
+                            onChange={(e) => {
+                              const updated = [...editDeductions];
+                              updated[idx] = { ...updated[idx], amount: parseFloat(e.target.value) || 0 };
+                              setEditDeductions(updated);
+                            }}
+                            className="text-right"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-end border-t pt-2 mt-2">
+                      <span className="text-sm font-medium">
+                        Total: {formatAmount(editTotalDeductions)}
+                      </span>
+                    </div>
                   </div>
+
+                  {/* Advance Deduction - now editable */}
                   <div className="space-y-2">
-                    <Label className="text-sm">Advance Deduction</Label>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm">Advance Deduction</Label>
+                      <input
+                        type="checkbox"
+                        checked={isAdvanceManualOverride}
+                        onChange={(e) => setIsAdvanceManualOverride(e.target.checked)}
+                        className="w-4 h-4"
+                        title="Check to manually override advance deduction"
+                      />
+                      <span className="text-xs text-muted-foreground">Manual override</span>
+                    </div>
                     <Input
                       type="number"
                       value={editAdvance}
-                      readOnly
-                      className="bg-muted cursor-not-allowed"
-                      title="Advance deduction is auto-calculated and cannot be edited manually"
+                      onChange={(e) => setEditAdvance(e.target.value)}
+                      placeholder="0.00"
                     />
                   </div>
+
+                  {/* Net Salary - auto-calculated */}
                   <div className="space-y-2">
                     <Label className="text-sm">Net Salary (auto-calculated)</Label>
                     <Input
@@ -727,9 +802,11 @@ const HrPayroll = () => {
                       value={editNetSalary.toFixed(2)}
                       readOnly
                       disabled
-                      className="bg-muted"
+                      className="bg-muted font-medium"
                     />
                   </div>
+
+                  {/* Remarks */}
                   <div className="space-y-2">
                     <Label className="text-sm">Remarks</Label>
                     <Input
@@ -752,9 +829,9 @@ const HrPayroll = () => {
               <Button
                 className="btn-success"
                 onClick={handleSaveEdit}
-                disabled={updateMutation.isPending}
+                disabled={updateWithComponentsMutation.isPending}
               >
-                {updateMutation.isPending ? "Saving..." : "Save"}
+                {updateWithComponentsMutation.isPending ? "Saving..." : "Save"}
               </Button>
             </div>
           </div>
