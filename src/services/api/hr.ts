@@ -61,7 +61,7 @@ export interface PayrollListItem {
   id: number; employeeId: number; employeeCode: string; employeeName: string;
   year: number; month: number; totalEarnings: number; totalDeductions: number;
   advanceDeduction: number; netSalary: number; status: string; paidDate?: string;
-  latesDaysDeducted: number; paidLeavesConsumed: number; uncoveredAbsentDays: number;
+  latesDaysDeducted: number; annualLeavesConsumed: number; uncoveredAbsentDays: number;
 }
 export interface Payslip {
   payrollId: number; employeeCode: string; employeeName: string;
@@ -72,7 +72,7 @@ export interface Payslip {
   totalEarnings: number; totalDeductions: number; advanceDeduction: number;
   lateDeduction: number; latesDaysDeducted: number;
   rawAbsentDays: number;
-  paidLeavesConsumed: number; uncoveredAbsentDays: number; absentDeduction: number;
+  annualLeavesConsumed: number; uncoveredAbsentDays: number; absentDeduction: number;
   netSalary: number; status: string; paidDate?: string; remarks?: string;
 }
 export interface UpdatePayrollRequest {
@@ -112,7 +112,7 @@ export interface AttendanceSummary {
   employeeId: number; employeeCode: string; employeeName: string;
   year: number; month: number;
   presentDays: number; absentDays: number; lateDays: number; halfDays: number;
-  sickLeaveDays: number; paidLeaveDays: number; annualLeaveDays: number;
+  annualLeaveDays: number;
   holidays: number; totalWorkingDays: number;
   latesToAbsentConversions: number; effectiveAbsentDays: number;
 }
@@ -162,8 +162,8 @@ export const hrSalaryApi = {
 
 export interface PayrollPreGenerateInfo {
   totalAnnualLeaves: number;
-  availablePaidLeaves: number;
-  consumedPaidLeaves: number;
+  availableAnnualLeaves: number;
+  consumedAnnualLeaves: number;
   rawAbsentDays: number;
   latesDaysConverted: number;
   totalAbsentsThisMonth: number;
@@ -178,10 +178,8 @@ export const hrPayrollApi = {
   getPayslip: (id: number) => fetchApi<Payslip>(`/hr/payroll/${id}/payslip`),
   getPreGenerateInfo: (employeeId: number, year: number, month: number) =>
     fetchApi<PayrollPreGenerateInfo>(`/hr/payroll/pre-generate-info?employeeId=${employeeId}&year=${year}&month=${month}`),
-  generate: (employeeId: number, data: { year: number; month: number; paidLeavesToConsume?: number }) =>
+  generate: (employeeId: number, data: { year: number; month: number; annualLeavesToConsume?: number }) =>
     fetchApi<number>(`/hr/payroll/generate?employeeId=${employeeId}`, { method: 'POST', body: JSON.stringify(data) }),
-  generateBulk: (data: { year: number; month: number }) =>
-    fetchApi<number>('/hr/payroll/generate-bulk', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: number, data: UpdatePayrollRequest) =>
     fetchApi<void>(`/hr/payroll/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: number) => fetchApi<void>(`/hr/payroll/${id}`, { method: 'DELETE' }),

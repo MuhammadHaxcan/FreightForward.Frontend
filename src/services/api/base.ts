@@ -25,7 +25,6 @@ const ACTION_SEGMENTS = new Set([
   'deactivate',
   'cancel',
   'generate',
-  'generate-bulk',
   'test',
   'upload',
   'convert-to-shipment',
@@ -315,8 +314,6 @@ function getActionOutcomeLabel(actionSegment: string): string {
       return 'Marked Paid';
     case 'generate':
       return 'Generated';
-    case 'generate-bulk':
-      return 'Generated Bulk';
     case 'test':
       return 'Tested';
     case 'upload':

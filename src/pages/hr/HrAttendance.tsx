@@ -33,8 +33,6 @@ const statusColors: Record<string, string> = {
   Absent: "bg-red-500",
   Late: "bg-yellow-500",
   HalfDay: "bg-orange-500",
-  SickLeave: "bg-teal-500",
-  PaidLeave: "bg-blue-500",
   AnnualLeave: "bg-cyan-500",
   Holiday: "bg-purple-500",
 };
@@ -43,6 +41,7 @@ interface LocalEntry {
   employeeId: number;
   employeeCode: string;
   employeeName: string;
+  department?: string;
   attendanceId?: number;
   status: string;
   remarks: string;
@@ -56,6 +55,7 @@ const HrAttendance = () => {
   const [entries, setEntries] = useState<LocalEntry[]>([]);
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [selectedDepartment, setSelectedDepartment] = useState("");
 
   const { data: hrPolicy } = useQuery({
     queryKey: ["hr-attendance-policy"],
@@ -64,6 +64,7 @@ const HrAttendance = () => {
       if (result.error) throw new Error(result.error);
       return result.data;
     },
+    staleTime: 0,
   });
   const weeklyOffDays = hrPolicy?.weeklyOffDays ?? [];
 
@@ -86,6 +87,7 @@ const HrAttendance = () => {
           employeeId: emp.employeeId,
           employeeCode: emp.employeeCode,
           employeeName: emp.employeeName,
+          department: emp.department,
           attendanceId: emp.attendanceId,
           status: emp.status || "Present",
           remarks: emp.remarks || "",
@@ -93,6 +95,15 @@ const HrAttendance = () => {
       );
     }
   }, [dailyData]);
+
+  // Derive departments and filtered entries
+  const departments = Array.from(
+    new Set(entries.map((e) => e.department).filter(Boolean))
+  ).sort() as string[];
+
+  const filteredEntries = selectedDepartment
+    ? entries.filter((e) => e.department === selectedDepartment)
+    : entries;
 
   // Save bulk mutation
   const saveMutation = useMutation({
@@ -147,11 +158,24 @@ const HrAttendance = () => {
         })),
       });
       if (result.error) throw new Error(result.error);
-      return result.data;
+      const empIds = entries.map((e) => e.employeeId);
+      return { empIds };
     },
-    onSuccess: () => {
+    onSuccess: (_vars, _data, context) => {
       toast.success("Attendance saved successfully");
       queryClient.invalidateQueries({ queryKey: ["hr-attendance-daily", selectedDate] });
+      // Invalidate attendance summary caches used by HrAttendanceSummary and HrEmployeeDetail
+      const [year, month] = selectedDate.split("-");
+      queryClient.invalidateQueries({ queryKey: ["hr-attendance-summary", year, month] });
+      queryClient.invalidateQueries({ queryKey: ["hr-attendance-summary-emp"] });
+      queryClient.invalidateQueries({ queryKey: ["hr-attendance-employee-monthly"] });
+      // F7: Invalidate employee-specific attendance cache used by HrEmployeeDetail
+      if (context?.empIds) {
+        context.empIds.forEach((empId: number) => {
+          queryClient.invalidateQueries({ queryKey: ["hr-attendance-emp", empId] });
+          queryClient.invalidateQueries({ queryKey: ["hr-attendance-summary-emp", empId] });
+        });
+      }
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to save attendance");
@@ -176,9 +200,12 @@ const HrAttendance = () => {
 
   const navigateDay = (offset: number) => {
     const d = new Date(selectedDate + "T00:00:00");
+    let skipped = 0;
     do {
       d.setDate(d.getDate() + offset);
+      if (weeklyOffDays.includes(d.getDay())) skipped++;
     } while (weeklyOffDays.length > 0 && weeklyOffDays.includes(d.getDay()));
+    if (skipped > 0) toast.info(`Skipped ${skipped} off day${skipped > 1 ? "s" : ""}`);
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
@@ -200,9 +227,10 @@ const HrAttendance = () => {
   const isLocked = isPastDate && !isUnlocked;
   const isOffDay = weeklyOffDays.includes(new Date(selectedDate + "T00:00:00").getDay());
 
-  // Reset unlock state when date changes
+  // Reset unlock state and department filter when date changes
   useEffect(() => {
     setIsUnlocked(false);
+    setSelectedDepartment("");
   }, [selectedDate]);
 
   const handleMarkAll = (status: string) => {
@@ -256,7 +284,7 @@ const HrAttendance = () => {
         <div className="bg-muted/30 border rounded-lg p-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="text-sm font-medium text-green-600 mb-1 block">
+              <label className="text-sm font-medium mb-1 block">
                 Date
               </label>
               <div className="flex items-center gap-1">
@@ -302,7 +330,7 @@ const HrAttendance = () => {
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium text-green-600 mb-1 block">
+              <label className="text-sm font-medium mb-1 block">
                 Mark All
               </label>
               <SearchableSelect
@@ -313,9 +341,21 @@ const HrAttendance = () => {
                 disabled={isLocked}
               />
             </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">
+                Department
+              </label>
+              <SearchableSelect
+                options={[{ value: "", label: "All Departments" }, ...departments.map((d) => ({ value: d, label: d }))]}
+                value={selectedDepartment}
+                onValueChange={setSelectedDepartment}
+                placeholder="All Departments"
+                disabled={isLocked}
+              />
+            </div>
             <div className="flex items-end">
               <p className="text-sm text-muted-foreground">
-                {entries.length} employee{entries.length !== 1 ? "s" : ""} found
+                {filteredEntries.length} of {entries.length} employee{entries.length !== 1 ? "s" : ""}
               </p>
             </div>
             {isOffDay && (
@@ -376,7 +416,7 @@ const HrAttendance = () => {
                       </div>
                     </td>
                   </tr>
-                ) : entries.length === 0 ? (
+                ) : filteredEntries.length === 0 ? (
                   <tr>
                     <td
                       colSpan={4}
@@ -386,7 +426,7 @@ const HrAttendance = () => {
                     </td>
                   </tr>
                 ) : (
-                  entries.map((entry, index) => (
+                  filteredEntries.map((entry, index) => (
                     <tr
                       key={entry.employeeId}
                       className={`border-b border-border hover:bg-table-row-hover transition-colors ${

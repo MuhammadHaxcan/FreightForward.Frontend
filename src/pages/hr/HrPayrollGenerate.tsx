@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -28,7 +28,7 @@ const HrPayrollGenerate = () => {
   const [employeeId, setEmployeeId] = useState("");
   const [year, setYear] = useState(currentDate.getFullYear().toString());
   const [month, setMonth] = useState((currentDate.getMonth() + 1).toString());
-  const [paidLeavesToConsume, setPaidLeavesToConsume] = useState("0");
+  const [annualLeavesToConsume, setAnnualLeavesToConsume] = useState("0");
 
   const canFetchInfo = !!employeeId && !!year && !!month;
 
@@ -77,26 +77,29 @@ const HrPayrollGenerate = () => {
   const isPayrollBlocked = isPayrollPaid || isPayrollDraft;
 
   // Year options
-  const yearOptions = Array.from({ length: 5 }, (_, i) => {
-    const y = currentDate.getFullYear() - 2 + i;
+  const yearOptions = Array.from({ length: 10 }, (_, i) => {
+    const y = currentDate.getFullYear() - 5 + i;
     return { value: y.toString(), label: y.toString() };
   });
 
+  // R5: Capture employeeId at mutate() call time so onSuccess invalidates the correct employee
+  // even if user switched employees while mutation was in-flight
   const generateMutation = useMutation({
-    mutationFn: async () => {
-      const result = await hrPayrollApi.generate(parseInt(employeeId), {
+    mutationFn: async (empId: number) => {
+      const result = await hrPayrollApi.generate(empId, {
         year: parseInt(year),
         month: parseInt(month),
-        paidLeavesToConsume: parseInt(paidLeavesToConsume) || 0,
+        annualLeavesToConsume: parseInt(annualLeavesToConsume) || 0,
       });
       if (result.error) throw new Error(result.error);
       return result.data;
     },
-    onSuccess: () => {
+    onSuccess: (_data, empId) => {
       toast.success("Payroll generated successfully");
       queryClient.invalidateQueries({ queryKey: ["hr-payroll"] });
       queryClient.invalidateQueries({ queryKey: ["hr-payroll-pregenerate"] });
       queryClient.invalidateQueries({ queryKey: ["hr-payroll-exists"] });
+      queryClient.invalidateQueries({ queryKey: ["hr-payroll-emp", empId] });
       navigate("/hr/payroll");
     },
     onError: (error: Error) => {
@@ -104,9 +107,26 @@ const HrPayrollGenerate = () => {
     },
   });
 
+  // Guard against future periods
+  const selectedPeriodYear = parseInt(year);
+  const selectedPeriodMonth = parseInt(month);
+  const isFuturePeriod =
+    selectedPeriodYear > currentDate.getFullYear() ||
+    (selectedPeriodYear === currentDate.getFullYear() && selectedPeriodMonth > currentDate.getMonth() + 1);
+
   const maxLeavesToConsume = preGenInfo
-    ? Math.max(0, Math.min(preGenInfo.availablePaidLeaves, preGenInfo.totalAbsentsThisMonth))
+    ? Math.max(0, Math.min(preGenInfo.availableAnnualLeaves, preGenInfo.totalAbsentsThisMonth))
     : 0;
+
+  // C4/C5: Invalidate stale payroll pregenerate/exists queries when employee changes
+  const prevEmployeeIdRef = useRef<string>("");
+  useEffect(() => {
+    if (prevEmployeeIdRef.current && prevEmployeeIdRef.current !== employeeId) {
+      queryClient.invalidateQueries({ queryKey: ["hr-payroll-pregenerate", prevEmployeeIdRef.current] });
+      queryClient.invalidateQueries({ queryKey: ["hr-payroll-exists", prevEmployeeIdRef.current] });
+    }
+    prevEmployeeIdRef.current = employeeId;
+  }, [employeeId, queryClient]);
 
   const isGenerateDisabled =
     generateMutation.isPending ||
@@ -115,7 +135,8 @@ const HrPayrollGenerate = () => {
     infoFetching ||
     !preGenInfo ||
     existingPayrollLoading ||
-    isPayrollBlocked;
+    isPayrollBlocked ||
+    isFuturePeriod;
 
   return (
     <MainLayout>
@@ -148,7 +169,7 @@ const HrPayrollGenerate = () => {
                 value={employeeId}
                 onValueChange={(v) => {
                   setEmployeeId(v);
-                  setPaidLeavesToConsume("0");
+                  setAnnualLeavesToConsume("0");
                 }}
                 placeholder="Select an employee..."
                 searchPlaceholder="Search employees..."
@@ -161,7 +182,7 @@ const HrPayrollGenerate = () => {
                 value={year}
                 onValueChange={(v) => {
                   setYear(v);
-                  setPaidLeavesToConsume("0");
+                  setAnnualLeavesToConsume("0");
                 }}
               />
             </div>
@@ -172,7 +193,7 @@ const HrPayrollGenerate = () => {
                 value={month}
                 onValueChange={(v) => {
                   setMonth(v);
-                  setPaidLeavesToConsume("0");
+                  setAnnualLeavesToConsume("0");
                 }}
               />
             </div>
@@ -188,6 +209,19 @@ const HrPayrollGenerate = () => {
                 </div>
               ) : preGenInfo ? (
                 <div className="space-y-4">
+                  {/* U7: No absent deduction message */}
+                  {preGenInfo.totalAbsentsThisMonth === 0 && (
+                    <div className="flex gap-2 items-start rounded-lg border border-blue-300 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800 p-3 text-sm">
+                      <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="font-medium text-blue-800 dark:text-blue-300">No Absent Deduction</p>
+                        <p className="text-blue-700 dark:text-blue-400 text-xs mt-0.5">
+                          No absences this month — no absent deduction will be applied.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Lates breakdown */}
                   {preGenInfo.currentMonthLates === 0 && preGenInfo.previousCarryForwardLates > 0 ? (
                     <div className="bg-gray-50 dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700 rounded-lg p-3 text-sm">
@@ -228,30 +262,30 @@ const HrPayrollGenerate = () => {
                     </div>
                     <div className="p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-lg text-center">
                       <p className="text-3xl font-bold text-green-600">
-                        {preGenInfo.availablePaidLeaves - (parseInt(paidLeavesToConsume) || 0)}
+                        {preGenInfo.availableAnnualLeaves - (parseInt(annualLeavesToConsume) || 0)}
                       </p>
                       <p className="text-xs text-green-500 mt-1">Remaining Annual Leaves</p>
                       <div className="mt-2 flex justify-center gap-3 text-xs text-muted-foreground">
                         <span>Total: <span className="font-medium text-foreground">{preGenInfo.totalAnnualLeaves}</span></span>
-                        <span>Used: <span className="font-medium text-orange-500">{preGenInfo.consumedPaidLeaves + (parseInt(paidLeavesToConsume) || 0)}</span></span>
+                        <span>Used: <span className="font-medium text-orange-500">{preGenInfo.consumedAnnualLeaves + (parseInt(annualLeavesToConsume) || 0)}</span></span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Paid leaves to consume */}
+                  {/* Annual leaves to consume */}
                   <div className="space-y-1.5">
                     <Label className="text-sm">
-                      Paid Leaves to Consume
+                      Annual Leaves to Consume
                       <span className="text-muted-foreground font-normal ml-1">(max {maxLeavesToConsume})</span>
                     </Label>
                     <Input
                       type="number"
                       min={0}
                       max={maxLeavesToConsume}
-                      value={paidLeavesToConsume}
+                      value={annualLeavesToConsume}
                       onChange={(e) => {
                         const val = Math.min(Math.max(0, parseInt(e.target.value) || 0), maxLeavesToConsume);
-                        setPaidLeavesToConsume(val.toString());
+                        setAnnualLeavesToConsume(val.toString());
                       }}
                       placeholder="0"
                       className="max-w-[160px]"
@@ -260,7 +294,7 @@ const HrPayrollGenerate = () => {
                       <p className="text-xs text-muted-foreground">
                         Uncovered absents:{" "}
                         <span className="font-medium text-red-500">
-                          {Math.max(0, preGenInfo.totalAbsentsThisMonth - (parseInt(paidLeavesToConsume) || 0))} day(s)
+                          {Math.max(0, preGenInfo.totalAbsentsThisMonth - (parseInt(annualLeavesToConsume) || 0))} day(s)
                         </span>{" "}
                         will be deducted from salary.
                       </p>
@@ -270,6 +304,19 @@ const HrPayrollGenerate = () => {
                   </div>
                 </div>
               ) : null}
+
+              {/* Future period warning */}
+              {isFuturePeriod && (
+                <div className="flex gap-2 items-start rounded-lg border border-red-300 bg-red-50 dark:bg-red-950/20 dark:border-red-800 p-3 text-sm mb-4">
+                  <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium text-red-800 dark:text-red-300">Future Period</p>
+                    <p className="text-red-700 dark:text-red-400 text-xs mt-0.5">
+                      Cannot generate payroll for a future period ({monthNames[selectedPeriodMonth]} {selectedPeriodYear}).
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Existing payroll conflict alerts */}
               {!existingPayrollLoading && isPayrollPaid && (
@@ -301,7 +348,7 @@ const HrPayrollGenerate = () => {
           <div className="border-t border-border pt-4 flex justify-end">
             <Button
               className="btn-success gap-2 px-6"
-              onClick={() => generateMutation.mutate()}
+              onClick={() => generateMutation.mutate(parseInt(employeeId))}
               disabled={isGenerateDisabled}
             >
               {generateMutation.isPending ? (

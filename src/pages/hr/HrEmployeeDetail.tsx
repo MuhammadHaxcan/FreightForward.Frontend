@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -58,6 +58,11 @@ const HrEmployeeDetail = () => {
   const queryClient = useQueryClient();
   const employeeId = parseInt(id || "0");
   const [activeTab, setActiveTab] = useState("profile");
+
+  // U1: Reset activeTab when switching between employees
+  useEffect(() => {
+    setActiveTab("profile");
+  }, [employeeId]);
 
   // ========== Profile Tab State ==========
   const [employeeCode, setEmployeeCode] = useState("");
@@ -205,6 +210,8 @@ const HrEmployeeDetail = () => {
     onSuccess: () => {
       toast.success("Employee updated successfully");
       queryClient.invalidateQueries({ queryKey: ["hr-employee", employeeId] });
+      queryClient.invalidateQueries({ queryKey: ["hr-employees"] });
+      queryClient.invalidateQueries({ queryKey: ["hr-employees-dropdown"] });
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to update employee");
@@ -220,6 +227,7 @@ const HrEmployeeDetail = () => {
     onSuccess: () => {
       toast.success("Salary structure updated successfully");
       queryClient.invalidateQueries({ queryKey: ["hr-salary-structure", employeeId] });
+      queryClient.invalidateQueries({ queryKey: ["hr-salary-components-active"] });
       setSalaryModalOpen(false);
     },
     onError: (error: Error) => {
@@ -302,6 +310,7 @@ const HrEmployeeDetail = () => {
     const colors: Record<string, string> = {
       Active: "bg-green-500",
       FullyRepaid: "bg-blue-500",
+      WrittenOff: "bg-gray-500",
       Cancelled: "bg-gray-500",
     };
     return <span className={`px-2 py-0.5 rounded text-xs font-medium text-white ${colors[status] || "bg-gray-500"}`}>{status}</span>;
@@ -313,8 +322,6 @@ const HrEmployeeDetail = () => {
       Absent: "bg-red-500",
       Late: "bg-yellow-500",
       HalfDay: "bg-orange-500",
-      SickLeave: "bg-teal-500",
-      PaidLeave: "bg-blue-500",
       AnnualLeave: "bg-cyan-500",
       Holiday: "bg-purple-500",
     };
@@ -576,25 +583,19 @@ const HrEmployeeDetail = () => {
                 <thead>
                   <tr className="bg-table-header text-table-header-foreground">
                     <th className="px-4 py-3 text-left text-sm font-semibold">Date</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold">Check In</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold">Check Out</th>
-                    <th className="px-4 py-3 text-right text-sm font-semibold">Work Hours</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold">Status</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold">Remarks</th>
                   </tr>
                 </thead>
                 <tbody>
                   {attLoading ? (
-                    <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Loading...</td></tr>
+                    <tr><td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">Loading...</td></tr>
                   ) : !attendanceData?.items || attendanceData.items.length === 0 ? (
-                    <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">No records found</td></tr>
+                    <tr><td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">No records found</td></tr>
                   ) : (
                     attendanceData.items.map((rec, i) => (
                       <tr key={rec.id} className={`border-b border-border hover:bg-table-row-hover ${i % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
                         <td className="px-4 py-3 text-sm">{formatDate(rec.date)}</td>
-                        <td className="px-4 py-3 text-sm">{rec.checkIn || "-"}</td>
-                        <td className="px-4 py-3 text-sm">{rec.checkOut || "-"}</td>
-                        <td className="px-4 py-3 text-sm text-right">{rec.workHours?.toFixed(1) || "-"}</td>
                         <td className="px-4 py-3">{getAttendanceStatusBadge(rec.status)}</td>
                         <td className="px-4 py-3 text-sm text-muted-foreground">{rec.remarks || "-"}</td>
                       </tr>
@@ -645,8 +646,6 @@ const HrEmployeeDetail = () => {
                   { label: "Absent", value: attendanceSummaryData.absentDays, color: "text-red-600" },
                   { label: "Late", value: attendanceSummaryData.lateDays, color: "text-yellow-600" },
                   { label: "Half Day", value: attendanceSummaryData.halfDays, color: "text-orange-600" },
-                  { label: "Sick Leave", value: attendanceSummaryData.sickLeaveDays, color: "text-teal-600" },
-                  { label: "Paid Leave", value: attendanceSummaryData.paidLeaveDays, color: "text-blue-600" },
                   { label: "Annual Leave", value: attendanceSummaryData.annualLeaveDays, color: "text-cyan-600" },
                   { label: "Holidays", value: attendanceSummaryData.holidays, color: "text-purple-600" },
                   { label: "Total Working Days", value: attendanceSummaryData.totalWorkingDays, color: "text-foreground" },

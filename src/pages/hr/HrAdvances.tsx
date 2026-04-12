@@ -87,9 +87,11 @@ const HrAdvances = () => {
       if (result.error) throw new Error(result.error);
       return result.data;
     },
-    onSuccess: () => {
+    onSuccess: (_data, vars) => {
       toast.success("Advance created successfully");
       queryClient.invalidateQueries({ queryKey: ["hr-advances"] });
+      // C1: Invalidate employee-specific advances cache used by HrEmployeeDetail
+      queryClient.invalidateQueries({ queryKey: ["hr-advances-emp", vars.employeeId] });
       setAddModalOpen(false);
       resetForm();
     },
@@ -100,14 +102,15 @@ const HrAdvances = () => {
 
   // Delete mutation
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async ({ id, empId }: { id: number; empId: number }) => {
       const result = await hrAdvanceApi.delete(id);
       if (result.error) throw new Error(result.error);
-      return result.data;
+      return { id, empId };
     },
-    onSuccess: () => {
+    onSuccess: (vars) => {
       toast.success("Advance deleted successfully");
       queryClient.invalidateQueries({ queryKey: ["hr-advances"] });
+      queryClient.invalidateQueries({ queryKey: ["hr-advances-emp", vars.empId] });
       setDeleteDialogOpen(false);
       setDeletingAdvance(null);
     },
@@ -146,7 +149,8 @@ const HrAdvances = () => {
 
   const handleDeleteConfirm = () => {
     if (deletingAdvance) {
-      deleteMutation.mutate(deletingAdvance.id);
+      const empId = deletingAdvance.employeeId;
+      deleteMutation.mutate({ id: deletingAdvance.id, empId });
     }
   };
 
@@ -212,7 +216,7 @@ const HrAdvances = () => {
         <div className="bg-muted/30 border rounded-lg p-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="text-sm font-medium text-green-600 mb-1 block">Employee</label>
+              <label className="text-sm font-medium mb-1 block">Employee</label>
               <SearchableSelect
                 options={[
                   { value: "", label: "All Employees" },

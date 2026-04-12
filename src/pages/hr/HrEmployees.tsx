@@ -14,6 +14,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Trash2, Eye } from "lucide-react";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import { formatDate, getTodayDateOnly } from "@/lib/utils";
@@ -65,6 +75,13 @@ const HrEmployees = () => {
   const [emergencyContactName, setEmergencyContactName] = useState("");
   const [emergencyContactNumber, setEmergencyContactNumber] = useState("");
   const [annualLeaveDays, setAnnualLeaveDays] = useState("30");
+  const [confirmationDate, setConfirmationDate] = useState("");
+  const [passportNumber, setPassportNumber] = useState("");
+  const [passportExpiry, setPassportExpiry] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [bankAccountNumber, setBankAccountNumber] = useState("");
+  const [bankIban, setBankIban] = useState("");
+  const [bankBranch, setBankBranch] = useState("");
 
   // Fetch employees
   const { data: empData, isLoading } = useQuery({
@@ -91,6 +108,7 @@ const HrEmployees = () => {
     onSuccess: () => {
       toast.success("Employee created successfully");
       queryClient.invalidateQueries({ queryKey: ["hr-employees"] });
+      queryClient.invalidateQueries({ queryKey: ["hr-employees-dropdown"] });
       setModalOpen(false);
       resetForm();
     },
@@ -109,6 +127,7 @@ const HrEmployees = () => {
     onSuccess: () => {
       toast.success("Employee deleted successfully");
       queryClient.invalidateQueries({ queryKey: ["hr-employees"] });
+      queryClient.invalidateQueries({ queryKey: ["hr-employees-dropdown"] });
       setDeleteDialogOpen(false);
       setItemToDelete(null);
     },
@@ -138,6 +157,13 @@ const HrEmployees = () => {
     setEmergencyContactName("");
     setEmergencyContactNumber("");
     setAnnualLeaveDays("30");
+    setConfirmationDate("");
+    setPassportNumber("");
+    setPassportExpiry("");
+    setBankName("");
+    setBankAccountNumber("");
+    setBankIban("");
+    setBankBranch("");
   };
 
   const handleAddNew = async () => {
@@ -182,13 +208,20 @@ const HrEmployees = () => {
       department: department || undefined,
       designation: designation || undefined,
       joiningDate,
+      confirmationDate: confirmationDate || undefined,
       employmentStatus,
       gender: gender || undefined,
       dateOfBirth: dateOfBirth || undefined,
       nationalId: nationalId || undefined,
+      passportNumber: passportNumber || undefined,
+      passportExpiry: passportExpiry || undefined,
       emergencyContactName: emergencyContactName || undefined,
       emergencyContactNumber: emergencyContactNumber || undefined,
       address: address || undefined,
+      bankName: bankName || undefined,
+      bankAccountNumber: bankAccountNumber || undefined,
+      bankIban: bankIban || undefined,
+      bankBranch: bankBranch || undefined,
       annualLeaveDays: parseInt(annualLeaveDays) || 30,
     };
     createMutation.mutate(data);
@@ -226,7 +259,7 @@ const HrEmployees = () => {
         <div className="bg-muted/30 border rounded-lg p-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="text-sm font-medium text-green-600 mb-1 block">Status</label>
+              <label className="text-sm font-medium mb-1 block">Status</label>
               <SearchableSelect
                 options={[
                   { value: "", label: "All Statuses" },
@@ -238,7 +271,7 @@ const HrEmployees = () => {
               />
             </div>
             <div className="md:col-span-2">
-              <label className="text-sm font-medium text-green-600 mb-1 block">Search</label>
+              <label className="text-sm font-medium mb-1 block">Search</label>
               <Input
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -442,6 +475,13 @@ const HrEmployees = () => {
                 <DateInput value={joiningDate} onChange={setJoiningDate} />
               </div>
               <div className="space-y-2">
+                <Label className="text-sm">Confirmation Date</Label>
+                <DateInput value={confirmationDate} onChange={setConfirmationDate} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
                 <Label className="text-sm">Employment Status</Label>
                 <SearchableSelect
                   options={employmentStatuses}
@@ -473,6 +513,14 @@ const HrEmployees = () => {
                 <Label className="text-sm">National ID</Label>
                 <Input value={nationalId} onChange={(e) => setNationalId(e.target.value)} placeholder="National ID" />
               </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Passport Number</Label>
+                <Input value={passportNumber} onChange={(e) => setPassportNumber(e.target.value)} placeholder="Passport Number" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Passport Expiry</Label>
+                <DateInput value={passportExpiry} onChange={setPassportExpiry} />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -489,6 +537,26 @@ const HrEmployees = () => {
             <div className="space-y-2">
               <Label className="text-sm">Address</Label>
               <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Address" />
+            </div>
+
+            <h3 className="text-sm font-medium text-foreground pt-2 border-t border-border">Bank Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm">Bank Name</Label>
+                <Input value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="Bank Name" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Account Number</Label>
+                <Input value={bankAccountNumber} onChange={(e) => setBankAccountNumber(e.target.value)} placeholder="Account Number" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">IBAN</Label>
+                <Input value={bankIban} onChange={(e) => setBankIban(e.target.value)} placeholder="IBAN" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Branch</Label>
+                <Input value={bankBranch} onChange={(e) => setBankBranch(e.target.value)} placeholder="Branch" />
+              </div>
             </div>
 
             <h3 className="text-sm font-medium text-foreground pt-2 border-t border-border">Leave Entitlements (per year)</h3>
@@ -510,26 +578,28 @@ const HrEmployees = () => {
       </Dialog>
 
       {/* Delete Confirmation */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[400px] p-0 bg-card">
-          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
-            <DialogTitle className="text-white">Confirm Delete</DialogTitle>
-          </DialogHeader>
-          <div className="p-6 space-y-4">
-            <p className="text-sm text-muted-foreground">
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Employee</AlertDialogTitle>
+            <AlertDialogDescription>
               Are you sure you want to delete employee{" "}
               <span className="font-medium text-foreground">{itemToDelete?.fullName}</span>?
               This action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-2 pt-4 border-t border-border">
-              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-              <Button variant="destructive" onClick={confirmDelete} disabled={deleteMutation.isPending}>
-                {deleteMutation.isPending ? "Deleting..." : "Delete"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={confirmDelete}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 };

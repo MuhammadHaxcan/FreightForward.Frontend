@@ -13,6 +13,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import { formatDate } from "@/lib/utils";
@@ -63,6 +73,7 @@ const HrSalaryComponents = () => {
     onSuccess: () => {
       toast.success("Salary component created successfully");
       queryClient.invalidateQueries({ queryKey: ["hr-salary-components"] });
+      queryClient.invalidateQueries({ queryKey: ["hr-salary-components-active"] });
       setModalOpen(false);
       resetForm();
     },
@@ -81,6 +92,7 @@ const HrSalaryComponents = () => {
     onSuccess: () => {
       toast.success("Salary component updated successfully");
       queryClient.invalidateQueries({ queryKey: ["hr-salary-components"] });
+      queryClient.invalidateQueries({ queryKey: ["hr-salary-components-active"] });
       setModalOpen(false);
       resetForm();
     },
@@ -99,6 +111,7 @@ const HrSalaryComponents = () => {
     onSuccess: () => {
       toast.success("Salary component deleted successfully");
       queryClient.invalidateQueries({ queryKey: ["hr-salary-components"] });
+      queryClient.invalidateQueries({ queryKey: ["hr-salary-components-active"] });
       setDeleteDialogOpen(false);
       setItemToDelete(null);
     },
@@ -179,29 +192,31 @@ const HrSalaryComponents = () => {
         </div>
 
         {/* Search / Entries */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Show:</span>
-            <SearchableSelect
-              options={[
-                { value: "10", label: "10" },
-                { value: "25", label: "25" },
-                { value: "50", label: "50" },
-                { value: "100", label: "100" },
-              ]}
-              value={pageSize.toString()}
-              onValueChange={(v) => { setPageSize(parseInt(v)); setPageNumber(1); }}
-              triggerClassName="w-[90px] h-8"
-            />
-            <span className="text-sm text-muted-foreground">entries</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Search:</span>
-            <Input
-              value={searchTerm}
-              onChange={(e) => { setSearchTerm(e.target.value); setPageNumber(1); }}
-              className="w-[200px] h-8"
-            />
+        <div className="bg-muted/30 border rounded-lg p-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Label className="text-sm font-medium">Show:</Label>
+              <SearchableSelect
+                options={[
+                  { value: "10", label: "10" },
+                  { value: "25", label: "25" },
+                  { value: "50", label: "50" },
+                  { value: "100", label: "100" },
+                ]}
+                value={pageSize.toString()}
+                onValueChange={(v) => { setPageSize(parseInt(v)); setPageNumber(1); }}
+                triggerClassName="w-[90px] h-8"
+              />
+              <span className="text-sm text-muted-foreground">entries</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Label className="text-sm font-medium">Search:</Label>
+              <Input
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setPageNumber(1); }}
+                className="w-[200px] h-8"
+              />
+            </div>
           </div>
         </div>
 
@@ -377,26 +392,28 @@ const HrSalaryComponents = () => {
       </Dialog>
 
       {/* Delete Confirmation */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[400px] p-0 bg-card">
-          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
-            <DialogTitle className="text-white">Confirm Delete</DialogTitle>
-          </DialogHeader>
-          <div className="p-6 space-y-4">
-            <p className="text-sm text-muted-foreground">
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Salary Component</AlertDialogTitle>
+            <AlertDialogDescription>
               Are you sure you want to delete salary component{" "}
               <span className="font-medium text-foreground">{itemToDelete?.name}</span>?
               This action cannot be undone.
-            </p>
-            <div className="flex justify-end gap-2 pt-4 border-t border-border">
-              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-              <Button variant="destructive" onClick={confirmDelete} disabled={deleteMutation.isPending}>
-                {deleteMutation.isPending ? "Deleting..." : "Delete"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={confirmDelete}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </MainLayout>
   );
 };

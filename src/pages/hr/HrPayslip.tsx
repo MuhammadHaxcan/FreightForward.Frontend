@@ -183,12 +183,12 @@ const HrPayslip = () => {
                       <td className="py-1 text-right text-muted-foreground">—</td>
                     </tr>
                   )}
-                  {payslip.paidLeavesConsumed > 0 && (
+                  {payslip.annualLeavesConsumed > 0 && (
                     <tr className="border-b border-border/50">
                       <td className="py-1 text-green-700 dark:text-green-500">
-                        Paid Leave Used&nbsp;
+                        Annual Leave Used&nbsp;
                         <span className="text-xs font-normal text-muted-foreground">
-                          ({payslip.paidLeavesConsumed} day{payslip.paidLeavesConsumed !== 1 ? "s" : ""} — offset against absents)
+                          ({payslip.annualLeavesConsumed} day{payslip.annualLeavesConsumed !== 1 ? "s" : ""} — offset against absents)
                         </span>
                       </td>
                       <td className="py-1 text-right text-green-700 dark:text-green-500">0.00</td>
@@ -205,10 +205,10 @@ const HrPayslip = () => {
                       <td className="py-1 text-right">{formatAmount(payslip.absentDeduction)}</td>
                     </tr>
                   )}
-                  {payslip.uncoveredAbsentDays === 0 && payslip.paidLeavesConsumed > 0 && (
+                  {payslip.uncoveredAbsentDays === 0 && payslip.annualLeavesConsumed > 0 && (
                     <tr className="border-b border-border/50">
                       <td className="py-1 text-green-700 dark:text-green-500 text-xs">
-                        All absents covered by paid leave
+                        All absents covered by annual leave
                       </td>
                       <td className="py-1 text-right">0.00</td>
                     </tr>

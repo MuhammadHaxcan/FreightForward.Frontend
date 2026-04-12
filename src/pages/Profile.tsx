@@ -36,8 +36,6 @@ const statusColors: Record<string, string> = {
   Absent: 'bg-red-500',
   Late: 'bg-yellow-500',
   HalfDay: 'bg-orange-500',
-  SickLeave: 'bg-teal-500',
-  PaidLeave: 'bg-blue-500',
   AnnualLeave: 'bg-cyan-500',
   Holiday: 'bg-purple-500',
 };
@@ -47,8 +45,6 @@ const statusLabels: Record<string, string> = {
   Absent: 'Absent',
   Late: 'Late',
   HalfDay: 'Half Day',
-  SickLeave: 'Sick Leave',
-  PaidLeave: 'Paid Leave',
   AnnualLeave: 'Annual Leave',
   Holiday: 'Holiday',
 };

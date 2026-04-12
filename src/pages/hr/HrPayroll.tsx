@@ -15,6 +15,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Plus, Pencil, Trash2, Eye, Check } from "lucide-react";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import {
@@ -104,6 +114,8 @@ const HrPayroll = () => {
   // Delete confirmation
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [deletingEmployeeId, setDeletingEmployeeId] = useState<number | null>(null);
+  const [deletingPayrollId, setDeletingPayrollId] = useState<number | null>(null);
 
   // Mark Paid modal
   const [markPaidModalOpen, setMarkPaidModalOpen] = useState(false);
@@ -116,8 +128,8 @@ const HrPayroll = () => {
   const [markPaidPostDatedValidDate, setMarkPaidPostDatedValidDate] = useState("");
 
   // Year options
-  const yearOptions = Array.from({ length: 5 }, (_, i) => {
-    const y = currentDate.getFullYear() - 2 + i;
+  const yearOptions = Array.from({ length: 10 }, (_, i) => {
+    const y = currentDate.getFullYear() - 5 + i;
     return { value: y.toString(), label: y.toString() };
   });
 
@@ -155,20 +167,26 @@ const HrPayroll = () => {
   const updateMutation = useMutation({
     mutationFn: async ({
       id,
+      empId,
+      payrollId,
       data,
     }: {
       id: number;
+      empId: number;
+      payrollId: number;
       data: UpdatePayrollRequest;
     }) => {
       const result = await hrPayrollApi.update(id, data);
       if (result.error) throw new Error(result.error);
-      return result.data;
+      return { empId, payrollId };
     },
-    onSuccess: () => {
+    onSuccess: (vars) => {
       toast.success("Payroll updated successfully");
       queryClient.invalidateQueries({ queryKey: ["hr-payroll"] });
       queryClient.invalidateQueries({ queryKey: ["hr-payroll-pregenerate"] });
       queryClient.invalidateQueries({ queryKey: ["hr-payroll-exists"] });
+      queryClient.invalidateQueries({ queryKey: ["hr-payroll-emp", vars.empId] });
+      queryClient.invalidateQueries({ queryKey: ["hr-payslip", vars.payrollId] });
       setEditModalOpen(false);
       setEditingItem(null);
     },
@@ -178,18 +196,22 @@ const HrPayroll = () => {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async ({ id, empId, payrollId }: { id: number; empId: number; payrollId: number }) => {
       const result = await hrPayrollApi.delete(id);
       if (result.error) throw new Error(result.error);
-      return result.data;
+      return { empId, payrollId };
     },
-    onSuccess: () => {
+    onSuccess: (vars) => {
       toast.success("Payroll deleted successfully");
       queryClient.invalidateQueries({ queryKey: ["hr-payroll"] });
       queryClient.invalidateQueries({ queryKey: ["hr-payroll-pregenerate"] });
       queryClient.invalidateQueries({ queryKey: ["hr-payroll-exists"] });
+      queryClient.invalidateQueries({ queryKey: ["hr-payroll-emp", vars.empId] });
+      queryClient.invalidateQueries({ queryKey: ["hr-payslip", vars.payrollId] });
       setDeleteDialogOpen(false);
       setDeletingId(null);
+      setDeletingEmployeeId(null);
+      setDeletingPayrollId(null);
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to delete payroll");
@@ -197,16 +219,18 @@ const HrPayroll = () => {
   });
 
   const markPaidMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: MarkPaidRequest }) => {
+    mutationFn: async ({ id, data }: { id: number; empId: number; data: MarkPaidRequest }) => {
       const result = await hrPayrollApi.markPaid(id, data);
       if (result.error) throw new Error(result.error);
       return result.data;
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       toast.success("Payroll marked as paid");
       queryClient.invalidateQueries({ queryKey: ["hr-payroll"] });
       queryClient.invalidateQueries({ queryKey: ["hr-payroll-pregenerate"] });
       queryClient.invalidateQueries({ queryKey: ["hr-payroll-exists"] });
+      queryClient.invalidateQueries({ queryKey: ["hr-payroll-emp", variables.empId] });
+      queryClient.invalidateQueries({ queryKey: ["hr-payslip", variables.id] });
       setMarkPaidModalOpen(false);
       setMarkPaidPayroll(null);
     },
@@ -251,17 +275,19 @@ const HrPayroll = () => {
       netSalary: editNetSalary,
       remarks: editRemarks || undefined,
     };
-    updateMutation.mutate({ id: editingItem.id, data });
+    updateMutation.mutate({ id: editingItem.id, empId: editingItem.employeeId, payrollId: editingItem.id, data });
   };
 
-  const handleConfirmDelete = (id: number) => {
-    setDeletingId(id);
+  const handleConfirmDelete = (item: PayrollListItem) => {
+    setDeletingId(item.id);
+    setDeletingEmployeeId(item.employeeId);
+    setDeletingPayrollId(item.id);
     setDeleteDialogOpen(true);
   };
 
   const handleDelete = () => {
-    if (deletingId !== null) {
-      deleteMutation.mutate(deletingId);
+    if (deletingId !== null && deletingEmployeeId !== null && deletingPayrollId !== null) {
+      deleteMutation.mutate({ id: deletingId, empId: deletingEmployeeId, payrollId: deletingPayrollId });
     }
   };
 
@@ -278,6 +304,9 @@ const HrPayroll = () => {
 
   const handleSubmitMarkPaid = () => {
     if (!markPaidPayroll) return;
+    // R5 pattern: capture IDs before mutation so onSuccess has correct values even if state resets
+    const payrollId = markPaidPayroll.id;
+    const empId = markPaidPayroll.employeeId;
     const data: MarkPaidRequest = {
       paymentMode: paymentModeToEnum[markPaidPaymentMode] || "Cash",
       bankId: markPaidRequiresBank && markPaidBankId ? parseInt(markPaidBankId) : undefined,
@@ -286,7 +315,7 @@ const HrPayroll = () => {
       chequeDate: markPaidRequiresChequeDetails && markPaidChequeDate ? markPaidChequeDate : undefined,
       postDatedValidDate: markPaidPaymentMode === "POST DATED CHEQUE" && markPaidPostDatedValidDate ? markPaidPostDatedValidDate : undefined,
     };
-    markPaidMutation.mutate({ id: markPaidPayroll.id, data });
+    markPaidMutation.mutate({ id: payrollId, empId, data });
   };
 
   const getStatusBadge = (status: string) => {
@@ -327,7 +356,7 @@ const HrPayroll = () => {
         <div className="bg-muted/30 border rounded-lg p-4 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="text-sm font-medium text-green-600 mb-1 block">
+              <label className="text-sm font-medium mb-1 block">
                 Year
               </label>
               <SearchableSelect
@@ -340,7 +369,7 @@ const HrPayroll = () => {
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-green-600 mb-1 block">
+              <label className="text-sm font-medium mb-1 block">
                 Month From
               </label>
               <SearchableSelect
@@ -353,7 +382,7 @@ const HrPayroll = () => {
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-green-600 mb-1 block">
+              <label className="text-sm font-medium mb-1 block">
                 Month To
               </label>
               <SearchableSelect
@@ -366,7 +395,7 @@ const HrPayroll = () => {
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-green-600 mb-1 block">
+              <label className="text-sm font-medium mb-1 block">
                 Employee
               </label>
               <SearchableSelect
@@ -507,7 +536,7 @@ const HrPayroll = () => {
                             <PermissionGate permission="hr_payroll_edit">
                               <button
                                 className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
-                                onClick={() => handleConfirmDelete(item.id)}
+                                onClick={() => handleConfirmDelete(item)}
                                 title="Delete"
                               >
                                 <Trash2 size={14} />
@@ -551,15 +580,15 @@ const HrPayroll = () => {
                         ) : <span className="text-muted-foreground">—</span>}
                       </td>
                       <td className="px-4 py-3 text-sm text-right">
-                        {item.paidLeavesConsumed > 0 ? (
-                          <span className="text-green-600 font-medium">{item.paidLeavesConsumed}d</span>
+                        {item.annualLeavesConsumed > 0 ? (
+                          <span className="text-green-600 font-medium">{item.annualLeavesConsumed}d</span>
                         ) : <span className="text-muted-foreground">—</span>}
                       </td>
                       <td className="px-4 py-3 text-sm text-right">
                         {item.uncoveredAbsentDays > 0 ? (
                           <span className="text-red-500 font-medium">{item.uncoveredAbsentDays}d</span>
-                        ) : (item.paidLeavesConsumed > 0 ? (
-                          <span className="text-green-600 text-xs">{item.paidLeavesConsumed}d ✓</span>
+                        ) : (item.annualLeavesConsumed > 0 ? (
+                          <span className="text-green-600 text-xs">{item.annualLeavesConsumed}d ✓</span>
                         ) : <span className="text-muted-foreground">—</span>)}
                       </td>
                       <td className="px-4 py-3 text-sm text-right font-medium">
@@ -686,8 +715,9 @@ const HrPayroll = () => {
                     <Input
                       type="number"
                       value={editAdvance}
-                      onChange={(e) => setEditAdvance(e.target.value)}
-                      placeholder="0.00"
+                      readOnly
+                      className="bg-muted cursor-not-allowed"
+                      title="Advance deduction is auto-calculated and cannot be edited manually"
                     />
                   </div>
                   <div className="space-y-2">
@@ -732,37 +762,26 @@ const HrPayroll = () => {
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[400px] p-0 bg-card">
-          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
-            <DialogTitle className="text-white">Confirm Delete</DialogTitle>
-          </DialogHeader>
-          <div className="p-6 space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Are you sure you want to delete this payroll record? This action
-              cannot be undone.
-            </p>
-            <div className="flex justify-end gap-2 pt-4 border-t border-border">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setDeleteDialogOpen(false);
-                  setDeletingId(null);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleDelete}
-                disabled={deleteMutation.isPending}
-              >
-                {deleteMutation.isPending ? "Deleting..." : "Delete"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Payroll Record</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this payroll record? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Mark as Paid Modal */}
       <Dialog open={markPaidModalOpen} onOpenChange={setMarkPaidModalOpen}>

@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { Printer } from "lucide-react";
+import { Printer, ArrowLeft } from "lucide-react";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 import { hrAttendanceApi, hrEmployeeApi, hrAttendancePolicyApi } from "@/services/api/hr";
 import {
   Dialog,
@@ -43,8 +44,6 @@ const statusColors: Record<string, string> = {
   Absent: "bg-red-500",
   Late: "bg-yellow-500",
   HalfDay: "bg-orange-500",
-  SickLeave: "bg-teal-500",
-  PaidLeave: "bg-blue-500",
   AnnualLeave: "bg-cyan-500",
   Holiday: "bg-purple-500",
 };
@@ -54,14 +53,11 @@ const statusLabels: Record<string, string> = {
   Absent: "Absent",
   Late: "Late",
   HalfDay: "Half Day",
-  SickLeave: "Sick Leave",
-  PaidLeave: "Paid Leave",
   AnnualLeave: "Annual Leave",
   Holiday: "Holiday",
 };
 
 const statusOptions = Object.entries(statusLabels)
-  .filter(([value]) => value !== "SickLeave" && value !== "PaidLeave")
   .map(([value, label]) => ({ value, label }));
 
 const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -93,6 +89,7 @@ const HrAttendanceSummary = () => {
   const [unlockReason, setUnlockReason] = useState("");
 
   const queryClient = useQueryClient();
+  const unlockedDateRef = useRef<string>("");
 
   const { data: hrPolicy } = useQuery({
     queryKey: ["hr-attendance-policy"],
@@ -101,11 +98,12 @@ const HrAttendanceSummary = () => {
       if (result.error) throw new Error(result.error);
       return result.data;
     },
+    staleTime: 0,
   });
   const weeklyOffDays = hrPolicy?.weeklyOffDays ?? [];
 
-  const yearOptions = Array.from({ length: 5 }, (_, i) => {
-    const y = currentDate.getFullYear() - 2 + i;
+  const yearOptions = Array.from({ length: 10 }, (_, i) => {
+    const y = currentDate.getFullYear() - 5 + i;
     return { value: y.toString(), label: y.toString() };
   });
 
@@ -152,6 +150,7 @@ const HrAttendanceSummary = () => {
   const unlockMutation = useMutation({
     mutationFn: async () => {
       const { recordId, employeeId, dateStr } = unlockModal;
+      unlockedDateRef.current = dateStr;
       if (recordId) {
         const result = await hrAttendanceApi.update(recordId, {
           status: unlockStatus,
@@ -172,6 +171,12 @@ const HrAttendanceSummary = () => {
       toast.success("Attendance updated successfully");
       queryClient.invalidateQueries({
         queryKey: ["hr-attendance-employee-monthly", selectedEmployee, selectedYear, selectedMonth],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["hr-attendance-summary", selectedYear, selectedMonth],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["hr-attendance-daily", unlockedDateRef.current],
       });
       setUnlockModal({ open: false, dateStr: "", dayLabel: "", employeeId: 0 });
       setUnlockReason("");
@@ -260,15 +265,15 @@ const HrAttendanceSummary = () => {
         <div className="bg-muted/30 border rounded-lg p-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="text-sm font-medium text-green-600 mb-1 block">Year</label>
+              <label className="text-sm font-medium mb-1 block">Year</label>
               <SearchableSelect options={yearOptions} value={selectedYear} onValueChange={setSelectedYear} />
             </div>
             <div>
-              <label className="text-sm font-medium text-green-600 mb-1 block">Month</label>
+              <label className="text-sm font-medium mb-1 block">Month</label>
               <SearchableSelect options={monthOptions} value={selectedMonth} onValueChange={setSelectedMonth} />
             </div>
             <div>
-              <label className="text-sm font-medium text-green-600 mb-1 block">Employee</label>
+              <label className="text-sm font-medium mb-1 block">Employee</label>
               <SearchableSelect
                 options={[
                   { value: "", label: "All Employees" },
@@ -358,6 +363,16 @@ const HrAttendanceSummary = () => {
 
         {/* Employee Detail View */}
         {isEmployeeView && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setSelectedEmployee("")}>
+                <ArrowLeft size={16} />
+                Back to Summary
+              </Button>
+              <span className="text-sm font-medium text-muted-foreground">
+                {employees.find((e) => e.id.toString() === selectedEmployee)?.fullName ?? "Employee"} — {monthOptions.find((m) => m.value === selectedMonth)?.label} {selectedYear}
+              </span>
+            </div>
           <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -416,14 +431,16 @@ const HrAttendanceSummary = () => {
                           </td>
                           <td className="px-4 py-2">
                             {showUnlock && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-7 text-xs px-2"
-                                onClick={() => openUnlockModal(dateStr, `${dayName} ${day}`, record?.id)}
-                              >
-                                Unlock
-                              </Button>
+                              <PermissionGate permission="hr_attend_unlock">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-xs px-2"
+                                  onClick={() => openUnlockModal(dateStr, `${dayName} ${day}`, record?.id)}
+                                >
+                                  Unlock
+                                </Button>
+                              </PermissionGate>
                             )}
                           </td>
                         </tr>
@@ -450,6 +467,7 @@ const HrAttendanceSummary = () => {
                 )}
               </table>
             </div>
+          </div>
           </div>
         )}
       </div>
