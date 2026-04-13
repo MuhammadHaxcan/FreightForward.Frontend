@@ -399,7 +399,7 @@ export function useAllCountries() {
 }
 
 // SMTP Hooks
-export function useSmtpSettings() {
+export function useSmtpSettings(enabled = true) {
   return useQuery({
     queryKey: ['smtpSettings'],
     queryFn: async () => {
@@ -407,6 +407,7 @@ export function useSmtpSettings() {
       if (response.error) throw new Error(response.error);
       return response.data!;
     },
+    enabled,
   });
 }
 
@@ -532,11 +533,11 @@ export function useAllChargeItems() {
   return useQuery({
     queryKey: ['chargeItems', 'all'],
     queryFn: async () => {
-      const response = await settingsApi.getChargeItems({ pageSize: 1000 });
+      const response = await settingsApi.getAllChargeItems();
       if (response.error) {
         throw new Error(response.error);
       }
-      return response.data!.items;
+      return response.data!;
     },
   });
 }

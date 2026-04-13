@@ -6,6 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Loader2, Mail, CheckCircle2, XCircle } from "lucide-react";
 import { useSmtpSettings, useSaveSmtpSettings, useTestSmtpConnection } from "@/hooks/useSettings";
 import { SaveSmtpSettingsRequest } from "@/services/api/settings";
+import { PermissionGate } from "@/components/auth/PermissionGate";
 
 const DEFAULT_FORM: SaveSmtpSettingsRequest = {
   smtpHost: "",
@@ -160,27 +161,31 @@ export function SmtpSettingsTab() {
 
         {/* Actions */}
         <div className="flex items-center gap-3 pt-2 border-t">
-          <Button
-            variant="outline"
-            onClick={() => testConnection.mutate()}
-            disabled={testConnection.isPending || !settings?.isConfigured}
-          >
-            {testConnection.isPending ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Testing...</>
-            ) : (
-              "Test Connection"
-            )}
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={saveSettings.isPending}
-          >
-            {saveSettings.isPending ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</>
-            ) : (
-              "Save Email Settings"
-            )}
-          </Button>
+          <PermissionGate permission="smtp_edit">
+            <Button
+              variant="outline"
+              onClick={() => testConnection.mutate()}
+              disabled={testConnection.isPending || !settings?.isConfigured}
+            >
+              {testConnection.isPending ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Testing...</>
+              ) : (
+                "Test Connection"
+              )}
+            </Button>
+          </PermissionGate>
+          <PermissionGate permission="smtp_edit">
+            <Button
+              onClick={handleSave}
+              disabled={saveSettings.isPending}
+            >
+              {saveSettings.isPending ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</>
+              ) : (
+                "Save Email Settings"
+              )}
+            </Button>
+          </PermissionGate>
           <Button variant="ghost" onClick={handleReset}>
             Reset
           </Button>

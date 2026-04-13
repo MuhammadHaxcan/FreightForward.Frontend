@@ -32,6 +32,7 @@ const HrAttendancePolicy = () => {
     mutationFn: async () => {
       const result = await hrAttendancePolicyApi.update({
         latesPerAbsent: parseInt(latesPerAbsent) || 3,
+        weeklyOffDays: policy?.weeklyOffDays ?? [],
       });
       if (result.error) throw new Error(result.error);
       return result.data;

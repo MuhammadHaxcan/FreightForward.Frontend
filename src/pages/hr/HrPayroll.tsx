@@ -191,6 +191,8 @@ const HrPayroll = () => {
       queryClient.invalidateQueries({ queryKey: ["hr-payroll-exists"] });
       queryClient.invalidateQueries({ queryKey: ["hr-payroll-emp", vars.empId] });
       queryClient.invalidateQueries({ queryKey: ["hr-payslip", vars.payrollId] });
+      queryClient.invalidateQueries({ queryKey: ["hr-advances"] });
+      queryClient.invalidateQueries({ queryKey: ["hr-advances-emp", vars.empId] });
       setEditModalOpen(false);
       setEditingItem(null);
     },
@@ -212,6 +214,8 @@ const HrPayroll = () => {
       queryClient.invalidateQueries({ queryKey: ["hr-payroll-exists"] });
       queryClient.invalidateQueries({ queryKey: ["hr-payroll-emp", vars.empId] });
       queryClient.invalidateQueries({ queryKey: ["hr-payslip", vars.payrollId] });
+      queryClient.invalidateQueries({ queryKey: ["hr-advances"] });
+      queryClient.invalidateQueries({ queryKey: ["hr-advances-emp", vars.empId] });
       setDeleteDialogOpen(false);
       setDeletingId(null);
       setDeletingEmployeeId(null);

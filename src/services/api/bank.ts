@@ -40,6 +40,7 @@ export const bankApi = {
     if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
     return fetchApi<PaginatedList<Bank>>(`/banks?${query}`);
   },
+  getAllBanks: () => fetchApi<Bank[]>('/banks/all'),
   getById: (id: number) => fetchApi<Bank>(`/banks/${id}`),
   create: (data: CreateBankRequest) =>
     fetchApi<number>('/banks', { method: 'POST', body: JSON.stringify(data) }),

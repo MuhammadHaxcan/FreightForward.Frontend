@@ -100,6 +100,8 @@ const HrPayrollGenerate = () => {
       queryClient.invalidateQueries({ queryKey: ["hr-payroll-pregenerate"] });
       queryClient.invalidateQueries({ queryKey: ["hr-payroll-exists"] });
       queryClient.invalidateQueries({ queryKey: ["hr-payroll-emp", empId] });
+      queryClient.invalidateQueries({ queryKey: ["hr-advances"] });
+      queryClient.invalidateQueries({ queryKey: ["hr-advances-emp", empId] });
       navigate("/hr/payroll");
     },
     onError: (error: Error) => {

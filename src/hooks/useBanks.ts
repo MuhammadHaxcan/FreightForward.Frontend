@@ -16,6 +16,20 @@ export function useBanks(params?: { pageNumber?: number; pageSize?: number; sear
   });
 }
 
+export function useAllBanks() {
+  return useQuery({
+    queryKey: ['banks', 'all'],
+    queryFn: async () => {
+      const response = await bankApi.getAllBanks();
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 export function useBank(id: number) {
   return useQuery({
     queryKey: ['banks', id],

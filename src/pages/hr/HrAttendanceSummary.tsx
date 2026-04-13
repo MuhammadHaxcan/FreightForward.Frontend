@@ -178,6 +178,8 @@ const HrAttendanceSummary = () => {
       queryClient.invalidateQueries({
         queryKey: ["hr-attendance-daily", unlockedDateRef.current],
       });
+      queryClient.invalidateQueries({ queryKey: ["hr-attendance-emp", parseInt(selectedEmployee)] });
+      queryClient.invalidateQueries({ queryKey: ["hr-attendance-summary-emp", parseInt(selectedEmployee)] });
       setUnlockModal({ open: false, dateStr: "", dayLabel: "", employeeId: 0 });
       setUnlockReason("");
       setUnlockStatus("Present");
@@ -530,7 +532,7 @@ const HrAttendanceSummary = () => {
             </Button>
             <Button
               onClick={() => unlockMutation.mutate()}
-              disabled={unlockMutation.isPending || !unlockReason.trim()}
+              disabled={unlockMutation.isPending}
             >
               {unlockMutation.isPending ? "Saving..." : "Save"}
             </Button>

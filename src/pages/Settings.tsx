@@ -34,6 +34,7 @@ import {
   useUpdateExpenseType,
   useDeleteExpenseType,
   useAllCountries,
+  useAllCurrencyTypes,
   useInvoiceNotes,
   useCreateInvoiceNote,
   useUpdateInvoiceNote,
@@ -42,28 +43,28 @@ import {
 } from "@/hooks/useSettings";
 import {
   useBanks,
+  useAllBanks,
   useCreateBank,
   useUpdateBank,
   useDeleteBank,
 } from "@/hooks/useBanks";
+import { DeleteConfirmationModal } from "@/components/ui/delete-confirmation-modal";
 import {
   CurrencyType,
   Port,
   ChargeItem,
   ExpenseType,
   PaymentType,
-  Company,
   Bank,
   InvoiceNote,
   InvoiceNoteType,
   companyApi,
-  bankApi,
   fileApi,
-  settingsApi,
 } from "@/services/api";
 import { toast } from "sonner";
 import { CurrencyRateHistoryModal } from "@/components/settings/CurrencyRateHistoryModal";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
+import { usePermissions } from "@/hooks/usePermissions";
 
 const DAYS_OF_WEEK = [
   { value: 0, label: "Sun" },
@@ -78,6 +79,7 @@ const DAYS_OF_WEEK = [
 const Settings = () => {
   const baseCurrency = useBaseCurrency();
   const queryClient = useQueryClient();
+  const { hasPermission } = usePermissions();
 
   // HR Settings state
   const [hrLatesPerAbsent, setHrLatesPerAbsent] = useState("3");
@@ -172,6 +174,13 @@ const Settings = () => {
   const [editBankModalOpen, setEditBankModalOpen] = useState(false);
   const [editNoteModalOpen, setEditNoteModalOpen] = useState(false);
 
+  // Delete confirmation state
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    type: 'currency' | 'port' | 'charge' | 'expense' | 'bank' | 'note';
+    id: number;
+    name: string;
+  } | null>(null);
+
   // Edit form states
   const [editCurrency, setEditCurrency] = useState<CurrencyType | null>(null);
   const [editPort, setEditPort] = useState<Port | null>(null);
@@ -188,8 +197,10 @@ const Settings = () => {
   const [companyId, setCompanyId] = useState<number | null>(null);
   const [companyLoading, setCompanyLoading] = useState(true);
   const [companySaving, setCompanySaving] = useState(false);
-  const [allBanks, setAllBanks] = useState<Bank[]>([]);
-  const [allCurrencies, setAllCurrencies] = useState<CurrencyType[]>([]);
+  const { data: allBanksData } = useAllBanks();
+  const allBanks = allBanksData ?? [];
+  const { data: allCurrenciesData } = useAllCurrencyTypes();
+  const allCurrencies = allCurrenciesData ?? [];
   const [companyProfile, setCompanyProfile] = useState({
     name: "",
     companyType: "",
@@ -293,8 +304,8 @@ const Settings = () => {
     searchTerm: appliedNoteSearch || undefined,
   });
 
-  // Prefetch SMTP settings so the tab loads instantly from cache
-  useSmtpSettings();
+  // Prefetch SMTP settings only if user has smtp_view permission
+  useSmtpSettings(hasPermission('smtp_view'));
 
   // Mutations
   const createCurrencyMutation = useCreateCurrencyType();
@@ -365,8 +376,8 @@ const Settings = () => {
     );
   };
 
-  const handleDeleteCurrency = (id: number) => {
-    deleteCurrencyMutation.mutate(id);
+  const handleDeleteCurrency = (id: number, name: string) => {
+    setDeleteConfirm({ type: 'currency', id, name });
   };
 
   const handleAddPort = () => {
@@ -416,8 +427,8 @@ const Settings = () => {
     );
   };
 
-  const handleDeletePort = (id: number) => {
-    deletePortMutation.mutate(id);
+  const handleDeletePort = (id: number, name: string) => {
+    setDeleteConfirm({ type: 'port', id, name });
   };
 
   const handleAddCharge = () => {
@@ -453,8 +464,8 @@ const Settings = () => {
     );
   };
 
-  const handleDeleteCharge = (id: number) => {
-    deleteChargeMutation.mutate(id);
+  const handleDeleteCharge = (id: number, name: string) => {
+    setDeleteConfirm({ type: 'charge', id, name });
   };
 
   const handleAddNote = () => {
@@ -496,8 +507,8 @@ const Settings = () => {
     );
   };
 
-  const handleDeleteNote = (id: number) => {
-    deleteNoteMutation.mutate(id);
+  const handleDeleteNote = (id: number, name: string) => {
+    setDeleteConfirm({ type: 'note', id, name });
   };
 
   const handleAddExpense = () => {
@@ -535,8 +546,8 @@ const Settings = () => {
     );
   };
 
-  const handleDeleteExpense = (id: number) => {
-    deleteExpenseMutation.mutate(id);
+  const handleDeleteExpense = (id: number, name: string) => {
+    setDeleteConfirm({ type: 'expense', id, name });
   };
 
   const handleAddBank = () => {
@@ -582,8 +593,20 @@ const Settings = () => {
     );
   };
 
-  const handleDeleteBank = (id: number) => {
-    deleteBankMutation.mutate(id);
+  const handleDeleteBank = (id: number, name: string) => {
+    setDeleteConfirm({ type: 'bank', id, name });
+  };
+
+  const handleDeleteConfirm = () => {
+    if (!deleteConfirm) return;
+    const { type, id } = deleteConfirm;
+    const onSuccess = () => setDeleteConfirm(null);
+    if (type === 'currency') deleteCurrencyMutation.mutate(id, { onSuccess: () => { setCurrencyPage(1); onSuccess(); } });
+    else if (type === 'port') deletePortMutation.mutate(id, { onSuccess: () => { setPortPage(1); onSuccess(); } });
+    else if (type === 'charge') deleteChargeMutation.mutate(id, { onSuccess: () => { setChargePage(1); onSuccess(); } });
+    else if (type === 'expense') deleteExpenseMutation.mutate(id, { onSuccess: () => { setExpensePage(1); onSuccess(); } });
+    else if (type === 'bank') deleteBankMutation.mutate(id, { onSuccess: () => { setBankPage(1); onSuccess(); } });
+    else if (type === 'note') deleteNoteMutation.mutate(id, { onSuccess: () => { setNotePage(1); onSuccess(); } });
   };
 
   const resetCurrencyForm = () => {
@@ -620,22 +643,12 @@ const Settings = () => {
   const { data: countriesData } = useAllCountries();
   const countries = (countriesData || []).map((c) => c.name);
 
-  // Load company profile and all banks on mount
+  // Load company profile on mount
   useEffect(() => {
     const loadCompanyData = async () => {
       setCompanyLoading(true);
       try {
-        const [companyRes, bankRes, currencyRes] = await Promise.all([
-          companyApi.getAll({ pageNumber: 1, pageSize: 1 }),
-          bankApi.getAll({ pageNumber: 1, pageSize: 100 }),
-          settingsApi.getAllCurrencyTypes(),
-        ]);
-        if (bankRes.data) {
-          setAllBanks(bankRes.data.items);
-        }
-        if (currencyRes.data) {
-          setAllCurrencies(currencyRes.data);
-        }
+        const companyRes = await companyApi.getAll({ pageNumber: 1, pageSize: 1 });
         if (companyRes.data && companyRes.data.items.length > 0) {
           const c = companyRes.data.items[0];
           setCompanyId(c.id);
@@ -770,12 +783,14 @@ const Settings = () => {
             >
               Notes
             </TabsTrigger>
-            <TabsTrigger
-              value="smtp"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
-            >
-              Email / SMTP
-            </TabsTrigger>
+            <PermissionGate permission="smtp_view">
+              <TabsTrigger
+                value="smtp"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
+              >
+                Email / SMTP
+              </TabsTrigger>
+            </PermissionGate>
             <TabsTrigger
               value="hr-settings"
               className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6 py-2.5"
@@ -876,7 +891,7 @@ const Settings = () => {
                               </PermissionGate>
                               <PermissionGate permission="currency_delete">
                                 <button
-                                  onClick={() => handleDeleteCurrency(currency.id)}
+                                  onClick={() => handleDeleteCurrency(currency.id, currency.name)}
                                   className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
                                   title="Delete"
                                 >
@@ -1012,7 +1027,7 @@ const Settings = () => {
                               </PermissionGate>
                               <PermissionGate permission="port_delete">
                                 <button
-                                  onClick={() => handleDeletePort(port.id)}
+                                  onClick={() => handleDeletePort(port.id, port.seaPortName || port.airPortName)}
                                   className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
                                 >
                                   <Trash2 size={14} />
@@ -1143,7 +1158,7 @@ const Settings = () => {
                               </PermissionGate>
                               <PermissionGate permission="chargeitem_delete">
                                 <button
-                                  onClick={() => handleDeleteCharge(charge.id)}
+                                  onClick={() => handleDeleteCharge(charge.id, charge.name)}
                                   className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
                                 >
                                   <Trash2 size={14} />
@@ -1272,7 +1287,7 @@ const Settings = () => {
                               </PermissionGate>
                               <PermissionGate permission="expensetype_delete">
                                 <button
-                                  onClick={() => handleDeleteExpense(expense.id)}
+                                  onClick={() => handleDeleteExpense(expense.id, expense.name)}
                                   className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
                                 >
                                   <Trash2 size={14} />
@@ -1637,7 +1652,7 @@ const Settings = () => {
                               </PermissionGate>
                               <PermissionGate permission="banks_delete">
                                 <button
-                                  onClick={() => handleDeleteBank(bank.id)}
+                                  onClick={() => handleDeleteBank(bank.id, bank.bankName)}
                                   className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
                                 >
                                   <Trash2 size={14} />
@@ -1773,7 +1788,7 @@ const Settings = () => {
                               </PermissionGate>
                               <PermissionGate permission="invoicenote_delete">
                                 <button
-                                  onClick={() => handleDeleteNote(note.id)}
+                                  onClick={() => handleDeleteNote(note.id, note.text)}
                                   className="p-1.5 bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
                                 >
                                   <Trash2 size={14} />
@@ -2586,6 +2601,21 @@ const Settings = () => {
         currencyId={historyModalCurrency?.id ?? null}
         currencyName={historyModalCurrency?.name ?? ""}
         currencyCode={historyModalCurrency?.code ?? ""}
+      />
+
+      <DeleteConfirmationModal
+        open={!!deleteConfirm}
+        onOpenChange={(open) => { if (!open) setDeleteConfirm(null); }}
+        onConfirm={handleDeleteConfirm}
+        itemName={deleteConfirm?.name}
+        isLoading={
+          deleteCurrencyMutation.isPending ||
+          deletePortMutation.isPending ||
+          deleteChargeMutation.isPending ||
+          deleteExpenseMutation.isPending ||
+          deleteBankMutation.isPending ||
+          deleteNoteMutation.isPending
+        }
       />
     </MainLayout>
   );
