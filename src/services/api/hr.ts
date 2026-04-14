@@ -179,6 +179,8 @@ export const hrSalaryApi = {
 };
 
 export interface PayrollPreGenerateInfo {
+  joiningDate: string; // DateOnly serialized as "YYYY-MM-DD"
+  lastWorkingDate: string | null;
   totalAnnualLeaves: number;
   availableAnnualLeaves: number;
   consumedAnnualLeaves: number;

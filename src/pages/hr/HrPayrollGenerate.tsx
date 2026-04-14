@@ -116,6 +116,21 @@ const HrPayrollGenerate = () => {
     selectedPeriodYear > currentDate.getFullYear() ||
     (selectedPeriodYear === currentDate.getFullYear() && selectedPeriodMonth > currentDate.getMonth() + 1);
 
+  // Guard against periods before employee joining date
+  const isBeforeJoining = (() => {
+    if (!preGenInfo?.joiningDate) return false;
+    const [jy, jm] = preGenInfo.joiningDate.split('-').map(Number);
+    return selectedPeriodYear < jy || (selectedPeriodYear === jy && selectedPeriodMonth < jm);
+  })();
+
+  // Guard against periods after employee's last working date
+  const isAfterLastWorking = (() => {
+    if (!preGenInfo?.lastWorkingDate) return false;
+    const [ly, lm] = preGenInfo.lastWorkingDate.split('-').map(Number);
+    // Block if the payroll period starts after the last working month
+    return selectedPeriodYear > ly || (selectedPeriodYear === ly && selectedPeriodMonth > lm);
+  })();
+
   const maxLeavesToConsume = preGenInfo
     ? Math.max(0, Math.min(preGenInfo.availableAnnualLeaves, preGenInfo.totalAbsentsThisMonth))
     : 0;
@@ -138,7 +153,9 @@ const HrPayrollGenerate = () => {
     !preGenInfo ||
     existingPayrollLoading ||
     isPayrollBlocked ||
-    isFuturePeriod;
+    isFuturePeriod ||
+    isBeforeJoining ||
+    isAfterLastWorking;
 
   return (
     <MainLayout>
@@ -315,6 +332,32 @@ const HrPayrollGenerate = () => {
                     <p className="font-medium text-red-800 dark:text-red-300">Future Period</p>
                     <p className="text-red-700 dark:text-red-400 text-xs mt-0.5">
                       Cannot generate payroll for a future period ({monthNames[selectedPeriodMonth]} {selectedPeriodYear}).
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Before joining date warning */}
+              {isBeforeJoining && preGenInfo?.joiningDate && (
+                <div className="flex gap-2 items-start rounded-lg border border-red-300 bg-red-50 dark:bg-red-950/20 dark:border-red-800 p-3 text-sm mb-4">
+                  <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium text-red-800 dark:text-red-300">Before Joining Date</p>
+                    <p className="text-red-700 dark:text-red-400 text-xs mt-0.5">
+                      Cannot generate payroll for {monthNames[selectedPeriodMonth]} {selectedPeriodYear} — employee joined on {preGenInfo.joiningDate}.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* After last working date warning */}
+              {isAfterLastWorking && preGenInfo?.lastWorkingDate && (
+                <div className="flex gap-2 items-start rounded-lg border border-red-300 bg-red-50 dark:bg-red-950/20 dark:border-red-800 p-3 text-sm mb-4">
+                  <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium text-red-800 dark:text-red-300">After Last Working Date</p>
+                    <p className="text-red-700 dark:text-red-400 text-xs mt-0.5">
+                      Cannot generate payroll for {monthNames[selectedPeriodMonth]} {selectedPeriodYear} — employee's last working date was {preGenInfo.lastWorkingDate}.
                     </p>
                   </div>
                 </div>

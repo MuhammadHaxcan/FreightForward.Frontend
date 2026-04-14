@@ -267,11 +267,22 @@ const HrEmployeeDetail = () => {
   };
 
   const handleOpenSalaryModal = () => {
-    const existing = (salaryStructure || []).map((s) => ({
-      salaryComponentId: s.salaryComponentId.toString(),
-      amount: s.amount.toString(),
-    }));
-    setSalaryLines(existing.length > 0 ? existing : [{ salaryComponentId: "", amount: "" }]);
+    const all = salaryStructure || [];
+    if (all.length > 0) {
+      const maxDate = all.reduce(
+        (max, s) => (s.effectiveFrom > max ? s.effectiveFrom : max),
+        all[0].effectiveFrom
+      );
+      const latest = all.filter((s) => s.effectiveFrom === maxDate);
+      setSalaryLines(
+        latest.map((s) => ({
+          salaryComponentId: s.salaryComponentId.toString(),
+          amount: s.amount.toString(),
+        }))
+      );
+    } else {
+      setSalaryLines([{ salaryComponentId: "", amount: "" }]);
+    }
     setSalaryEffectiveFrom(getTodayDateOnly());
     setSalaryModalOpen(true);
   };
@@ -537,40 +548,86 @@ const HrEmployeeDetail = () => {
                 </Button>
               </PermissionGate>
             </div>
-            <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-table-header text-table-header-foreground">
-                    <th className="px-4 py-3 text-left text-sm font-semibold">Component</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold">Type</th>
-                    <th className="px-4 py-3 text-right text-sm font-semibold">Amount</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold">Effective From</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold">Effective To</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {salaryLoading ? (
-                    <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">Loading...</td></tr>
-                  ) : !salaryStructure || salaryStructure.length === 0 ? (
-                    <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">No salary structure defined</td></tr>
-                  ) : (
-                    salaryStructure.map((item, i) => (
-                      <tr key={item.id} className={`border-b border-border hover:bg-table-row-hover ${i % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
-                        <td className="px-4 py-3 text-sm font-medium">{item.componentName}</td>
-                        <td className="px-4 py-3 text-sm">
-                          <span className={`px-2 py-0.5 rounded text-xs font-medium text-white ${item.componentType === "Earning" ? "bg-green-500" : "bg-red-400"}`}>
-                            {item.componentType}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-right">{formatAmount(item.amount)}</td>
-                        <td className="px-4 py-3 text-sm text-muted-foreground">{formatDate(item.effectiveFrom)}</td>
-                        <td className="px-4 py-3 text-sm text-muted-foreground">{item.effectiveTo ? formatDate(item.effectiveTo) : "-"}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+
+            {salaryLoading ? (
+              <div className="py-8 text-center text-muted-foreground text-sm">Loading...</div>
+            ) : !salaryStructure || salaryStructure.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground text-sm">No salary structure defined</div>
+            ) : (() => {
+              const today = new Date().toISOString().split("T")[0];
+              // Group by effectiveFrom date
+              const groups = salaryStructure.reduce<Record<string, typeof salaryStructure>>((acc, item) => {
+                (acc[item.effectiveFrom] ??= []).push(item);
+                return acc;
+              }, {});
+              // Sort groups: most recent first
+              const sorted = Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
+
+              return (
+                <div className="space-y-4">
+                  {sorted.map(([date, items]) => {
+                    const effectiveTo = items[0].effectiveTo;
+                    const isUpcoming = date > today;
+                    const isExpiring = !!effectiveTo;
+                    const isActive = !isUpcoming && !isExpiring;
+                    const totalEarnings = items.filter(i => i.componentType === "Earning").reduce((s, i) => s + i.amount, 0);
+                    const totalDeductions = items.filter(i => i.componentType === "Deduction").reduce((s, i) => s + i.amount, 0);
+                    const netSalary = totalEarnings - totalDeductions;
+
+                    return (
+                      <div key={date} className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
+                        {/* Period header */}
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
+                          <div className="flex items-center gap-3">
+                            {isActive && (
+                              <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">Active</span>
+                            )}
+                            {isUpcoming && (
+                              <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">Upcoming</span>
+                            )}
+                            {isExpiring && !isUpcoming && (
+                              <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">Expiring</span>
+                            )}
+                            <span className="text-sm font-medium text-foreground">
+                              {formatDate(date)} → {effectiveTo ? formatDate(effectiveTo) : "Ongoing"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            <span>Earnings: <span className="font-semibold text-green-600">{formatAmount(totalEarnings)}</span></span>
+                            <span>Deductions: <span className="font-semibold text-red-500">{formatAmount(totalDeductions)}</span></span>
+                            <span>Net: <span className="font-semibold text-foreground">{formatAmount(netSalary)}</span></span>
+                          </div>
+                        </div>
+
+                        {/* Components table */}
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-b border-border bg-muted/10">
+                              <th className="px-4 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Component</th>
+                              <th className="px-4 py-2 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Type</th>
+                              <th className="px-4 py-2 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wide">Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {items.map((item, i) => (
+                              <tr key={item.id} className={`border-b border-border last:border-0 ${i % 2 === 0 ? "" : "bg-muted/20"}`}>
+                                <td className="px-4 py-2.5 text-sm font-medium">{item.componentName}</td>
+                                <td className="px-4 py-2.5 text-sm">
+                                  <span className={`px-2 py-0.5 rounded text-xs font-medium text-white ${item.componentType === "Earning" ? "bg-green-500" : "bg-red-400"}`}>
+                                    {item.componentType}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-2.5 text-sm text-right tabular-nums">{formatAmount(item.amount)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         )}
 
