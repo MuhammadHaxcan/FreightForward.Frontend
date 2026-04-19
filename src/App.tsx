@@ -60,6 +60,7 @@ const CostSheetDetail = lazy(() => import("./pages/CostSheetDetail"));
 const CostSheetPrintView = lazy(() => import("./pages/CostSheetPrintView"));
 const CostSheetDetailPrintView = lazy(() => import("./pages/CostSheetDetailPrintView"));
 const VatReport = lazy(() => import("./pages/VatReport"));
+const VatReportPrintView = lazy(() => import("./pages/VatReportPrintView"));
 const AccountReceivable = lazy(() => import("./pages/AccountReceivable"));
 const AccountReceivablePrintView = lazy(() => import("./pages/AccountReceivablePrintView"));
 const AccountPayable = lazy(() => import("./pages/AccountPayable"));
@@ -358,6 +359,11 @@ const AppRoutes = () => (
       <Route path="/accounts/vat-report" element={
         <ProtectedRoute permission="invoice_view">
           <VatReport />
+        </ProtectedRoute>
+      } />
+      <Route path="/accounts/vat-report/print" element={
+        <ProtectedRoute permission="invoice_view">
+          <VatReportPrintView />
         </ProtectedRoute>
       } />
       <Route path="/accounts/account-receivable" element={

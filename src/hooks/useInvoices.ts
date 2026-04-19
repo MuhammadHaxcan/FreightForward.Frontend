@@ -22,8 +22,9 @@ export function useCreateInvoice() {
       }
       return response.data!;
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['shipments', variables.shipmentId] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shipments'] });
+      queryClient.invalidateQueries({ queryKey: ['shipment-invoices'] });
       toast.success('Invoice created successfully');
     },
     onError: (error: Error) => {
@@ -43,9 +44,10 @@ export function useCreatePurchaseInvoice() {
       }
       return response.data!;
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['shipments', variables.shipmentId] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shipments'] });
       queryClient.invalidateQueries({ queryKey: ['purchaseInvoices'] });
+      queryClient.invalidateQueries({ queryKey: ['shipment-invoices'] });
       toast.success('Purchase invoice created successfully');
     },
     onError: (error: Error) => {

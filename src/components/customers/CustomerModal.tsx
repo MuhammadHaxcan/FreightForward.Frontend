@@ -7,8 +7,8 @@ import { SearchableMultiSelect } from "@/components/ui/searchable-multi-select";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useCreateCustomer, useUpdateCustomer, useSimilarCustomerCheck } from "@/hooks/useCustomers";
-import { useAllCountries } from "@/hooks/useSettings";
-import { Customer, customerApi, settingsApi, NextCustomerCodes, CurrencyType, CustomerCategoryType } from "@/services/api";
+import { useAllCountries, useAllCurrencyTypes, useAllCustomerCategoryTypes } from "@/hooks/useSettings";
+import { Customer, customerApi, NextCustomerCodes } from "@/services/api";
 import { hrEmployeeApi } from "@/services/api/hr";
 import { useQuery } from "@tanstack/react-query";
 
@@ -60,20 +60,10 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
   const countries = countriesData || [];
 
   // Fetch currencies from API
-  const { data: currenciesResponse } = useQuery({
-    queryKey: ['currencyTypes', 'all'],
-    queryFn: () => settingsApi.getAllCurrencyTypes(),
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-  });
-  const currencies = currenciesResponse?.data ?? [];
+  const { data: currencies = [] } = useAllCurrencyTypes();
 
   // Fetch customer category types from API
-  const { data: categoryTypesResponse } = useQuery({
-    queryKey: ['customerCategoryTypes', 'all'],
-    queryFn: () => settingsApi.getAllCustomerCategoryTypes(),
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-  });
-  const categoryTypes = useMemo(() => categoryTypesResponse?.data ?? [], [categoryTypesResponse?.data]);
+  const { data: categoryTypes = [] } = useAllCustomerCategoryTypes();
 
   // Fetch employees for Assign To dropdown
   const { data: employeesResponse } = useQuery({

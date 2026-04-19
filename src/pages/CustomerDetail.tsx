@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { ArrowLeft, Plus, CalendarIcon, Pencil, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { formatDate, formatDateToISO, cn } from "@/lib/utils";
 import { customerApi, settingsApi, CustomerCategoryType, CurrencyType, Invoice as ApiInvoice, AccountReceivable as ApiAccountReceivable, AccountPayable as ApiAccountPayable, PaymentStatus, Receipt as ApiReceipt, CustomerStatement } from "@/services/api";
@@ -82,6 +83,7 @@ const CustomerDetail = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const baseCurrencyCode = useBaseCurrency();
   const isViewMode = searchParams.get("mode") === "view";
   const isEditMode = !!id;
@@ -649,6 +651,7 @@ const CustomerDetail = () => {
           throw new Error(response.error);
         }
 
+        queryClient.invalidateQueries({ queryKey: ['customers'] });
         toast.success("Customer updated successfully");
       } else {
         // Create new customer
@@ -674,6 +677,7 @@ const CustomerDetail = () => {
           throw new Error(response.error);
         }
 
+        queryClient.invalidateQueries({ queryKey: ['customers'] });
         toast.success("Customer created and sent for approval");
         navigate("/master-customers");
       }

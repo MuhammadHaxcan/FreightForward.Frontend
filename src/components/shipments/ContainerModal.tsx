@@ -10,8 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { useQuery } from "@tanstack/react-query";
-import { settingsApi, PackageType, ContainerType, ShipmentContainer } from "@/services/api";
+import { useAllContainerTypes, useAllPackageTypes } from "@/hooks/useSettings";
+import { PackageType, ContainerType, ShipmentContainer } from "@/services/api";
 
 // Extend ShipmentContainer with UI-specific fields
 type ContainerModalData = Partial<ShipmentContainer> & {
@@ -31,13 +31,7 @@ const weightUnits = ["Kgs", "Lbs", "MT"];
 
 export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo }: ContainerModalProps) {
   // Fetch container types from API
-  const { data: containerTypesResponse, isLoading: isLoadingContainerTypes } = useQuery({
-    queryKey: ['containerTypes', 'all'],
-    queryFn: () => settingsApi.getAllContainerTypes(),
-    staleTime: 60 * 60 * 1000, // Cache for 1 hour
-  });
-
-  const containerTypes = useMemo(() => containerTypesResponse?.data ?? [], [containerTypesResponse?.data]);
+  const { data: containerTypes = [], isLoading: isLoadingContainerTypes } = useAllContainerTypes();
 
   // Group container types by category
   const containerTypesByCategory = useMemo(() => {
@@ -52,13 +46,7 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
   }, [containerTypes]);
 
   // Fetch package types from API
-  const { data: packageTypesResponse, isLoading: isLoadingPackageTypes } = useQuery({
-    queryKey: ['packageTypes', 'all'],
-    queryFn: () => settingsApi.getAllPackageTypes(),
-    staleTime: 60 * 60 * 1000, // Cache for 1 hour (package types rarely change)
-  });
-
-  const packageTypes = useMemo(() => packageTypesResponse?.data ?? [], [packageTypesResponse?.data]);
+  const { data: packageTypes = [], isLoading: isLoadingPackageTypes } = useAllPackageTypes();
 
   // Group package types by category
   const packageTypesByCategory = useMemo(() => {

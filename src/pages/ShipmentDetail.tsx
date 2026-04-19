@@ -53,6 +53,7 @@ import {
   useDeleteShipmentCosting,
 } from "@/hooks/useShipments";
 import { useDeleteInvoice, useDeletePurchaseInvoice } from "@/hooks/useInvoices";
+import { useAllCustomerCategoryTypes, useAllIncoTerms, useAllPackageTypes, useAllPorts } from "@/hooks/useSettings";
 import { CargoContainerTab, CargoFormEntry } from "@/components/shipments/CargoContainerTab";
 import { calculateCbm } from "@/lib/cargoCalculations";
 import { useCustomers } from "@/hooks/useCustomers";
@@ -361,28 +362,13 @@ const ShipmentDetail = () => {
   const shipmentInvoices = shipmentInvoicesResponse?.data;
 
   // Fetch customer category types
-  const { data: categoryTypesResponse } = useQuery({
-    queryKey: ['customerCategoryTypes', 'all'],
-    queryFn: () => settingsApi.getAllCustomerCategoryTypes(),
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-  });
-  const categoryTypes = useMemo(() => categoryTypesResponse?.data ?? [], [categoryTypesResponse?.data]);
+  const { data: categoryTypes = [] } = useAllCustomerCategoryTypes();
 
   // Fetch INCO terms
-  const { data: incoTermsResponse, isLoading: isLoadingIncoTerms } = useQuery({
-    queryKey: ['incoTerms', 'all'],
-    queryFn: () => settingsApi.getAllIncoTerms(),
-    staleTime: 60 * 60 * 1000, // Cache for 1 hour (INCO terms rarely change)
-  });
-  const incoTerms = useMemo(() => incoTermsResponse?.data ?? [], [incoTermsResponse?.data]);
+  const { data: incoTerms = [], isLoading: isLoadingIncoTerms } = useAllIncoTerms();
 
   // Fetch Package Types for cargo dropdown
-  const { data: packageTypesResponse } = useQuery({
-    queryKey: ['packageTypes', 'all'],
-    queryFn: () => settingsApi.getAllPackageTypes(),
-    staleTime: 60 * 60 * 1000, // Cache for 1 hour
-  });
-  const packageTypes = useMemo(() => packageTypesResponse?.data ?? [], [packageTypesResponse?.data]);
+  const { data: packageTypes = [] } = useAllPackageTypes();
 
   // Group package types by category
   const packageTypesByCategory = useMemo(() => {
@@ -429,12 +415,7 @@ const ShipmentDetail = () => {
   }, [blTypes, formData.mode]);
 
   // Fetch Ports
-  const { data: portsResponse, isLoading: isLoadingPorts } = useQuery({
-    queryKey: ['ports', 'all'],
-    queryFn: () => settingsApi.getAllPorts(),
-    staleTime: 60 * 60 * 1000, // Cache for 1 hour
-  });
-  const ports = useMemo(() => portsResponse?.data ?? [], [portsResponse?.data]);
+  const { data: ports = [], isLoading: isLoadingPorts } = useAllPorts();
 
   // Get data from shipmentData
   const containers = shipmentData?.containers || [];
@@ -947,11 +928,9 @@ const ShipmentDetail = () => {
           break;
         case 'invoice':
           await deleteInvoiceMutation.mutateAsync(deleteModalConfig.id);
-          queryClient.invalidateQueries({ queryKey: ['shipment-invoices', shipmentId] });
           break;
         case 'purchaseInvoice':
           await deletePurchaseInvoiceMutation.mutateAsync(deleteModalConfig.id);
-          queryClient.invalidateQueries({ queryKey: ['shipment-invoices', shipmentId] });
           break;
       }
       refetchShipment();
@@ -2326,7 +2305,6 @@ const ShipmentDetail = () => {
         parties={parties}
         editInvoiceId={editInvoiceId}
         onSave={async () => {
-          await queryClient.invalidateQueries({ queryKey: ['shipment-invoices', shipmentId] });
           await refetchShipment();
         }}
       />
@@ -2343,7 +2321,6 @@ const ShipmentDetail = () => {
         parties={parties}
         editPurchaseInvoiceId={editPurchaseInvoiceId}
         onSave={async () => {
-          await queryClient.invalidateQueries({ queryKey: ['shipment-invoices', shipmentId] });
           await refetchShipment();
         }}
       />

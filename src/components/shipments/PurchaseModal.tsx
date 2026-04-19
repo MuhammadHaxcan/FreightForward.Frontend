@@ -21,12 +21,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Loader2, Plus } from "lucide-react";
-import { ShipmentParty, ShipmentCosting, CreatePurchaseInvoiceItemRequest, UpdatePurchaseInvoiceItemRequest, invoiceApi, customerApi, settingsApi, CurrencyType, AccountPurchaseInvoiceDetail, shipmentApi, AddShipmentCostingRequest, UpdateShipmentCostingRequest } from "@/services/api";
+import { ShipmentParty, ShipmentCosting, CreatePurchaseInvoiceItemRequest, UpdatePurchaseInvoiceItemRequest, invoiceApi, customerApi, AccountPurchaseInvoiceDetail, shipmentApi, AddShipmentCostingRequest, UpdateShipmentCostingRequest } from "@/services/api";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
+import { useAllCurrencyTypes } from "@/hooks/useSettings";
 import { useCreatePurchaseInvoice, useUpdatePurchaseInvoice } from "@/hooks/useInvoices";
 import { useAddShipmentCosting, useUpdateShipmentCosting } from "@/hooks/useShipments";
 import { CostingModal, type CostingModalData } from "@/components/shipments/CostingModal";
-import { useQueryClient } from "@tanstack/react-query";
+
 
 // Result type for the onSave callback
 interface PurchaseSaveResult {
@@ -71,7 +72,6 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
   const updatePurchaseInvoiceMutation = useUpdatePurchaseInvoice();
   const addCostingMutation = useAddShipmentCosting();
   const updateCostingMutation = useUpdateShipmentCosting();
-  const queryClient = useQueryClient();
   const isEditMode = !!editPurchaseInvoiceId;
 
   // Filter parties to only show Creditors and deduplicate by customerId
@@ -80,7 +80,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
     [parties]
   );
 
-  const [currencies, setCurrencies] = useState<CurrencyType[]>([]);
+  const { data: currencies = [] } = useAllCurrencyTypes();
   const [editInvoiceData, setEditInvoiceData] = useState<AccountPurchaseInvoiceDetail | null>(null);
   const [isLoadingEdit, setIsLoadingEdit] = useState(false);
   // Map of costing id -> existing purchase invoice item id (for updates)
@@ -127,13 +127,6 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
       setEditingCostingForModal(undefined);
       setPendingAutoSelect(null);
 
-      // Fetch currency types
-      settingsApi.getAllCurrencyTypes().then(response => {
-        if (response.data) {
-          setCurrencies(response.data);
-        }
-      });
-
       if (isEditMode && editPurchaseInvoiceId) {
         // Edit mode: fetch existing purchase invoice data
         setIsLoadingEdit(true);
@@ -157,23 +150,17 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
               .filter(item => item.shipmentCostingId)
               .map(item => item.shipmentCostingId!);
 
-            settingsApi.getAllCurrencyTypes().then(currResponse => {
-              if (currResponse.data) {
-                setCurrencies(currResponse.data);
-                const currency = currResponse.data.find(c => c.id === inv.currencyId);
-                setFormData({
-                  purchaseId: inv.purchaseNo,
-                  companyName: inv.vendorName || "",
-                  customerId: matchingParty ? matchingParty.id.toString() : "",
-                  invoiceDate: inv.purchaseDate,
-                  invoiceNo: inv.vendorInvoiceNo || "",
-                  vDate: inv.vendorInvoiceDate || getTodayDateOnly(),
-                  currencyId: inv.currencyId || 1,
-                  currencyCode: currency?.code || baseCurrencyCode,
-                  remarks: inv.remarks || "",
-                  selectedCharges: costingIds,
-                });
-              }
+            setFormData({
+              purchaseId: inv.purchaseNo,
+              companyName: inv.vendorName || "",
+              customerId: matchingParty ? matchingParty.id.toString() : "",
+              invoiceDate: inv.purchaseDate,
+              invoiceNo: inv.vendorInvoiceNo || "",
+              vDate: inv.vendorInvoiceDate || getTodayDateOnly(),
+              currencyId: inv.currencyId || 1,
+              currencyCode: baseCurrencyCode,
+              remarks: inv.remarks || "",
+              selectedCharges: costingIds,
             });
           }
           setIsLoadingEdit(false);
@@ -188,6 +175,15 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
       }
     }
   }, [open, editPurchaseInvoiceId]);
+
+  // Resolve currencyCode once editInvoiceData and currencies are both available
+  useEffect(() => {
+    if (!editInvoiceData || currencies.length === 0) return;
+    const currency = currencies.find(c => c.id === editInvoiceData.currencyId);
+    if (currency) {
+      setFormData(prev => ({ ...prev, currencyCode: currency.code }));
+    }
+  }, [editInvoiceData, currencies]);
 
   // Filter charges: show uninvoiced charges + charges from this purchase invoice
   const filteredCharges = useMemo(() => {
@@ -255,7 +251,6 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
   const refetchCostings = async () => {
     if (!shipmentId) return;
     try {
-      await queryClient.invalidateQueries({ queryKey: ['shipments', shipmentId] });
       const response = await shipmentApi.getById(shipmentId);
       if (response.data) {
         setLocalCostings(response.data.costings);

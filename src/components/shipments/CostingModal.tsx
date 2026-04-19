@@ -12,10 +12,9 @@ import { DateInput } from "@/components/ui/date-input";
 import { getTodayDateOnly } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { ShipmentParty, ShipmentCosting, settingsApi } from "@/services/api";
-import { useCurrencyTypes } from "@/hooks/useSettings";
+import { ShipmentParty, ShipmentCosting } from "@/services/api";
+import { useCurrencyTypes, useAllChargeItems, useAllCostingUnits } from "@/hooks/useSettings";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
-import { useQuery } from "@tanstack/react-query";
 import { X, Lock, Info } from "lucide-react";
 import { toast } from "sonner";
 import { FieldError, fieldErrorClass } from "@/components/ui/field-error";
@@ -63,20 +62,10 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
   const currencyTypes = useMemo(() => currencyTypesData?.items || [], [currencyTypesData]);
 
   // Fetch charge items from settings
-  const { data: chargeItemsResponse, isLoading: isLoadingChargeItems } = useQuery({
-    queryKey: ['chargeItems', 'all'],
-    queryFn: () => settingsApi.getAllChargeItems(),
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-  });
-  const chargeItems = useMemo(() => chargeItemsResponse?.data || [], [chargeItemsResponse?.data]);
+  const { data: chargeItems = [], isLoading: isLoadingChargeItems } = useAllChargeItems();
 
   // Fetch costing units from settings
-  const { data: costingUnitsResponse, isLoading: isLoadingCostingUnits } = useQuery({
-    queryKey: ['costingUnits', 'all'],
-    queryFn: () => settingsApi.getAllCostingUnits(),
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-  });
-  const costingUnits = useMemo(() => costingUnitsResponse?.data || [], [costingUnitsResponse?.data]);
+  const { data: costingUnits = [], isLoading: isLoadingCostingUnits } = useAllCostingUnits();
 
   // Helper to deduplicate parties by customerId
   const deduplicateByCustomerId = (partyList: ShipmentParty[]): ShipmentParty[] => {

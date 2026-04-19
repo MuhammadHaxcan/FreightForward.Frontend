@@ -139,8 +139,8 @@ export function useAddShipmentParty() {
       }
       return response.data!;
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['shipments', variables.shipmentId] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shipments'] });
       toast.success('Party added successfully');
     },
     onError: (error: Error) => {
@@ -160,8 +160,8 @@ export function useDeleteShipmentParty() {
       }
       return response.data;
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['shipments', variables.shipmentId] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shipments'] });
       toast.success('Party removed successfully');
     },
     onError: (error: Error) => {
@@ -182,8 +182,8 @@ export function useAddShipmentContainer() {
       }
       return response.data!;
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['shipments', variables.shipmentId] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shipments'] });
       toast.success('Container added successfully');
     },
     onError: (error: Error) => {
@@ -203,8 +203,8 @@ export function useUpdateShipmentContainer() {
       }
       return response.data;
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['shipments', variables.shipmentId] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shipments'] });
       toast.success('Container updated successfully');
     },
     onError: (error: Error) => {
@@ -224,8 +224,8 @@ export function useDeleteShipmentContainer() {
       }
       return response.data;
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['shipments', variables.shipmentId] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shipments'] });
       toast.success('Container removed successfully');
     },
     onError: (error: Error) => {
@@ -247,7 +247,7 @@ export function useAddShipmentCosting() {
       return response.data!;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['shipments', variables.shipmentId] });
+      queryClient.invalidateQueries({ queryKey: ['shipments'] });
       queryClient.invalidateQueries({ queryKey: ['shipment-invoices', variables.shipmentId] });
       toast.success('Costing added successfully');
     },
@@ -269,7 +269,7 @@ export function useUpdateShipmentCosting() {
       return response.data;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['shipments', variables.shipmentId] });
+      queryClient.invalidateQueries({ queryKey: ['shipments'] });
       queryClient.invalidateQueries({ queryKey: ['shipment-invoices', variables.shipmentId] });
       toast.success('Costing updated successfully');
     },
@@ -291,7 +291,7 @@ export function useDeleteShipmentCosting() {
       return response.data;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['shipments', variables.shipmentId] });
+      queryClient.invalidateQueries({ queryKey: ['shipments'] });
       queryClient.invalidateQueries({ queryKey: ['shipment-invoices', variables.shipmentId] });
       toast.success('Costing removed successfully');
     },

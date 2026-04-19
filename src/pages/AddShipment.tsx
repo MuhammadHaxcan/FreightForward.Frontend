@@ -85,6 +85,7 @@ import {
   useDeleteShipmentCosting,
 } from "@/hooks/useShipments";
 import { useDeleteInvoice, useDeletePurchaseInvoice } from "@/hooks/useInvoices";
+import { useAllCustomerCategoryTypes, useAllIncoTerms, useAllContainerTypes, useAllPackageTypes, useAllPorts } from "@/hooks/useSettings";
 import { useQuotationForShipment, useConvertQuotationToShipment } from "@/hooks/useSales";
 import { CargoContainerTab, CargoFormEntry } from "@/components/shipments/CargoContainerTab";
 import { calculateCbm } from "@/lib/cargoCalculations";
@@ -297,20 +298,10 @@ const AddShipment = () => {
   const [statusLogModalOpen, setStatusLogModalOpen] = useState(false);
 
   // Fetch customer category types
-  const { data: categoryTypesResponse } = useQuery({
-    queryKey: ['customerCategoryTypes', 'all'],
-    queryFn: () => settingsApi.getAllCustomerCategoryTypes(),
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-  });
-  const categoryTypes = useMemo(() => categoryTypesResponse?.data ?? [], [categoryTypesResponse?.data]);
+  const { data: categoryTypes = [] } = useAllCustomerCategoryTypes();
 
   // Fetch INCO terms
-  const { data: incoTermsResponse, isLoading: isLoadingIncoTerms } = useQuery({
-    queryKey: ['incoTerms', 'all'],
-    queryFn: () => settingsApi.getAllIncoTerms(),
-    staleTime: 60 * 60 * 1000, // Cache for 1 hour (INCO terms rarely change)
-  });
-  const incoTerms = useMemo(() => incoTermsResponse?.data ?? [], [incoTermsResponse?.data]);
+  const { data: incoTerms = [], isLoading: isLoadingIncoTerms } = useAllIncoTerms();
 
   // Fetch Network Partners
   const { data: networkPartnersResponse, isLoading: isLoadingNetworkPartners } = useQuery({
@@ -337,20 +328,10 @@ const AddShipment = () => {
   const blTypes = useMemo(() => blTypesResponse?.data ?? [], [blTypesResponse?.data]);
 
   // Fetch Container Types
-  const { data: containerTypesResponse } = useQuery({
-    queryKey: ['containerTypes', 'all'],
-    queryFn: () => settingsApi.getAllContainerTypes(),
-    staleTime: 60 * 60 * 1000, // Cache for 1 hour
-  });
-  const containerTypes = useMemo(() => containerTypesResponse?.data ?? [], [containerTypesResponse?.data]);
+  const { data: containerTypes = [] } = useAllContainerTypes();
 
   // Fetch Package Types for cargo dropdown
-  const { data: packageTypesResponse } = useQuery({
-    queryKey: ['packageTypes', 'all'],
-    queryFn: () => settingsApi.getAllPackageTypes(),
-    staleTime: 60 * 60 * 1000, // Cache for 1 hour
-  });
-  const packageTypes = useMemo(() => packageTypesResponse?.data ?? [], [packageTypesResponse?.data]);
+  const { data: packageTypes = [] } = useAllPackageTypes();
 
   // Group package types by category
   const packageTypesByCategory = useMemo(() => {
@@ -382,12 +363,7 @@ const AddShipment = () => {
   }, [blTypes, formData.mode]);
 
   // Fetch Ports
-  const { data: portsResponse, isLoading: isLoadingPorts } = useQuery({
-    queryKey: ['ports', 'all'],
-    queryFn: () => settingsApi.getAllPorts(),
-    staleTime: 60 * 60 * 1000, // Cache for 1 hour
-  });
-  const ports = useMemo(() => portsResponse?.data ?? [], [portsResponse?.data]);
+  const { data: ports = [], isLoading: isLoadingPorts } = useAllPorts();
 
   // Fetch customers filtered by the selected category ID (only when a type is selected)
   const { data: customersData, isLoading: isLoadingCustomers } = useCustomers({
@@ -1235,12 +1211,10 @@ const AddShipment = () => {
           break;
         case 'invoice':
           await deleteInvoiceMutation.mutateAsync(deleteModalConfig.id);
-          queryClient.invalidateQueries({ queryKey: ['shipment-invoices', savedShipmentId] });
           refetchShipment();
           break;
         case 'purchaseInvoice':
           await deletePurchaseInvoiceMutation.mutateAsync(deleteModalConfig.id);
-          queryClient.invalidateQueries({ queryKey: ['shipment-invoices', savedShipmentId] });
           refetchShipment();
           break;
       }
@@ -2518,7 +2492,6 @@ const AddShipment = () => {
         parties={parties}
         editInvoiceId={editInvoiceId}
         onSave={async () => {
-          await queryClient.invalidateQueries({ queryKey: ['shipment-invoices', savedShipmentId] });
           await refetchShipment();
         }}
       />
@@ -2535,7 +2508,6 @@ const AddShipment = () => {
         parties={parties}
         editPurchaseInvoiceId={editPurchaseInvoiceId}
         onSave={async () => {
-          await queryClient.invalidateQueries({ queryKey: ['shipment-invoices', savedShipmentId] });
           await refetchShipment();
         }}
       />

@@ -161,21 +161,14 @@ const HrAttendance = () => {
       const empIds = entries.map((e) => e.employeeId);
       return { empIds };
     },
-    onSuccess: (_vars, _data, context) => {
+    onSuccess: () => {
       toast.success("Attendance saved successfully");
       queryClient.invalidateQueries({ queryKey: ["hr-attendance-daily", selectedDate] });
-      // Invalidate attendance summary caches used by HrAttendanceSummary and HrEmployeeDetail
       const [year, month] = selectedDate.split("-");
       queryClient.invalidateQueries({ queryKey: ["hr-attendance-summary", year, month] });
       queryClient.invalidateQueries({ queryKey: ["hr-attendance-summary-emp"] });
       queryClient.invalidateQueries({ queryKey: ["hr-attendance-employee-monthly"] });
-      // F7: Invalidate employee-specific attendance cache used by HrEmployeeDetail
-      if (context?.empIds) {
-        context.empIds.forEach((empId: number) => {
-          queryClient.invalidateQueries({ queryKey: ["hr-attendance-emp", empId] });
-          queryClient.invalidateQueries({ queryKey: ["hr-attendance-summary-emp", empId] });
-        });
-      }
+      queryClient.invalidateQueries({ queryKey: ["hr-attendance-emp"] });
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to save attendance");

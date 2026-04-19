@@ -127,6 +127,14 @@ export default function VatReport() {
     setOutPageNumber(1);
   };
 
+  const handleOutPrint = () => {
+    const params = new URLSearchParams({ type: "output" });
+    if (outAppliedDateRange?.from) params.set("fromDate", formatDateToISO(outAppliedDateRange.from));
+    if (outAppliedDateRange?.to) params.set("toDate", formatDateToISO(outAppliedDateRange.to));
+    if (outAppliedCustomer !== "all") params.set("entityId", outAppliedCustomer);
+    window.open(`/accounts/vat-report/print?${params.toString()}`, "_blank");
+  };
+
   // --- VAT Input fetch ---
   const fetchVatInput = useCallback(async () => {
     setInLoading(true);
@@ -171,6 +179,22 @@ export default function VatReport() {
     setInAppliedVendor(inSelectedVendor);
     setInAppliedDateRange(inDateRange);
     setInPageNumber(1);
+  };
+
+  const handleInPrint = () => {
+    const params = new URLSearchParams({ type: "input" });
+    if (inAppliedDateRange?.from) params.set("fromDate", formatDateToISO(inAppliedDateRange.from));
+    if (inAppliedDateRange?.to) params.set("toDate", formatDateToISO(inAppliedDateRange.to));
+    if (inAppliedVendor !== "all") params.set("entityId", inAppliedVendor);
+    window.open(`/accounts/vat-report/print?${params.toString()}`, "_blank");
+  };
+
+  const handleCombinedPrint = () => {
+    const applied = activeTab === "vat-output" ? outAppliedDateRange : inAppliedDateRange;
+    const params = new URLSearchParams({ type: "combined" });
+    if (applied?.from) params.set("fromDate", formatDateToISO(applied.from));
+    if (applied?.to) params.set("toDate", formatDateToISO(applied.to));
+    window.open(`/accounts/vat-report/print?${params.toString()}`, "_blank");
   };
 
   const formatAmount = (amount: number) => {
@@ -253,7 +277,12 @@ export default function VatReport() {
   return (
     <MainLayout>
       <div className="p-6 space-y-4">
-        <h1 className="text-2xl font-semibold">VAT Report</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-semibold">VAT Report</h1>
+          <Button onClick={handleCombinedPrint} variant="outline">
+            Print Combined
+          </Button>
+        </div>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "vat-output" | "vat-input")}>
           <TabsList>
@@ -290,9 +319,12 @@ export default function VatReport() {
                     className="w-full"
                   />
                 </div>
-                <div className="flex items-end">
+                <div className="flex items-end gap-2">
                   <Button onClick={handleOutSearch} className="bg-primary text-primary-foreground">
                     Search
+                  </Button>
+                  <Button onClick={handleOutPrint} variant="outline">
+                    Print
                   </Button>
                 </div>
               </div>
@@ -422,9 +454,12 @@ export default function VatReport() {
                     className="w-full"
                   />
                 </div>
-                <div className="flex items-end">
+                <div className="flex items-end gap-2">
                   <Button onClick={handleInSearch} className="bg-primary text-primary-foreground">
                     Search
+                  </Button>
+                  <Button onClick={handleInPrint} variant="outline">
+                    Print
                   </Button>
                 </div>
               </div>
