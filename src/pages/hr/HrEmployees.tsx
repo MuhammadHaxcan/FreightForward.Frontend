@@ -32,6 +32,7 @@ import {
   EmployeeListItem,
   CreateEmployeeRequest,
 } from "@/services/api/hr";
+import { MutationBlockingOverlay } from "@/components/ui/mutation-blocking-overlay";
 
 const employmentStatuses = [
   { value: "Active", label: "Active" },
@@ -428,26 +429,27 @@ const HrEmployees = () => {
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white">Add New Employee</DialogTitle>
           </DialogHeader>
-          <div className="p-6 space-y-4">
+          <div className="p-6 space-y-4 relative">
+            <MutationBlockingOverlay isPending={createMutation.isPending} message="Saving..." />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">First Name <span className="text-destructive">*</span></Label>
-                <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="First Name" />
+                <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="First Name" disabled={createMutation.isPending} />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Last Name <span className="text-destructive">*</span></Label>
-                <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Last Name" />
+                <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Last Name" disabled={createMutation.isPending} />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">Email</Label>
-                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
+                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" disabled={createMutation.isPending} />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Contact Number</Label>
-                <Input value={contactNumber} onChange={(e) => setContactNumber(e.target.value)} placeholder="Contact Number" />
+                <Input value={contactNumber} onChange={(e) => setContactNumber(e.target.value)} placeholder="Contact Number" disabled={createMutation.isPending} />
               </div>
             </div>
 
@@ -461,22 +463,22 @@ const HrEmployees = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">Department</Label>
-                <Input value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="e.g. Operations" />
+                <Input value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="e.g. Operations" disabled={createMutation.isPending} />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Designation</Label>
-                <Input value={designation} onChange={(e) => setDesignation(e.target.value)} placeholder="e.g. Manager" />
+                <Input value={designation} onChange={(e) => setDesignation(e.target.value)} placeholder="e.g. Manager" disabled={createMutation.isPending} />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">Joining Date <span className="text-destructive">*</span></Label>
-                <DateInput value={joiningDate} onChange={setJoiningDate} />
+                <DateInput value={joiningDate} onChange={setJoiningDate} disabled={createMutation.isPending} />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Confirmation Date</Label>
-                <DateInput value={confirmationDate} onChange={setConfirmationDate} />
+                <DateInput value={confirmationDate} onChange={setConfirmationDate} disabled={createMutation.isPending} />
               </div>
             </div>
 
@@ -488,6 +490,7 @@ const HrEmployees = () => {
                   value={employmentStatus}
                   onValueChange={setEmploymentStatus}
                   placeholder="Select status..."
+                  disabled={createMutation.isPending}
                 />
               </div>
             </div>
@@ -500,62 +503,63 @@ const HrEmployees = () => {
                   value={gender}
                   onValueChange={setGender}
                   placeholder="Select gender..."
+                  disabled={createMutation.isPending}
                 />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Date of Birth</Label>
-                <DateInput value={dateOfBirth} onChange={setDateOfBirth} />
+                <DateInput value={dateOfBirth} onChange={setDateOfBirth} disabled={createMutation.isPending} />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">National ID</Label>
-                <Input value={nationalId} onChange={(e) => setNationalId(e.target.value)} placeholder="National ID" />
+                <Input value={nationalId} onChange={(e) => setNationalId(e.target.value)} placeholder="National ID" disabled={createMutation.isPending} />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Passport Number</Label>
-                <Input value={passportNumber} onChange={(e) => setPassportNumber(e.target.value)} placeholder="Passport Number" />
+                <Input value={passportNumber} onChange={(e) => setPassportNumber(e.target.value)} placeholder="Passport Number" disabled={createMutation.isPending} />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Passport Expiry</Label>
-                <DateInput value={passportExpiry} onChange={setPassportExpiry} />
+                <DateInput value={passportExpiry} onChange={setPassportExpiry} disabled={createMutation.isPending} />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">Emergency Contact Name</Label>
-                <Input value={emergencyContactName} onChange={(e) => setEmergencyContactName(e.target.value)} placeholder="Emergency Contact Name" />
+                <Input value={emergencyContactName} onChange={(e) => setEmergencyContactName(e.target.value)} placeholder="Emergency Contact Name" disabled={createMutation.isPending} />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Emergency Contact Number</Label>
-                <Input value={emergencyContactNumber} onChange={(e) => setEmergencyContactNumber(e.target.value)} placeholder="Emergency Contact Number" />
+                <Input value={emergencyContactNumber} onChange={(e) => setEmergencyContactNumber(e.target.value)} placeholder="Emergency Contact Number" disabled={createMutation.isPending} />
               </div>
             </div>
 
             <div className="space-y-2">
               <Label className="text-sm">Address</Label>
-              <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Address" />
+              <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Address" disabled={createMutation.isPending} />
             </div>
 
             <h3 className="text-sm font-medium text-foreground pt-2 border-t border-border">Bank Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">Bank Name</Label>
-                <Input value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="Bank Name" />
+                <Input value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="Bank Name" disabled={createMutation.isPending} />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Account Number</Label>
-                <Input value={bankAccountNumber} onChange={(e) => setBankAccountNumber(e.target.value)} placeholder="Account Number" />
+                <Input value={bankAccountNumber} onChange={(e) => setBankAccountNumber(e.target.value)} placeholder="Account Number" disabled={createMutation.isPending} />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">IBAN</Label>
-                <Input value={bankIban} onChange={(e) => setBankIban(e.target.value)} placeholder="IBAN" />
+                <Input value={bankIban} onChange={(e) => setBankIban(e.target.value)} placeholder="IBAN" disabled={createMutation.isPending} />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Branch</Label>
-                <Input value={bankBranch} onChange={(e) => setBankBranch(e.target.value)} placeholder="Branch" />
+                <Input value={bankBranch} onChange={(e) => setBankBranch(e.target.value)} placeholder="Branch" disabled={createMutation.isPending} />
               </div>
             </div>
 
@@ -563,12 +567,12 @@ const HrEmployees = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">Annual Leave Days</Label>
-                <Input type="number" min={0} value={annualLeaveDays} onChange={(e) => setAnnualLeaveDays(e.target.value)} />
+                <Input type="number" min={0} value={annualLeaveDays} onChange={(e) => setAnnualLeaveDays(e.target.value)} disabled={createMutation.isPending} />
               </div>
             </div>
 
             <div className="flex justify-end gap-2 pt-4 border-t border-border">
-              <Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setModalOpen(false)} disabled={createMutation.isPending}>Cancel</Button>
               <Button className="btn-success" onClick={handleSave} disabled={createMutation.isPending}>
                 {createMutation.isPending ? "Saving..." : "Save"}
               </Button>
@@ -580,6 +584,7 @@ const HrEmployees = () => {
       {/* Delete Confirmation */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
+          <MutationBlockingOverlay isPending={deleteMutation.isPending} message="Deleting..." />
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Employee</AlertDialogTitle>
             <AlertDialogDescription>

@@ -37,6 +37,7 @@ import {
   MarkPaidRequest,
 } from "@/services/api/hr";
 import { useBanks } from "@/hooks/useBanks";
+import { MutationBlockingOverlay } from "@/components/ui/mutation-blocking-overlay";
 
 const monthNames = [
   "",
@@ -695,7 +696,8 @@ const HrPayroll = () => {
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white">Edit Payroll</DialogTitle>
           </DialogHeader>
-          <div className="p-6 space-y-4">
+          <div className="p-6 space-y-4 relative">
+            <MutationBlockingOverlay isPending={updateWithComponentsMutation.isPending} message="Saving..." />
             {editingItem && (
               <>
                 {/* Read-only info */}
@@ -737,6 +739,7 @@ const HrPayroll = () => {
                               setEditEarnings(updated);
                             }}
                             className="text-right"
+                            disabled={updateWithComponentsMutation.isPending}
                           />
                         </div>
                       ))}
@@ -766,6 +769,7 @@ const HrPayroll = () => {
                               setEditDeductions(updated);
                             }}
                             className="text-right"
+                            disabled={updateWithComponentsMutation.isPending}
                           />
                         </div>
                       ))}
@@ -787,6 +791,7 @@ const HrPayroll = () => {
                         onChange={(e) => setIsAdvanceManualOverride(e.target.checked)}
                         className="w-4 h-4"
                         title="Check to manually override advance deduction"
+                        disabled={updateWithComponentsMutation.isPending}
                       />
                       <span className="text-xs text-muted-foreground">Manual override</span>
                     </div>
@@ -795,6 +800,7 @@ const HrPayroll = () => {
                       value={editAdvance}
                       onChange={(e) => setEditAdvance(e.target.value)}
                       placeholder="0.00"
+                      disabled={updateWithComponentsMutation.isPending}
                     />
                   </div>
 
@@ -817,6 +823,7 @@ const HrPayroll = () => {
                       value={editRemarks}
                       onChange={(e) => setEditRemarks(e.target.value)}
                       placeholder="Optional remarks"
+                      disabled={updateWithComponentsMutation.isPending}
                     />
                   </div>
                 </div>
@@ -827,6 +834,7 @@ const HrPayroll = () => {
               <Button
                 variant="outline"
                 onClick={() => setEditModalOpen(false)}
+                disabled={updateWithComponentsMutation.isPending}
               >
                 Cancel
               </Button>
@@ -845,6 +853,7 @@ const HrPayroll = () => {
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
+          <MutationBlockingOverlay isPending={deleteMutation.isPending} message="Deleting..." />
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Payroll Record</AlertDialogTitle>
             <AlertDialogDescription>
@@ -870,7 +879,8 @@ const HrPayroll = () => {
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white">Mark as Paid</DialogTitle>
           </DialogHeader>
-          <div className="p-6 space-y-4">
+          <div className="p-6 space-y-4 relative">
+            <MutationBlockingOverlay isPending={markPaidMutation.isPending} message="Processing..." />
             {markPaidPayroll && (
               <>
                 {/* Read-only info */}
@@ -908,6 +918,7 @@ const HrPayroll = () => {
                         }}
                         placeholder="Select Payment Mode"
                         searchPlaceholder="Search..."
+                        disabled={markPaidMutation.isPending}
                       />
                     </div>
                     <div>
@@ -916,7 +927,7 @@ const HrPayroll = () => {
                         options={banks.map((bank) => ({ value: bank.id.toString(), label: bank.bankName }))}
                         value={markPaidBankId}
                         onValueChange={setMarkPaidBankId}
-                        disabled={!markPaidRequiresBank}
+                        disabled={!markPaidRequiresBank || markPaidMutation.isPending}
                         triggerClassName={!markPaidRequiresBank ? "bg-muted" : ""}
                         placeholder="Select Bank"
                         searchPlaceholder="Search..."
@@ -929,6 +940,7 @@ const HrPayroll = () => {
                     <DateInput
                       value={markPaidExpenseDate}
                       onChange={setMarkPaidExpenseDate}
+                      disabled={markPaidMutation.isPending}
                     />
                   </div>
 
@@ -941,6 +953,7 @@ const HrPayroll = () => {
                           placeholder="Enter cheque number"
                           value={markPaidChequeNumber}
                           onChange={(e) => setMarkPaidChequeNumber(e.target.value)}
+                          disabled={markPaidMutation.isPending}
                         />
                       </div>
                       <div>
@@ -948,6 +961,7 @@ const HrPayroll = () => {
                         <DateInput
                           value={markPaidChequeDate}
                           onChange={setMarkPaidChequeDate}
+                          disabled={markPaidMutation.isPending}
                         />
                       </div>
                       {markPaidPaymentMode === "POST DATED CHEQUE" && (
@@ -956,6 +970,7 @@ const HrPayroll = () => {
                           <DateInput
                             value={markPaidPostDatedValidDate}
                             onChange={setMarkPaidPostDatedValidDate}
+                            disabled={markPaidMutation.isPending}
                           />
                         </div>
                       )}
@@ -969,6 +984,7 @@ const HrPayroll = () => {
               <Button
                 variant="outline"
                 onClick={() => setMarkPaidModalOpen(false)}
+                disabled={markPaidMutation.isPending}
               >
                 Cancel
               </Button>

@@ -23,6 +23,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { MutationBlockingOverlay } from "@/components/ui/mutation-blocking-overlay";
 
 const monthOptions = [
   { value: "1", label: "January" },
@@ -486,6 +487,7 @@ const HrAttendanceSummary = () => {
         }}
       >
         <DialogContent className="max-w-md">
+          <MutationBlockingOverlay isPending={unlockMutation.isPending} message="Saving..." />
           <DialogHeader>
             <DialogTitle>Unlock Attendance</DialogTitle>
           </DialogHeader>
@@ -495,7 +497,7 @@ const HrAttendanceSummary = () => {
             </p>
             <div className="space-y-1.5">
               <Label>Attendance Status</Label>
-              <Select value={unlockStatus} onValueChange={setUnlockStatus}>
+              <Select value={unlockStatus} onValueChange={setUnlockStatus} disabled={unlockMutation.isPending}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
@@ -515,6 +517,7 @@ const HrAttendanceSummary = () => {
                 value={unlockReason}
                 onChange={(e) => setUnlockReason(e.target.value)}
                 rows={3}
+                disabled={unlockMutation.isPending}
               />
             </div>
           </div>

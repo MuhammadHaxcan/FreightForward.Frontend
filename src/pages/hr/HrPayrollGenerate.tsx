@@ -175,7 +175,7 @@ const HrPayrollGenerate = () => {
         </div>
 
         {/* Form Card */}
-        <div className="bg-card rounded-lg border border-border shadow-sm p-6 space-y-6">
+        <div className="bg-card rounded-lg border border-border shadow-sm p-6 space-y-6 relative">
           {/* Employee + Period selectors */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-3">
@@ -192,6 +192,7 @@ const HrPayrollGenerate = () => {
                 }}
                 placeholder="Select an employee..."
                 searchPlaceholder="Search employees..."
+                disabled={generateMutation.isPending}
               />
             </div>
             <div>
@@ -203,6 +204,7 @@ const HrPayrollGenerate = () => {
                   setYear(v);
                   setAnnualLeavesToConsume("0");
                 }}
+                disabled={generateMutation.isPending}
               />
             </div>
             <div className="md:col-span-2">
@@ -214,6 +216,7 @@ const HrPayrollGenerate = () => {
                   setMonth(v);
                   setAnnualLeavesToConsume("0");
                 }}
+                disabled={generateMutation.isPending}
               />
             </div>
           </div>
@@ -389,12 +392,22 @@ const HrPayrollGenerate = () => {
             </div>
           )}
 
+          <MutationBlockingOverlay isPending={generateMutation.isPending} variant="page" message="Generating..." />
           {/* Generate button */}
           <div className="border-t border-border pt-4 flex justify-end">
             <Button
               className="btn-success gap-2 px-6"
               onClick={() => generateMutation.mutate(parseInt(employeeId))}
-              disabled={isGenerateDisabled}
+              disabled={
+                generateMutation.isPending ||
+                !employeeId ||
+                infoLoading ||
+                infoFetching ||
+                !preGenInfo ||
+                existingPayrollLoading ||
+                isPayrollBlocked ||
+                isFuturePeriod
+              }
             >
               {generateMutation.isPending ? (
                 <Loader2 size={16} className="animate-spin" />

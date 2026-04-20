@@ -26,6 +26,7 @@ import {
   UpdateEmployeeRequest,
   SetSalaryStructureRequest,
 } from "@/services/api/hr";
+import { MutationBlockingOverlay } from "@/components/ui/mutation-blocking-overlay";
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -408,30 +409,31 @@ const HrEmployeeDetail = () => {
 
         {/* ========== Profile Tab ========== */}
         {activeTab === "profile" && (
-          <div className="space-y-6">
+          <div className="space-y-6 relative">
+            <MutationBlockingOverlay isPending={updateMutation.isPending} variant="page" message="Saving..." />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">Employee Code <span className="text-destructive">*</span></Label>
-                <Input value={employeeCode} onChange={(e) => setEmployeeCode(e.target.value)} />
+                <Input value={employeeCode} onChange={(e) => setEmployeeCode(e.target.value)} disabled={updateMutation.isPending} />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Department</Label>
-                <Input value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="e.g. Operations" />
+                <Input value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="e.g. Operations" disabled={updateMutation.isPending} />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Designation</Label>
-                <Input value={designation} onChange={(e) => setDesignation(e.target.value)} placeholder="e.g. Manager" />
+                <Input value={designation} onChange={(e) => setDesignation(e.target.value)} placeholder="e.g. Manager" disabled={updateMutation.isPending} />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">Joining Date</Label>
-                <DateInput value={joiningDate} onChange={setJoiningDate} />
+                <DateInput value={joiningDate} onChange={setJoiningDate} disabled={updateMutation.isPending} />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Confirmation Date</Label>
-                <DateInput value={confirmationDate} onChange={setConfirmationDate} />
+                <DateInput value={confirmationDate} onChange={setConfirmationDate} disabled={updateMutation.isPending} />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Employment Status</Label>
@@ -439,6 +441,7 @@ const HrEmployeeDetail = () => {
                   options={employmentStatuses}
                   value={employmentStatus}
                   onValueChange={setEmploymentStatus}
+                  disabled={updateMutation.isPending}
                 />
               </div>
             </div>
@@ -446,11 +449,11 @@ const HrEmployeeDetail = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">Resignation Date</Label>
-                <DateInput value={resignationDate} onChange={setResignationDate} />
+                <DateInput value={resignationDate} onChange={setResignationDate} disabled={updateMutation.isPending} />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Last Working Date</Label>
-                <DateInput value={lastWorkingDate} onChange={setLastWorkingDate} />
+                <DateInput value={lastWorkingDate} onChange={setLastWorkingDate} disabled={updateMutation.isPending} />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Gender</Label>
@@ -458,6 +461,7 @@ const HrEmployeeDetail = () => {
                   options={[{ value: "", label: "None" }, ...genderOptions]}
                   value={gender}
                   onValueChange={setGender}
+                  disabled={updateMutation.isPending}
                 />
               </div>
             </div>
@@ -465,55 +469,55 @@ const HrEmployeeDetail = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">Date of Birth</Label>
-                <DateInput value={dateOfBirth} onChange={setDateOfBirth} />
+                <DateInput value={dateOfBirth} onChange={setDateOfBirth} disabled={updateMutation.isPending} />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">National ID</Label>
-                <Input value={nationalId} onChange={(e) => setNationalId(e.target.value)} />
+                <Input value={nationalId} onChange={(e) => setNationalId(e.target.value)} disabled={updateMutation.isPending} />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Passport Number</Label>
-                <Input value={passportNumber} onChange={(e) => setPassportNumber(e.target.value)} />
+                <Input value={passportNumber} onChange={(e) => setPassportNumber(e.target.value)} disabled={updateMutation.isPending} />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">Passport Expiry</Label>
-                <DateInput value={passportExpiry} onChange={setPassportExpiry} />
+                <DateInput value={passportExpiry} onChange={setPassportExpiry} disabled={updateMutation.isPending} />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Emergency Contact Name</Label>
-                <Input value={emergencyContactName} onChange={(e) => setEmergencyContactName(e.target.value)} />
+                <Input value={emergencyContactName} onChange={(e) => setEmergencyContactName(e.target.value)} disabled={updateMutation.isPending} />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Emergency Contact Number</Label>
-                <Input value={emergencyContactNumber} onChange={(e) => setEmergencyContactNumber(e.target.value)} />
+                <Input value={emergencyContactNumber} onChange={(e) => setEmergencyContactNumber(e.target.value)} disabled={updateMutation.isPending} />
               </div>
             </div>
 
             <div className="space-y-2">
               <Label className="text-sm">Address</Label>
-              <Input value={address} onChange={(e) => setAddress(e.target.value)} />
+              <Input value={address} onChange={(e) => setAddress(e.target.value)} disabled={updateMutation.isPending} />
             </div>
 
             <h3 className="text-lg font-medium border-b pb-2">Bank Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">Bank Name</Label>
-                <Input value={bankName} onChange={(e) => setBankName(e.target.value)} />
+                <Input value={bankName} onChange={(e) => setBankName(e.target.value)} disabled={updateMutation.isPending} />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Account Number</Label>
-                <Input value={bankAccountNumber} onChange={(e) => setBankAccountNumber(e.target.value)} />
+                <Input value={bankAccountNumber} onChange={(e) => setBankAccountNumber(e.target.value)} disabled={updateMutation.isPending} />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">IBAN</Label>
-                <Input value={bankIban} onChange={(e) => setBankIban(e.target.value)} />
+                <Input value={bankIban} onChange={(e) => setBankIban(e.target.value)} disabled={updateMutation.isPending} />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Branch</Label>
-                <Input value={bankBranch} onChange={(e) => setBankBranch(e.target.value)} />
+                <Input value={bankBranch} onChange={(e) => setBankBranch(e.target.value)} disabled={updateMutation.isPending} />
               </div>
             </div>
 
@@ -521,7 +525,7 @@ const HrEmployeeDetail = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">Annual Paid Leave Days</Label>
-                <Input type="number" min={0} value={annualLeaveDays} onChange={(e) => setAnnualLeaveDays(e.target.value)} />
+                <Input type="number" min={0} value={annualLeaveDays} onChange={(e) => setAnnualLeaveDays(e.target.value)} disabled={updateMutation.isPending} />
               </div>
             </div>
 
@@ -818,16 +822,17 @@ const HrEmployeeDetail = () => {
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white">Set Salary Structure</DialogTitle>
           </DialogHeader>
-          <div className="p-6 space-y-4">
+          <div className="p-6 space-y-4 relative">
+            <MutationBlockingOverlay isPending={setSalaryMutation.isPending} message="Saving..." />
             <div className="space-y-2">
               <Label className="text-sm">Effective From <span className="text-destructive">*</span></Label>
-              <DateInput value={salaryEffectiveFrom} onChange={setSalaryEffectiveFrom} />
+              <DateInput value={salaryEffectiveFrom} onChange={setSalaryEffectiveFrom} disabled={setSalaryMutation.isPending} />
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-medium">Components</Label>
-                <Button variant="outline" size="sm" onClick={addSalaryLine}>
+                <Button variant="outline" size="sm" onClick={addSalaryLine} disabled={setSalaryMutation.isPending}>
                   <Plus size={14} className="mr-1" /> Add Line
                 </Button>
               </div>
@@ -839,6 +844,7 @@ const HrEmployeeDetail = () => {
                       value={line.salaryComponentId}
                       onValueChange={(v) => updateSalaryLine(idx, "salaryComponentId", v)}
                       placeholder="Select component..."
+                      disabled={setSalaryMutation.isPending}
                     />
                   </div>
                   <Input
@@ -847,8 +853,9 @@ const HrEmployeeDetail = () => {
                     value={line.amount}
                     onChange={(e) => updateSalaryLine(idx, "amount", e.target.value)}
                     placeholder="Amount"
+                    disabled={setSalaryMutation.isPending}
                   />
-                  <Button variant="destructive" size="sm" onClick={() => removeSalaryLine(idx)} className="h-9 w-9 p-0">
+                  <Button variant="destructive" size="sm" onClick={() => removeSalaryLine(idx)} className="h-9 w-9 p-0" disabled={setSalaryMutation.isPending}>
                     <Trash2 size={14} />
                   </Button>
                 </div>
@@ -856,7 +863,7 @@ const HrEmployeeDetail = () => {
             </div>
 
             <div className="flex justify-end gap-2 pt-4 border-t border-border">
-              <Button variant="outline" onClick={() => setSalaryModalOpen(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setSalaryModalOpen(false)} disabled={setSalaryMutation.isPending}>Cancel</Button>
               <Button className="btn-success" onClick={handleSaveSalary} disabled={setSalaryMutation.isPending}>
                 {setSalaryMutation.isPending ? "Saving..." : "Save"}
               </Button>

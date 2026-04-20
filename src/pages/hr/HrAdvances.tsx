@@ -33,6 +33,7 @@ import {
   Advance,
   CreateAdvanceRequest,
 } from "@/services/api/hr";
+import { MutationBlockingOverlay } from "@/components/ui/mutation-blocking-overlay";
 
 const HrAdvances = () => {
   const queryClient = useQueryClient();
@@ -366,7 +367,8 @@ const HrAdvances = () => {
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white">New Advance</DialogTitle>
           </DialogHeader>
-          <div className="p-6 space-y-4">
+          <div className="p-6 space-y-4 relative">
+            <MutationBlockingOverlay isPending={createMutation.isPending} message="Saving..." />
             <div className="space-y-2">
               <Label className="text-sm">Employee <span className="text-destructive">*</span></Label>
               <SearchableSelect
@@ -375,26 +377,27 @@ const HrAdvances = () => {
                 onValueChange={setEmployeeId}
                 placeholder="Select employee..."
                 searchPlaceholder="Search employees..."
+                disabled={createMutation.isPending}
               />
             </div>
             <div className="space-y-2">
               <Label className="text-sm">Amount <span className="text-destructive">*</span></Label>
-              <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" />
+              <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" disabled={createMutation.isPending} />
             </div>
             <div className="space-y-2">
               <Label className="text-sm">Issue Date</Label>
-              <DateInput value={issueDate} onChange={setIssueDate} />
+              <DateInput value={issueDate} onChange={setIssueDate} disabled={createMutation.isPending} />
             </div>
             <div className="space-y-2">
               <Label className="text-sm">Monthly Deduction <span className="text-destructive">*</span></Label>
-              <Input type="number" value={monthlyDeduction} onChange={(e) => setMonthlyDeduction(e.target.value)} placeholder="0.00" />
+              <Input type="number" value={monthlyDeduction} onChange={(e) => setMonthlyDeduction(e.target.value)} placeholder="0.00" disabled={createMutation.isPending} />
             </div>
             <div className="space-y-2">
               <Label className="text-sm">Reason</Label>
-              <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason for advance" rows={3} />
+              <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason for advance" rows={3} disabled={createMutation.isPending} />
             </div>
             <div className="flex justify-end gap-2 pt-4 border-t border-border">
-              <Button variant="outline" onClick={() => setAddModalOpen(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setAddModalOpen(false)} disabled={createMutation.isPending}>Cancel</Button>
               <Button
                 className="btn-success"
                 onClick={handleSave}
@@ -466,6 +469,7 @@ const HrAdvances = () => {
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
+          <MutationBlockingOverlay isPending={deleteMutation.isPending} message="Deleting..." />
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Advance</AlertDialogTitle>
             <AlertDialogDescription>

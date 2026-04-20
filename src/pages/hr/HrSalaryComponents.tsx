@@ -31,6 +31,7 @@ import {
   SalaryComponent,
   CreateSalaryComponentRequest,
 } from "@/services/api/hr";
+import { MutationBlockingOverlay } from "@/components/ui/mutation-blocking-overlay";
 
 const HrSalaryComponents = () => {
   const queryClient = useQueryClient();
@@ -352,14 +353,18 @@ const HrSalaryComponents = () => {
               {modalMode === "add" ? "Add New" : "Edit"} Salary Component
             </DialogTitle>
           </DialogHeader>
-          <div className="p-6 space-y-4">
+          <div className="p-6 space-y-4 relative">
+            <MutationBlockingOverlay
+              isPending={createMutation.isPending || updateMutation.isPending}
+              message="Saving..."
+            />
             <div className="space-y-2">
               <Label className="text-sm">Name <span className="text-destructive">*</span></Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Basic Salary" />
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Basic Salary" disabled={createMutation.isPending || updateMutation.isPending} />
             </div>
             <div className="space-y-2">
               <Label className="text-sm">Code</Label>
-              <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="e.g. BASIC" />
+              <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="e.g. BASIC" disabled={createMutation.isPending || updateMutation.isPending} />
             </div>
             <div className="space-y-2">
               <Label className="text-sm">Type <span className="text-destructive">*</span></Label>
@@ -371,14 +376,15 @@ const HrSalaryComponents = () => {
                 value={componentType}
                 onValueChange={setComponentType}
                 placeholder="Select type..."
+                disabled={createMutation.isPending || updateMutation.isPending}
               />
             </div>
             <div className="flex items-center gap-2">
-              <Checkbox id="isActive" checked={isActive} onCheckedChange={(checked) => setIsActive(checked === true)} />
+              <Checkbox id="isActive" checked={isActive} onCheckedChange={(checked) => setIsActive(checked === true)} disabled={createMutation.isPending || updateMutation.isPending} />
               <Label htmlFor="isActive" className="text-sm font-normal cursor-pointer">Active</Label>
             </div>
             <div className="flex justify-end gap-2 pt-4 border-t border-border">
-              <Button variant="outline" onClick={() => setModalOpen(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setModalOpen(false)} disabled={createMutation.isPending || updateMutation.isPending}>Cancel</Button>
               <Button
                 className="btn-success"
                 onClick={handleSave}
@@ -394,6 +400,7 @@ const HrSalaryComponents = () => {
       {/* Delete Confirmation */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
+          <MutationBlockingOverlay isPending={deleteMutation.isPending} message="Deleting..." />
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Salary Component</AlertDialogTitle>
             <AlertDialogDescription>

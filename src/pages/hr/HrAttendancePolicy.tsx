@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Save, Loader2 } from "lucide-react";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import { hrAttendancePolicyApi } from "@/services/api/hr";
+import { MutationBlockingOverlay } from "@/components/ui/mutation-blocking-overlay";
 
 const HrAttendancePolicy = () => {
   const queryClient = useQueryClient();
@@ -65,7 +66,8 @@ const HrAttendancePolicy = () => {
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <div className="bg-card rounded-lg border border-border shadow-sm p-6 max-w-md space-y-4">
+          <div className="bg-card rounded-lg border border-border shadow-sm p-6 max-w-md space-y-4 relative">
+            <MutationBlockingOverlay isPending={saveMutation.isPending} variant="page" message="Saving..." />
             <div className="space-y-2">
               <Label className="text-sm font-medium">Lates per Absent</Label>
               <Input
@@ -73,6 +75,7 @@ const HrAttendancePolicy = () => {
                 min={1}
                 value={latesPerAbsent}
                 onChange={(e) => setLatesPerAbsent(e.target.value)}
+                disabled={saveMutation.isPending}
               />
               <p className="text-xs text-muted-foreground">
                 Number of "Late" marks that count as 1 "Absent" in the attendance summary.

@@ -18,6 +18,7 @@ import {
   DailyAttendanceEmployee,
   BulkAttendanceEntry,
 } from "@/services/api/hr";
+import { MutationBlockingOverlay } from "@/components/ui/mutation-blocking-overlay";
 
 const statusOptions = [
   { value: "Present", label: "Present" },
@@ -257,6 +258,7 @@ const HrAttendance = () => {
           <h1 className="text-2xl font-semibold text-foreground">
             Bulk Attendance
           </h1>
+          <MutationBlockingOverlay isPending={saveMutation.isPending} variant="page" message="Saving..." />
           <PermissionGate permission="hr_attend_add">
             <Button
               className="btn-success gap-2"
@@ -331,7 +333,7 @@ const HrAttendance = () => {
                 value=""
                 onValueChange={(v) => { if (v) handleMarkAll(v); }}
                 placeholder="Set all to..."
-                disabled={isLocked}
+                disabled={isLocked || saveMutation.isPending}
               />
             </div>
             <div>
@@ -343,7 +345,7 @@ const HrAttendance = () => {
                 value={selectedDepartment}
                 onValueChange={setSelectedDepartment}
                 placeholder="All Departments"
-                disabled={isLocked}
+                disabled={isLocked || saveMutation.isPending}
               />
             </div>
             <div className="flex items-end">
