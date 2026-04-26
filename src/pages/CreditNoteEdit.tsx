@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Loader2, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { creditNoteApi, customerApi, settingsApi, AccountCreditNoteDetail, Customer, CurrencyType, ChargeItem, UnpaidInvoice } from "@/services/api";
-import { useUpdateCreditNote } from "@/hooks/useCreditNotes";
+import { useCreditNote, useUpdateCreditNote, useCustomerCreditNoteUnpaidInvoices } from "@/hooks/useCreditNotes";
+import { useAllDebtors } from "@/hooks/useCustomers";
+import { useAllCurrencyTypes, useAllChargeItems } from "@/hooks/useSettings";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -30,13 +31,36 @@ interface EditChargeLine {
 export default function CreditNoteEdit() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const numericId = id ? parseInt(id, 10) : NaN;
   const updateMutation = useUpdateCreditNote();
-  const [creditNote, setCreditNote] = useState<AccountCreditNoteDetail | null>(null);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [currencyTypes, setCurrencyTypes] = useState<CurrencyType[]>([]);
-  const [chargeItems, setChargeItems] = useState<ChargeItem[]>([]);
+
+  // Redirect on invalid id
+  useEffect(() => {
+    if (!id || isNaN(numericId)) {
+      navigate('/accounts/credit-notes');
+    }
+  }, [id, numericId, navigate]);
+
+  // Server data
+  const { data: creditNote, isLoading: cnLoading, error: cnError } = useCreditNote(
+    isNaN(numericId) ? undefined : numericId
+  );
+  const { data: customers = [] } = useAllDebtors();
+  const { data: currencyTypes = [] } = useAllCurrencyTypes();
+  const { data: chargeItems = [] } = useAllChargeItems();
+  const { data: unpaidInvoices = [] } = useCustomerCreditNoteUnpaidInvoices(
+    creditNote?.customerId ?? 0,
+    isNaN(numericId) ? undefined : numericId,
+    { enabled: !!creditNote }
+  );
+
+  const loading = cnLoading;
+
+  // Show toast only once on error
+  useEffect(() => {
+    if (cnError) toast.error("Failed to load credit note data");
+  }, [cnError]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -54,7 +78,6 @@ export default function CreditNoteEdit() {
   });
 
   // Invoice allocation state
-  const [unpaidInvoices, setUnpaidInvoices] = useState<UnpaidInvoice[]>([]);
   const [selectedInvoices, setSelectedInvoices] = useState<{
     invoiceId: number;
     invoiceNo: string;
@@ -67,83 +90,51 @@ export default function CreditNoteEdit() {
     allocatedAmount: number;
   }[]>([]);
 
+  // Populate form state once per credit-note identity. Guarded via ref so background refetches
+  // from cross-entity invalidations do not wipe user edits.
+  const initializedForIdRef = useRef<number | null>(null);
   useEffect(() => {
-    const fetchData = async () => {
-      const numericId = parseInt(id ?? '', 10);
-      if (!id || isNaN(numericId)) {
-        navigate('/accounts/credit-notes');
-        return;
-      }
-      setLoading(true);
-      try {
-        const [cnRes, custRes, currRes, ciRes] = await Promise.all([
-          creditNoteApi.getById(numericId),
-          customerApi.getAll({ pageSize: 1000, masterType: 'Debtors' }),
-          settingsApi.getAllCurrencyTypes(),
-          settingsApi.getAllChargeItems(),
-        ]);
+    if (!creditNote || initializedForIdRef.current === creditNote.id) return;
 
-        if (cnRes.data) {
-          setCreditNote(cnRes.data);
-          const cn = cnRes.data;
-          setFormData({
-            customerId: cn.customerId.toString(),
-            creditNoteDate: cn.creditNoteDate ? new Date(cn.creditNoteDate) : null,
-            jobNumber: cn.jobNumber || "",
-            referenceNo: cn.referenceNo || "",
-            email: cn.email || "",
-            status: cn.status || "Active",
-            additionalContents: cn.additionalContents || "",
-          });
-          setChargeLines(
-            (cn.details || []).map(d => ({
-              id: d.id,
-              chargeDetails: d.chargeDetails || "",
-              bases: d.bases || "",
-              currencyId: d.currencyId,
-              currencyCode: d.currencyCode,
-              rate: (d.rate ?? 0).toString(),
-              roe: (d.roe ?? 1).toString(),
-              quantity: (d.quantity ?? 0).toString(),
-              amount: (d.amount ?? 0).toString(),
-            }))
-          );
-
-          // Populate existing invoice allocations
-          if (cn.invoices && cn.invoices.length > 0) {
-            setSelectedInvoices(
-              cn.invoices.map(inv => ({
-                invoiceId: inv.invoiceId,
-                invoiceNo: inv.invoiceNo || "",
-                invoiceDate: inv.invoiceDate,
-                jobNo: inv.jobNo,
-                hblNo: inv.hblNo,
-                currencyId: inv.currencyId,
-                currencyCode: inv.currencyCode,
-                pendingAmount: inv.amount + inv.balance, // Original pending = what was allocated + remaining balance
-                allocatedAmount: inv.amount,
-              }))
-            );
-          }
-
-          // Fetch unpaid invoices for this customer (excluding current CN)
-          const unpaidRes = await creditNoteApi.getUnpaidInvoices(cn.customerId, parseInt(id));
-          if (unpaidRes.data) {
-            setUnpaidInvoices(unpaidRes.data);
-          }
-        }
-        if (custRes.data) setCustomers(custRes.data.items);
-        if (currRes.data) setCurrencyTypes(currRes.data);
-        if (ciRes.data) setChargeItems(ciRes.data);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        toast.error("Failed to load credit note data");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [id]);
+    setFormData({
+      customerId: creditNote.customerId.toString(),
+      creditNoteDate: creditNote.creditNoteDate ? new Date(creditNote.creditNoteDate) : null,
+      jobNumber: creditNote.jobNumber || "",
+      referenceNo: creditNote.referenceNo || "",
+      email: creditNote.email || "",
+      status: creditNote.status || "Active",
+      additionalContents: creditNote.additionalContents || "",
+    });
+    setChargeLines(
+      (creditNote.details || []).map(d => ({
+        id: d.id,
+        chargeDetails: d.chargeDetails || "",
+        bases: d.bases || "",
+        currencyId: d.currencyId,
+        currencyCode: d.currencyCode,
+        rate: (d.rate ?? 0).toString(),
+        roe: (d.roe ?? 1).toString(),
+        quantity: (d.quantity ?? 0).toString(),
+        amount: (d.amount ?? 0).toString(),
+      }))
+    );
+    if (creditNote.invoices && creditNote.invoices.length > 0) {
+      setSelectedInvoices(
+        creditNote.invoices.map(inv => ({
+          invoiceId: inv.invoiceId,
+          invoiceNo: inv.invoiceNo || "",
+          invoiceDate: inv.invoiceDate,
+          jobNo: inv.jobNo,
+          hblNo: inv.hblNo,
+          currencyId: inv.currencyId,
+          currencyCode: inv.currencyCode,
+          pendingAmount: inv.amount + inv.balance, // Original pending = what was allocated + remaining balance
+          allocatedAmount: inv.amount,
+        }))
+      );
+    }
+    initializedForIdRef.current = creditNote.id;
+  }, [creditNote]);
 
   const handleAddCharge = () => {
     if (!newCharge.chargeDetails) return;

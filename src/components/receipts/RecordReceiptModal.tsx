@@ -35,6 +35,7 @@ import {
   type CreateReceiptRequest,
 } from "@/services/api";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
+import { useCreateReceipt } from "@/hooks/useReceipts";
 import { toast } from "sonner";
 
 interface RecordReceiptModalProps {
@@ -59,6 +60,7 @@ export function RecordReceiptModal({
   onSuccess,
 }: RecordReceiptModalProps) {
   const baseCurrencyCode = useBaseCurrency();
+  const createReceiptMutation = useCreateReceipt();
   const [loading, setLoading] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [banks, setBanks] = useState<Bank[]>([]);
@@ -295,11 +297,10 @@ export function RecordReceiptModal({
         })),
       };
 
-      await receiptApi.create(request);
-      toast.success("Receipt recorded successfully");
+      await createReceiptMutation.mutateAsync(request);
       onSuccess();
-    } catch (error) {
-      toast.error("Failed to record receipt");
+    } catch {
+      // toast already shown by mutation's onError
     } finally {
       setLoading(false);
     }

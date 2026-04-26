@@ -85,12 +85,16 @@ export default function Profile() {
     return { value: y.toString(), label: y.toString() };
   });
 
+  // Populate form fields once per user identity. Without this guard, any refresh of the
+  // auth user (e.g. from refreshUser on other screens) would wipe in-progress edits.
+  const initializedForUserIdRef = useRef<string | number | null>(null);
   useEffect(() => {
-    if (user) {
+    if (user && initializedForUserIdRef.current !== user.id) {
       setFirstName(user.firstName);
       setLastName(user.lastName);
       setContactNumber(user.contactNumber || '');
       setProfilePictureUrl(user.profilePictureUrl || '');
+      initializedForUserIdRef.current = user.id;
     }
   }, [user]);
 

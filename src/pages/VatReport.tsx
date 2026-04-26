@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
-import { toast } from "sonner";
+import { useState } from "react";
 import { formatDate, formatDateToISO } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +15,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DateRangePicker, DateRangeValue } from "@/components/ui/date-range-picker";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { invoiceApi, customerApi, Customer, VatReportItem, VatReportTotals } from "@/services/api";
+import { VatReportTotals } from "@/services/api";
+import { useVatReport, useVatInputReport } from "@/hooks/useInvoices";
+import { useAllDebtors, useAllCreditors } from "@/hooks/useCustomers";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 
 const defaultTotals: VatReportTotals = {
@@ -37,88 +38,58 @@ export default function VatReport() {
   const [activeTab, setActiveTab] = useState<"vat-output" | "vat-input">("vat-output");
 
   // --- VAT Output state ---
-  const [outItems, setOutItems] = useState<VatReportItem[]>([]);
-  const [outTotals, setOutTotals] = useState<VatReportTotals>(defaultTotals);
-  const [outCustomers, setOutCustomers] = useState<Customer[]>([]);
-  const [outLoading, setOutLoading] = useState(true);
   const [outSearchTerm, setOutSearchTerm] = useState("");
   const [outSelectedCustomer, setOutSelectedCustomer] = useState<string>("all");
   const [outDateRange, setOutDateRange] = useState<DateRangeValue | undefined>(defaultDateRange());
   const [outPageNumber, setOutPageNumber] = useState(1);
   const [outPageSize, setOutPageSize] = useState(10);
-  const [outTotalCount, setOutTotalCount] = useState(0);
-  const [outTotalPages, setOutTotalPages] = useState(0);
   const [outAppliedSearch, setOutAppliedSearch] = useState("");
   const [outAppliedCustomer, setOutAppliedCustomer] = useState<string>("all");
   const [outAppliedDateRange, setOutAppliedDateRange] = useState<DateRangeValue | undefined>(defaultDateRange());
 
   // --- VAT Input state ---
-  const [inItems, setInItems] = useState<VatReportItem[]>([]);
-  const [inTotals, setInTotals] = useState<VatReportTotals>(defaultTotals);
-  const [inVendors, setInVendors] = useState<Customer[]>([]);
-  const [inLoading, setInLoading] = useState(true);
   const [inSearchTerm, setInSearchTerm] = useState("");
   const [inSelectedVendor, setInSelectedVendor] = useState<string>("all");
   const [inDateRange, setInDateRange] = useState<DateRangeValue | undefined>(defaultDateRange());
   const [inPageNumber, setInPageNumber] = useState(1);
   const [inPageSize, setInPageSize] = useState(10);
-  const [inTotalCount, setInTotalCount] = useState(0);
-  const [inTotalPages, setInTotalPages] = useState(0);
-  const [inInitialLoaded, setInInitialLoaded] = useState(false);
   const [inAppliedSearch, setInAppliedSearch] = useState("");
   const [inAppliedVendor, setInAppliedVendor] = useState<string>("all");
   const [inAppliedDateRange, setInAppliedDateRange] = useState<DateRangeValue | undefined>(defaultDateRange());
 
-  // Fetch customers (Debtors) for VAT Output filter
-  useEffect(() => {
-    const fetchCustomers = async () => {
-      const response = await customerApi.getAll({ pageSize: 1000, masterType: 'Debtors' });
-      if (response.data) {
-        setOutCustomers(response.data.items);
-      }
-    };
-    fetchCustomers();
-  }, []);
+  // Filter dropdowns
+  const { data: outCustomers = [] } = useAllDebtors();
+  const { data: inVendors = [] } = useAllCreditors();
 
-  // Fetch vendors (Creditors) for VAT Input filter
-  useEffect(() => {
-    const fetchVendors = async () => {
-      const response = await customerApi.getAll({ pageSize: 1000, masterType: 'Creditors' });
-      if (response.data) {
-        setInVendors(response.data.items);
-      }
-    };
-    fetchVendors();
-  }, []);
+  // VAT Output data — only fetches while the tab is active; cached on tab switch
+  const { data: outData, isLoading: outLoading } = useVatReport({
+    pageNumber: outPageNumber,
+    pageSize: outPageSize,
+    customerId: outAppliedCustomer !== "all" ? parseInt(outAppliedCustomer) : undefined,
+    fromDate: outAppliedDateRange?.from ? formatDateToISO(outAppliedDateRange.from) : undefined,
+    toDate: outAppliedDateRange?.to ? formatDateToISO(outAppliedDateRange.to) : undefined,
+    searchTerm: outAppliedSearch || undefined,
+    enabled: activeTab === "vat-output",
+  });
+  const outItems = outData?.items.items ?? [];
+  const outTotalCount = outData?.items.totalCount ?? 0;
+  const outTotalPages = outData?.items.totalPages ?? 0;
+  const outTotals = outData?.totals ?? defaultTotals;
 
-  // --- VAT Output fetch ---
-  const fetchVatOutput = useCallback(async () => {
-    setOutLoading(true);
-    try {
-      const response = await invoiceApi.getVatReport({
-        pageNumber: outPageNumber,
-        pageSize: outPageSize,
-        customerId: outAppliedCustomer !== "all" ? parseInt(outAppliedCustomer) : undefined,
-        fromDate: outAppliedDateRange?.from ? formatDateToISO(outAppliedDateRange.from) : undefined,
-        toDate: outAppliedDateRange?.to ? formatDateToISO(outAppliedDateRange.to) : undefined,
-        searchTerm: outAppliedSearch || undefined,
-      });
-      if (response.data) {
-        setOutItems(response.data.items.items);
-        setOutTotalCount(response.data.items.totalCount);
-        setOutTotalPages(response.data.items.totalPages);
-        setOutTotals(response.data.totals);
-      }
-    } catch {
-      toast.error("Failed to load VAT Output report");
-    } finally {
-      setOutLoading(false);
-    }
-  }, [outPageNumber, outPageSize, outAppliedSearch, outAppliedCustomer, outAppliedDateRange]);
-
-  useEffect(() => {
-    fetchVatOutput();
-  }, [fetchVatOutput]);
+  // VAT Input data — lazy-loaded (only fetches after first tab visit)
+  const { data: inData, isLoading: inLoading } = useVatInputReport({
+    pageNumber: inPageNumber,
+    pageSize: inPageSize,
+    vendorId: inAppliedVendor !== "all" ? parseInt(inAppliedVendor) : undefined,
+    fromDate: inAppliedDateRange?.from ? formatDateToISO(inAppliedDateRange.from) : undefined,
+    toDate: inAppliedDateRange?.to ? formatDateToISO(inAppliedDateRange.to) : undefined,
+    searchTerm: inAppliedSearch || undefined,
+    enabled: activeTab === "vat-input",
+  });
+  const inItems = inData?.items.items ?? [];
+  const inTotalCount = inData?.items.totalCount ?? 0;
+  const inTotalPages = inData?.items.totalPages ?? 0;
+  const inTotals = inData?.totals ?? defaultTotals;
 
   const handleOutSearch = () => {
     setOutAppliedSearch(outSearchTerm);
@@ -134,45 +105,6 @@ export default function VatReport() {
     if (outAppliedCustomer !== "all") params.set("entityId", outAppliedCustomer);
     window.open(`/accounts/vat-report/print?${params.toString()}`, "_blank");
   };
-
-  // --- VAT Input fetch ---
-  const fetchVatInput = useCallback(async () => {
-    setInLoading(true);
-    try {
-      const response = await invoiceApi.getVatInputReport({
-        pageNumber: inPageNumber,
-        pageSize: inPageSize,
-        vendorId: inAppliedVendor !== "all" ? parseInt(inAppliedVendor) : undefined,
-        fromDate: inAppliedDateRange?.from ? formatDateToISO(inAppliedDateRange.from) : undefined,
-        toDate: inAppliedDateRange?.to ? formatDateToISO(inAppliedDateRange.to) : undefined,
-        searchTerm: inAppliedSearch || undefined,
-      });
-      if (response.data) {
-        setInItems(response.data.items.items);
-        setInTotalCount(response.data.items.totalCount);
-        setInTotalPages(response.data.items.totalPages);
-        setInTotals(response.data.totals);
-      }
-    } catch {
-      toast.error("Failed to load VAT Input report");
-    } finally {
-      setInLoading(false);
-    }
-  }, [inPageNumber, inPageSize, inAppliedSearch, inAppliedVendor, inAppliedDateRange]);
-
-  useEffect(() => {
-    if (inInitialLoaded) {
-      fetchVatInput();
-    }
-  }, [fetchVatInput, inInitialLoaded]);
-
-  // Load VAT Input data on first tab switch
-  useEffect(() => {
-    if (activeTab === "vat-input" && !inInitialLoaded) {
-      setInInitialLoaded(true);
-      fetchVatInput();
-    }
-  }, [activeTab]);
 
   const handleInSearch = () => {
     setInAppliedSearch(inSearchTerm);

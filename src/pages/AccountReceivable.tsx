@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
-import { toast } from "sonner";
+import { useState } from "react";
 import { formatDateToISO } from "@/lib/utils";
 import { Search, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,13 +16,10 @@ import {
 import { DateRangePicker, DateRangeValue } from "@/components/ui/date-range-picker";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { CustomerReceivableDetailsModal } from "@/components/payments/CustomerReceivableDetailsModal";
-import { invoiceApi, customerApi, Customer, AccountReceivableSummaryItem, AccountReceivableCurrencyTotal } from "@/services/api";
+import { useAccountReceivableSummary } from "@/hooks/useInvoices";
+import { useAllDebtors } from "@/hooks/useCustomers";
 
 export default function AccountReceivable() {
-  const [items, setItems] = useState<AccountReceivableSummaryItem[]>([]);
-  const [totals, setTotals] = useState<AccountReceivableCurrencyTotal[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<string>("all");
   const [dateRange, setDateRange] = useState<DateRangeValue | undefined>({
@@ -33,8 +29,6 @@ export default function AccountReceivable() {
   const [modalCustomer, setModalCustomer] = useState<{ id: number; name: string; currencyCode: string } | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(25);
-  const [totalCount, setTotalCount] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
   const [appliedSearch, setAppliedSearch] = useState("");
   const [appliedCustomer, setAppliedCustomer] = useState<string>("all");
   const [appliedDateRange, setAppliedDateRange] = useState<DateRangeValue | undefined>({
@@ -42,45 +36,19 @@ export default function AccountReceivable() {
     to: new Date(),
   });
 
-  // Fetch customers for filter
-  useEffect(() => {
-    const fetchCustomers = async () => {
-      const response = await customerApi.getAll({ pageSize: 1000, masterType: 'Debtors' });
-      if (response.data) {
-        setCustomers(response.data.items);
-      }
-    };
-    fetchCustomers();
-  }, []);
-
-  // Fetch account receivable data
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await invoiceApi.getAccountReceivableSummary({
-        pageNumber,
-        pageSize,
-        customerId: appliedCustomer !== "all" ? parseInt(appliedCustomer, 10) : undefined,
-        fromDate: appliedDateRange?.from ? formatDateToISO(appliedDateRange.from) : undefined,
-        toDate: appliedDateRange?.to ? formatDateToISO(appliedDateRange.to) : undefined,
-        searchTerm: appliedSearch || undefined,
-      });
-      if (response.data) {
-        setItems(response.data.items.items);
-        setTotalCount(response.data.items.totalCount);
-        setTotalPages(response.data.items.totalPages);
-        setTotals(response.data.totals);
-      }
-    } catch (error) {
-      toast.error("Failed to load account receivable data");
-    } finally {
-      setLoading(false);
-    }
-  }, [pageNumber, pageSize, appliedSearch, appliedCustomer, appliedDateRange]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const { data: customers = [] } = useAllDebtors();
+  const { data: summary, isLoading: loading } = useAccountReceivableSummary({
+    pageNumber,
+    pageSize,
+    customerId: appliedCustomer !== "all" ? parseInt(appliedCustomer, 10) : undefined,
+    fromDate: appliedDateRange?.from ? formatDateToISO(appliedDateRange.from) : undefined,
+    toDate: appliedDateRange?.to ? formatDateToISO(appliedDateRange.to) : undefined,
+    searchTerm: appliedSearch || undefined,
+  });
+  const items = summary?.items.items ?? [];
+  const totalCount = summary?.items.totalCount ?? 0;
+  const totalPages = summary?.items.totalPages ?? 0;
+  const totals = summary?.totals ?? [];
 
   const handleSearch = () => {
     setAppliedSearch(searchTerm);
@@ -91,9 +59,9 @@ export default function AccountReceivable() {
 
   const handlePrint = () => {
     const params = new URLSearchParams();
-    if (dateRange?.from) params.append('fromDate', formatDateToISO(dateRange.from));
-    if (dateRange?.to) params.append('toDate', formatDateToISO(dateRange.to));
-    if (selectedCustomer !== "all") params.append('customerId', selectedCustomer);
+    if (appliedDateRange?.from) params.append('fromDate', formatDateToISO(appliedDateRange.from));
+    if (appliedDateRange?.to) params.append('toDate', formatDateToISO(appliedDateRange.to));
+    if (appliedCustomer !== "all") params.append('customerId', appliedCustomer);
     if (appliedSearch) params.append('searchTerm', appliedSearch);
     window.open(`/accounts/account-receivable/print?${params.toString()}`, '_blank');
   };

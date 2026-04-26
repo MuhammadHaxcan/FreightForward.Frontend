@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { formatDate } from "@/lib/utils";
 import { ArrowLeft, Mail, Pencil, FileText, Download } from "lucide-react";
@@ -12,7 +12,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { creditNoteApi, AccountCreditNoteDetail } from "@/services/api";
+import { creditNoteApi } from "@/services/api";
+import { useCreditNote } from "@/hooks/useCreditNotes";
 import { API_BASE_URL, fetchBlob } from "@/services/api/base";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMutation } from "@tanstack/react-query";
@@ -23,15 +24,14 @@ export default function CreditNoteView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { hasPermission, officeName, user } = useAuth();
-  const [creditNote, setCreditNote] = useState<AccountCreditNoteDetail | null>(null);
-  const [loading, setLoading] = useState(true);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
+
+  const numericId = id ? parseInt(id) : undefined;
+  const { data: creditNote, isLoading: loading } = useCreditNote(numericId);
 
   const sendEmailMutation = useMutation({
     mutationFn: async (req: { recipientEmail: string; sendToCustomer: boolean; subject: string }) => {
-      if (!id) throw new Error("No credit note ID");
-      const numericId = parseInt(id);
-      if (isNaN(numericId)) throw new Error("Invalid credit note ID");
+      if (!numericId || isNaN(numericId)) throw new Error("Invalid credit note ID");
       const response = await creditNoteApi.sendEmail(numericId, req);
       if (response.error) throw new Error(response.error);
     },
@@ -43,24 +43,6 @@ export default function CreditNoteView() {
       toast.error(error.message || "Failed to send email");
     },
   });
-
-  useEffect(() => {
-    const fetchCreditNote = async () => {
-      if (!id) return;
-      setLoading(true);
-      try {
-        const response = await creditNoteApi.getById(parseInt(id));
-        if (response.data) {
-          setCreditNote(response.data);
-        }
-      } catch (error) {
-        console.error("Error fetching credit note:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchCreditNote();
-  }, [id]);
 
   const handlePrint = () => {
     if (!id) return;

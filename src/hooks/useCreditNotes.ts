@@ -2,6 +2,23 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { creditNoteApi, CreateAccountCreditNoteRequest, UpdateAccountCreditNoteRequest } from '@/services/api';
 import { toast } from 'sonner';
 
+export function useCustomerCreditNoteUnpaidInvoices(
+  customerId: number,
+  excludeCreditNoteId?: number,
+  options?: { enabled?: boolean }
+) {
+  const enabled = options?.enabled ?? true;
+  return useQuery({
+    queryKey: ['creditNotes', 'unpaidInvoices', customerId, excludeCreditNoteId],
+    queryFn: async () => {
+      const response = await creditNoteApi.getUnpaidInvoices(customerId, excludeCreditNoteId);
+      if (response.error) throw new Error(response.error);
+      return response.data ?? [];
+    },
+    enabled: customerId > 0 && enabled,
+  });
+}
+
 export function useCreditNotes(params?: {
   pageNumber?: number;
   pageSize?: number;
@@ -48,6 +65,10 @@ export function useCreateCreditNote() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['creditNotes'] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['shipments'] });
+      queryClient.invalidateQueries({ queryKey: ['shipment-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Credit note created successfully');
     },
     onError: (error: Error) => {
@@ -70,6 +91,10 @@ export function useUpdateCreditNote() {
       queryClient.invalidateQueries({ queryKey: ['creditNotes'] });
       queryClient.invalidateQueries({ queryKey: ['creditNotes', variables.id] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['shipments'] });
+      queryClient.invalidateQueries({ queryKey: ['shipment-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Credit note updated successfully');
     },
     onError: (error: Error) => {
@@ -91,6 +116,10 @@ export function useDeleteCreditNote() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['creditNotes'] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['shipments'] });
+      queryClient.invalidateQueries({ queryKey: ['shipment-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Credit note deleted successfully');
     },
     onError: (error: Error) => {

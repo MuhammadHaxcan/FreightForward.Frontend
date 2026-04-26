@@ -121,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     return { success: false, error: 'Unknown error' };
-  }, []);
+  }, [queryClient]);
 
   const logout = useCallback(async () => {
     await authApi.logout();

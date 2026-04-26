@@ -9,13 +9,30 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { ArrowLeft, Plus, CalendarIcon, Pencil, Trash2 } from "lucide-react";
-import { useState, useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { formatDate, formatDateToISO, cn } from "@/lib/utils";
-import { customerApi, settingsApi, CustomerCategoryType, CurrencyType, Invoice as ApiInvoice, AccountReceivable as ApiAccountReceivable, AccountPayable as ApiAccountPayable, PaymentStatus, Receipt as ApiReceipt, CustomerStatement } from "@/services/api";
-import { getPaymentVouchers, PaymentVoucher } from "@/services/api/payment";
-import { invoiceApi, AccountPurchaseInvoice, creditNoteApi, UnpaidInvoice } from "@/services/api/invoice";
+import { customerApi, PaymentStatus } from "@/services/api";
+import { usePurchaseInvoices } from "@/hooks/useInvoices";
+import { usePaymentVouchers } from "@/hooks/usePaymentVouchers";
+import {
+  useCustomer,
+  useCreateCustomer,
+  useUpdateCustomer,
+  useCustomerInvoices,
+  useCustomerReceipts,
+  useCustomerCreditNotes,
+  useCustomerAccountReceivables,
+  useCustomerAccountPayables,
+  useCustomerStatement,
+} from "@/hooks/useCustomers";
+import { useCreateCreditNote, useCustomerCreditNoteUnpaidInvoices } from "@/hooks/useCreditNotes";
+import {
+  useAllCustomerCategoryTypes,
+  useAllCurrencyTypes,
+  useAllChargeItems,
+} from "@/hooks/useSettings";
 import { hrEmployeeApi } from "@/services/api/hr";
 import { toast } from "sonner";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
@@ -87,78 +104,39 @@ const CustomerDetail = () => {
   const baseCurrencyCode = useBaseCurrency();
   const isViewMode = searchParams.get("mode") === "view";
   const isEditMode = !!id;
+  const customerId = id ? parseInt(id) : 0;
   const [isPendingCustomer, setIsPendingCustomer] = useState(false);
 
   const [activeTab, setActiveTab] = useState("profile");
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [openingBalanceModalOpen, setOpeningBalanceModalOpen] = useState(false);
   const [creditNoteModalOpen, setCreditNoteModalOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [categoryTypes, setCategoryTypes] = useState<CustomerCategoryType[]>([]);
-  const [currencyTypes, setCurrencyTypes] = useState<CurrencyType[]>([]);
-  const [employees, setEmployees] = useState<{ id: number; employeeCode: string; fullName: string }[]>([]);
 
-  // Invoices state (declared early to avoid reference errors)
-  const [invoices, setInvoices] = useState<ApiInvoice[]>([]);
-  const [invoicesLoading, setInvoicesLoading] = useState(false);
+  // Pagination state for each tab
   const [invoicesPageNumber, setInvoicesPageNumber] = useState(1);
   const [invoicesPageSize, setInvoicesPageSize] = useState(10);
-  const [invoicesTotalCount, setInvoicesTotalCount] = useState(0);
-  const [invoicesTotalPages, setInvoicesTotalPages] = useState(0);
-
-  // Account Receivables state
-  const [accountReceivables, setAccountReceivables] = useState<ApiAccountReceivable[]>([]);
-  const [arLoading, setArLoading] = useState(false);
   const [arPageNumber, setArPageNumber] = useState(1);
   const [arPageSize, setArPageSize] = useState(10);
-  const [arTotalCount, setArTotalCount] = useState(0);
-  const [arTotalPages, setArTotalPages] = useState(0);
-
-  // Account Payables state (for Creditors)
-  const [accountPayables, setAccountPayables] = useState<ApiAccountPayable[]>([]);
-  const [apLoading, setApLoading] = useState(false);
   const [apPageNumber, setApPageNumber] = useState(1);
   const [apPageSize, setApPageSize] = useState(10);
-  const [apTotalCount, setApTotalCount] = useState(0);
-  const [apTotalPages, setApTotalPages] = useState(0);
-
-  // Payment Vouchers state (for Creditors)
-  const [paymentVouchers, setPaymentVouchers] = useState<PaymentVoucher[]>([]);
-  const [pvLoading, setPvLoading] = useState(false);
   const [pvPageNumber, setPvPageNumber] = useState(1);
   const [pvPageSize, setPvPageSize] = useState(10);
-  const [pvTotalCount, setPvTotalCount] = useState(0);
-  const [pvTotalPages, setPvTotalPages] = useState(0);
-
-  // Purchase Invoices state (for Creditors)
-  const [purchaseInvoices, setPurchaseInvoices] = useState<AccountPurchaseInvoice[]>([]);
-  const [piLoading, setPiLoading] = useState(false);
   const [piPageNumber, setPiPageNumber] = useState(1);
   const [piPageSize, setPiPageSize] = useState(10);
-  const [piTotalCount, setPiTotalCount] = useState(0);
-  const [piTotalPages, setPiTotalPages] = useState(0);
-
-  // Receipts state
-  const [receipts, setReceipts] = useState<ApiReceipt[]>([]);
-  const [receiptsLoading, setReceiptsLoading] = useState(false);
   const [receiptsPageNumber, setReceiptsPageNumber] = useState(1);
   const [receiptsPageSize, setReceiptsPageSize] = useState(10);
-  const [receiptsTotalCount, setReceiptsTotalCount] = useState(0);
-  const [receiptsTotalPages, setReceiptsTotalPages] = useState(0);
+  const [cnPageNumber, setCnPageNumber] = useState(1);
+  const [cnPageSize, setCnPageSize] = useState(10);
 
-  // Statement of Account state
-  const [statementData, setStatementData] = useState<CustomerStatement | null>(null);
-  const [statementLoading, setStatementLoading] = useState(false);
+  // Date range state
   const [dateRange, setDateRange] = useState<DateRangeValue>({
     from: new Date(new Date().getFullYear() - 5, 0, 1),
     to: new Date(),
   });
-
-  // SOA (Account Receivable) date range state
   const [soaDateRange, setSoaDateRange] = useState<DateRangeValue | undefined>(undefined);
 
-  // Contacts list
+  // Contacts + form state
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [contactForm, setContactForm] = useState<Partial<Contact>>({});
 
@@ -182,355 +160,181 @@ const CustomerDetail = () => {
     salesperson: "",
   });
 
-  // Load category types and customer data
+  // Reference data (shared cache across app)
+  const { data: categoryTypes = [] } = useAllCustomerCategoryTypes();
+  const { data: currencyTypes = [] } = useAllCurrencyTypes();
+  const { data: employeesResp } = useQuery({
+    queryKey: ['hr-employees-dropdown'],
+    queryFn: () => hrEmployeeApi.getDropdown(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const employees = employeesResp?.data ?? [];
+
+  // Customer detail
+  const { data: customer } = useCustomer(customerId);
+
+  // Tab data — gated by activeTab (and masterType for Creditor tabs)
+  const { data: invoicesPage, isLoading: invoicesLoading } = useCustomerInvoices(customerId, {
+    pageNumber: invoicesPageNumber,
+    pageSize: invoicesPageSize,
+    enabled: activeTab === 'invoices',
+  });
+  const invoices = invoicesPage?.items ?? [];
+  const invoicesTotalCount = invoicesPage?.totalCount ?? 0;
+  const invoicesTotalPages = invoicesPage?.totalPages ?? 0;
+
+  const { data: receiptsPage, isLoading: receiptsLoading } = useCustomerReceipts(customerId, {
+    pageNumber: receiptsPageNumber,
+    pageSize: receiptsPageSize,
+    enabled: activeTab === 'receipt',
+  });
+  const receipts = receiptsPage?.items ?? [];
+  const receiptsTotalCount = receiptsPage?.totalCount ?? 0;
+  const receiptsTotalPages = receiptsPage?.totalPages ?? 0;
+
+  const { data: creditNotesPage, isLoading: cnLoading } = useCustomerCreditNotes(customerId, {
+    pageNumber: cnPageNumber,
+    pageSize: cnPageSize,
+    enabled: activeTab === 'credit-notes',
+  });
+  const creditNotes = creditNotesPage?.items ?? [];
+  const cnTotalCount = creditNotesPage?.totalCount ?? 0;
+  const cnTotalPages = creditNotesPage?.totalPages ?? 0;
+
+  const { data: arPage, isLoading: arLoading } = useCustomerAccountReceivables(customerId, {
+    pageNumber: arPageNumber,
+    pageSize: arPageSize,
+    fromDate: soaDateRange?.from ? formatDateToISO(soaDateRange.from) : undefined,
+    toDate: soaDateRange?.to ? formatDateToISO(soaDateRange.to) : undefined,
+    enabled: activeTab === 'account-receivable',
+  });
+  const accountReceivables = arPage?.items ?? [];
+  const arTotalCount = arPage?.totalCount ?? 0;
+  const arTotalPages = arPage?.totalPages ?? 0;
+
+  const { data: apPage, isLoading: apLoading } = useCustomerAccountPayables(customerId, {
+    pageNumber: apPageNumber,
+    pageSize: apPageSize,
+    enabled: activeTab === 'account-payable',
+  });
+  const accountPayables = apPage?.items ?? [];
+  const apTotalCount = apPage?.totalCount ?? 0;
+  const apTotalPages = apPage?.totalPages ?? 0;
+
+  const { data: pvPage, isLoading: pvLoading } = usePaymentVouchers({
+    vendorId: customerId,
+    pageNumber: pvPageNumber,
+    pageSize: pvPageSize,
+  });
+  // Gate via enabled through the mounted component — we only read it when Creditor tab is active
+  const paymentVouchers = (activeTab === 'payment-vouchers' && profileData.masterType === 'Creditors')
+    ? (pvPage?.items ?? [])
+    : [];
+  const pvTotalCount = pvPage?.totalCount ?? 0;
+  const pvTotalPages = pvPage?.totalPages ?? 0;
+
+  const { data: piPage, isLoading: piLoading } = usePurchaseInvoices({
+    vendorId: customerId,
+    pageNumber: piPageNumber,
+    pageSize: piPageSize,
+  });
+  const purchaseInvoices = (activeTab === 'purchase-invoices' && profileData.masterType === 'Creditors')
+    ? (piPage?.items ?? [])
+    : [];
+  const piTotalCount = piPage?.totalCount ?? 0;
+  const piTotalPages = piPage?.totalPages ?? 0;
+
+  const { data: statementData, isLoading: statementLoading } = useCustomerStatement(
+    customerId,
+    dateRange.from ? formatDateToISO(dateRange.from) : "",
+    dateRange.to ? formatDateToISO(dateRange.to) : "",
+    { enabled: activeTab === 'statement-account' }
+  );
+
+  // Initial form population — fires ONLY when customer identity changes (not on background refetches),
+  // so cross-entity invalidations don't wipe user edits.
+  const initializedForIdRef = useRef<number | null>(null);
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        // Load category types
-        const categoryResponse = await settingsApi.getAllCustomerCategoryTypes();
-        if (categoryResponse.data) {
-          setCategoryTypes(categoryResponse.data);
-        }
+    if (!customer || initializedForIdRef.current === customer.id) return;
 
-        // Load currency types
-        const currencyResponse = await settingsApi.getAllCurrencyTypes();
-        if (currencyResponse.data) {
-          setCurrencyTypes(currencyResponse.data);
-        }
+    setIsPendingCustomer(customer.isApproved === false);
+    setProfileData({
+      code: customer.code,
+      masterType: customer.masterType as "Debtors" | "Creditors" | "Neutral",
+      categoryIds: customer.categories?.map(c => c.id.toString()) || [],
+      name: customer.name,
+      city: customer.city || "",
+      country: customer.country || "United Arab Emirates",
+      phone: customer.phone || "",
+      fax: customer.fax || "",
+      generalEmail: customer.email || "",
+      ntnVatTaxNo: customer.taxNo || "",
+      taxPercentage: customer.taxPercentage?.toString() || "",
+      address: customer.address || "",
+      status: customer.status || "Active",
+      carrierCode: customer.carrierCode || "",
+      currencyId: customer.currencyId?.toString() || "",
+      salesperson: customer.salesperson || "",
+    });
+    initializedForIdRef.current = customer.id;
+  }, [customer]);
 
-        // Load employees
-        try {
-          const employeeResponse = await hrEmployeeApi.getDropdown();
-          if (employeeResponse.data) {
-            setEmployees(employeeResponse.data);
-          }
-        } catch (e) {
-          console.error("Error loading employees:", e);
-        }
-
-        // Load customer data if editing
-        if (id) {
-          const customerResponse = await customerApi.getById(parseInt(id));
-          if (customerResponse.data) {
-            const customer = customerResponse.data;
-            setIsPendingCustomer(customer.isApproved === false);
-            setProfileData({
-              code: customer.code,
-              masterType: customer.masterType as "Debtors" | "Creditors" | "Neutral",
-              categoryIds: customer.categories?.map(c => c.id.toString()) || [],
-              name: customer.name,
-              city: customer.city || "",
-              country: customer.country || "United Arab Emirates",
-              phone: customer.phone || "",
-              fax: customer.fax || "",
-              generalEmail: customer.email || "",
-              ntnVatTaxNo: customer.taxNo || "",
-              taxPercentage: customer.taxPercentage?.toString() || "",
-              address: customer.address || "",
-              status: customer.status || "Active",
-              carrierCode: customer.carrierCode || "",
-              currencyId: customer.currencyId?.toString() || "",
-              salesperson: customer.salesperson || "",
-            });
-            // Load account details currency from customer's base currency
-            if (customer.currencyId && currencyResponse.data) {
-              const currency = currencyResponse.data.find(c => c.id === customer.currencyId);
-              if (currency) {
-                setAccountDetails(prev => ({ ...prev, currency: currency.code }));
-              }
-            }
-            // Load contacts
-            if (customer.contacts) {
-              setContacts(customer.contacts.map(c => ({
-                id: c.id,
-                name: c.name,
-                email: c.email || "",
-                mobile: c.mobile || "",
-                position: c.position || "",
-                phone: c.phone || "",
-                designation: c.designation || "",
-                department: c.department || "",
-                directTel: c.directTel || "",
-                whatsapp: c.whatsapp || "",
-                skype: c.skype || "",
-                enableRateRequest: c.enableRateRequest,
-              })));
-            }
-            // Load account details
-            if (customer.accountDetail) {
-              const ad = customer.accountDetail;
-              const acCurrency = ad.currencyId && currencyResponse.data
-                ? currencyResponse.data.find(c => c.id === ad.currencyId)
-                : null;
-              setAccountDetails({
-                acName: ad.acName || "",
-                bankAcNo: ad.bankAcNo || "",
-                currency: acCurrency?.code || accountDetails.currency || baseCurrencyCode,
-                type: ad.type || "Credit",
-                notes: ad.notes || "",
-                swiftCode: ad.swiftCode || "",
-                acType: ad.acType || "",
-                approvedCreditDays: ad.approvedCreditDays?.toString() || "0",
-                alertCreditDays: ad.alertCreditDays?.toString() || "0",
-                cc: ad.cc || "",
-                approvedCreditAmount: ad.approvedCreditAmount?.toString() || "0.00",
-                alertCreditAmount: ad.alertCreditAmount?.toString() || "0.00",
-                bcc: ad.bcc || "",
-              });
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Error loading data:", error);
-        toast.error("Failed to load data");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, [id]);
-
-  // Fetch invoices when tab is active
-  const fetchInvoices = async () => {
-    if (!id) return;
-    setInvoicesLoading(true);
-    try {
-      const response = await customerApi.getInvoices(parseInt(id), {
-        pageNumber: invoicesPageNumber,
-        pageSize: invoicesPageSize
+  // Sync account details from customer (re-runs on customer refetch so currency stays correct,
+  // but only when we have currencies loaded to resolve the code).
+  useEffect(() => {
+    if (!customer || currencyTypes.length === 0) return;
+    if (customer.accountDetail) {
+      const ad = customer.accountDetail;
+      const acCurrency = ad.currencyId
+        ? currencyTypes.find(c => c.id === ad.currencyId)
+        : null;
+      setAccountDetails({
+        acName: ad.acName || "",
+        bankAcNo: ad.bankAcNo || "",
+        currency: acCurrency?.code || baseCurrencyCode,
+        type: ad.type || "Credit",
+        notes: ad.notes || "",
+        swiftCode: ad.swiftCode || "",
+        acType: ad.acType || "",
+        approvedCreditDays: ad.approvedCreditDays?.toString() || "0",
+        alertCreditDays: ad.alertCreditDays?.toString() || "0",
+        cc: ad.cc || "",
+        approvedCreditAmount: ad.approvedCreditAmount?.toString() || "0.00",
+        alertCreditAmount: ad.alertCreditAmount?.toString() || "0.00",
+        bcc: ad.bcc || "",
       });
-      if (response.data) {
-        setInvoices(response.data.items);
-        setInvoicesTotalCount(response.data.totalCount);
-        setInvoicesTotalPages(response.data.totalPages);
+    } else if (customer.currencyId) {
+      const currency = currencyTypes.find(c => c.id === customer.currencyId);
+      if (currency) {
+        setAccountDetails(prev => ({ ...prev, currency: currency.code }));
       }
-    } catch (error) {
-      console.error("Error fetching invoices:", error);
-      toast.error("Failed to load invoices");
-    } finally {
-      setInvoicesLoading(false);
     }
-  };
+  }, [customer, currencyTypes, baseCurrencyCode]);
 
+  // Keep contacts in sync with server data on every customer refetch.
   useEffect(() => {
-    if (activeTab === 'invoices' && id) {
-      fetchInvoices();
+    if (customer?.contacts) {
+      setContacts(customer.contacts.map(c => ({
+        id: c.id,
+        name: c.name,
+        email: c.email || "",
+        mobile: c.mobile || "",
+        position: c.position || "",
+        phone: c.phone || "",
+        designation: c.designation || "",
+        department: c.department || "",
+        directTel: c.directTel || "",
+        whatsapp: c.whatsapp || "",
+        skype: c.skype || "",
+        enableRateRequest: c.enableRateRequest,
+      })));
     }
-  }, [activeTab, id, invoicesPageNumber, invoicesPageSize]);
+  }, [customer?.contacts]);
 
-  // Fetch account receivables when tab is active
-  const fetchAccountReceivables = async () => {
-    if (!id) return;
-    setArLoading(true);
-    try {
-      const response = await customerApi.getAccountReceivables(parseInt(id), {
-        pageNumber: arPageNumber,
-        pageSize: arPageSize,
-        fromDate: soaDateRange?.from ? formatDateToISO(soaDateRange.from) : undefined,
-        toDate: soaDateRange?.to ? formatDateToISO(soaDateRange.to) : undefined,
-      });
-      if (response.data) {
-        // Backend now filters by payment status (Pending, PartiallyPaid, Paid)
-        setAccountReceivables(response.data.items);
-        setArTotalCount(response.data.totalCount);
-        setArTotalPages(response.data.totalPages);
-      }
-    } catch (error) {
-      console.error("Error fetching account receivables:", error);
-      toast.error("Failed to load account receivables");
-    } finally {
-      setArLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === 'account-receivable' && id) {
-      fetchAccountReceivables();
-    }
-  }, [activeTab, id, arPageNumber, arPageSize, soaDateRange]);
-
-  // Fetch receipts when tab is active
-  const fetchReceipts = async () => {
-    if (!id) return;
-    setReceiptsLoading(true);
-    try {
-      const response = await customerApi.getReceipts(parseInt(id), {
-        pageNumber: receiptsPageNumber,
-        pageSize: receiptsPageSize
-      });
-      if (response.data) {
-        setReceipts(response.data.items);
-        setReceiptsTotalCount(response.data.totalCount);
-        setReceiptsTotalPages(response.data.totalPages);
-      }
-    } catch (error) {
-      console.error("Error fetching receipts:", error);
-      toast.error("Failed to load receipts");
-    } finally {
-      setReceiptsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === 'receipt' && id) {
-      fetchReceipts();
-    }
-  }, [activeTab, id, receiptsPageNumber, receiptsPageSize]);
-
-  // Fetch account payables when tab is active (for Creditors)
-  const fetchAccountPayables = async () => {
-    if (!id) return;
-    setApLoading(true);
-    try {
-      const response = await customerApi.getAccountPayables(parseInt(id), {
-        pageNumber: apPageNumber,
-        pageSize: apPageSize
-      });
-      if (response.data) {
-        setAccountPayables(response.data.items);
-        setApTotalCount(response.data.totalCount);
-        setApTotalPages(response.data.totalPages);
-      }
-    } catch (error) {
-      console.error("Error fetching account payables:", error);
-      toast.error("Failed to load account payables");
-    } finally {
-      setApLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === 'account-payable' && id) {
-      fetchAccountPayables();
-    }
-  }, [activeTab, id, apPageNumber, apPageSize]);
-
-  // Fetch payment vouchers when tab is active (for Creditors)
-  const fetchPaymentVouchers = async () => {
-    if (!id) return;
-    setPvLoading(true);
-    try {
-      const response = await getPaymentVouchers({
-        vendorId: parseInt(id),
-        pageNumber: pvPageNumber,
-        pageSize: pvPageSize
-      });
-      if (response.data) {
-        setPaymentVouchers(response.data.items);
-        setPvTotalCount(response.data.totalCount);
-        setPvTotalPages(response.data.totalPages);
-      }
-    } catch (error) {
-      toast.error("Failed to load payment vouchers");
-    } finally {
-      setPvLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === "payment-vouchers" && id && profileData.masterType === "Creditors") {
-      fetchPaymentVouchers();
-    }
-  }, [activeTab, id, pvPageNumber, pvPageSize, profileData.masterType]);
-
-  // Fetch purchase invoices when tab is active (for Creditors)
-  const fetchPurchaseInvoices = async () => {
-    if (!id) return;
-    setPiLoading(true);
-    try {
-      const response = await invoiceApi.getAllPurchaseInvoices({
-        vendorId: parseInt(id),
-        pageNumber: piPageNumber,
-        pageSize: piPageSize
-      });
-      if (response.data) {
-        setPurchaseInvoices(response.data.items);
-        setPiTotalCount(response.data.totalCount);
-        setPiTotalPages(response.data.totalPages);
-      }
-    } catch (error) {
-      toast.error("Failed to load purchase invoices");
-    } finally {
-      setPiLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === "purchase-invoices" && id && profileData.masterType === "Creditors") {
-      fetchPurchaseInvoices();
-    }
-  }, [activeTab, id, piPageNumber, piPageSize, profileData.masterType]);
-
-  // Fetch statement when tab is active
-  const fetchStatement = async () => {
-    if (!id) return;
-    setStatementLoading(true);
-    try {
-      const fromDateStr = dateRange.from ? formatDateToISO(dateRange.from) : "";
-      const toDateStr = dateRange.to ? formatDateToISO(dateRange.to) : "";
-      const response = await customerApi.getStatement(parseInt(id), fromDateStr, toDateStr);
-      if (response.data) {
-        setStatementData(response.data);
-      }
-    } catch (error) {
-      console.error("Error fetching statement:", error);
-      toast.error("Failed to load statement");
-    } finally {
-      setStatementLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === 'statement-account' && id) {
-      fetchStatement();
-    }
-  }, [activeTab, id, dateRange]);
-
-  // Credit Notes
-  const [creditNotes, setCreditNotes] = useState<import("@/services/api/customer").CreditNote[]>([]);
-  const [cnLoading, setCnLoading] = useState(false);
-  const [cnPageNumber, setCnPageNumber] = useState(1);
-  const [cnPageSize, setCnPageSize] = useState(10);
-  const [cnTotalCount, setCnTotalCount] = useState(0);
-  const [cnTotalPages, setCnTotalPages] = useState(0);
-
-  // Fetch credit notes when tab is active
-  const fetchCreditNotes = async () => {
-    if (!id) return;
-    setCnLoading(true);
-    try {
-      const response = await customerApi.getCreditNotes(parseInt(id), { pageNumber: cnPageNumber, pageSize: cnPageSize });
-      if (response.data) {
-        setCreditNotes(response.data.items);
-        setCnTotalCount(response.data.totalCount);
-        setCnTotalPages(response.data.totalPages);
-      }
-    } catch (error) {
-      console.error("Error fetching credit notes:", error);
-      toast.error("Failed to load credit notes");
-    } finally {
-      setCnLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === "credit-notes" && id) {
-      fetchCreditNotes();
-    }
-  }, [activeTab, id, cnPageNumber, cnPageSize]);
-
-  // Fetch charge items for credit note modal
-  useEffect(() => {
-    if (creditNoteModalOpen && chargeItemsList.length === 0) {
-      settingsApi.getAllChargeItems().then(res => {
-        if (res.data) setChargeItemsList(res.data);
-      });
-    }
-  }, [creditNoteModalOpen]);
+  // Charge items and CN unpaid invoices are loaded via shared hooks (declared below).
 
   // Save credit note handler
+  const createCreditNoteMutation = useCreateCreditNote();
   const handleSaveCreditNote = async () => {
     if (!id || !creditNoteForm.creditNoteDate) {
       toast.error("Please fill in required fields");
@@ -553,7 +357,7 @@ const CustomerDetail = () => {
         return;
       }
 
-      const response = await creditNoteApi.create({
+      await createCreditNoteMutation.mutateAsync({
         customerId: parseInt(id),
         creditNoteDate: format(creditNoteForm.creditNoteDate, "yyyy-MM-dd"),
         jobNumber: creditNoteForm.jobNumber || undefined,
@@ -576,19 +380,13 @@ const CustomerDetail = () => {
           currencyId: inv.currencyId,
         })),
       });
-      if (response.error) {
-        toast.error(response.error);
-      } else {
-        toast.success("Credit note created successfully");
-        setCreditNoteModalOpen(false);
-        setChargeDetails([]);
-        setAdditionalContents("");
-        setCnSelectedInvoices([]);
-        setCreditNoteForm({ jobNumber: "", email: "", creditNoteDate: new Date(), referenceNo: "", status: "Active" });
-        fetchCreditNotes();
-      }
-    } catch (error) {
-      toast.error("Failed to create credit note");
+      setCreditNoteModalOpen(false);
+      setChargeDetails([]);
+      setAdditionalContents("");
+      setCnSelectedInvoices([]);
+      setCreditNoteForm({ jobNumber: "", email: "", creditNoteDate: new Date(), referenceNo: "", status: "Active" });
+    } catch {
+      // toast already shown by mutation's onError
     } finally {
       setCnSaving(false);
     }
@@ -613,6 +411,8 @@ const CustomerDetail = () => {
   };
 
   // Save handler
+  const createCustomerMutation = useCreateCustomer();
+  const updateCustomerMutation = useUpdateCustomer();
   const handleSave = async () => {
     if (!profileData.name.trim()) {
       toast.error("Customer name is required");
@@ -621,44 +421,36 @@ const CustomerDetail = () => {
 
     setSaving(true);
     try {
-      // Look up currencyId from the account details currency code
       const selectedCurrency = currencyTypes.find(c => c.code === accountDetails.currency);
       const currencyId = selectedCurrency?.id;
 
       if (isEditMode && id) {
-        // Update existing customer
-        const updateData = {
+        await updateCustomerMutation.mutateAsync({
           id: parseInt(id),
-          name: profileData.name,
-          masterType: profileData.masterType,
-          categoryIds: profileData.categoryIds.map(id => parseInt(id)),
-          phone: profileData.phone || undefined,
-          fax: profileData.fax || undefined,
-          email: profileData.generalEmail || undefined,
-          country: profileData.country || undefined,
-          city: profileData.city || undefined,
-          address: profileData.address || undefined,
-          currencyId: currencyId || undefined,
-          taxNo: profileData.ntnVatTaxNo || undefined,
-          taxPercentage: profileData.taxPercentage ? parseFloat(profileData.taxPercentage) : undefined,
-          carrierCode: profileData.carrierCode || undefined,
-          status: profileData.status,
-          salesperson: profileData.salesperson || undefined,
-        };
-
-        const response = await customerApi.update(parseInt(id), updateData);
-        if (response.error) {
-          throw new Error(response.error);
-        }
-
-        queryClient.invalidateQueries({ queryKey: ['customers'] });
-        toast.success("Customer updated successfully");
+          data: {
+            id: parseInt(id),
+            name: profileData.name,
+            masterType: profileData.masterType,
+            categoryIds: profileData.categoryIds.map(cid => parseInt(cid)),
+            phone: profileData.phone || undefined,
+            fax: profileData.fax || undefined,
+            email: profileData.generalEmail || undefined,
+            country: profileData.country || undefined,
+            city: profileData.city || undefined,
+            address: profileData.address || undefined,
+            currencyId: currencyId || undefined,
+            taxNo: profileData.ntnVatTaxNo || undefined,
+            taxPercentage: profileData.taxPercentage ? parseFloat(profileData.taxPercentage) : undefined,
+            carrierCode: profileData.carrierCode || undefined,
+            status: profileData.status,
+            salesperson: profileData.salesperson || undefined,
+          },
+        });
       } else {
-        // Create new customer
-        const createData = {
+        await createCustomerMutation.mutateAsync({
           name: profileData.name,
           masterType: profileData.masterType,
-          categoryIds: profileData.categoryIds.map(id => parseInt(id)),
+          categoryIds: profileData.categoryIds.map(cid => parseInt(cid)),
           phone: profileData.phone || undefined,
           fax: profileData.fax || undefined,
           email: profileData.generalEmail || undefined,
@@ -670,20 +462,11 @@ const CustomerDetail = () => {
           taxPercentage: profileData.taxPercentage ? parseFloat(profileData.taxPercentage) : undefined,
           carrierCode: profileData.carrierCode || undefined,
           salesperson: profileData.salesperson || undefined,
-        };
-
-        const response = await customerApi.create(createData);
-        if (response.error) {
-          throw new Error(response.error);
-        }
-
-        queryClient.invalidateQueries({ queryKey: ['customers'] });
-        toast.success("Customer created and sent for approval");
+        });
         navigate("/master-customers");
       }
-    } catch (error) {
-      console.error("Error saving customer:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to save customer");
+    } catch {
+      // toast already shown by mutation's onError
     } finally {
       setSaving(false);
     }
@@ -747,10 +530,16 @@ const CustomerDetail = () => {
   });
   const [additionalContents, setAdditionalContents] = useState("");
   const [cnSaving, setCnSaving] = useState(false);
-  const [chargeItemsList, setChargeItemsList] = useState<import("@/services/api").ChargeItem[]>([]);
+
+  // Charge items + CN unpaid invoices (loaded via shared hooks; CN unpaid only when modal opens)
+  const { data: chargeItemsList = [] } = useAllChargeItems();
+  const { data: cnUnpaidInvoices = [] } = useCustomerCreditNoteUnpaidInvoices(
+    customerId,
+    undefined,
+    { enabled: creditNoteModalOpen }
+  );
 
   // Invoice allocation state for credit notes
-  const [cnUnpaidInvoices, setCnUnpaidInvoices] = useState<UnpaidInvoice[]>([]);
   const [cnSelectedInvoices, setCnSelectedInvoices] = useState<{
     invoiceId: number;
     invoiceNo: string;
@@ -806,24 +595,8 @@ const CustomerDetail = () => {
       });
       if (response.error) throw new Error(response.error);
 
-      // Refetch customer data to get updated contacts
-      const customerResponse = await customerApi.getById(parseInt(id));
-      if (customerResponse.data?.contacts) {
-        setContacts(customerResponse.data.contacts.map(c => ({
-          id: c.id,
-          name: c.name,
-          email: c.email || "",
-          mobile: c.mobile || "",
-          position: c.position || "",
-          phone: c.phone || "",
-          designation: c.designation || "",
-          department: c.department || "",
-          directTel: c.directTel || "",
-          whatsapp: c.whatsapp || "",
-          skype: c.skype || "",
-          enableRateRequest: c.enableRateRequest,
-        })));
-      }
+      // Let the useCustomer hook refetch; contacts sync useEffect will pick up the new list.
+      queryClient.invalidateQueries({ queryKey: ['customers', parseInt(id)] });
 
       toast.success("Contact added successfully");
       setContactForm({});
@@ -844,7 +617,9 @@ const CustomerDetail = () => {
       const response = await customerApi.deleteContact(contactId);
       if (response.error) throw new Error(response.error);
 
+      // Optimistic local update; server truth will sync via invalidation.
       setContacts(contacts.filter(c => c.id !== contactId));
+      queryClient.invalidateQueries({ queryKey: ['customers', parseInt(id)] });
       toast.success("Contact deleted successfully");
     } catch (error) {
       console.error("Error deleting contact:", error);
@@ -877,6 +652,7 @@ const CustomerDetail = () => {
       const response = await customerApi.updateAccountDetail(parseInt(id), data);
       if (response.error) throw new Error(response.error);
 
+      queryClient.invalidateQueries({ queryKey: ['customers', parseInt(id)] });
       toast.success("Account details saved successfully");
     } catch (error) {
       console.error("Error saving account details:", error);
@@ -1740,13 +1516,9 @@ const CustomerDetail = () => {
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold text-primary">Credit Notes</h2>
           {!isViewMode && (
-            <Button className="btn-success gap-2" onClick={async () => {
-              setCreditNoteModalOpen(true);
+            <Button className="btn-success gap-2" onClick={() => {
               setCnSelectedInvoices([]);
-              if (id) {
-                const res = await creditNoteApi.getUnpaidInvoices(parseInt(id));
-                if (res.data) setCnUnpaidInvoices(res.data);
-              }
+              setCreditNoteModalOpen(true);
             }}>
               <Plus size={16} /> Credit Notes
             </Button>

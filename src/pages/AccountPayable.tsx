@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
-import { toast } from "sonner";
+import { useState } from "react";
 import { formatDateToISO } from "@/lib/utils";
 import { Search, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,13 +16,10 @@ import {
 import { DateRangePicker, DateRangeValue } from "@/components/ui/date-range-picker";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { VendorPayableDetailsModal } from "@/components/payments/VendorPayableDetailsModal";
-import { invoiceApi, customerApi, Customer, AccountPayableSummaryItem, AccountPayableCurrencyTotal } from "@/services/api";
+import { useAccountPayableSummary } from "@/hooks/useInvoices";
+import { useAllCreditors } from "@/hooks/useCustomers";
 
 export default function AccountPayable() {
-  const [items, setItems] = useState<AccountPayableSummaryItem[]>([]);
-  const [totals, setTotals] = useState<AccountPayableCurrencyTotal[]>([]);
-  const [vendors, setVendors] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedVendor, setSelectedVendor] = useState<string>("all");
   const [modalVendor, setModalVendor] = useState<{ id: number; name: string; currencyCode: string } | null>(null);
@@ -33,8 +29,6 @@ export default function AccountPayable() {
   });
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(25);
-  const [totalCount, setTotalCount] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
   const [appliedSearch, setAppliedSearch] = useState("");
   const [appliedVendor, setAppliedVendor] = useState<string>("all");
   const [appliedDateRange, setAppliedDateRange] = useState<DateRangeValue | undefined>({
@@ -42,45 +36,19 @@ export default function AccountPayable() {
     to: new Date(),
   });
 
-  // Fetch vendors for filter
-  useEffect(() => {
-    const fetchVendors = async () => {
-      const response = await customerApi.getAll({ pageSize: 1000, masterType: 'Creditors' });
-      if (response.data) {
-        setVendors(response.data.items);
-      }
-    };
-    fetchVendors();
-  }, []);
-
-  // Fetch account payable data
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await invoiceApi.getAccountPayableSummary({
-        pageNumber,
-        pageSize,
-        vendorId: appliedVendor !== "all" ? parseInt(appliedVendor, 10) : undefined,
-        fromDate: appliedDateRange?.from ? formatDateToISO(appliedDateRange.from) : undefined,
-        toDate: appliedDateRange?.to ? formatDateToISO(appliedDateRange.to) : undefined,
-        searchTerm: appliedSearch || undefined,
-      });
-      if (response.data) {
-        setItems(response.data.items.items);
-        setTotalCount(response.data.items.totalCount);
-        setTotalPages(response.data.items.totalPages);
-        setTotals(response.data.totals);
-      }
-    } catch (error) {
-      toast.error("Failed to load account payable data");
-    } finally {
-      setLoading(false);
-    }
-  }, [pageNumber, pageSize, appliedSearch, appliedVendor, appliedDateRange]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const { data: vendors = [] } = useAllCreditors();
+  const { data: summary, isLoading: loading } = useAccountPayableSummary({
+    pageNumber,
+    pageSize,
+    vendorId: appliedVendor !== "all" ? parseInt(appliedVendor, 10) : undefined,
+    fromDate: appliedDateRange?.from ? formatDateToISO(appliedDateRange.from) : undefined,
+    toDate: appliedDateRange?.to ? formatDateToISO(appliedDateRange.to) : undefined,
+    searchTerm: appliedSearch || undefined,
+  });
+  const items = summary?.items.items ?? [];
+  const totalCount = summary?.items.totalCount ?? 0;
+  const totalPages = summary?.items.totalPages ?? 0;
+  const totals = summary?.totals ?? [];
 
   const handleSearch = () => {
     setAppliedSearch(searchTerm);

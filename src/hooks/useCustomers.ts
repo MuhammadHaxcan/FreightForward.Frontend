@@ -104,59 +104,110 @@ export function useDeleteCustomer() {
   });
 }
 
-export function useCustomerInvoices(customerId: number, params?: { pageNumber?: number; pageSize?: number }) {
+// Customer-scoped sub-resource hooks (used by CustomerDetail tabs).
+// All keys start with ['customers', ...] so invalidateQueries(['customers']) auto-refreshes them.
+
+export function useCustomerInvoices(
+  customerId: number,
+  params?: { pageNumber?: number; pageSize?: number; enabled?: boolean }
+) {
+  const { enabled = true, ...queryParams } = params ?? {};
   return useQuery({
-    queryKey: ['customers', customerId, 'invoices', params],
+    queryKey: ['customers', customerId, 'invoices', queryParams],
     queryFn: async () => {
-      const response = await customerApi.getInvoices(customerId, params);
-      if (response.error) {
-        throw new Error(response.error);
-      }
+      const response = await customerApi.getInvoices(customerId, queryParams);
+      if (response.error) throw new Error(response.error);
       return response.data!;
     },
-    enabled: customerId > 0,
+    enabled: customerId > 0 && enabled,
   });
 }
 
-export function useCustomerReceipts(customerId: number, params?: { pageNumber?: number; pageSize?: number }) {
+export function useCustomerReceipts(
+  customerId: number,
+  params?: { pageNumber?: number; pageSize?: number; enabled?: boolean }
+) {
+  const { enabled = true, ...queryParams } = params ?? {};
   return useQuery({
-    queryKey: ['customers', customerId, 'receipts', params],
+    queryKey: ['customers', customerId, 'receipts', queryParams],
     queryFn: async () => {
-      const response = await customerApi.getReceipts(customerId, params);
-      if (response.error) {
-        throw new Error(response.error);
-      }
+      const response = await customerApi.getReceipts(customerId, queryParams);
+      if (response.error) throw new Error(response.error);
       return response.data!;
     },
-    enabled: customerId > 0,
+    enabled: customerId > 0 && enabled,
   });
 }
 
-export function useCustomerCreditNotes(customerId: number, params?: { pageNumber?: number; pageSize?: number }) {
+export function useCustomerCreditNotes(
+  customerId: number,
+  params?: { pageNumber?: number; pageSize?: number; enabled?: boolean }
+) {
+  const { enabled = true, ...queryParams } = params ?? {};
   return useQuery({
-    queryKey: ['customers', customerId, 'creditNotes', params],
+    queryKey: ['customers', customerId, 'creditNotes', queryParams],
     queryFn: async () => {
-      const response = await customerApi.getCreditNotes(customerId, params);
-      if (response.error) {
-        throw new Error(response.error);
-      }
+      const response = await customerApi.getCreditNotes(customerId, queryParams);
+      if (response.error) throw new Error(response.error);
       return response.data!;
     },
-    enabled: customerId > 0,
+    enabled: customerId > 0 && enabled,
   });
 }
 
-export function useCustomerAccountReceivables(customerId: number, params?: { pageNumber?: number; pageSize?: number }) {
+export function useCustomerAccountReceivables(
+  customerId: number,
+  params?: {
+    pageNumber?: number;
+    pageSize?: number;
+    fromDate?: string;
+    toDate?: string;
+    enabled?: boolean;
+  }
+) {
+  const { enabled = true, ...queryParams } = params ?? {};
   return useQuery({
-    queryKey: ['customers', customerId, 'accountReceivables', params],
+    queryKey: ['customers', customerId, 'accountReceivables', queryParams],
     queryFn: async () => {
-      const response = await customerApi.getAccountReceivables(customerId, params);
-      if (response.error) {
-        throw new Error(response.error);
-      }
+      const response = await customerApi.getAccountReceivables(customerId, queryParams);
+      if (response.error) throw new Error(response.error);
       return response.data!;
     },
-    enabled: customerId > 0,
+    enabled: customerId > 0 && enabled,
+  });
+}
+
+export function useCustomerAccountPayables(
+  customerId: number,
+  params?: { pageNumber?: number; pageSize?: number; enabled?: boolean }
+) {
+  const { enabled = true, ...queryParams } = params ?? {};
+  return useQuery({
+    queryKey: ['customers', customerId, 'accountPayables', queryParams],
+    queryFn: async () => {
+      const response = await customerApi.getAccountPayables(customerId, queryParams);
+      if (response.error) throw new Error(response.error);
+      return response.data!;
+    },
+    enabled: customerId > 0 && enabled,
+  });
+}
+
+export function useCustomerStatement(
+  customerId: number,
+  fromDate: string,
+  toDate: string,
+  options?: { enabled?: boolean }
+) {
+  const enabled = options?.enabled ?? true;
+  return useQuery({
+    queryKey: ['customers', customerId, 'statement', fromDate, toDate],
+    queryFn: async () => {
+      const response = await customerApi.getStatement(customerId, fromDate, toDate);
+      if (response.error) throw new Error(response.error);
+      return response.data!;
+    },
+    enabled: customerId > 0 && !!fromDate && !!toDate && enabled,
   });
 }
 
@@ -165,7 +216,7 @@ export function useAllCreditors() {
   return useQuery({
     queryKey: ['customers', 'creditors'],
     queryFn: async () => {
-      const response = await customerApi.getAll({ pageSize: 500, masterType: 'Creditors' });
+      const response = await customerApi.getAll({ pageSize: 1000, masterType: 'Creditors' });
       if (response.error) {
         throw new Error(response.error);
       }
@@ -180,7 +231,7 @@ export function useAllDebtors() {
   return useQuery({
     queryKey: ['customers', 'debtors'],
     queryFn: async () => {
-      const response = await customerApi.getAll({ pageSize: 500, masterType: 'Debtors' });
+      const response = await customerApi.getAll({ pageSize: 1000, masterType: 'Debtors' });
       if (response.error) {
         throw new Error(response.error);
       }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { formatDate } from "@/lib/utils";
 import { Eye, Plus, Trash2, Download, Printer, Edit } from "lucide-react";
@@ -24,25 +24,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { receiptApi, ReceiptVoucher as Receipt } from "@/services/api";
 import { API_BASE_URL, fetchBlob } from "@/services/api/base";
 import { RecordReceiptModal } from "@/components/receipts/RecordReceiptModal";
 import { UpdateReceiptModal } from "@/components/receipts/UpdateReceiptModal";
 import { ReceiptDetailsModal } from "@/components/receipts/ReceiptDetailsModal";
 import { PermissionGate } from "@/components/auth/PermissionGate";
-import { toast } from "sonner";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
+import { useReceipts, useDeleteReceipt } from "@/hooks/useReceipts";
 
 export default function ReceiptVouchers() {
   const navigate = useNavigate();
   const baseCurrencyCode = useBaseCurrency();
-  const [receipts, setReceipts] = useState<Receipt[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [totalCount, setTotalCount] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
   const [appliedSearch, setAppliedSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
@@ -52,30 +47,16 @@ export default function ReceiptVouchers() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [receiptToDelete, setReceiptToDelete] = useState<number | null>(null);
 
-  // Fetch receipts
-  const fetchReceipts = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await receiptApi.getAll({
-        pageNumber,
-        pageSize,
-        searchTerm: appliedSearch || undefined,
-      });
-      if (response.data) {
-        setReceipts(response.data.items);
-        setTotalCount(response.data.totalCount);
-        setTotalPages(response.data.totalPages);
-      }
-    } catch (error) {
-      console.error("Error fetching receipts:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [pageNumber, pageSize, appliedSearch]);
+  const { data: receiptsPage, isLoading: loading } = useReceipts({
+    pageNumber,
+    pageSize,
+    searchTerm: appliedSearch || undefined,
+  });
+  const receipts = receiptsPage?.items ?? [];
+  const totalCount = receiptsPage?.totalCount ?? 0;
+  const totalPages = receiptsPage?.totalPages ?? 0;
 
-  useEffect(() => {
-    fetchReceipts();
-  }, [fetchReceipts]);
+  const deleteReceiptMutation = useDeleteReceipt();
 
   const handleSearch = () => {
     setAppliedSearch(searchTerm);
@@ -122,12 +103,9 @@ export default function ReceiptVouchers() {
   const handleDeleteConfirm = async () => {
     if (!receiptToDelete) return;
     try {
-      await receiptApi.delete(receiptToDelete);
-      toast.success("Receipt deleted successfully");
-      fetchReceipts();
-    } catch (error) {
-      console.error("Error deleting receipt:", error);
-      toast.error("Failed to delete receipt");
+      await deleteReceiptMutation.mutateAsync(receiptToDelete);
+    } catch {
+      // toast already shown by mutation's onError
     } finally {
       setDeleteDialogOpen(false);
       setReceiptToDelete(null);
@@ -386,7 +364,6 @@ export default function ReceiptVouchers() {
         onOpenChange={setIsModalOpen}
         onSuccess={() => {
           setIsModalOpen(false);
-          fetchReceipts();
         }}
       />
 
@@ -405,7 +382,6 @@ export default function ReceiptVouchers() {
         onSuccess={() => {
           setIsUpdateModalOpen(false);
           setEditReceiptId(null);
-          fetchReceipts();
         }}
       />
 

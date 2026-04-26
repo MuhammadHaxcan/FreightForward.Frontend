@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { formatDate } from "@/lib/utils";
 import { ArrowLeft, Printer, Download } from "lucide-react";
@@ -12,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { receiptApi, ReceiptDetail } from "@/services/api";
+import { useReceiptByIdentifier } from "@/hooks/useReceipts";
 import { API_BASE_URL, fetchBlob } from "@/services/api/base";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 
@@ -20,26 +19,8 @@ export default function ReceiptView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const baseCurrencyCode = useBaseCurrency();
-  const [receipt, setReceipt] = useState<ReceiptDetail | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchReceipt = async () => {
-      if (!id) return;
-      setLoading(true);
-      try {
-        const response = await receiptApi.getByIdentifier(id);
-        if (response.data) {
-          setReceipt(response.data);
-        }
-      } catch (error) {
-        console.error("Error fetching receipt:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchReceipt();
-  }, [id]);
+  const { data: receipt, isLoading: loading } = useReceiptByIdentifier(id ?? null);
 
   const handlePrint = () => {
     if (!receipt) return;

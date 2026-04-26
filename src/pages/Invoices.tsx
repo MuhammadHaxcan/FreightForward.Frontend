@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
-import { toast } from "sonner";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { formatDate, formatDateToISO } from "@/lib/utils";
 import { Eye } from "lucide-react";
@@ -15,62 +14,31 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { invoiceApi, customerApi, AccountInvoice, Customer } from "@/services/api";
+import { useInvoices } from "@/hooks/useInvoices";
+import { useAllDebtors } from "@/hooks/useCustomers";
 import { DateRangePicker, DateRangeValue } from "@/components/ui/date-range-picker";
 
 export default function Invoices() {
   const navigate = useNavigate();
-  const [invoices, setInvoices] = useState<AccountInvoice[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<string>("all");
   const [dateRange, setDateRange] = useState<DateRangeValue | undefined>(undefined);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [totalCount, setTotalCount] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
 
-  // Fetch customers for filter (only Debtors)
-  useEffect(() => {
-    const fetchCustomers = async () => {
-      const response = await customerApi.getAll({ pageSize: 1000, masterType: 'Debtors' });
-      if (response.data) {
-        setCustomers(response.data.items);
-      }
-    };
-    fetchCustomers();
-  }, []);
-
-  // Fetch invoices - wrapped in useCallback for proper dependency tracking
-  const fetchInvoices = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await invoiceApi.getAll({
-        pageNumber,
-        pageSize,
-        searchTerm: appliedSearch || undefined,
-        customerId: selectedCustomer !== "all" ? parseInt(selectedCustomer) : undefined,
-        fromDate: dateRange?.from ? formatDateToISO(dateRange.from) : undefined,
-        toDate: dateRange?.to ? formatDateToISO(dateRange.to) : undefined,
-      });
-      if (response.data) {
-        setInvoices(response.data.items);
-        setTotalCount(response.data.totalCount);
-        setTotalPages(response.data.totalPages);
-      }
-    } catch (error) {
-      toast.error("Failed to load invoices");
-    } finally {
-      setLoading(false);
-    }
-  }, [pageNumber, pageSize, appliedSearch, selectedCustomer, dateRange]);
-
-  // Fetch on pagination changes and initial load
-  useEffect(() => {
-    fetchInvoices();
-  }, [fetchInvoices]);
+  const { data: customers = [] } = useAllDebtors();
+  const { data: invoicesPage, isLoading: loading } = useInvoices({
+    pageNumber,
+    pageSize,
+    searchTerm: appliedSearch || undefined,
+    customerId: selectedCustomer !== "all" ? parseInt(selectedCustomer) : undefined,
+    fromDate: dateRange?.from ? formatDateToISO(dateRange.from) : undefined,
+    toDate: dateRange?.to ? formatDateToISO(dateRange.to) : undefined,
+  });
+  const invoices = invoicesPage?.items ?? [];
+  const totalCount = invoicesPage?.totalCount ?? 0;
+  const totalPages = invoicesPage?.totalPages ?? 0;
 
   const handleSearch = () => {
     setAppliedSearch(searchTerm);

@@ -103,6 +103,13 @@ export function useCreatePaymentVoucher() {
       queryClient.invalidateQueries({ queryKey: ['paymentVouchers'] });
       queryClient.invalidateQueries({ queryKey: ['nextPaymentNumber'] });
       queryClient.invalidateQueries({ queryKey: ['unpaidPurchaseInvoices'] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['purchaseInvoices'] });
+      queryClient.invalidateQueries({ queryKey: ['purchaseInvoice'] });
+      queryClient.invalidateQueries({ queryKey: ['shipments'] });
+      queryClient.invalidateQueries({ queryKey: ['shipment-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['post-dated-cheques'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Payment voucher created successfully');
     },
     onError: (error: Error) => {
@@ -122,7 +129,15 @@ export function useDeletePaymentVoucher() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['paymentVouchers'] });
+      queryClient.invalidateQueries({ queryKey: ['paymentVoucher'] });
       queryClient.invalidateQueries({ queryKey: ['unpaidPurchaseInvoices'] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['purchaseInvoices'] });
+      queryClient.invalidateQueries({ queryKey: ['purchaseInvoice'] });
+      queryClient.invalidateQueries({ queryKey: ['shipments'] });
+      queryClient.invalidateQueries({ queryKey: ['shipment-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['post-dated-cheques'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Payment voucher deleted successfully');
     },
     onError: (error: Error) => {
@@ -144,6 +159,13 @@ export function useUpdatePaymentVoucher() {
       queryClient.invalidateQueries({ queryKey: ['paymentVouchers'] });
       queryClient.invalidateQueries({ queryKey: ['paymentVoucher'] });
       queryClient.invalidateQueries({ queryKey: ['unpaidPurchaseInvoices'] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['purchaseInvoices'] });
+      queryClient.invalidateQueries({ queryKey: ['purchaseInvoice'] });
+      queryClient.invalidateQueries({ queryKey: ['shipments'] });
+      queryClient.invalidateQueries({ queryKey: ['shipment-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['post-dated-cheques'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Payment voucher updated successfully');
     },
     onError: (error: Error) => {

@@ -393,6 +393,9 @@ export function useConvertQuotationToShipment() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       queryClient.invalidateQueries({ queryKey: ['quotations'] });
+      queryClient.invalidateQueries({ queryKey: ['shipments'] });
+      queryClient.invalidateQueries({ queryKey: ['nextJobNumber'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Quotation converted to shipment successfully');
     },
     onError: (error: Error) => {

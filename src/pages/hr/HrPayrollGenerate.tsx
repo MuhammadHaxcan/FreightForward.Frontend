@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { ArrowLeft, Loader2, Play, AlertTriangle, Info } from "lucide-react";
 import { hrPayrollApi, hrEmployeeApi } from "@/services/api/hr";
+import { MutationBlockingOverlay } from "@/components/ui/mutation-blocking-overlay";
 
 const monthNames = [
   "", "January", "February", "March", "April", "May", "June",

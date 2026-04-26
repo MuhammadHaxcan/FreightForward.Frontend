@@ -1,45 +1,19 @@
-import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { invoiceApi, shipmentApi, AccountInvoiceDetail, ShipmentDetail } from "@/services/api";
 import { InvoiceModal } from "@/components/shipments/InvoiceModal";
-import { toast } from "sonner";
+import { useInvoiceByIdentifier } from "@/hooks/useInvoices";
+import { useShipment } from "@/hooks/useShipments";
 
 export default function InvoiceEdit() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [invoice, setInvoice] = useState<AccountInvoiceDetail | null>(null);
-  const [shipment, setShipment] = useState<ShipmentDetail | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!id) return;
-      setLoading(true);
-      try {
-        const invoiceResponse = await invoiceApi.getByIdentifier(id);
-        if (invoiceResponse.data) {
-          setInvoice(invoiceResponse.data);
-
-          // Fetch shipment data for parties and costings
-          if (invoiceResponse.data.shipmentId) {
-            const shipmentResponse = await shipmentApi.getById(invoiceResponse.data.shipmentId);
-            if (shipmentResponse.data) {
-              setShipment(shipmentResponse.data);
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        toast.error("Failed to load invoice data");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [id]);
+  const { data: invoice, isLoading: invoiceLoading } = useInvoiceByIdentifier(id);
+  const { data: shipment, isLoading: shipmentLoading } = useShipment(invoice?.shipmentId ?? 0);
+  // Still loading if invoice is pending, or invoice has a shipmentId but that shipment is still loading
+  const loading = invoiceLoading || (!!invoice?.shipmentId && shipmentLoading);
 
   const handleModalClose = (open: boolean) => {
     if (!open) {

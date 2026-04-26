@@ -391,7 +391,7 @@ const ShipmentDetail = () => {
 
   // Fetch Employees for Assign To dropdown
   const { data: employeesResponse, isLoading: isLoadingEmployees } = useQuery({
-    queryKey: ['employees', 'dropdown'],
+    queryKey: ['hr-employees-dropdown'],
     queryFn: () => hrEmployeeApi.getDropdown(),
     staleTime: 60 * 60 * 1000,
   });

@@ -76,6 +76,8 @@ export function useCreateShipment() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shipments'] });
+      queryClient.invalidateQueries({ queryKey: ['nextJobNumber'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Shipment created successfully');
     },
     onError: (error: Error) => {
@@ -98,6 +100,7 @@ export function useUpdateShipment() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['shipments'] });
       queryClient.invalidateQueries({ queryKey: ['shipments', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Shipment updated successfully');
     },
     onError: (error: Error) => {
@@ -119,6 +122,7 @@ export function useDeleteShipment() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shipments'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Shipment deleted successfully');
     },
     onError: (error: Error) => {

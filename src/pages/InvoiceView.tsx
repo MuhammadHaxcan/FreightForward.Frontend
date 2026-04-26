@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { formatDate } from "@/lib/utils";
 import { ArrowLeft, Mail, Pencil, FileText, Download, File } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { invoiceApi, AccountInvoiceDetail } from "@/services/api";
+import { invoiceApi } from "@/services/api";
+import { useInvoiceByIdentifier } from "@/hooks/useInvoices";
 import { SendEmailModal } from "@/components/common/SendEmailModal";
 import {
   Table,
@@ -23,9 +24,9 @@ export default function InvoiceView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { officeName, user } = useAuth();
-  const [invoice, setInvoice] = useState<AccountInvoiceDetail | null>(null);
-  const [loading, setLoading] = useState(true);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
+
+  const { data: invoice, isLoading: loading } = useInvoiceByIdentifier(id);
 
   const sendEmailMutation = useMutation({
     mutationFn: async (req: { recipientEmail: string; sendToCustomer: boolean; subject: string }) => {
@@ -41,24 +42,6 @@ export default function InvoiceView() {
       toast.error(error.message || "Failed to send email");
     },
   });
-
-  useEffect(() => {
-    const fetchInvoice = async () => {
-      if (!id) return;
-      setLoading(true);
-      try {
-        const response = await invoiceApi.getByIdentifier(id);
-        if (response.data) {
-          setInvoice(response.data);
-        }
-      } catch (error) {
-        console.error("Error fetching invoice:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchInvoice();
-  }, [id]);
 
   const handleTaxInvoice = () => {
     if (!invoice) return;

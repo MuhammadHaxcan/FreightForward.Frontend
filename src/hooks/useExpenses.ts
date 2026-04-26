@@ -47,6 +47,7 @@ export function useCreateExpense() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Expense created successfully');
     },
     onError: (error: Error) => {
@@ -68,6 +69,7 @@ export function useUpdateExpense() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Expense updated successfully');
     },
     onError: (error: Error) => {
@@ -89,6 +91,7 @@ export function useDeleteExpense() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Expense deleted successfully');
     },
     onError: (error: Error) => {

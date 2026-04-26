@@ -1,9 +1,8 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
 import { authApi } from '../services/api/auth';
-import { settingsApi } from '../services/api/settings';
+import { useAllCurrencyTypes } from '@/hooks/useSettings';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -30,14 +29,7 @@ export default function ChangePassword() {
 
   const needsCurrencySetup = user?.forcePasswordChange === true && user?.baseCurrencySet === false;
 
-  const { data: currencies, isLoading: currenciesLoading } = useQuery({
-    queryKey: ['allCurrencyTypes'],
-    queryFn: async () => {
-      const result = await settingsApi.getAllCurrencyTypes();
-      return result.data || [];
-    },
-    enabled: needsCurrencySetup,
-  });
+  const { data: currencies = [], isLoading: currenciesLoading } = useAllCurrencyTypes();
 
   const validatePassword = (password: string): string | null => {
     if (password.length < 8) {

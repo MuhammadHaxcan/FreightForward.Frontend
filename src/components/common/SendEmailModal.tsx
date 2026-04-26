@@ -48,13 +48,17 @@ export function SendEmailModal({
   const [editableRecipientEmail, setEditableRecipientEmail] = useState(recipientEmail);
   const [editableSubject, setEditableSubject] = useState(defaultSubject);
 
+  // Reset form only on open transition (false → true). Depending on recipientEmail/defaultSubject
+  // here would wipe in-progress user edits whenever a parent re-render produced a new
+  // computed value for those props.
   useEffect(() => {
     if (open) {
       setSendToCustomer(false);
       setEditableRecipientEmail(recipientEmail);
       setEditableSubject(defaultSubject);
     }
-  }, [open, recipientEmail, defaultSubject]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const handleSend = async () => {
     await onSend({

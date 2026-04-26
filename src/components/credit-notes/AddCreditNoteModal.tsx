@@ -19,6 +19,7 @@ import {
   type ChargeItem,
   type UnpaidInvoice,
 } from "@/services/api";
+import { useCreateCreditNote } from "@/hooks/useCreditNotes";
 
 interface ChargeDetail {
   id: number;
@@ -80,6 +81,8 @@ export function AddCreditNoteModal({ open, onOpenChange, onSuccess }: AddCreditN
 
   const [unpaidInvoices, setUnpaidInvoices] = useState<UnpaidInvoice[]>([]);
   const [selectedInvoices, setSelectedInvoices] = useState<SelectedInvoice[]>([]);
+
+  const createCreditNoteMutation = useCreateCreditNote();
 
   // Fetch customers, currencies, charge items on open
   useEffect(() => {
@@ -164,7 +167,7 @@ export function AddCreditNoteModal({ open, onOpenChange, onSuccess }: AddCreditN
         return;
       }
 
-      const response = await creditNoteApi.create({
+      await createCreditNoteMutation.mutateAsync({
         customerId: parseInt(selectedCustomerId),
         creditNoteDate: format(creditNoteForm.creditNoteDate, "yyyy-MM-dd"),
         jobNumber: creditNoteForm.jobNumber || undefined,
@@ -187,15 +190,9 @@ export function AddCreditNoteModal({ open, onOpenChange, onSuccess }: AddCreditN
           currencyId: inv.currencyId,
         })),
       });
-
-      if (response.error) {
-        toast.error(response.error);
-      } else {
-        toast.success("Credit note created successfully");
-        onSuccess();
-      }
+      onSuccess();
     } catch {
-      toast.error("Failed to create credit note");
+      // toast already shown by mutation's onError
     } finally {
       setSaving(false);
     }

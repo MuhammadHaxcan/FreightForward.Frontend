@@ -20,6 +20,7 @@ import {
   type ReceiptDetail,
   type UpdateReceiptRequest,
 } from "@/services/api";
+import { useUpdateReceipt } from "@/hooks/useReceipts";
 import { toast } from "sonner";
 
 interface UpdateReceiptModalProps {
@@ -35,6 +36,7 @@ export function UpdateReceiptModal({
   receiptId,
   onSuccess,
 }: UpdateReceiptModalProps) {
+  const updateReceiptMutation = useUpdateReceipt();
   const [loading, setLoading] = useState(false);
   const [fetchingData, setFetchingData] = useState(false);
   const [banks, setBanks] = useState<Bank[]>([]);
@@ -162,12 +164,11 @@ export function UpdateReceiptModal({
         amount: amount,
       };
 
-      await receiptApi.update(receiptId, request);
-      toast.success("Receipt updated successfully");
+      await updateReceiptMutation.mutateAsync({ id: receiptId, request });
       onSuccess();
     } catch (error) {
       console.error("Error updating receipt:", error);
-      toast.error("Failed to update receipt");
+      // toast already shown by mutation's onError
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
-import { toast } from "sonner";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { formatDate } from "@/lib/utils";
 import { Search, Eye, Trash2, Plus } from "lucide-react";
@@ -15,8 +14,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { creditNoteApi, customerApi, AccountCreditNote, Customer } from "@/services/api";
-import { useDeleteCreditNote } from "@/hooks/useCreditNotes";
+import { useCreditNotes, useDeleteCreditNote } from "@/hooks/useCreditNotes";
+import { useAllDebtors } from "@/hooks/useCustomers";
 import { useAuth } from "@/contexts/AuthContext";
 import { DeleteConfirmationModal } from "@/components/ui/delete-confirmation-modal";
 import { PermissionGate } from "@/components/auth/PermissionGate";
@@ -25,55 +24,26 @@ import { AddCreditNoteModal } from "@/components/credit-notes/AddCreditNoteModal
 export default function CreditNotes() {
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
-  const [creditNotes, setCreditNotes] = useState<AccountCreditNote[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<string>("all");
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [totalCount, setTotalCount] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [addModalOpen, setAddModalOpen] = useState(false);
+
+  const { data: customers = [] } = useAllDebtors();
+  const { data: creditNotesPage, isLoading: loading } = useCreditNotes({
+    pageNumber,
+    pageSize,
+    searchTerm: appliedSearch || undefined,
+    customerId: selectedCustomer !== "all" ? parseInt(selectedCustomer) : undefined,
+  });
+  const creditNotes = creditNotesPage?.items ?? [];
+  const totalCount = creditNotesPage?.totalCount ?? 0;
+  const totalPages = creditNotesPage?.totalPages ?? 0;
+
   const deleteMutation = useDeleteCreditNote();
-
-  // Fetch customers for filter (only Debtors)
-  useEffect(() => {
-    const fetchCustomers = async () => {
-      const response = await customerApi.getAll({ pageSize: 1000, masterType: 'Debtors' });
-      if (response.data) {
-        setCustomers(response.data.items);
-      }
-    };
-    fetchCustomers();
-  }, []);
-
-  const fetchCreditNotes = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await creditNoteApi.getAll({
-        pageNumber,
-        pageSize,
-        searchTerm: appliedSearch || undefined,
-        customerId: selectedCustomer !== "all" ? parseInt(selectedCustomer) : undefined,
-      });
-      if (response.data) {
-        setCreditNotes(response.data.items);
-        setTotalCount(response.data.totalCount);
-        setTotalPages(response.data.totalPages);
-      }
-    } catch {
-      toast.error("Failed to load credit notes");
-    } finally {
-      setLoading(false);
-    }
-  }, [pageNumber, pageSize, appliedSearch, selectedCustomer]);
-
-  useEffect(() => {
-    fetchCreditNotes();
-  }, [fetchCreditNotes]);
 
   const handleSearch = () => {
     setAppliedSearch(searchTerm);
@@ -84,7 +54,6 @@ export default function CreditNotes() {
     if (!deleteId) return;
     await deleteMutation.mutateAsync(deleteId);
     setDeleteId(null);
-    fetchCreditNotes();
   };
 
   const startEntry = (pageNumber - 1) * pageSize + 1;
@@ -294,7 +263,6 @@ export default function CreditNotes() {
       onOpenChange={setAddModalOpen}
       onSuccess={() => {
         setAddModalOpen(false);
-        fetchCreditNotes();
       }}
     />
     </MainLayout>

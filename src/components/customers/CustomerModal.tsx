@@ -67,7 +67,7 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
 
   // Fetch employees for Assign To dropdown
   const { data: employeesResponse } = useQuery({
-    queryKey: ['employees', 'dropdown'],
+    queryKey: ['hr-employees-dropdown'],
     queryFn: () => hrEmployeeApi.getDropdown(),
     staleTime: 5 * 60 * 1000,
   });

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { formatDate, formatDateToISO } from "@/lib/utils";
 import { Eye } from "lucide-react";
@@ -14,16 +14,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { invoiceApi, customerApi, AccountPurchaseInvoice, Customer } from "@/services/api";
+import { usePurchaseInvoices } from "@/hooks/useInvoices";
+import { useAllCreditors } from "@/hooks/useCustomers";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 import { DateRangePicker, DateRangeValue } from "@/components/ui/date-range-picker";
 
 export default function PurchaseInvoices() {
   const navigate = useNavigate();
   const baseCurrencyCode = useBaseCurrency();
-  const [invoices, setInvoices] = useState<AccountPurchaseInvoice[]>([]);
-  const [vendors, setVendors] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [selectedVendor, setSelectedVendor] = useState<string>("all");
@@ -33,47 +31,19 @@ export default function PurchaseInvoices() {
   });
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [totalCount, setTotalCount] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
 
-  // Fetch vendors (Creditors) for filter
-  useEffect(() => {
-    const fetchVendors = async () => {
-      const response = await customerApi.getAll({ pageSize: 1000, masterType: 'Creditors' });
-      if (response.data) {
-        setVendors(response.data.items);
-      }
-    };
-    fetchVendors();
-  }, []);
-
-  // Fetch purchase invoices
-  const fetchInvoices = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await invoiceApi.getAllPurchaseInvoices({
-        pageNumber,
-        pageSize,
-        searchTerm: appliedSearch || undefined,
-        vendorId: selectedVendor !== "all" ? parseInt(selectedVendor) : undefined,
-        fromDate: dateRange?.from ? formatDateToISO(dateRange.from) : undefined,
-        toDate: dateRange?.to ? formatDateToISO(dateRange.to) : undefined,
-      });
-      if (response.data) {
-        setInvoices(response.data.items);
-        setTotalCount(response.data.totalCount);
-        setTotalPages(response.data.totalPages);
-      }
-    } catch (error) {
-      console.error("Error fetching purchase invoices:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [pageNumber, pageSize, appliedSearch, selectedVendor, dateRange]);
-
-  useEffect(() => {
-    fetchInvoices();
-  }, [fetchInvoices]);
+  const { data: vendors = [] } = useAllCreditors();
+  const { data: invoicesPage, isLoading: loading } = usePurchaseInvoices({
+    pageNumber,
+    pageSize,
+    searchTerm: appliedSearch || undefined,
+    vendorId: selectedVendor !== "all" ? parseInt(selectedVendor) : undefined,
+    fromDate: dateRange?.from ? formatDateToISO(dateRange.from) : undefined,
+    toDate: dateRange?.to ? formatDateToISO(dateRange.to) : undefined,
+  });
+  const invoices = invoicesPage?.items ?? [];
+  const totalCount = invoicesPage?.totalCount ?? 0;
+  const totalPages = invoicesPage?.totalPages ?? 0;
 
   const handleSearch = () => {
     setAppliedSearch(searchTerm);

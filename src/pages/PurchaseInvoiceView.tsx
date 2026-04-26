@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { formatDate } from "@/lib/utils";
 import { ArrowLeft, Printer, Download, Edit } from "lucide-react";
@@ -12,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { invoiceApi, AccountPurchaseInvoiceDetail } from "@/services/api";
+import { usePurchaseInvoiceByIdentifier } from "@/hooks/useInvoices";
 import { useAuth } from "@/contexts/AuthContext";
 import { API_BASE_URL, fetchBlob } from "@/services/api/base";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
@@ -22,26 +21,8 @@ export default function PurchaseInvoiceView() {
   const navigate = useNavigate();
   const { officeName } = useAuth();
   const baseCurrencyCode = useBaseCurrency();
-  const [invoice, setInvoice] = useState<AccountPurchaseInvoiceDetail | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchInvoice = async () => {
-      if (!id) return;
-      setLoading(true);
-      try {
-        const response = await invoiceApi.getPurchaseInvoiceByIdentifier(id);
-        if (response.data) {
-          setInvoice(response.data);
-        }
-      } catch (error) {
-        console.error("Error fetching purchase invoice:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchInvoice();
-  }, [id]);
+  const { data: invoice, isLoading: loading } = usePurchaseInvoiceByIdentifier(id);
 
   const handlePrint = () => {
     if (!invoice) return;
