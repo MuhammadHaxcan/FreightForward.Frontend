@@ -36,6 +36,7 @@ import {
 import { hrEmployeeApi } from "@/services/api/hr";
 import { toast } from "sonner";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
+import { useAllCountries } from "@/hooks/useSettings";
 import { format } from "date-fns";
 import { DateRangePicker, DateRangeValue } from "@/components/ui/date-range-picker";
 
@@ -61,8 +62,6 @@ interface Contact {
 // CreditNote type imported from API (customer.ts)
 
 // StatementEntry imported from API as part of CustomerStatement
-
-const countries = ["United Arab Emirates", "Singapore", "Pakistan", "Taiwan", "China", "Ethiopia", "India", "USA"];
 
 // Base tabs for all customer types
 const baseTabs = [
@@ -102,6 +101,8 @@ const CustomerDetail = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const baseCurrencyCode = useBaseCurrency();
+  const { data: countriesData } = useAllCountries();
+  const countries = countriesData || [];
   const isViewMode = searchParams.get("mode") === "view";
   const isEditMode = !!id;
   const customerId = id ? parseInt(id) : 0;
@@ -713,7 +714,7 @@ const CustomerDetail = () => {
         <div className="space-y-2">
           <Label className="text-sm">Country</Label>
           <SearchableSelect
-            options={countries.map(c => ({ value: c, label: c }))}
+            options={countries.map(c => ({ value: c.name, label: c.name }))}
             value={profileData.country}
             onValueChange={v => setProfileData({...profileData, country: v})}
             disabled={isViewMode}

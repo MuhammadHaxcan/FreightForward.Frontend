@@ -13,6 +13,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { customerApi, settingsApi, CustomerCategoryType, CurrencyType } from "@/services/api";
 import { toast } from "sonner";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
+import { useAllCountries } from "@/hooks/useSettings";
 
 interface Contact {
   id: number;
@@ -29,8 +30,6 @@ interface Contact {
   enableRateRequest: boolean;
 }
 
-const countries = ["United Arab Emirates", "Singapore", "Pakistan", "Taiwan", "China", "Ethiopia", "India", "USA", "Qatar"];
-
 const tabs = [
   { id: "profile", label: "Profile" },
   { id: "contacts", label: "Contacts" },
@@ -42,6 +41,8 @@ const NeutralDetail = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const baseCurrencyCode = useBaseCurrency();
+  const { data: countriesData } = useAllCountries();
+  const countries = countriesData || [];
   const isViewMode = searchParams.get("mode") === "view";
   const isEditMode = !!id;
 
@@ -350,7 +351,7 @@ const NeutralDetail = () => {
         <div className="space-y-2">
           <Label className="text-sm">Country</Label>
           <SearchableSelect
-            options={countries.map(c => ({ value: c, label: c }))}
+            options={countries.map(c => ({ value: c.name, label: c.name }))}
             value={profileData.country}
             onValueChange={v => setProfileData({...profileData, country: v})}
             disabled={isViewMode}
