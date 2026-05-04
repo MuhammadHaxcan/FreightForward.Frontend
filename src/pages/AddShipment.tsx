@@ -2079,13 +2079,11 @@ const AddShipment = () => {
                     <TableHead className="text-table-header-foreground">S.No</TableHead>
                     <TableHead className="text-table-header-foreground">Description</TableHead>
                     <TableHead className="text-table-header-foreground">Sale (Qty × Unit)</TableHead>
-                    <TableHead className="text-table-header-foreground">Currency</TableHead>
-                    <TableHead className="text-table-header-foreground">Ex.Rate</TableHead>
+                    <TableHead className="text-table-header-foreground">Curr / ROE</TableHead>
                     <TableHead className="text-table-header-foreground">FCY Amount</TableHead>
                     <TableHead className="text-table-header-foreground">LCY Amount</TableHead>
                     <TableHead className="text-table-header-foreground">Cost (Qty × Unit)</TableHead>
-                    <TableHead className="text-table-header-foreground">Currency</TableHead>
-                    <TableHead className="text-table-header-foreground">Ex.Rate</TableHead>
+                    <TableHead className="text-table-header-foreground">Curr / ROE</TableHead>
                     <TableHead className="text-table-header-foreground">FCY Amount</TableHead>
                     <TableHead className="text-table-header-foreground">LCY Amount</TableHead>
                     <TableHead className="text-table-header-foreground">Unit</TableHead>
@@ -2096,7 +2094,7 @@ const AddShipment = () => {
                 <TableBody>
                   {costing.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={15} className="text-center text-muted-foreground">No costing entries</TableCell>
+                      <TableCell colSpan={13} className="text-center text-muted-foreground">No costing entries</TableCell>
                     </TableRow>
                   ) : (
                     costing.map((cost, index) => {
@@ -2110,13 +2108,21 @@ const AddShipment = () => {
                           <TableCell>{index + 1}</TableCell>
                           <TableCell className="text-emerald-600">{cost.description}</TableCell>
                           <TableCell className={saleHighlight}>{cost.saleQty} × {cost.saleUnit}</TableCell>
-                          <TableCell className={saleHighlight}>{cost.saleCurrencyCode}</TableCell>
-                          <TableCell className={saleHighlight}>{cost.saleExRate}</TableCell>
+                          <TableCell className={saleHighlight}>
+                            <div className="flex flex-col">
+                              <span>{cost.saleCurrencyCode || "-"}</span>
+                              <span className="text-sm text-muted-foreground">{cost.saleExRate ?? "-"}</span>
+                            </div>
+                          </TableCell>
                           <TableCell className={saleHighlight}>{cost.saleFCY?.toFixed(2)}</TableCell>
                           <TableCell className={`${saleHighlight} text-emerald-600`}>{cost.saleLCY?.toFixed(2)}</TableCell>
                           <TableCell className={costHighlight}>{cost.costQty} × {cost.costUnit}</TableCell>
-                          <TableCell className={costHighlight}>{cost.costCurrencyCode}</TableCell>
-                          <TableCell className={costHighlight}>{cost.costExRate}</TableCell>
+                          <TableCell className={costHighlight}>
+                            <div className="flex flex-col">
+                              <span>{cost.costCurrencyCode || "-"}</span>
+                              <span className="text-sm text-muted-foreground">{cost.costExRate ?? "-"}</span>
+                            </div>
+                          </TableCell>
                           <TableCell className={costHighlight}>{cost.costFCY?.toFixed(2)}</TableCell>
                           <TableCell className={costHighlight}>{cost.costLCY?.toFixed(2)}</TableCell>
                           <TableCell>{cost.unitName}</TableCell>

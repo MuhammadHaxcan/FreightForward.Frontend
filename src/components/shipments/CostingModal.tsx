@@ -581,7 +581,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-modal-5xl max-h-[90vh] overflow-y-auto bg-card border border-border p-0">
+      <DialogContent className="max-h-[90vh] max-w-modal-5xl overflow-x-hidden overflow-y-auto bg-card border border-border p-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-lg font-semibold">
             {isFullyLocked ? "View Costing" : costing ? "Edit Costing" : "Add Costing"}
@@ -604,8 +604,8 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
           )}
 
           {/* Common Fields - Row 1 */}
-          <div className="grid grid-cols-4 gap-3">
-            <div className="col-span-2">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+            <div className="md:col-span-2">
               <Label className="text-xs font-medium">Charge</Label>
               <SearchableSelect
                 options={chargeItems.map(item => ({ value: item.name, label: item.name }))}
@@ -619,7 +619,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
               />
               <FieldError message={errors.charge} />
             </div>
-            <div className="col-span-2">
+            <div className="md:col-span-2">
               <Label className="text-xs font-medium">Description</Label>
               <Input
                 value={formData.description}
@@ -632,7 +632,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
           </div>
 
           {/* Common Fields - Row 2 */}
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
             <div>
               <Label className="text-xs font-medium">PP/CC</Label>
               <SearchableSelect
@@ -664,7 +664,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                 disabled={isFullyLocked}
               />
             </div>
-            <div className="col-span-2">
+            <div className="md:col-span-2">
               <Label className="text-xs font-medium">Remarks</Label>
               <Input
                 value={formData.remarks}
@@ -697,7 +697,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
 
             {/* Cost Tab */}
             <TabsContent value="cost" className="mt-3 space-y-3">
-              <div className="grid grid-cols-6 gap-2">
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-6">
                 <div>
                   <Label className="text-xs">Currency</Label>
                   <SearchableSelect
@@ -758,7 +758,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-4">
                 <div>
                   <Label className="text-xs">Vendor (Creditor)</Label>
                   <SearchableSelect
@@ -867,7 +867,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                 const subTotal = lcy + vat;
                 const curr = getFooterCurrency(formData.costCurrency);
                 return (
-                  <div className="flex items-center justify-end gap-6 pt-2 border-t border-border mt-2">
+                  <div className="flex flex-wrap items-center justify-end gap-6 pt-2 border-t border-border mt-2">
                     <div className="text-center">
                       <div className="text-xs text-muted-foreground">Total Cost</div>
                       <div className="text-sm font-semibold">{curr} {lcy.toFixed(2)}</div>
@@ -887,7 +887,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
 
             {/* Sale Tab */}
             <TabsContent value="sale" className="mt-3 space-y-3">
-              <div className="grid grid-cols-6 gap-2">
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-6">
                 <div>
                   <Label className="text-xs">Currency</Label>
                   <SearchableSelect
@@ -948,7 +948,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
                 <div>
                   <Label className="text-xs">Bill to (Debtor) <span className="text-red-500">*</span></Label>
                   <SearchableSelect
@@ -1046,7 +1046,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                 const subTotal = lcy + vat;
                 const curr = getFooterCurrency(formData.saleCurrency);
                 return (
-                  <div className="flex items-center justify-end gap-6 pt-2 border-t border-border mt-2">
+                  <div className="flex flex-wrap items-center justify-end gap-6 pt-2 border-t border-border mt-2">
                     <div className="text-center">
                       <div className="text-xs text-muted-foreground">Total Sale</div>
                       <div className="text-sm font-semibold">{curr} {lcy.toFixed(2)}</div>

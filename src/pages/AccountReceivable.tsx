@@ -22,19 +22,13 @@ import { useAllDebtors } from "@/hooks/useCustomers";
 export default function AccountReceivable() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<string>("all");
-  const [dateRange, setDateRange] = useState<DateRangeValue | undefined>({
-    from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-    to: new Date(),
-  });
+  const [dateRange, setDateRange] = useState<DateRangeValue | undefined>(undefined);
   const [modalCustomer, setModalCustomer] = useState<{ id: number; name: string; currencyCode: string } | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [appliedSearch, setAppliedSearch] = useState("");
   const [appliedCustomer, setAppliedCustomer] = useState<string>("all");
-  const [appliedDateRange, setAppliedDateRange] = useState<DateRangeValue | undefined>({
-    from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-    to: new Date(),
-  });
+  const [appliedDateRange, setAppliedDateRange] = useState<DateRangeValue | undefined>(undefined);
 
   const { data: customers = [] } = useAllDebtors();
   const { data: summary, isLoading: loading } = useAccountReceivableSummary({
