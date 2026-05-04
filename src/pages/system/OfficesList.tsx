@@ -251,7 +251,7 @@ export default function OfficesList() {
                 Create Office
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px] p-0 bg-card">
+            <DialogContent className="sm:max-w-modal-lg p-0 bg-card">
               {createdOffice ? (
                 <>
                   <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
@@ -463,7 +463,7 @@ export default function OfficesList() {
 
         {/* Migrations Dialog */}
         <Dialog open={!!migrationsDialogOffice} onOpenChange={(open) => !open && closeMigrationsDialog()}>
-          <DialogContent className="sm:max-w-[600px] p-0 bg-card">
+          <DialogContent className="sm:max-w-modal-xl p-0 bg-card">
             <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
               <DialogTitle className="text-white flex items-center gap-2">
                 <Database className="h-5 w-5" />
@@ -559,7 +559,7 @@ export default function OfficesList() {
 
         {/* Edit Office Dialog */}
         <Dialog open={!!editingOffice} onOpenChange={(open) => !open && setEditingOffice(null)}>
-          <DialogContent className="sm:max-w-[500px] p-0 bg-card">
+          <DialogContent className="sm:max-w-modal-lg p-0 bg-card">
             <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
               <DialogTitle className="text-white">Edit Office</DialogTitle>
               <DialogDescription className="text-white/70">

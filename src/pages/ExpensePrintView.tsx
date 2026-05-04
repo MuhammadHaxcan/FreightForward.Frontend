@@ -8,15 +8,21 @@ export default function ExpensePrintView() {
 
   const startDate = searchParams.get("startDate") || "";
   const endDate = searchParams.get("endDate") || "";
-  const bank = searchParams.get("bank") || "";
-  const category = searchParams.get("category") || "";
+  const searchTerm = searchParams.get("searchTerm") || "";
+  const bankId = searchParams.get("bankId") || "";
+  const expenseTypeId = searchParams.get("expenseTypeId") || "";
+  const paymentType = searchParams.get("paymentType") || "";
+  const paymentMode = searchParams.get("paymentMode") || "";
 
   const pdfUrl = useMemo(() => {
     let url = `${API_BASE_URL}/invoices/expenses/pdf?startDate=${startDate}&endDate=${endDate}&inline=true`;
-    if (bank) url += `&bank=${encodeURIComponent(bank)}`;
-    if (category) url += `&category=${encodeURIComponent(category)}`;
+    if (searchTerm) url += `&searchTerm=${encodeURIComponent(searchTerm)}`;
+    if (bankId) url += `&bankId=${encodeURIComponent(bankId)}`;
+    if (expenseTypeId) url += `&expenseTypeId=${encodeURIComponent(expenseTypeId)}`;
+    if (paymentType) url += `&paymentType=${encodeURIComponent(paymentType)}`;
+    if (paymentMode) url += `&paymentMode=${encodeURIComponent(paymentMode)}`;
     return url;
-  }, [startDate, endDate, bank, category]);
+  }, [startDate, endDate, searchTerm, bankId, expenseTypeId, paymentType, paymentMode]);
 
   const { blobUrl, isLoading, error } = useAuthPdf(pdfUrl);
 

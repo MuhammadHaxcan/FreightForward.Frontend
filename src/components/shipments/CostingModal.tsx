@@ -581,7 +581,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto bg-card border border-border p-0">
+      <DialogContent className="max-w-modal-5xl max-h-[90vh] overflow-y-auto bg-card border border-border p-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-lg font-semibold">
             {isFullyLocked ? "View Costing" : costing ? "Edit Costing" : "Add Costing"}

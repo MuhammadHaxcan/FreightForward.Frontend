@@ -404,7 +404,7 @@ const AllUsers = () => {
 
       {/* Add/Edit User Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto p-0 bg-card">
+        <DialogContent className="sm:max-w-modal-xl max-h-[85vh] overflow-y-auto p-0 bg-card">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white">
               {modalMode === "add" ? "Add New" : "Edit"} User
@@ -566,7 +566,7 @@ const AllUsers = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-[400px] p-0 bg-card">
+        <DialogContent className="sm:max-w-modal-md p-0 bg-card">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white">Confirm Delete</DialogTitle>
           </DialogHeader>

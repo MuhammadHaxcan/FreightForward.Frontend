@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { formatDate } from "@/lib/utils";
 import {
@@ -18,14 +18,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Printer, Search, Eye, Pencil, Trash2, Loader2, Edit } from "lucide-react";
+import { Plus, Printer, FileSpreadsheet, Eye, Trash2, Loader2, Edit } from "lucide-react";
 import { DateInput } from "@/components/ui/date-input";
 import { ExpenseModal } from "@/components/expenses/ExpenseModal";
 import { useAllExpenseTypes } from "@/hooks/useSettings";
 import { useBanks } from "@/hooks/useBanks";
-import { useExpenses, useCreateExpense, useUpdateExpense, useDeleteExpense } from "@/hooks/useExpenses";
-import { Expense as ApiExpense, CreateExpenseRequest } from "@/services/api";
+import { useExpenses, useExpenseSummary, useCreateExpense, useUpdateExpense, useDeleteExpense } from "@/hooks/useExpenses";
+import { Expense as ApiExpense, CreateExpenseRequest, API_BASE_URL, fetchBlob, ExpenseSummaryFilters } from "@/services/api";
+import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 import { PermissionGate } from "@/components/auth/PermissionGate";
+import { toast } from "sonner";
 
 // Map PaymentMode enum values to display labels
 const paymentModeLabels: Record<string, string> = {
@@ -48,6 +50,7 @@ const paymentModeValues: Record<string, string> = {
 };
 
 export default function DailyExpenses() {
+  const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const currentYear = new Date().getFullYear();
   const [startDate, setStartDate] = useState(`${currentYear}-01-01`);
@@ -59,51 +62,69 @@ export default function DailyExpenses() {
   const [viewingExpense, setViewingExpense] = useState<ApiExpense | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [isExporting, setIsExporting] = useState(false);
 
-  // Fetch expenses from API
-  const { data: expensesData, isLoading } = useExpenses({ pageNumber, pageSize });
-  const createExpense = useCreateExpense();
-  const updateExpense = useUpdateExpense();
-  const deleteExpense = useDeleteExpense();
+  const baseCurrencyCode = useBaseCurrency();
+
+  // Debounce search input → only re-query 400ms after the user stops typing.
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      setSearchTerm(searchInput.trim());
+    }, 400);
+    return () => clearTimeout(handle);
+  }, [searchInput]);
 
   // Fetch expense types from Settings API
   const { data: expenseTypesData } = useAllExpenseTypes();
   const { data: banksData } = useBanks({ pageSize: 100 });
 
-  // Map expense types to category names
+  // Map expense types to category names + an id lookup
   const expenseCategories = useMemo(() => {
     if (!Array.isArray(expenseTypesData)) return [];
     return expenseTypesData.map((et) => et.name);
   }, [expenseTypesData]);
 
-  // Get banks as objects with id and bankName
-  const banks = useMemo(() => {
-    if (!banksData?.items) return [];
-    return banksData.items;
-  }, [banksData]);
+  const expenseTypeIdByName = useMemo(() => {
+    const map = new Map<string, number>();
+    if (Array.isArray(expenseTypesData)) {
+      expenseTypesData.forEach((et) => map.set(et.name, et.id));
+    }
+    return map;
+  }, [expenseTypesData]);
 
-  // Map banks to bank names for filter dropdown
-  const bankNames = useMemo(() => {
-    return banks.map((b) => b.bankName);
+  // Get banks as objects with id and bankName
+  const banks = useMemo(() => banksData?.items ?? [], [banksData]);
+  const bankIdByName = useMemo(() => {
+    const map = new Map<string, number>();
+    banks.forEach((b) => map.set(b.bankName, b.id));
+    return map;
   }, [banks]);
+
+  // Resolve filter selections to ids for the API
+  const filterParams = useMemo(() => ({
+    startDate,
+    endDate,
+    searchTerm: searchTerm || undefined,
+    bankId: selectedBank !== "all" ? bankIdByName.get(selectedBank) : undefined,
+    expenseTypeId: selectedCategory !== "all" ? expenseTypeIdByName.get(selectedCategory) : undefined,
+  }), [startDate, endDate, searchTerm, selectedBank, selectedCategory, bankIdByName, expenseTypeIdByName]);
+
+  // Reset to page 1 whenever any filter changes (not pageNumber itself).
+  useEffect(() => {
+    setPageNumber(1);
+  }, [startDate, endDate, searchTerm, selectedBank, selectedCategory, pageSize]);
+
+  const { data: expensesData, isLoading } = useExpenses({ pageNumber, pageSize, ...filterParams });
+  const { data: summaryData } = useExpenseSummary(filterParams);
+  const createExpense = useCreateExpense();
+  const updateExpense = useUpdateExpense();
+  const deleteExpense = useDeleteExpense();
 
   const formatAmount = (currency: string, amount: number) => {
     return `${currency} ${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  // Get expenses from API data
   const expenses = expensesData?.items || [];
-
-  // Filter expenses
-  const filteredExpenses = expenses.filter((expense) => {
-    const matchesSearch = (expense.description || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      expense.category.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesBank = selectedBank === "all" || expense.bankName === selectedBank;
-    const matchesCategory = selectedCategory === "all" || expense.category === selectedCategory;
-    const expenseDate = new Date(expense.expenseDate);
-    const matchesDateRange = expenseDate >= new Date(startDate) && expenseDate <= new Date(endDate);
-    return matchesSearch && matchesBank && matchesCategory && matchesDateRange;
-  });
 
   const handleAddExpense = (expenseData: {
     date: string;
@@ -194,6 +215,45 @@ export default function DailyExpenses() {
     setIsModalOpen(true);
   };
 
+  const buildReportQueryString = (params: ExpenseSummaryFilters) => {
+    const query = new URLSearchParams({
+      startDate: params.startDate ?? startDate,
+      endDate: params.endDate ?? endDate,
+    });
+    if (params.searchTerm) query.append("searchTerm", params.searchTerm);
+    if (params.bankId !== undefined) query.append("bankId", params.bankId.toString());
+    if (params.expenseTypeId !== undefined) query.append("expenseTypeId", params.expenseTypeId.toString());
+    if (params.paymentType) query.append("paymentType", params.paymentType);
+    if (params.paymentMode) query.append("paymentMode", params.paymentMode);
+    return query.toString();
+  };
+
+  const handleExportExcel = async () => {
+    setIsExporting(true);
+    try {
+      const response = await fetchBlob(`${API_BASE_URL}/invoices/expenses/excel?${buildReportQueryString(filterParams)}`);
+      if (!response.ok) {
+        throw new Error(`Export failed (${response.status})`);
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `DailyExpensesReport-${startDate}-to-${endDate}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to export Excel");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const formatBaseAmount = (amount: number) =>
+    `${baseCurrencyCode} ${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
   return (
     <MainLayout>
       <div className="p-6 space-y-4">
@@ -224,7 +284,7 @@ export default function DailyExpenses() {
               <SearchableSelect
                 options={[
                   { value: "all", label: "Select All" },
-                  ...bankNames.map((bank) => ({ value: bank, label: bank }))
+                  ...banks.map((b) => ({ value: b.bankName, label: b.bankName }))
                 ]}
                 value={selectedBank}
                 onValueChange={setSelectedBank}
@@ -246,22 +306,47 @@ export default function DailyExpenses() {
               />
             </div>
             <div className="flex items-end gap-2">
-              <Button className="bg-primary hover:bg-primary/90">
-                <Search className="h-4 w-4 mr-2" />
-                Search
-              </Button>
               <Button
-                onClick={() => {
-                  const params = new URLSearchParams({ startDate, endDate });
-                  if (selectedBank !== "all") params.append("bank", selectedBank);
-                  if (selectedCategory !== "all") params.append("category", selectedCategory);
-                  window.open(`/accounts/expenses/print?${params.toString()}`, '_blank');
-                }}
+                onClick={() => window.open(`/accounts/expenses/print?${buildReportQueryString(filterParams)}`, '_blank')}
                 variant="outline"
               >
                 <Printer className="h-4 w-4 mr-2" />
                 Print
               </Button>
+              <Button
+                onClick={handleExportExcel}
+                disabled={isExporting}
+                variant="outline"
+              >
+                {isExporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileSpreadsheet className="h-4 w-4 mr-2" />}
+                Excel
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Totals summary */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="rounded-lg border bg-card p-3">
+            <div className="text-xs text-muted-foreground">Cash Receipts</div>
+            <div className="text-lg font-semibold">{formatBaseAmount(summaryData?.totalCashReceipts ?? 0)}</div>
+          </div>
+          <div className="rounded-lg border bg-card p-3">
+            <div className="text-xs text-muted-foreground">Bank Receipts</div>
+            <div className="text-lg font-semibold">{formatBaseAmount(summaryData?.totalBankReceipts ?? 0)}</div>
+          </div>
+          <div className="rounded-lg border bg-card p-3">
+            <div className="text-xs text-muted-foreground">Cash Payments</div>
+            <div className="text-lg font-semibold">{formatBaseAmount(summaryData?.totalCashPayments ?? 0)}</div>
+          </div>
+          <div className="rounded-lg border bg-card p-3">
+            <div className="text-xs text-muted-foreground">Bank Payments</div>
+            <div className="text-lg font-semibold">{formatBaseAmount(summaryData?.totalBankPayments ?? 0)}</div>
+          </div>
+          <div className="rounded-lg border bg-green-50 dark:bg-green-950/30 p-3">
+            <div className="text-xs text-muted-foreground">Net Cash Flow</div>
+            <div className={`text-lg font-bold ${(summaryData?.netCashFlow ?? 0) < 0 ? "text-destructive" : "text-green-700 dark:text-green-400"}`}>
+              {formatBaseAmount(summaryData?.netCashFlow ?? 0)}
             </div>
           </div>
         </div>
@@ -278,10 +363,7 @@ export default function DailyExpenses() {
                   { value: "100", label: "100" },
                 ]}
                 value={pageSize.toString()}
-                onValueChange={(v) => {
-                  setPageSize(parseInt(v));
-                  setPageNumber(1);
-                }}
+                onValueChange={(v) => setPageSize(parseInt(v))}
                 triggerClassName="w-[90px]"
               />
               <span className="text-sm text-muted-foreground">entries</span>
@@ -289,10 +371,10 @@ export default function DailyExpenses() {
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Search:</span>
               <Input
-                placeholder="Search..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-48"
+                placeholder="Search description, cheque, ref..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="w-64"
               />
             </div>
           </div>
@@ -317,14 +399,14 @@ export default function DailyExpenses() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredExpenses.length === 0 ? (
+                {expenses.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       No expenses found
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredExpenses.map((expense, index) => (
+                  expenses.map((expense, index) => (
                     <TableRow key={expense.id} className={`border-b border-border hover:bg-table-row-hover transition-colors ${index % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
                       <TableCell className="whitespace-nowrap">{formatDate(expense.expenseDate)}</TableCell>
                       <TableCell>{expense.paymentType} || {paymentModeLabels[expense.paymentMode] || expense.paymentMode}</TableCell>
@@ -451,7 +533,7 @@ export default function DailyExpenses() {
       />
 
       <Dialog open={!!viewingExpense} onOpenChange={() => setViewingExpense(null)}>
-        <DialogContent className="max-w-lg p-0 bg-card">
+        <DialogContent className="max-w-modal-lg p-0 bg-card">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white">Expense Details</DialogTitle>
           </DialogHeader>

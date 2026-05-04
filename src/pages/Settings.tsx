@@ -1942,7 +1942,7 @@ const Settings = () => {
 
       {/* Add Currency Modal */}
       <Dialog open={addCurrencyModalOpen} onOpenChange={(open) => { setAddCurrencyModalOpen(open); if (!open) resetCurrencyForm(); }}>
-        <DialogContent className="sm:max-w-md bg-card p-0">
+        <DialogContent className="sm:max-w-modal-md bg-card p-0">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white text-lg font-semibold"><span className="font-bold">Add New</span> Currency Type</DialogTitle>
           </DialogHeader>
@@ -2016,7 +2016,7 @@ const Settings = () => {
 
       {/* Edit Currency Modal */}
       <Dialog open={editCurrencyModalOpen} onOpenChange={setEditCurrencyModalOpen}>
-        <DialogContent className="sm:max-w-md bg-card p-0">
+        <DialogContent className="sm:max-w-modal-md bg-card p-0">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white text-lg font-semibold">Edit Currency Type</DialogTitle>
           </DialogHeader>
@@ -2064,7 +2064,7 @@ const Settings = () => {
 
       {/* Add Port Modal */}
       <Dialog open={addPortModalOpen} onOpenChange={(open) => { setAddPortModalOpen(open); if (!open) resetPortForm(); }}>
-        <DialogContent className="sm:max-w-lg bg-card p-0">
+        <DialogContent className="sm:max-w-modal-lg bg-card p-0">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white text-lg font-semibold"><span className="font-bold">Add New</span> Port</DialogTitle>
           </DialogHeader>
@@ -2142,7 +2142,7 @@ const Settings = () => {
 
       {/* Edit Port Modal */}
       <Dialog open={editPortModalOpen} onOpenChange={setEditPortModalOpen}>
-        <DialogContent className="sm:max-w-lg bg-card p-0">
+        <DialogContent className="sm:max-w-modal-lg bg-card p-0">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white text-lg font-semibold">Edit Port</DialogTitle>
           </DialogHeader>
@@ -2202,7 +2202,7 @@ const Settings = () => {
 
       {/* Add Charge Modal */}
       <Dialog open={addChargeModalOpen} onOpenChange={(open) => { setAddChargeModalOpen(open); if (!open) resetChargeForm(); }}>
-        <DialogContent className="sm:max-w-md bg-card p-0">
+        <DialogContent className="sm:max-w-modal-md bg-card p-0">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white text-lg font-semibold"><span className="font-bold">Add New</span> Charge</DialogTitle>
           </DialogHeader>
@@ -2232,7 +2232,7 @@ const Settings = () => {
 
       {/* Edit Charge Modal */}
       <Dialog open={editChargeModalOpen} onOpenChange={setEditChargeModalOpen}>
-        <DialogContent className="sm:max-w-md bg-card p-0">
+        <DialogContent className="sm:max-w-modal-md bg-card p-0">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white text-lg font-semibold">Edit Charge Item</DialogTitle>
           </DialogHeader>
@@ -2260,7 +2260,7 @@ const Settings = () => {
 
       {/* Add Expense Modal */}
       <Dialog open={addExpenseModalOpen} onOpenChange={(open) => { setAddExpenseModalOpen(open); if (!open) resetExpenseForm(); }}>
-        <DialogContent className="sm:max-w-md bg-card p-0">
+        <DialogContent className="sm:max-w-modal-md bg-card p-0">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white text-lg font-semibold"><span className="font-bold">Add New</span> Expense</DialogTitle>
           </DialogHeader>
@@ -2303,7 +2303,7 @@ const Settings = () => {
 
       {/* Edit Expense Modal */}
       <Dialog open={editExpenseModalOpen} onOpenChange={setEditExpenseModalOpen}>
-        <DialogContent className="sm:max-w-md bg-card p-0">
+        <DialogContent className="sm:max-w-modal-md bg-card p-0">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white text-lg font-semibold">Edit Expense Item</DialogTitle>
           </DialogHeader>
@@ -2344,7 +2344,7 @@ const Settings = () => {
 
       {/* Add Bank Modal */}
       <Dialog open={addBankModalOpen} onOpenChange={(open) => { setAddBankModalOpen(open); if (!open) resetBankForm(); }}>
-        <DialogContent className="sm:max-w-md bg-card p-0">
+        <DialogContent className="sm:max-w-modal-md bg-card p-0">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white text-lg font-semibold"><span className="font-bold">Add New</span> Bank</DialogTitle>
           </DialogHeader>
@@ -2414,7 +2414,7 @@ const Settings = () => {
 
       {/* Edit Bank Modal */}
       <Dialog open={editBankModalOpen} onOpenChange={setEditBankModalOpen}>
-        <DialogContent className="sm:max-w-md bg-card p-0">
+        <DialogContent className="sm:max-w-modal-md bg-card p-0">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white text-lg font-semibold">Edit Bank</DialogTitle>
           </DialogHeader>
@@ -2462,7 +2462,7 @@ const Settings = () => {
 
       {/* Add Note Modal */}
       <Dialog open={addNoteModalOpen} onOpenChange={(open) => { setAddNoteModalOpen(open); if (!open) resetNoteForm(); }}>
-        <DialogContent className="sm:max-w-md bg-card p-0">
+        <DialogContent className="sm:max-w-modal-md bg-card p-0">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white text-lg font-semibold"><span className="font-bold">Add New</span> Invoice Note</DialogTitle>
           </DialogHeader>
@@ -2529,7 +2529,7 @@ const Settings = () => {
 
       {/* Edit Note Modal */}
       <Dialog open={editNoteModalOpen} onOpenChange={setEditNoteModalOpen}>
-        <DialogContent className="sm:max-w-md bg-card p-0">
+        <DialogContent className="sm:max-w-modal-md bg-card p-0">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white text-lg font-semibold">Edit Invoice Note</DialogTitle>
           </DialogHeader>

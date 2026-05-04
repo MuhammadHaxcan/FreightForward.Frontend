@@ -363,7 +363,7 @@ const HrAdvances = () => {
 
       {/* Add Modal */}
       <Dialog open={addModalOpen} onOpenChange={setAddModalOpen}>
-        <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-y-auto p-0 bg-card">
+        <DialogContent className="sm:max-w-modal-lg max-h-[85vh] overflow-y-auto p-0 bg-card">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white">New Advance</DialogTitle>
           </DialogHeader>
@@ -412,7 +412,7 @@ const HrAdvances = () => {
 
       {/* View Modal */}
       <Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>
-        <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-y-auto p-0 bg-card">
+        <DialogContent className="sm:max-w-modal-lg max-h-[85vh] overflow-y-auto p-0 bg-card">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white">Advance Details</DialogTitle>
           </DialogHeader>

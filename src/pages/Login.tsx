@@ -221,7 +221,7 @@ export default function Login() {
       </Card>
 
       <Dialog open={isForgotPasswordOpen} onOpenChange={setIsForgotPasswordOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-modal-md">
           <DialogHeader>
             <DialogTitle>Forgot Password</DialogTitle>
             <DialogDescription>

@@ -35,7 +35,7 @@ export function PaymentDetailsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl p-0">
+      <DialogContent className="max-w-modal-3xl p-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-lg font-semibold">
             Payment Details

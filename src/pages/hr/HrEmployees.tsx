@@ -425,7 +425,7 @@ const HrEmployees = () => {
 
       {/* Add Employee Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto p-0 bg-card">
+        <DialogContent className="sm:max-w-modal-2xl max-h-[85vh] overflow-y-auto p-0 bg-card">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white">Add New Employee</DialogTitle>
           </DialogHeader>

@@ -116,7 +116,7 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl bg-card border border-border p-0">
+      <DialogContent className="max-w-modal-4xl bg-card border border-border p-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-lg font-semibold">{isEditing ? "Edit Container" : "Add Container"}</DialogTitle>
         </DialogHeader>

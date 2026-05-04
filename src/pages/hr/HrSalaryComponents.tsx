@@ -347,7 +347,7 @@ const HrSalaryComponents = () => {
 
       {/* Add/Edit Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-y-auto p-0 bg-card">
+        <DialogContent className="sm:max-w-modal-lg max-h-[85vh] overflow-y-auto p-0 bg-card">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white">
               {modalMode === "add" ? "Add New" : "Edit"} Salary Component

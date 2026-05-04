@@ -190,7 +190,7 @@ const createInitialFormData = () => ({
   mblFreight: "Collect",
   placeOfBLIssue: "",
   carrier: "",
-  freeTime: "0",
+  freeTime: "",
   networkPartnerId: undefined as number | undefined,
   salesperson: "",
   placeOfReceiptId: undefined as number | undefined,

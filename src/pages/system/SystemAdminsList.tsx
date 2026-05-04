@@ -146,7 +146,7 @@ export default function SystemAdminsList() {
                 Add Admin
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] p-0 bg-card">
+            <DialogContent className="sm:max-w-modal-md p-0 bg-card">
               <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
                 <DialogTitle className="text-white">Create System Admin</DialogTitle>
                 <DialogDescription className="text-white/70">
@@ -226,7 +226,7 @@ export default function SystemAdminsList() {
 
         {/* Edit Dialog */}
         <Dialog open={!!editingAdmin} onOpenChange={(open) => !open && setEditingAdmin(null)}>
-          <DialogContent className="sm:max-w-[425px] p-0 bg-card">
+          <DialogContent className="sm:max-w-modal-md p-0 bg-card">
             <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
               <DialogTitle className="text-white">Edit System Admin</DialogTitle>
               <DialogDescription className="text-white/70">

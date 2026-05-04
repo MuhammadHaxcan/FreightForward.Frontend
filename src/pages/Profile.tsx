@@ -554,7 +554,7 @@ export default function Profile() {
 
       {/* ── Payslip Dialog ── */}
       <Dialog open={payslipDialogOpen} onOpenChange={(open) => { setPayslipDialogOpen(open); if (!open) setSelectedPayrollId(null); }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-modal-lg">
           <DialogHeader>
             <DialogTitle>Salary Breakdown</DialogTitle>
           </DialogHeader>

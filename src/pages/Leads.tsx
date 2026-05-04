@@ -575,7 +575,7 @@ export default function Leads() {
 
         {/* Accept Portal Lead Dialog */}
         <Dialog open={acceptDialogOpen} onOpenChange={handleAcceptDialogClose}>
-          <DialogContent className="max-w-xl">
+          <DialogContent className="max-w-modal-xl">
             <DialogHeader>
               <DialogTitle>Accept Portal Lead</DialogTitle>
               <DialogDescription>

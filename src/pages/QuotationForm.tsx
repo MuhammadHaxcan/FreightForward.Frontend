@@ -14,7 +14,11 @@ import {
   useCreateQuotation,
   useUpdateQuotation,
   useRateRequestForConversion,
+  useRateRequest,
+  useLead,
 } from "@/hooks/useSales";
+import { LockedLeadSections } from "@/components/leads/LockedLeadSections";
+import { LockedRateRequestSection } from "@/components/leads/LockedRateRequestSection";
 import { useAllDebtors, useCustomer } from "@/hooks/useCustomers";
 import {
   useAllIncoTerms,
@@ -121,6 +125,17 @@ export default function QuotationForm() {
   // Queries
   const { data: conversionData } = useRateRequestForConversion(conversionRateRequestId || 0);
   const { data: quotationDetail, isLoading: isQuotationLoading } = useQuotation(quotationId || 0);
+
+  // ----- Source rate-request + lead for the locked context cards above the form -----
+  // Convert mode: use the rateRequestId from location.state.
+  // View / Edit mode: use the rateRequestId already attached to the loaded quotation.
+  const sourceRateRequestId =
+    conversionRateRequestId ?? quotationDetail?.rateRequestId ?? 0;
+  const { data: sourceRateRequest, isLoading: isSourceRateRequestLoading } =
+    useRateRequest(sourceRateRequestId);
+  const sourceLeadId = sourceRateRequest?.leadId ?? 0;
+  const { data: sourceLead, isLoading: isSourceLeadLoading } = useLead(sourceLeadId);
+  const hasSourceContext = sourceRateRequestId > 0;
 
   // Dropdown data queries
   const { data: debtorsData } = useAllDebtors();
@@ -501,6 +516,35 @@ export default function QuotationForm() {
           </div>
         ) : (
           <div className="space-y-6">
+            {/* === Locked source context (lead + rate request) === */}
+            {hasSourceContext && (
+              isSourceRateRequestLoading || isSourceLeadLoading ? (
+                <Card>
+                  <CardContent className="py-12 flex items-center justify-center">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <span className="ml-2 text-muted-foreground">Loading source lead &amp; rate request...</span>
+                  </CardContent>
+                </Card>
+              ) : (
+                <>
+                  {sourceLead ? (
+                    <LockedLeadSections lead={sourceLead} />
+                  ) : (
+                    <Card>
+                      <CardContent className="py-6 text-center text-sm text-muted-foreground">
+                        {sourceRateRequest && !sourceRateRequest.leadId
+                          ? "This rate request has no source lead linked."
+                          : "Source lead could not be loaded."}
+                      </CardContent>
+                    </Card>
+                  )}
+                  {sourceRateRequest && (
+                    <LockedRateRequestSection rateRequest={sourceRateRequest} />
+                  )}
+                </>
+              )
+            )}
+
             {/* Quotation Details */}
             <Card>
               <CardHeader className="pb-4">

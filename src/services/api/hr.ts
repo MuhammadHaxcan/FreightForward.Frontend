@@ -12,6 +12,7 @@ export interface EmployeeListItem {
 }
 export interface EmployeeDetail {
   id: number; userId?: number; employeeCode: string; fullName: string;
+  firstName: string; lastName: string;
   email?: string; contactNumber?: string; department?: string; designation?: string;
   joiningDate: string; confirmationDate?: string; resignationDate?: string; lastWorkingDate?: string;
   employmentStatus: string; bankName?: string; bankAccountNumber?: string; bankIban?: string; bankBranch?: string;
@@ -35,7 +36,7 @@ export interface CreateEmployeeRequest {
   emergencyContactName?: string; emergencyContactNumber?: string; address?: string;
   annualLeaveDays?: number;
 }
-export interface UpdateEmployeeRequest extends Omit<CreateEmployeeRequest, 'firstName' | 'lastName' | 'email' | 'contactNumber'> {
+export interface UpdateEmployeeRequest extends Omit<CreateEmployeeRequest, 'email' | 'contactNumber' | 'employeeCode'> {
   resignationDate?: string; lastWorkingDate?: string;
 }
 

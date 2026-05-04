@@ -507,7 +507,7 @@ const PermissionRoles = () => {
 
       {/* Add/Edit Role Modal */}
       <Dialog open={roleModalOpen} onOpenChange={(open) => !open && closeModal()}>
-        <DialogContent className="sm:max-w-[900px] max-h-[85vh] overflow-y-auto p-0 bg-card">
+        <DialogContent className="sm:max-w-modal-4xl max-h-[85vh] overflow-y-auto p-0 bg-card">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white">{editingRole ? "Edit Role" : "Set New Role"}</DialogTitle>
           </DialogHeader>
@@ -710,7 +710,7 @@ const PermissionRoles = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <DialogContent className="sm:max-w-[400px] p-0 bg-card">
+        <DialogContent className="sm:max-w-modal-md p-0 bg-card">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white">Confirm Delete</DialogTitle>
           </DialogHeader>

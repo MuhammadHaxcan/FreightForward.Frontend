@@ -1,44 +1,149 @@
-import { useMemo } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Loader2, ArrowLeft } from "lucide-react";
-import { useRateRequest, useLead } from "@/hooks/useSales";
-import { useAllCountries, useAllPorts, useAllIncoTerms, useAllCustomerCategoryTypes } from "@/hooks/useSettings";
+import {
+  useRateRequest,
+  useLead,
+  useCreateRateRequest,
+  useUpdateRateRequest,
+} from "@/hooks/useSales";
+import { useAllCustomerCategoryTypes } from "@/hooks/useSettings";
 import { useAllCreditors } from "@/hooks/useCustomers";
-import { EquipmentGridReadOnly } from "@/components/leads/EquipmentGridReadOnly";
-import { BoxPalletsGridReadOnly } from "@/components/leads/BoxPalletsGridReadOnly";
+import { LockedLeadSections } from "@/components/leads/LockedLeadSections";
+
+const READONLY_INPUT = "bg-muted cursor-not-allowed";
 
 export default function RateRequestForm() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const rateRequestId = id ? parseInt(id) : null;
   const isEditing = !!rateRequestId;
 
-  // Fetch rate request data when editing
+  // Resolve which lead to fetch:
+  //   new  → ?leadId=X query param
+  //   view/edit → rateRequest.leadId after the rate request loads
+  const queryLeadId = searchParams.get("leadId");
+
   const { data: rateRequest, isLoading: isRateRequestLoading } = useRateRequest(rateRequestId || 0);
 
-  // Fetch lead data for package details
-  const { data: leadData, isLoading: isLeadLoading } = useLead(rateRequest?.leadId || 0);
+  const leadId = isEditing
+    ? rateRequest?.leadId ?? 0
+    : queryLeadId
+      ? parseInt(queryLeadId)
+      : 0;
 
-  // Load reference data for dropdowns
-  const { data: countriesData } = useAllCountries();
-  const { data: portsData } = useAllPorts();
-  const { data: incoTermsData } = useAllIncoTerms();
+  const { data: lead, isLoading: isLeadLoading } = useLead(leadId);
+
+  // Vendor / category lookups for the Rate Request Details card
   const { data: categoryTypesData } = useAllCustomerCategoryTypes();
   const { data: vendorsData } = useAllCreditors();
-
-  const countries = useMemo(() => Array.isArray(countriesData) ? countriesData : [], [countriesData]);
-  const ports = useMemo(() => Array.isArray(portsData) ? portsData : [], [portsData]);
-  const incoTerms = useMemo(() => Array.isArray(incoTermsData) ? incoTermsData : [], [incoTermsData]);
   const categoryTypes = useMemo(() => Array.isArray(categoryTypesData) ? categoryTypesData : [], [categoryTypesData]);
   const vendors = useMemo(() => Array.isArray(vendorsData) ? vendorsData : [], [vendorsData]);
+
+  const hasLeadContext = leadId > 0;
+
+  // -------------------------------------------------------------------------
+  // Editable Rate Request Details state
+  // -------------------------------------------------------------------------
+  const [vendorTypeId, setVendorTypeId] = useState<string>("");
+  const [vendorId, setVendorId] = useState<string>("");
+  const [vendorEmail, setVendorEmail] = useState<string>("");
+
+  // Edit mode: hydrate state once both rateRequest and the categoryTypes
+  // lookup are loaded (rateRequest stores vendorType as its display name; the
+  // dropdown is keyed by id, so we have to translate).
+  useEffect(() => {
+    if (rateRequest && categoryTypes.length > 0) {
+      const matchedCategory = categoryTypes.find((c) => c.name === rateRequest.vendorType);
+      setVendorTypeId(matchedCategory?.id.toString() ?? "");
+      setVendorId(rateRequest.vendorId?.toString() ?? "");
+      setVendorEmail(rateRequest.vendorEmail ?? "");
+    }
+  }, [rateRequest, categoryTypes]);
+
+  // Same client-side narrowing used by SendRateRequestModal: filter vendors
+  // by the selected category id, fall back to all when no type is picked.
+  const filteredVendors = useMemo(() => {
+    if (!vendorTypeId) return vendors;
+    const targetId = parseInt(vendorTypeId);
+    return vendors.filter((c) => c.categories?.some((cat) => cat.id === targetId));
+  }, [vendors, vendorTypeId]);
+
+  // Resolve the human-readable vendor type name (sent in the create/update payload).
+  const vendorTypeName = useMemo(
+    () => categoryTypes.find((c) => c.id.toString() === vendorTypeId)?.name ?? "",
+    [categoryTypes, vendorTypeId],
+  );
+
+  // Auto-populate the email when the user picks a different vendor.
+  // (Done here rather than in a useEffect so we don't clobber the persisted
+  // email during initial hydration on edit mode.)
+  const handleVendorChange = (value: string) => {
+    setVendorId(value);
+    const selectedVendor = vendors.find((c) => c.id === parseInt(value));
+    if (selectedVendor) {
+      setVendorEmail(selectedVendor.email || "");
+    }
+  };
+
+  // -------------------------------------------------------------------------
+  // Save / Send actions
+  // -------------------------------------------------------------------------
+  const createMutation = useCreateRateRequest();
+  const updateMutation = useUpdateRateRequest();
+  const isSaving = createMutation.isPending || updateMutation.isPending;
+
+  const handleSubmit = async () => {
+    if (!vendorTypeId) {
+      toast.error("Please select a vendor type");
+      return;
+    }
+    if (!vendorId) {
+      toast.error("Please select a vendor");
+      return;
+    }
+
+    const selectedVendor = vendors.find((c) => c.id === parseInt(vendorId));
+    const vendorIdNum = parseInt(vendorId);
+
+    try {
+      if (isEditing && rateRequestId) {
+        await updateMutation.mutateAsync({
+          id: rateRequestId,
+          data: {
+            leadId: rateRequest?.leadId,
+            vendorId: vendorIdNum,
+            vendorName: selectedVendor?.name || "",
+            vendorType: vendorTypeName,
+            vendorEmail,
+          },
+        });
+      } else {
+        if (!leadId) {
+          toast.error("No source lead — cannot create a rate request without one.");
+          return;
+        }
+        await createMutation.mutateAsync({
+          leadId,
+          vendorId: vendorIdNum,
+          vendorName: selectedVendor?.name || "",
+          vendorType: vendorTypeName,
+          vendorEmail,
+        });
+      }
+      navigate("/sales/rate-requests");
+    } catch {
+      // toast handled by the mutation hook's onError
+    }
+  };
 
   return (
     <MainLayout>
@@ -48,9 +153,16 @@ export default function RateRequestForm() {
           <Button variant="outline" size="icon" onClick={() => navigate("/sales/rate-requests")}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-2xl font-semibold text-foreground">
-            {isEditing ? "Edit Rate Request" : "Add Rate Request"}
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-semibold text-foreground">
+              {isEditing ? `Edit Rate Request${rateRequest?.rateRequestNo ? ` ${rateRequest.rateRequestNo}` : ""}` : "Add Rate Request"}
+            </h1>
+            {lead?.leadNo && (
+              <span className="px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                Lead: {lead.leadNo}
+              </span>
+            )}
+          </div>
         </div>
 
         {isEditing && isRateRequestLoading ? (
@@ -60,214 +172,108 @@ export default function RateRequestForm() {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* General Details */}
+            {/* === Locked lead sections === */}
+            {!hasLeadContext ? (
+              <Card>
+                <CardContent className="py-10 text-center space-y-3">
+                  {isEditing ? (
+                    <p className="text-sm text-muted-foreground">
+                      This rate request has no source lead linked, so lead context cannot be displayed.
+                    </p>
+                  ) : (
+                    <>
+                      <p className="text-sm text-muted-foreground">
+                        Rate requests must be created from a lead. Open a lead, then click <strong>Send Rate Request</strong>.
+                      </p>
+                      <Button onClick={() => navigate("/sales/leads")} className="btn-success">
+                        Go to Leads
+                      </Button>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            ) : isLeadLoading ? (
+              <Card>
+                <CardContent className="py-12 flex items-center justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <span className="ml-2 text-muted-foreground">Loading lead context...</span>
+                </CardContent>
+              </Card>
+            ) : !lead ? (
+              <Card>
+                <CardContent className="py-6 text-center text-sm text-muted-foreground">
+                  Could not load lead details.
+                </CardContent>
+              </Card>
+            ) : (
+              <LockedLeadSections lead={lead} />
+            )}
+
+            {/* === Rate Request Details (the only editable card) === */}
             <Card>
               <CardHeader className="pb-4">
-                <CardTitle className="text-lg text-primary">General Details</CardTitle>
+                <CardTitle className="text-lg text-primary">Rate Request Details</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-red-500">* Rate code</Label>
+                    <Label>Rate Code</Label>
                     <Input
                       value={rateRequest?.rateRequestNo || "Auto-generated"}
                       readOnly
-                      className="bg-muted"
+                      className={READONLY_INPUT}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-red-500">* Shipment Mode</Label>
+                    <Label>
+                      Vendor Type <span className="text-red-500">*</span>
+                    </Label>
                     <SearchableSelect
-                      options={[
-                        { value: "air", label: "Air Freight" },
-                        { value: "fcl", label: "FCL-Sea Freight" },
-                        { value: "lcl", label: "LCL-Sea Freight" },
-                      ]}
-                      value={rateRequest?.mode === "SeaFreightFCL" ? "fcl" : rateRequest?.mode === "SeaFreightLCL" ? "lcl" : "air"}
-                      onValueChange={() => {}}
-                      placeholder="Select"
-                      searchPlaceholder="Search..."
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Incoterm</Label>
-                    <SearchableSelect
-                      options={incoTerms.map((term) => ({
-                        value: term.id.toString(),
-                        label: `${term.code}-${term.name}`,
+                      options={categoryTypes.map((type) => ({
+                        value: type.id.toString(),
+                        label: type.name,
                       }))}
-                      value={rateRequest?.incoTermId?.toString() || ""}
-                      onValueChange={() => {}}
-                      placeholder="Select"
+                      value={vendorTypeId}
+                      onValueChange={(value) => {
+                        setVendorTypeId(value);
+                        // Reset downstream selections so a stale vendor doesn't
+                        // hide behind the new type filter.
+                        setVendorId("");
+                        setVendorEmail("");
+                      }}
+                      placeholder="Select vendor type"
                       searchPlaceholder="Search..."
                     />
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Package Details */}
-            <Card>
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg text-primary">Package Details</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLeadLoading && rateRequest?.leadId ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-green-600" />
-                    <span className="ml-2 text-muted-foreground">Loading package details...</span>
-                  </div>
-                ) : leadData?.details && leadData.details.length > 0 ? (
-                  <div className="space-y-4">
-                    {leadData.details.some(d => d.detailType === "Equipment") && (
-                      <EquipmentGridReadOnly
-                        equipments={leadData.details.filter(d => d.detailType === "Equipment")}
-                      />
-                    )}
-                    {leadData.details.some(d => d.detailType === "BoxPallet") && (
-                      <BoxPalletsGridReadOnly
-                        boxPallets={leadData.details.filter(d => d.detailType === "BoxPallet")}
-                      />
-                    )}
-                    <div className="mt-4 space-y-2">
-                      <Label>Commodity</Label>
-                      <Textarea
-                        defaultValue={rateRequest?.productDescription || ""}
-                        placeholder="Enter commodity description"
-                        className="min-h-[40px]"
-                        readOnly
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No package details available for this rate request.
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Vendor Details */}
-            <Card>
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg text-primary">Vendor Details</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label>Vendors</Label>
+                    <Label>
+                      Vendor Name <span className="text-red-500">*</span>
+                    </Label>
                     <SearchableSelect
-                      options={vendors.map((vendor) => ({
+                      options={filteredVendors.map((vendor) => ({
                         value: vendor.id.toString(),
                         label: vendor.name,
                       }))}
-                      value={rateRequest?.vendorId?.toString() || ""}
-                      onValueChange={() => {}}
-                      placeholder="Select"
+                      value={vendorId}
+                      onValueChange={handleVendorChange}
+                      placeholder="Select vendor"
                       searchPlaceholder="Search..."
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Vendor Type</Label>
-                    <SearchableSelect
-                      options={categoryTypes.map((type) => ({
-                        value: type.name,
-                        label: type.name,
-                      }))}
-                      value={rateRequest?.vendorType || ""}
-                      onValueChange={() => {}}
-                      placeholder="Select"
-                      searchPlaceholder="Search..."
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between mb-1">
-                      <Label>Vendor Email to</Label>
-                      <div className="flex items-center gap-2">
-                        <Checkbox id="selectAll" />
-                        <label htmlFor="selectAll" className="text-sm text-muted-foreground cursor-pointer">
-                          Select All
-                        </label>
-                      </div>
-                    </div>
-                    <Input defaultValue={rateRequest?.vendorEmail || ""} placeholder="vendor@email.com" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Port Details */}
-            <Card>
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg text-primary">Port Details</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-4 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-red-500">* Arriving Country</Label>
-                    <SearchableSelect
-                      options={countries.map((country) => ({
-                        value: country.id.toString(),
-                        label: country.name,
-                      }))}
-                      value={rateRequest?.deliveryCountryId?.toString() || ""}
-                      onValueChange={() => {}}
-                      placeholder="Select"
-                      searchPlaceholder="Search..."
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-red-500">* Arrival Port</Label>
-                    <SearchableSelect
-                      options={ports.map((port) => ({
-                        value: port.id.toString(),
-                        label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
-                      }))}
-                      value={rateRequest?.destinationPortId?.toString() || ""}
-                      onValueChange={() => {}}
-                      placeholder="Select"
-                      searchPlaceholder="Search..."
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-red-500">* Departure Country</Label>
-                    <SearchableSelect
-                      options={countries.map((country) => ({
-                        value: country.id.toString(),
-                        label: country.name,
-                      }))}
-                      value={rateRequest?.pickupCountryId?.toString() || ""}
-                      onValueChange={() => {}}
-                      placeholder="Select"
-                      searchPlaceholder="Search..."
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Departure Port</Label>
-                    <SearchableSelect
-                      options={ports.map((port) => ({
-                        value: port.id.toString(),
-                        label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
-                      }))}
-                      value={rateRequest?.loadingPortId?.toString() || ""}
-                      onValueChange={() => {}}
-                      placeholder="Select"
-                      searchPlaceholder="Search..."
+                      emptyMessage={
+                        vendorTypeId
+                          ? "No creditors tagged with this vendor type — clear Vendor Type to see all"
+                          : "No creditors found"
+                      }
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-red-500">* Pickup Address</Label>
-                    <Textarea defaultValue={rateRequest?.pickupAddress || ""} placeholder="Enter pickup address" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-red-500">* Delivery Address</Label>
-                    <Textarea defaultValue={rateRequest?.deliveryAddress || ""} placeholder="Enter delivery address" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Remarks Notes</Label>
-                    <Textarea placeholder="Additional notes..." />
+                    <Label>Vendor Email</Label>
+                    <Input
+                      value={vendorEmail}
+                      onChange={(e) => setVendorEmail(e.target.value)}
+                      placeholder="vendor@email.com"
+                    />
                   </div>
                 </div>
               </CardContent>
@@ -278,11 +284,19 @@ export default function RateRequestForm() {
               <Button variant="outline" onClick={() => navigate("/sales/rate-requests")}>
                 Cancel
               </Button>
-              {!isEditing && (
-                <Button className="btn-success">
-                  Send Rate Request
-                </Button>
-              )}
+              <Button
+                className="btn-success"
+                onClick={handleSubmit}
+                disabled={
+                  isSaving ||
+                  !vendorTypeId ||
+                  !vendorId ||
+                  (!isEditing && !leadId)
+                }
+              >
+                {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {isEditing ? "Save" : "Send"}
+              </Button>
             </div>
           </div>
         )}
@@ -290,3 +304,4 @@ export default function RateRequestForm() {
     </MainLayout>
   );
 }
+

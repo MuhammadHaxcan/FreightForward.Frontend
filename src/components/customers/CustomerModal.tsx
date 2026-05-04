@@ -171,7 +171,7 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] bg-card border-border p-0">
+      <DialogContent className="sm:max-w-modal-xl bg-card border-border p-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-lg font-semibold">
             {mode === "add" ? "Add New Customer" : "Edit Customer"}

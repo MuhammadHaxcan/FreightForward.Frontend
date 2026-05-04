@@ -692,7 +692,7 @@ const HrPayroll = () => {
 
       {/* Edit Payroll Modal */}
       <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
-        <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-y-auto p-0 bg-card">
+        <DialogContent className="sm:max-w-modal-lg max-h-[85vh] overflow-y-auto p-0 bg-card">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white">Edit Payroll</DialogTitle>
           </DialogHeader>
@@ -875,7 +875,7 @@ const HrPayroll = () => {
 
       {/* Mark as Paid Modal */}
       <Dialog open={markPaidModalOpen} onOpenChange={setMarkPaidModalOpen}>
-        <DialogContent className="sm:max-w-[550px] max-h-[85vh] overflow-y-auto p-0 bg-card">
+        <DialogContent className="sm:max-w-modal-xl max-h-[85vh] overflow-y-auto p-0 bg-card">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white">Mark as Paid</DialogTitle>
           </DialogHeader>

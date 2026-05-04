@@ -2380,7 +2380,7 @@ const ShipmentDetail = () => {
 
       {/* Reports Dialog */}
       <Dialog open={showReportsDialog} onOpenChange={setShowReportsDialog}>
-        <DialogContent className="max-w-md p-0 bg-card">
+        <DialogContent className="max-w-modal-md p-0 bg-card">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white text-lg">Shipment Reports</DialogTitle>
           </DialogHeader>

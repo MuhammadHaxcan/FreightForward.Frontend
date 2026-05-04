@@ -228,7 +228,11 @@ export interface CreateRateRequestRequest {
   vendorEmail?: string;
 }
 
-export interface UpdateRateRequestRequest {
+// Mirrors the backend's `UpdateRateRequestRequest : CreateRateRequestRequest`.
+// SalesService.UpdateAsync currently persists: vendorId, vendorName, vendorType,
+// vendorEmail, polCountry, podCountry, status. All fields are partial — only
+// non-empty values are written.
+export interface UpdateRateRequestRequest extends CreateRateRequestRequest {
   status?: string;
 }
 

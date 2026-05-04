@@ -627,7 +627,7 @@ const NeutralDetail = () => {
 
       {/* Contact Modal */}
       <Dialog open={contactModalOpen} onOpenChange={setContactModalOpen}>
-        <DialogContent className="max-w-2xl p-0 bg-card">
+        <DialogContent className="max-w-modal-2xl p-0 bg-card">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white">Add new contact</DialogTitle>
           </DialogHeader>

@@ -111,7 +111,7 @@ export function StatusLogModal({ open, onOpenChange, onSave }: StatusLogModalPro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg bg-card border border-border p-0">
+      <DialogContent className="max-w-modal-lg bg-card border border-border p-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-lg font-semibold">
             Add Tracking Event

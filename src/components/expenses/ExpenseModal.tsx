@@ -186,7 +186,7 @@ export function ExpenseModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl p-0">
+      <DialogContent className="max-w-modal-2xl p-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-lg font-semibold">{expense ? "Edit Record" : "New Record"}</DialogTitle>
         </DialogHeader>

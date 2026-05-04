@@ -200,7 +200,7 @@ export function AddCreditNoteModal({ open, onOpenChange, onSuccess }: AddCreditN
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 bg-card">
+      <DialogContent className="max-w-modal-4xl max-h-[90vh] overflow-y-auto p-0 bg-card">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-xl">Add New Credit Note</DialogTitle>
         </DialogHeader>

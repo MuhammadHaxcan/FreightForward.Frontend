@@ -92,7 +92,7 @@ export function BankModal({ open, onOpenChange, bank, mode }: BankModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl bg-card p-0">
+      <DialogContent className="sm:max-w-modal-2xl bg-card p-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-lg font-semibold">
             {mode === "add" ? "Add New" : "Edit"} Bank

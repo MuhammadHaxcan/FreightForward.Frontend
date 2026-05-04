@@ -1,16 +1,31 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { expenseApi, CreateExpenseRequest, UpdateExpenseRequest } from '@/services/api';
+import {
+  expenseApi,
+  CreateExpenseRequest,
+  UpdateExpenseRequest,
+  ExpenseListFilters,
+  ExpenseSummaryFilters,
+} from '@/services/api';
 import { toast } from 'sonner';
 
-export function useExpenses(params?: {
-  pageNumber?: number;
-  pageSize?: number;
-  searchTerm?: string;
-}) {
+export function useExpenses(params?: ExpenseListFilters) {
   return useQuery({
     queryKey: ['expenses', params],
     queryFn: async () => {
       const response = await expenseApi.getExpenses(params);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+  });
+}
+
+export function useExpenseSummary(params?: ExpenseSummaryFilters) {
+  return useQuery({
+    queryKey: ['expenses', 'summary', params],
+    queryFn: async () => {
+      const response = await expenseApi.getExpenseSummary(params);
       if (response.error) {
         throw new Error(response.error);
       }

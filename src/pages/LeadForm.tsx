@@ -129,17 +129,25 @@ export default function LeadForm() {
   const isEditing = !!leadId;
   const isSaving = createLead.isPending || updateLead.isPending;
 
-  // Filter ports by selected country
+  // Filter ports by selected country.
+  // Tolerant comparison: case-insensitive + trim so post-migration whitespace /
+  // case differences (e.g. "United Arab Emirates" vs "united arab emirates ")
+  // don't wipe out the dropdown. Falls back to ALL ports if the filter excludes
+  // everything while ports were actually loaded — ensures the user can still
+  // pick a port even when the names mismatch.
   const portsArray = Array.isArray(ports) ? ports : [];
-  const pickupPorts = portsArray.filter(
-    (p) => !formData.pickupCountryId ||
-    countries?.find(c => c.id === formData.pickupCountryId)?.name === p.country
-  );
+  const norm = (s: string | null | undefined) => (s ?? "").trim().toLowerCase();
 
-  const deliveryPorts = portsArray.filter(
-    (p) => !formData.deliveryCountryId ||
-    countries?.find(c => c.id === formData.deliveryCountryId)?.name === p.country
-  );
+  const filterPortsByCountry = (countryId: number | undefined) => {
+    if (!countryId) return portsArray;
+    const target = norm(countries?.find((c) => c.id === countryId)?.name);
+    if (!target) return portsArray;
+    const matched = portsArray.filter((p) => norm(p.country) === target);
+    return matched.length > 0 ? matched : portsArray;
+  };
+
+  const pickupPorts = filterPortsByCountry(formData.pickupCountryId);
+  const deliveryPorts = filterPortsByCountry(formData.deliveryCountryId);
 
   useEffect(() => {
     if (leadId && lead) {

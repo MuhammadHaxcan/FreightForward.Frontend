@@ -31,7 +31,9 @@ export function SendRateRequestModal({
   leadId,
   onSuccess,
 }: SendRateRequestModalProps) {
-  const [vendorType, setVendorType] = useState<string>("");
+  // vendorTypeId drives the client-side narrowing of the Vendor Name dropdown.
+  // vendorTypeName is the human-readable string sent in the createRateRequest payload.
+  const [vendorTypeId, setVendorTypeId] = useState<string>("");
   const [vendorId, setVendorId] = useState<string>("");
   const [vendorEmail, setVendorEmail] = useState<string>("");
   const [step, setStep] = useState<"form" | "email">("form");
@@ -43,24 +45,34 @@ export function SendRateRequestModal({
   const { data: categoryTypes, isLoading: loadingCategoryTypes } =
     useAllCustomerCategoryTypes();
 
-  // Load customers (Creditors) for Vendor Name dropdown
+  // Load ALL Creditors. Vendor Type is metadata for the rate-request payload;
+  // it does NOT filter this dropdown. (Filtering by category previously hid
+  // most creditors because the legacy customer_type tags don't always align
+  // with the Vendor Type lookup categories.)
   const { data: customersData, isLoading: loadingCustomers } = useCustomers({
-    masterType: "Creditors",
     pageSize: 1000,
+    masterType: "Creditors",
   });
 
   const createRateRequest = useCreateRateRequest();
   const sendEmail = useSendRateRequestEmail();
 
-  // Filter vendors by selected category type
-  const filteredVendors = useMemo(() => {
-    if (!customersData?.items) return [];
-    if (!vendorType) return customersData.items;
+  const vendorTypeName = useMemo(
+    () =>
+      categoryTypes?.find((c) => c.id.toString() === vendorTypeId)?.name ?? "",
+    [categoryTypes, vendorTypeId]
+  );
 
-    return customersData.items.filter((customer) =>
-      customer.categories?.some((cat) => cat.name === vendorType)
-    );
-  }, [customersData?.items, vendorType]);
+  // Client-side narrowing by category ID. Loaded list = all creditors;
+  // picking a Vendor Type restricts to creditors whose CustomerCategories
+  // contain that category id. Filtering by ID (not name) avoids the
+  // string-mismatch failure mode that caused the original empty-dropdown bug.
+  const filteredVendors = useMemo(() => {
+    const all = customersData?.items ?? [];
+    if (!vendorTypeId) return all;
+    const targetId = parseInt(vendorTypeId);
+    return all.filter((c) => c.categories?.some((cat) => cat.id === targetId));
+  }, [customersData?.items, vendorTypeId]);
 
   // Auto-populate email when vendor is selected
   useEffect(() => {
@@ -77,7 +89,7 @@ export function SendRateRequestModal({
   // Reset form when modal opens/closes
   useEffect(() => {
     if (!open) {
-      setVendorType("");
+      setVendorTypeId("");
       setVendorId("");
       setVendorEmail("");
       setStep("form");
@@ -86,6 +98,10 @@ export function SendRateRequestModal({
   }, [open]);
 
   const handleSubmit = async () => {
+    if (!vendorTypeId) {
+      toast.error("Please select a vendor type");
+      return;
+    }
     if (!vendorId) {
       toast.error("Please select a vendor");
       return;
@@ -100,7 +116,7 @@ export function SendRateRequestModal({
         leadId,
         vendorId: parseInt(vendorId),
         vendorName: selectedVendor?.name || "",
-        vendorType,
+        vendorType: vendorTypeName,
         vendorEmail,
       });
 
@@ -142,7 +158,7 @@ export function SendRateRequestModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md p-0">
+      <DialogContent className="max-w-modal-md p-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-lg font-semibold">
             Send Rate Request
@@ -161,12 +177,12 @@ export function SendRateRequestModal({
               </Label>
               <SearchableSelect
                 options={(categoryTypes || []).map((cat) => ({
-                  value: cat.name,
+                  value: cat.id.toString(),
                   label: cat.name,
                 }))}
-                value={vendorType}
+                value={vendorTypeId}
                 onValueChange={(value) => {
-                  setVendorType(value);
+                  setVendorTypeId(value);
                   setVendorId("");
                   setVendorEmail("");
                 }}
@@ -186,10 +202,15 @@ export function SendRateRequestModal({
                 }))}
                 value={vendorId}
                 onValueChange={setVendorId}
-                placeholder={vendorType ? "Select vendor" : "Select vendor type first"}
+                placeholder="Select vendor"
                 searchPlaceholder="Search vendors..."
-                disabled={!vendorType}
-                emptyMessage={loadingCustomers ? "Loading..." : "No vendors found for this category"}
+                emptyMessage={
+                  loadingCustomers
+                    ? "Loading..."
+                    : vendorTypeId
+                      ? "No creditors tagged with this vendor type — clear Vendor Type to see all"
+                      : "No creditors found"
+                }
               />
             </div>
 
@@ -210,7 +231,7 @@ export function SendRateRequestModal({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!vendorId || createRateRequest.isPending}
+            disabled={!vendorTypeId || !vendorId || createRateRequest.isPending}
             className="btn-success"
           >
             {createRateRequest.isPending ? (

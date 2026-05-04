@@ -486,7 +486,7 @@ const HrAttendanceSummary = () => {
           }
         }}
       >
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-modal-md">
           <MutationBlockingOverlay isPending={unlockMutation.isPending} message="Saving..." />
           <DialogHeader>
             <DialogTitle>Unlock Attendance</DialogTitle>

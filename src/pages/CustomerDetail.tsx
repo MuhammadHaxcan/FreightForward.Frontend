@@ -1897,7 +1897,7 @@ const CustomerDetail = () => {
 
       {/* Contact Modal */}
       <Dialog open={contactModalOpen} onOpenChange={setContactModalOpen}>
-        <DialogContent className="max-w-lg p-0 bg-card">
+        <DialogContent className="max-w-modal-lg p-0 bg-card">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white">Add new contact</DialogTitle>
             <p className="text-xs text-white/80">{profileData.name}</p>
@@ -1949,7 +1949,7 @@ const CustomerDetail = () => {
 
       {/* Opening Balance Modal */}
       <Dialog open={openingBalanceModalOpen} onOpenChange={setOpeningBalanceModalOpen}>
-        <DialogContent className="max-w-md p-0 bg-card">
+        <DialogContent className="max-w-modal-md p-0 bg-card">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white">Add Opening Balance</DialogTitle>
             <p className="text-xs text-white/80">{profileData.name}</p>
@@ -2003,7 +2003,7 @@ const CustomerDetail = () => {
 
       {/* Credit Note Modal */}
       <Dialog open={creditNoteModalOpen} onOpenChange={setCreditNoteModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 bg-card">
+        <DialogContent className="max-w-modal-4xl max-h-[90vh] overflow-y-auto p-0 bg-card">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white text-xl">Add New Credit Note</DialogTitle>
           </DialogHeader>

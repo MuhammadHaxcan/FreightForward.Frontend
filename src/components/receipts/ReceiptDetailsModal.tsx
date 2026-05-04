@@ -59,7 +59,7 @@ export function ReceiptDetailsModal({ open, onOpenChange, receiptId }: ReceiptDe
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl p-0">
+      <DialogContent className="max-w-modal-4xl p-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-lg font-semibold">Receipt Details</DialogTitle>
         </DialogHeader>

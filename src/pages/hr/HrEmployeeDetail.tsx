@@ -67,6 +67,8 @@ const HrEmployeeDetail = () => {
 
   // ========== Profile Tab State ==========
   const [employeeCode, setEmployeeCode] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [department, setDepartment] = useState("");
   const [designation, setDesignation] = useState("");
   const [joiningDate, setJoiningDate] = useState("");
@@ -113,6 +115,8 @@ const HrEmployeeDetail = () => {
   // Populate profile form when employee data loads
   if (employee && !profileLoaded) {
     setEmployeeCode(employee.employeeCode);
+    setFirstName(employee.firstName || "");
+    setLastName(employee.lastName || "");
     setDepartment(employee.department || "");
     setDesignation(employee.designation || "");
     setJoiningDate(employee.joiningDate?.split("T")[0] || "");
@@ -237,12 +241,17 @@ const HrEmployeeDetail = () => {
   });
 
   const handleSaveProfile = () => {
-    if (!employeeCode.trim()) {
-      toast.error("Employee code is required");
+    if (!firstName.trim()) {
+      toast.error("First name is required");
+      return;
+    }
+    if (!lastName.trim()) {
+      toast.error("Last name is required");
       return;
     }
     const data: UpdateEmployeeRequest = {
-      employeeCode,
+      firstName,
+      lastName,
       department: department || undefined,
       designation: designation || undefined,
       joiningDate,
@@ -413,9 +422,20 @@ const HrEmployeeDetail = () => {
             <MutationBlockingOverlay isPending={updateMutation.isPending} variant="page" message="Saving..." />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label className="text-sm">Employee Code <span className="text-destructive">*</span></Label>
-                <Input value={employeeCode} onChange={(e) => setEmployeeCode(e.target.value)} disabled={updateMutation.isPending} />
+                <Label className="text-sm">Employee Code</Label>
+                <Input value={employeeCode} readOnly className="bg-muted cursor-not-allowed" />
               </div>
+              <div className="space-y-2">
+                <Label className="text-sm">First Name <span className="text-destructive">*</span></Label>
+                <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="First Name" disabled={updateMutation.isPending} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Last Name <span className="text-destructive">*</span></Label>
+                <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Last Name" disabled={updateMutation.isPending} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">Department</Label>
                 <Input value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="e.g. Operations" disabled={updateMutation.isPending} />
@@ -818,7 +838,7 @@ const HrEmployeeDetail = () => {
 
       {/* Salary Structure Modal */}
       <Dialog open={salaryModalOpen} onOpenChange={setSalaryModalOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto p-0 bg-card">
+        <DialogContent className="sm:max-w-modal-xl max-h-[85vh] overflow-y-auto p-0 bg-card">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white">Set Salary Structure</DialogTitle>
           </DialogHeader>

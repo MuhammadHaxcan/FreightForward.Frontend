@@ -212,9 +212,13 @@ export {
 export {
   expenseApi,
   type ExpensePaymentType,
+  type ExpensePaymentMode,
   type Expense,
   type CreateExpenseRequest,
   type UpdateExpenseRequest,
+  type ExpenseListFilters,
+  type ExpenseSummaryFilters,
+  type ExpenseSummary,
 } from './expense';
 
 // Dashboard

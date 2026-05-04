@@ -109,11 +109,12 @@ export default function RateRequests() {
             </Button>
             <PermissionGate permission="ratereq_add">
               <Button
-                onClick={() => navigate("/sales/rate-requests/new")}
+                onClick={() => navigate("/sales/leads")}
                 className="btn-success"
+                title="Rate requests are created from a lead. Pick a lead first."
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Send Rate Request
+                Send from Lead
               </Button>
             </PermissionGate>
           </div>

@@ -86,7 +86,7 @@ export function GeneralDocumentModal({ open, onOpenChange }: GeneralDocumentModa
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg bg-card p-0">
+      <DialogContent className="sm:max-w-modal-lg bg-card p-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-lg font-semibold">
             Add New General Document
