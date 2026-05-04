@@ -28,7 +28,6 @@ const Shipments = () => {
   const [appliedSearch, setAppliedSearch] = useState("");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [currentPage, setCurrentPage] = useState(1);
-  const [searchBy, setSearchBy] = useState("jobNo");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateRange, setDateRange] = useState<DateRangeValue | undefined>(undefined);
   const [appliedDateRange, setAppliedDateRange] = useState<DateRangeValue | undefined>(undefined);
@@ -157,26 +156,12 @@ const Shipments = () => {
 
         {/* Filters Row */}
         <div className="flex flex-wrap items-center gap-3">
-          <SearchableSelect
-            options={[
-              { value: "jobNo", label: "Job No" },
-              { value: "hbl", label: "HBL No" },
-              { value: "mbl", label: "MBL No" },
-              { value: "customer", label: "Customer" },
-            ]}
-            value={searchBy}
-            onValueChange={setSearchBy}
-            placeholder="Job No"
-            searchPlaceholder="Search..."
-            triggerClassName="w-[150px] bg-card border-border"
-          />
-
           <Input
-            placeholder="Search..."
+            placeholder="Search all shipment columns..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-            className="w-[300px] bg-card"
+            className="w-[340px] bg-card"
           />
 
           <SearchableSelect
