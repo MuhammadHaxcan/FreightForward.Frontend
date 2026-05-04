@@ -121,6 +121,7 @@ const CustomerDetail = () => {
   const [arPageSize, setArPageSize] = useState(10);
   const [apPageNumber, setApPageNumber] = useState(1);
   const [apPageSize, setApPageSize] = useState(10);
+  const [apSearchTerm, setApSearchTerm] = useState("");
   const [pvPageNumber, setPvPageNumber] = useState(1);
   const [pvPageSize, setPvPageSize] = useState(10);
   const [piPageNumber, setPiPageNumber] = useState(1);
@@ -217,6 +218,7 @@ const CustomerDetail = () => {
     pageNumber: apPageNumber,
     pageSize: apPageSize,
     enabled: activeTab === 'account-payable',
+    searchTerm: apSearchTerm || undefined,
   });
   const accountPayables = apPage?.items ?? [];
   const apTotalCount = apPage?.totalCount ?? 0;
@@ -1393,7 +1395,12 @@ const CustomerDetail = () => {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Search:</span>
-            <Input className="w-[200px] h-8" />
+            <Input
+              className="w-[200px] h-8"
+              value={apSearchTerm}
+              onChange={(e) => setApSearchTerm(e.target.value)}
+              placeholder="Search..."
+            />
           </div>
         </div>
 

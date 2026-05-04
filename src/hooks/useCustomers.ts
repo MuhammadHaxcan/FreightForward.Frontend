@@ -179,7 +179,7 @@ export function useCustomerAccountReceivables(
 
 export function useCustomerAccountPayables(
   customerId: number,
-  params?: { pageNumber?: number; pageSize?: number; enabled?: boolean }
+  params?: { pageNumber?: number; pageSize?: number; enabled?: boolean; searchTerm?: string }
 ) {
   const { enabled = true, ...queryParams } = params ?? {};
   return useQuery({

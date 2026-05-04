@@ -367,11 +367,12 @@ export const customerApi = {
   // Account Payables (for Creditors/Vendors)
   getAccountPayables: (
     customerId: number,
-    params?: { pageNumber?: number; pageSize?: number }
+    params?: { pageNumber?: number; pageSize?: number; searchTerm?: string }
   ) => {
     const query = new URLSearchParams();
     if (params?.pageNumber) query.append('pageNumber', params.pageNumber.toString());
     if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.searchTerm) query.append('searchTerm', params.searchTerm);
     return fetchApi<PaginatedList<AccountPayable>>(
       `/customers/${customerId}/account-payables?${query}`
     );
