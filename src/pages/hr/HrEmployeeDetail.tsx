@@ -217,6 +217,7 @@ const HrEmployeeDetail = () => {
       queryClient.invalidateQueries({ queryKey: ["hr-employee", employeeId] });
       queryClient.invalidateQueries({ queryKey: ["hr-employees"] });
       queryClient.invalidateQueries({ queryKey: ["hr-employees-dropdown"] });
+      queryClient.invalidateQueries({ queryKey: ["unlinked-employees"] });
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to update employee");

@@ -110,6 +110,7 @@ const HrEmployees = () => {
       toast.success("Employee created successfully");
       queryClient.invalidateQueries({ queryKey: ["hr-employees"] });
       queryClient.invalidateQueries({ queryKey: ["hr-employees-dropdown"] });
+      queryClient.invalidateQueries({ queryKey: ["unlinked-employees"] });
       setModalOpen(false);
       resetForm();
     },
@@ -129,6 +130,7 @@ const HrEmployees = () => {
       toast.success("Employee deleted successfully");
       queryClient.invalidateQueries({ queryKey: ["hr-employees"] });
       queryClient.invalidateQueries({ queryKey: ["hr-employees-dropdown"] });
+      queryClient.invalidateQueries({ queryKey: ["unlinked-employees"] });
       setDeleteDialogOpen(false);
       setItemToDelete(null);
     },
@@ -177,6 +179,11 @@ const HrEmployees = () => {
   };
 
   const handleDelete = (emp: EmployeeListItem) => {
+    if (emp.userId) {
+      toast.error("This employee has a linked user. Please unlink it first from Users.");
+      return;
+    }
+
     setItemToDelete(emp);
     setDeleteDialogOpen(true);
   };
