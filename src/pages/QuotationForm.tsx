@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo } from "react";
-import { calculateCbm } from "@/lib/cargoCalculations";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -326,40 +325,6 @@ export default function QuotationForm() {
     }
   }, [quotationId, quotationDetail]);
 
-  // Cargo row helpers
-  const addCargoRow = () => {
-    setCargoRows([
-      ...cargoRows,
-      {
-        id: Date.now(),
-        calculationMode: formData.cargoCalculationMode,
-        quantity: 1,
-        volumeUnit: "cm",
-        weightUnit: "kg",
-      },
-    ]);
-  };
-
-  const deleteCargoRow = (rowId: number) => {
-    if (cargoRows.length > 1) {
-      setCargoRows(cargoRows.filter((row) => row.id !== rowId));
-    }
-  };
-
-  const updateCargoRow = (rowId: number, field: keyof CargoRow, value: CargoRow[keyof CargoRow]) => {
-    setCargoRows(
-      cargoRows.map((row) => {
-        if (row.id !== rowId) return row;
-        const updated = { ...row, [field]: value };
-        // Auto-calculate CBM when dimensions or unit change
-        if (field === "length" || field === "width" || field === "height" || field === "volumeUnit") {
-          updated.cbm = calculateCbm(updated.length, updated.width, updated.height, updated.volumeUnit);
-        }
-        return updated;
-      })
-    );
-  };
-
   // Charge row helpers
   const addChargeRow = () => {
     setChargeRows([
@@ -486,11 +451,6 @@ export default function QuotationForm() {
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
-  // Calculate totals for cargo
-  const totalVolume = cargoRows.reduce((sum, row) => sum + (row.cbm || 0) * row.quantity, 0);
-  const totalCbm = cargoRows.reduce((sum, row) => sum + (row.totalCbm || row.cbm || 0), 0);
-  const totalWeight = cargoRows.reduce((sum, row) => sum + (row.totalWeight || (row.weight || 0) * row.quantity), 0);
-
   const getTitle = () => {
     if (isViewMode) return "View Quotation";
     if (isEditing) return "Edit Quotation";
@@ -551,7 +511,7 @@ export default function QuotationForm() {
                 <CardTitle className="text-lg text-primary">Quotation</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-6 gap-4">
+                <div className={`grid gap-4 ${hasSourceContext ? "grid-cols-3" : "grid-cols-6"}`}>
                   <div className="space-y-2">
                     <Label>Quotation ID</Label>
                     <Input
@@ -560,52 +520,56 @@ export default function QuotationForm() {
                       className="bg-muted"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Company Name</Label>
-                    <SearchableSelect
-                      disabled={isReadOnly}
-                      options={debtors.map((customer) => ({
-                        value: customer.id.toString(),
-                        label: customer.name,
-                      }))}
-                      value={formData.customerId?.toString() || ""}
-                      onValueChange={(value) => {
-                        const customer = debtors.find((c) => c.id === parseInt(value));
-                        setFormData({
-                          ...formData,
-                          customerId: parseInt(value),
-                          customerName: customer?.name || "",
-                          contactPersonId: undefined,
-                        });
-                      }}
-                      placeholder="Select Company"
-                      searchPlaceholder="Search..."
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Contact Person</Label>
-                    <SearchableSelect
-                      disabled={isReadOnly || !formData.customerId}
-                      options={selectedCustomer?.contacts?.map((contact) => ({
-                        value: contact.id.toString(),
-                        label: contact.name,
-                      })) || []}
-                      value={formData.contactPersonId?.toString() || ""}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, contactPersonId: parseInt(value) })
-                      }
-                      placeholder="Select Contact"
-                      searchPlaceholder="Search..."
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Customer Reference Code</Label>
-                    <Input
-                      value={formData.customerRefCode || ""}
-                      onChange={(e) => setFormData({ ...formData, customerRefCode: e.target.value })}
-                      disabled={isReadOnly}
-                    />
-                  </div>
+                  {!hasSourceContext && (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Company Name</Label>
+                        <SearchableSelect
+                          disabled={isReadOnly}
+                          options={debtors.map((customer) => ({
+                            value: customer.id.toString(),
+                            label: customer.name,
+                          }))}
+                          value={formData.customerId?.toString() || ""}
+                          onValueChange={(value) => {
+                            const customer = debtors.find((c) => c.id === parseInt(value));
+                            setFormData({
+                              ...formData,
+                              customerId: parseInt(value),
+                              customerName: customer?.name || "",
+                              contactPersonId: undefined,
+                            });
+                          }}
+                          placeholder="Select Company"
+                          searchPlaceholder="Search..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Contact Person</Label>
+                        <SearchableSelect
+                          disabled={isReadOnly || !formData.customerId}
+                          options={selectedCustomer?.contacts?.map((contact) => ({
+                            value: contact.id.toString(),
+                            label: contact.name,
+                          })) || []}
+                          value={formData.contactPersonId?.toString() || ""}
+                          onValueChange={(value) =>
+                            setFormData({ ...formData, contactPersonId: parseInt(value) })
+                          }
+                          placeholder="Select Contact"
+                          searchPlaceholder="Search..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Customer Reference Code</Label>
+                        <Input
+                          value={formData.customerRefCode || ""}
+                          onChange={(e) => setFormData({ ...formData, customerRefCode: e.target.value })}
+                          disabled={isReadOnly}
+                        />
+                      </div>
+                    </>
+                  )}
                   <div className="space-y-2">
                     <Label>Quotation Booking No</Label>
                     <Input
@@ -633,7 +597,7 @@ export default function QuotationForm() {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-6 gap-4">
+                <div className={`grid gap-4 ${hasSourceContext ? "grid-cols-3" : "grid-cols-6"}`}>
                   <div className="space-y-2">
                     <Label>Date Of Issue</Label>
                     <Input
@@ -652,22 +616,24 @@ export default function QuotationForm() {
                       disabled={isReadOnly}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Incoterm</Label>
-                    <SearchableSelect
-                      disabled={isReadOnly}
-                      options={incoTerms.map((incoTerm) => ({
-                        value: incoTerm.id.toString(),
-                        label: `${incoTerm.code} - ${incoTerm.name}`,
-                      }))}
-                      value={formData.incoTermId?.toString() || ""}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, incoTermId: parseInt(value) })
-                      }
-                      placeholder="Select Incoterm"
-                      searchPlaceholder="Search..."
-                    />
-                  </div>
+                  {!hasSourceContext && (
+                    <div className="space-y-2">
+                      <Label>Incoterm</Label>
+                      <SearchableSelect
+                        disabled={isReadOnly}
+                        options={incoTerms.map((incoTerm) => ({
+                          value: incoTerm.id.toString(),
+                          label: `${incoTerm.code} - ${incoTerm.name}`,
+                        }))}
+                        value={formData.incoTermId?.toString() || ""}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, incoTermId: parseInt(value) })
+                        }
+                        placeholder="Select Incoterm"
+                        searchPlaceholder="Search..."
+                      />
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label>Status</Label>
                     <SearchableSelect
@@ -683,58 +649,66 @@ export default function QuotationForm() {
                       searchPlaceholder="Search..."
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Origin/Loading Port</Label>
-                    <SearchableSelect
-                      disabled={isReadOnly}
-                      options={ports.map((port) => ({
-                        value: port.id.toString(),
-                        label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
-                      }))}
-                      value={formData.loadingPortId?.toString() || ""}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, loadingPortId: parseInt(value) })
-                      }
-                      placeholder="Select Port"
-                      searchPlaceholder="Search..."
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Destination/Discharge Port</Label>
-                    <SearchableSelect
-                      disabled={isReadOnly}
-                      options={ports.map((port) => ({
-                        value: port.id.toString(),
-                        label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
-                      }))}
-                      value={formData.destinationPortId?.toString() || ""}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, destinationPortId: parseInt(value) })
-                      }
-                      placeholder="Select Port"
-                      searchPlaceholder="Search..."
-                    />
-                  </div>
+                  {!hasSourceContext && (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Origin/Loading Port</Label>
+                        <SearchableSelect
+                          disabled={isReadOnly}
+                          options={ports.map((port) => ({
+                            value: port.id.toString(),
+                            label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
+                          }))}
+                          value={formData.loadingPortId?.toString() || ""}
+                          onValueChange={(value) =>
+                            setFormData({ ...formData, loadingPortId: parseInt(value) })
+                          }
+                          placeholder="Select Port"
+                          searchPlaceholder="Search..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Destination/Discharge Port</Label>
+                        <SearchableSelect
+                          disabled={isReadOnly}
+                          options={ports.map((port) => ({
+                            value: port.id.toString(),
+                            label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ''} - ${port.city}, ${port.country}`,
+                          }))}
+                          value={formData.destinationPortId?.toString() || ""}
+                          onValueChange={(value) =>
+                            setFormData({ ...formData, destinationPortId: parseInt(value) })
+                          }
+                          placeholder="Select Port"
+                          searchPlaceholder="Search..."
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
-                <div className="grid grid-cols-4 gap-4">
-                  <div className="space-y-2">
-                    <Label>Pick-Up Address</Label>
-                    <Textarea
-                      placeholder="Pick-Up Address"
-                      value={formData.pickupAddress || ""}
-                      onChange={(e) => setFormData({ ...formData, pickupAddress: e.target.value })}
-                      disabled={isReadOnly}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Delivery Address</Label>
-                    <Textarea
-                      placeholder="Delivery Address"
-                      value={formData.deliveryAddress || ""}
-                      onChange={(e) => setFormData({ ...formData, deliveryAddress: e.target.value })}
-                      disabled={isReadOnly}
-                    />
-                  </div>
+                <div className={`grid gap-4 ${hasSourceContext ? "grid-cols-2" : "grid-cols-4"}`}>
+                  {!hasSourceContext && (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Pick-Up Address</Label>
+                        <Textarea
+                          placeholder="Pick-Up Address"
+                          value={formData.pickupAddress || ""}
+                          onChange={(e) => setFormData({ ...formData, pickupAddress: e.target.value })}
+                          disabled={isReadOnly}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Delivery Address</Label>
+                        <Textarea
+                          placeholder="Delivery Address"
+                          value={formData.deliveryAddress || ""}
+                          onChange={(e) => setFormData({ ...formData, deliveryAddress: e.target.value })}
+                          disabled={isReadOnly}
+                        />
+                      </div>
+                    </>
+                  )}
                   <div className="space-y-2">
                     <Label>Remarks</Label>
                     <Textarea
@@ -783,290 +757,6 @@ export default function QuotationForm() {
                     />
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Cargo Details */}
-            <Card>
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg text-primary">Cargo Details</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {/* Cargo Calculation Mode Tabs */}
-                <div className="flex gap-2 mb-4">
-                  <Button
-                    className={
-                      formData.cargoCalculationMode === "units"
-                        ? "btn-success"
-                        : "bg-transparent text-primary hover:bg-primary/10"
-                    }
-                    variant={formData.cargoCalculationMode === "units" ? "default" : "ghost"}
-                    onClick={() =>
-                      !isReadOnly && setFormData({ ...formData, cargoCalculationMode: "units" })
-                    }
-                    disabled={isReadOnly}
-                  >
-                    Calculate by Units
-                  </Button>
-                  <Button
-                    className={
-                      formData.cargoCalculationMode === "shipment"
-                        ? "btn-success"
-                        : "bg-transparent text-primary hover:bg-primary/10"
-                    }
-                    variant={formData.cargoCalculationMode === "shipment" ? "default" : "ghost"}
-                    onClick={() =>
-                      !isReadOnly && setFormData({ ...formData, cargoCalculationMode: "shipment" })
-                    }
-                    disabled={isReadOnly}
-                  >
-                    Calculate by Total Shipment
-                  </Button>
-                </div>
-
-                {/* Calculate by Units View */}
-                {formData.cargoCalculationMode === "units" && (
-                  <>
-                    <div className="grid grid-cols-11 gap-2 mb-2 text-sm font-medium">
-                      <div>Qty</div>
-                      <div>Package Type</div>
-                      <div>Length</div>
-                      <div>Width</div>
-                      <div>Height</div>
-                      <div>Unit</div>
-                      <div>CBM</div>
-                      <div>Weight</div>
-                      <div>Unit</div>
-                      <div>Description</div>
-                      <div></div>
-                    </div>
-                    {cargoRows.map((row, index) => (
-                      <div key={row.id} className="grid grid-cols-11 gap-2 mb-2">
-                        <Input
-                          type="number"
-                          value={row.quantity}
-                          onChange={(e) =>
-                            updateCargoRow(row.id, "quantity", parseInt(e.target.value) || 0)
-                          }
-                          disabled={isReadOnly}
-                        />
-                        <SearchableSelect
-                          disabled={isReadOnly}
-                          options={packageTypes.map((pt) => ({
-                            value: pt.id.toString(),
-                            label: pt.name,
-                          }))}
-                          value={row.packageTypeId?.toString() || ""}
-                          onValueChange={(value) =>
-                            updateCargoRow(row.id, "packageTypeId", parseInt(value))
-                          }
-                          placeholder="Select"
-                          searchPlaceholder="Search..."
-                        />
-                        <Input
-                          type="number"
-                          placeholder="L"
-                          value={row.length || ""}
-                          onChange={(e) =>
-                            updateCargoRow(row.id, "length", parseFloat(e.target.value) || undefined)
-                          }
-                          disabled={isReadOnly}
-                        />
-                        <Input
-                          type="number"
-                          placeholder="W"
-                          value={row.width || ""}
-                          onChange={(e) =>
-                            updateCargoRow(row.id, "width", parseFloat(e.target.value) || undefined)
-                          }
-                          disabled={isReadOnly}
-                        />
-                        <Input
-                          type="number"
-                          placeholder="H"
-                          value={row.height || ""}
-                          onChange={(e) =>
-                            updateCargoRow(row.id, "height", parseFloat(e.target.value) || undefined)
-                          }
-                          disabled={isReadOnly}
-                        />
-                        <SearchableSelect
-                          disabled={isReadOnly}
-                          options={[
-                            { value: "cm", label: "CM" },
-                            { value: "meter", label: "Meter" },
-                            { value: "inch", label: "Inch" },
-                          ]}
-                          value={row.volumeUnit || "cm"}
-                          onValueChange={(value) => updateCargoRow(row.id, "volumeUnit", value)}
-                          placeholder="CM"
-                          searchPlaceholder="Search..."
-                        />
-                        <Input
-                          type="number"
-                          placeholder="CBM"
-                          value={row.cbm?.toFixed(6) || ""}
-                          disabled
-                          className="bg-muted"
-                        />
-                        <Input
-                          type="number"
-                          placeholder="Weight"
-                          value={row.weight || ""}
-                          onChange={(e) =>
-                            updateCargoRow(row.id, "weight", parseFloat(e.target.value) || undefined)
-                          }
-                          disabled={isReadOnly}
-                        />
-                        <SearchableSelect
-                          disabled={isReadOnly}
-                          options={[
-                            { value: "kg", label: "KG" },
-                            { value: "lb", label: "LB" },
-                          ]}
-                          value={row.weightUnit || "kg"}
-                          onValueChange={(value) => updateCargoRow(row.id, "weightUnit", value)}
-                          placeholder="KG"
-                          searchPlaceholder="Search..."
-                        />
-                        <Input
-                          placeholder="Description"
-                          value={row.cargoDescription || ""}
-                          onChange={(e) =>
-                            updateCargoRow(row.id, "cargoDescription", e.target.value)
-                          }
-                          disabled={isReadOnly}
-                        />
-                        <div>
-                          {!isReadOnly &&
-                            (index === cargoRows.length - 1 ? (
-                              <Button
-                                onClick={addCargoRow}
-                                className="btn-success w-full"
-                              >
-                                +
-                              </Button>
-                            ) : (
-                              <Button
-                                variant="destructive"
-                                size="icon"
-                                className="h-10 w-full"
-                                onClick={() => deleteCargoRow(row.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            ))}
-                        </div>
-                      </div>
-                    ))}
-                    <div className="grid grid-cols-4 gap-4 mt-4">
-                      <div className="space-y-2">
-                        <Label>Total Volume</Label>
-                        <Input value={totalVolume.toFixed(2)} readOnly className="bg-muted" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Total CBM</Label>
-                        <Input value={totalCbm.toFixed(2)} readOnly className="bg-muted" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Total Weight</Label>
-                        <Input value={totalWeight.toFixed(2)} readOnly className="bg-muted" />
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {/* Calculate by Total Shipment View */}
-                {formData.cargoCalculationMode === "shipment" && (
-                  <>
-                    <div className="grid grid-cols-5 gap-4 mb-4">
-                      <div className="space-y-2">
-                        <Label>Qty</Label>
-                        <Input
-                          type="number"
-                          value={cargoRows[0]?.quantity || ""}
-                          onChange={(e) =>
-                            updateCargoRow(cargoRows[0]?.id || 1, "quantity", parseInt(e.target.value) || 0)
-                          }
-                          disabled={isReadOnly}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Load Type</Label>
-                        <SearchableSelect
-                          disabled={isReadOnly}
-                          options={containerTypes.map((ct) => ({
-                            value: ct.name,
-                            label: ct.name,
-                          }))}
-                          value={cargoRows[0]?.loadType || ""}
-                          onValueChange={(value) =>
-                            updateCargoRow(cargoRows[0]?.id || 1, "loadType", value)
-                          }
-                          placeholder="Select"
-                          searchPlaceholder="Search..."
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Total CBM</Label>
-                        <Input
-                          type="number"
-                          value={cargoRows[0]?.totalCbm || ""}
-                          onChange={(e) =>
-                            updateCargoRow(
-                              cargoRows[0]?.id || 1,
-                              "totalCbm",
-                              parseFloat(e.target.value) || undefined
-                            )
-                          }
-                          disabled={isReadOnly}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Total Weight</Label>
-                        <Input
-                          type="number"
-                          value={cargoRows[0]?.totalWeight || ""}
-                          onChange={(e) =>
-                            updateCargoRow(
-                              cargoRows[0]?.id || 1,
-                              "totalWeight",
-                              parseFloat(e.target.value) || undefined
-                            )
-                          }
-                          disabled={isReadOnly}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Weight Type</Label>
-                        <SearchableSelect
-                          disabled={isReadOnly}
-                          options={[
-                            { value: "kg", label: "KG" },
-                            { value: "lb", label: "LB" },
-                          ]}
-                          value={cargoRows[0]?.weightUnit || "kg"}
-                          onValueChange={(value) =>
-                            updateCargoRow(cargoRows[0]?.id || 1, "weightUnit", value)
-                          }
-                          placeholder="KG"
-                          searchPlaceholder="Search..."
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Cargo Description</Label>
-                      <Input
-                        placeholder="GENERAL CARGO"
-                        value={cargoRows[0]?.cargoDescription || ""}
-                        onChange={(e) =>
-                          updateCargoRow(cargoRows[0]?.id || 1, "cargoDescription", e.target.value)
-                        }
-                        disabled={isReadOnly}
-                      />
-                    </div>
-                  </>
-                )}
               </CardContent>
             </Card>
 
