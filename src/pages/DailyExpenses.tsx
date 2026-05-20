@@ -39,6 +39,9 @@ const paymentModeLabels: Record<string, string> = {
   "PostDatedCheque": "POST DATED CHEQUE",
 };
 
+// Display label for wire values "Inwards"/"Outwards" (backend enum stays — UI only).
+const paymentTypeLabel = (v: string) => v === "Inwards" ? "Income" : v === "Outwards" ? "Expense" : v;
+
 // Map display labels back to enum values
 const paymentModeValues: Record<string, string> = {
   "CASH": "Cash",
@@ -409,7 +412,7 @@ export default function DailyExpenses() {
                   expenses.map((expense, index) => (
                     <TableRow key={expense.id} className={`border-b border-border hover:bg-table-row-hover transition-colors ${index % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
                       <TableCell className="whitespace-nowrap">{formatDate(expense.expenseDate)}</TableCell>
-                      <TableCell>{expense.paymentType} || {paymentModeLabels[expense.paymentMode] || expense.paymentMode}</TableCell>
+                      <TableCell>{paymentTypeLabel(expense.paymentType)} || {paymentModeLabels[expense.paymentMode] || expense.paymentMode}</TableCell>
                       <TableCell>{expense.category}</TableCell>
                       <TableCell>{expense.bankName || "---"}</TableCell>
                       <TableCell className="max-w-md">{expense.description}</TableCell>
@@ -541,7 +544,7 @@ export default function DailyExpenses() {
             <div className="p-6 space-y-3">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div><span className="font-medium text-muted-foreground">Date:</span> <span>{formatDate(viewingExpense.expenseDate)}</span></div>
-                <div><span className="font-medium text-muted-foreground">Payment Type:</span> <span>{viewingExpense.paymentType}</span></div>
+                <div><span className="font-medium text-muted-foreground">Payment Type:</span> <span>{paymentTypeLabel(viewingExpense.paymentType)}</span></div>
                 <div><span className="font-medium text-muted-foreground">Payment Mode:</span> <span>{paymentModeLabels[viewingExpense.paymentMode] || viewingExpense.paymentMode}</span></div>
                 <div><span className="font-medium text-muted-foreground">Category:</span> <span>{viewingExpense.category}</span></div>
                 <div><span className="font-medium text-muted-foreground">Bank:</span> <span>{viewingExpense.bankName || "---"}</span></div>

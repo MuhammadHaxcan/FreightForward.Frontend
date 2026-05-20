@@ -12,6 +12,27 @@ export interface ShipmentDistribution {
   color: string;
 }
 
+export interface MonthlyPnl {
+  month: string;
+  year: number;
+  revenue: number;
+  directCost: number;
+  grossProfit: number;
+}
+
+export interface BestLane {
+  from: string;
+  to: string;
+  grossProfit: number;
+  revenue: number;
+  grossMarginPercent: number;
+}
+
+export interface TopCustomer {
+  name: string;
+  revenue: number;
+}
+
 export interface DashboardStats {
   inProcess: number;
   completed: number;
@@ -20,6 +41,23 @@ export interface DashboardStats {
   monthlyShipments: MonthlyShipment[];
   modeDistribution: ShipmentDistribution[];
   directionDistribution: ShipmentDistribution[];
+
+  // Finance KPIs
+  revenue: number;
+  directCost: number;
+  grossProfit: number;
+  grossMarginPercent: number;
+  operatingExpenses: number;
+  netProfit: number;
+  netMarginPercent: number;
+  openAR: number;
+  currency: string;
+
+  monthlyPnl: MonthlyPnl[];
+  shipmentTypeMix: ShipmentDistribution[];
+  bestLane: BestLane | null;
+  topCustomer: TopCustomer | null;
+  expenseTrendPercent: number;
 }
 
 export const dashboardApi = {

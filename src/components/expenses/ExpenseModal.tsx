@@ -196,7 +196,7 @@ export function ExpenseModal({
             <div>
               <label className="form-label">Payment Type</label>
               <SearchableSelect
-                options={paymentTypes.map((type) => ({ value: type, label: type }))}
+                options={paymentTypes.map((type) => ({ value: type, label: type === "Inwards" ? "Income" : "Expense" }))}
                 value={formData.paymentType}
                 onValueChange={handlePaymentTypeChange}
                 placeholder="Select One"

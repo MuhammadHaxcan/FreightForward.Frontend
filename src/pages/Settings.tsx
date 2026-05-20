@@ -66,6 +66,9 @@ import { CurrencyRateHistoryModal } from "@/components/settings/CurrencyRateHist
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 import { usePermissions } from "@/hooks/usePermissions";
 
+// Display label for wire values "Inwards"/"Outwards" (backend enum stays — UI only).
+const paymentDirectionLabel = (v: string) => v === "Inwards" ? "Income" : v === "Outwards" ? "Expense" : v;
+
 const DAYS_OF_WEEK = [
   { value: 0, label: "Sun" },
   { value: 1, label: "Mon" },
@@ -1295,7 +1298,7 @@ const Settings = () => {
                               </PermissionGate>
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-sm text-foreground">{expense.paymentDirectionName}</td>
+                          <td className="px-4 py-3 text-sm text-foreground">{paymentDirectionLabel(expense.paymentDirectionName)}</td>
                           <td className="px-4 py-3 text-sm text-primary font-medium">{expense.name}</td>
                         </tr>
                       ))}
@@ -2269,8 +2272,8 @@ const Settings = () => {
               <label className="block text-sm font-medium text-foreground mb-1">Category</label>
               <SearchableSelect
                 options={[
-                  { value: "Outwards", label: "Outwards" },
-                  { value: "Inwards", label: "Inwards" },
+                  { value: "Outwards", label: "Expense" },
+                  { value: "Inwards", label: "Income" },
                 ]}
                 value={expenseForm.paymentDirection}
                 onValueChange={(value) => setExpenseForm({ ...expenseForm, paymentDirection: value as PaymentType })}
@@ -2313,8 +2316,8 @@ const Settings = () => {
                 <label className="block text-sm font-medium text-foreground mb-1">Category</label>
                 <SearchableSelect
                   options={[
-                    { value: "Outwards", label: "Outwards" },
-                    { value: "Inwards", label: "Inwards" },
+                    { value: "Outwards", label: "Expense" },
+                    { value: "Inwards", label: "Income" },
                   ]}
                   value={editExpense.paymentDirection}
                   onValueChange={(value) => setEditExpense({ ...editExpense, paymentDirection: value as PaymentType })}

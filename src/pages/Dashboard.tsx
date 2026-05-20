@@ -1,11 +1,25 @@
 import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { Search, Package, TrendingUp, CheckCircle, Clock, Loader2 } from "lucide-react";
+import { Search, Loader2, TrendingUp, TrendingDown, Wallet, Receipt, PiggyBank, Percent, FileWarning, Building2, Banknote, Gauge } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell, Legend, Tooltip } from "recharts";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  LabelList,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 import { useDashboardStats } from "@/hooks/useDashboard";
 import { format } from "date-fns";
 import { DateRangePicker, DateRangeValue } from "@/components/ui/date-range-picker";
+import type { ShipmentDistribution } from "@/services/api/dashboard";
 
 const Dashboard = () => {
   const currentYear = new Date().getFullYear();
@@ -18,7 +32,7 @@ const Dashboard = () => {
     toDate: `${currentYear}-12-31`,
   });
 
-  const { data: dashboardStats, isLoading, error } = useDashboardStats(appliedDateRange);
+  const { data: stats, isLoading, error } = useDashboardStats(appliedDateRange);
 
   const handleSearch = () => {
     setAppliedDateRange({
@@ -27,99 +41,149 @@ const Dashboard = () => {
     });
   };
 
-  const stats = [
+  const currency = stats?.currency ?? "AED";
+
+  const kpis = [
     {
-      title: "IN PROCESS",
-      value: dashboardStats?.inProcess ?? 0,
-      label: "Shipments",
-      color: "border-l-emerald-500",
-      bgColor: "bg-card",
-      icon: TrendingUp,
+      title: "REVENUE",
+      value: formatCurrency(stats?.revenue ?? 0, currency),
+      label: "Billed this period",
+      borderColor: "border-l-emerald-500",
+      labelColor: "text-emerald-600",
+      icon: Wallet,
     },
     {
-      title: "COMPLETED",
-      value: dashboardStats?.completed ?? 0,
-      label: "Shipments",
-      color: "border-l-amber-500",
-      bgColor: "bg-card",
-      icon: CheckCircle,
+      title: "DIRECT COST",
+      value: formatCurrency(stats?.directCost ?? 0, currency),
+      label: "Carrier + vendor side",
+      borderColor: "border-l-red-500",
+      labelColor: "text-red-600",
+      icon: Receipt,
     },
     {
-      title: "TOTAL",
-      value: dashboardStats?.total ?? 0,
-      label: "Shipments",
-      color: "border-l-red-500",
-      bgColor: "bg-card",
-      icon: Package,
+      title: "GROSS PROFIT",
+      value: formatCurrency(stats?.grossProfit ?? 0, currency),
+      label: "P and L centerpiece",
+      borderColor: "border-l-blue-500",
+      labelColor: "text-blue-600",
+      icon: PiggyBank,
     },
     {
-      title: "PENDING",
-      value: dashboardStats?.pending ?? 0,
-      label: "Shipments",
-      color: "border-l-yellow-500",
-      bgColor: "bg-card",
-      icon: Clock,
+      title: "GROSS MARGIN",
+      value: `${(stats?.grossMarginPercent ?? 0).toFixed(1)}%`,
+      label: "Across closed shipments",
+      borderColor: "border-l-purple-500",
+      labelColor: "text-purple-600",
+      icon: Percent,
+    },
+    {
+      title: "OPEN AR",
+      value: formatCurrency(stats?.openAR ?? 0, currency),
+      label: "Outstanding receivables (snapshot, ignores date filter)",
+      borderColor: "border-l-amber-500",
+      labelColor: "text-amber-600",
+      icon: FileWarning,
     },
   ];
 
-  const monthlyShipmentData = dashboardStats?.monthlyShipments ?? [];
-  const modeDistribution = dashboardStats?.modeDistribution ?? [];
-  const directionDistribution = dashboardStats?.directionDistribution ?? [];
+  const netProfit = stats?.netProfit ?? 0;
+  const netProfitNegative = netProfit < 0;
+  const netKpis = [
+    {
+      title: "OPERATING EXPENSES",
+      value: formatCurrency(stats?.operatingExpenses ?? 0, currency),
+      label: "Salaries, rent, utilities, bank fees",
+      borderColor: "border-l-orange-500",
+      labelColor: "text-orange-600",
+      icon: Building2,
+    },
+    {
+      title: "NET PROFIT",
+      value: formatCurrency(netProfit, currency),
+      label: "Gross profit minus operating expenses",
+      borderColor: netProfitNegative ? "border-l-red-500" : "border-l-teal-500",
+      labelColor: netProfitNegative ? "text-red-600" : "text-teal-600",
+      icon: Banknote,
+    },
+    {
+      title: "NET MARGIN",
+      value: `${(stats?.netMarginPercent ?? 0).toFixed(1)}%`,
+      label: "Net profit as % of revenue",
+      borderColor: netProfitNegative ? "border-l-red-500" : "border-l-indigo-500",
+      labelColor: netProfitNegative ? "text-red-600" : "text-indigo-600",
+      icon: Gauge,
+    },
+  ];
 
-  const maxShipments = monthlyShipmentData.length > 0
-    ? Math.max(...monthlyShipmentData.map(d => d.shipments ?? 0), 80)
-    : 80;
-  const yAxisMax = Math.ceil(maxShipments / 20) * 20;
+  const monthlyPnl = stats?.monthlyPnl ?? [];
+  const typeMix = stats?.shipmentTypeMix ?? [];
+  const directionMix = stats?.directionDistribution ?? [];
+  const typeTotal = typeMix.reduce((s, d) => s + d.value, 0);
+  const directionTotal = directionMix.reduce((s, d) => s + d.value, 0);
+
+  const expenseTrend = stats?.expenseTrendPercent ?? 0;
+  const expenseTrendUp = expenseTrend >= 0;
 
   return (
     <MainLayout>
       <div className="p-6 space-y-6">
-        {/* Header */}
         <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat, index) => (
+        {/* Gross P&L strip */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          {kpis.map((k, i) => (
             <div
-              key={stat.title}
-              className={`${stat.bgColor} rounded-lg border border-border ${stat.color} border-l-4 p-4 shadow-sm hover:shadow-md transition-shadow animate-fade-in`}
-              style={{ animationDelay: `${index * 100}ms` }}
+              key={k.title}
+              className={`bg-card rounded-lg border border-border ${k.borderColor} border-l-4 p-4 shadow-sm hover:shadow-md transition-shadow animate-fade-in`}
+              style={{ animationDelay: `${i * 80}ms` }}
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className={`text-xs font-semibold uppercase tracking-wide ${
-                    stat.title === "IN PROCESS" ? "text-emerald-600" :
-                    stat.title === "COMPLETED" ? "text-amber-600" :
-                    stat.title === "TOTAL" ? "text-red-600" :
-                    "text-yellow-600"
-                  }`}>
-                    {stat.title}
+              <div className="flex items-start justify-between">
+                <div className="min-w-0">
+                  <p className={`text-xs font-semibold uppercase tracking-wide ${k.labelColor}`}>
+                    {k.title}
                   </p>
-                  <p className="text-2xl font-bold text-foreground mt-1">
-                    {isLoading ? (
-                      <Loader2 className="h-6 w-6 animate-spin inline" />
-                    ) : (
-                      <>
-                        {stat.value} <span className="text-base font-normal text-muted-foreground">{stat.label}</span>
-                      </>
-                    )}
+                  <p className="text-2xl font-bold text-foreground mt-1 truncate">
+                    {isLoading ? <Loader2 className="h-6 w-6 animate-spin inline" /> : k.value}
                   </p>
+                  <p className="text-xs text-muted-foreground mt-1">{k.label}</p>
                 </div>
-                <div className="p-2 bg-muted rounded-lg opacity-50">
-                  <stat.icon className="text-muted-foreground" size={24} />
+                <div className="p-2 bg-muted rounded-lg opacity-50 shrink-0">
+                  <k.icon className="text-muted-foreground" size={20} />
                 </div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Date Range Filter */}
+        {/* Net P&L strip — OpEx, Net Profit, Net Margin */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {netKpis.map((k, i) => (
+            <div
+              key={k.title}
+              className={`bg-card rounded-lg border border-border ${k.borderColor} border-l-4 p-4 shadow-sm hover:shadow-md transition-shadow animate-fade-in`}
+              style={{ animationDelay: `${i * 80}ms` }}
+            >
+              <div className="flex items-start justify-between">
+                <div className="min-w-0">
+                  <p className={`text-xs font-semibold uppercase tracking-wide ${k.labelColor}`}>
+                    {k.title}
+                  </p>
+                  <p className="text-2xl font-bold text-foreground mt-1 truncate">
+                    {isLoading ? <Loader2 className="h-6 w-6 animate-spin inline" /> : k.value}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">{k.label}</p>
+                </div>
+                <div className="p-2 bg-muted rounded-lg opacity-50 shrink-0">
+                  <k.icon className="text-muted-foreground" size={20} />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Date range */}
         <div className="flex justify-start items-center gap-2">
-          <DateRangePicker
-            value={dateRange}
-            onApply={setDateRange}
-            className="w-[280px]"
-          />
+          <DateRangePicker value={dateRange} onApply={setDateRange} className="w-[280px]" />
           <Button variant="outline" size="sm" className="gap-1" onClick={handleSearch}>
             <Search size={14} />
             Search
@@ -132,154 +196,134 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Charts Section */}
+        {/* Charts row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Area Chart - No of Shipments */}
+          {/* Monthly P&L bar chart */}
           <div className="lg:col-span-2 bg-card rounded-lg border border-border shadow-sm p-4">
-            <h3 className="text-emerald-600 font-semibold mb-4">No of Shipments</h3>
-            <div className="h-[350px]">
+            <div className="flex items-start justify-between mb-2">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Monthly P and L Report
+                </p>
+                <h3 className="text-lg font-semibold text-foreground mt-1">
+                  Revenue versus direct cost with GP by month
+                </h3>
+              </div>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-1 rounded">
+                ● Finance
+              </span>
+            </div>
+            <div className="h-[340px]">
               {isLoading ? (
                 <div className="flex items-center justify-center h-full">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
-              ) : monthlyShipmentData.length === 0 ? (
+              ) : monthlyPnl.length === 0 ? (
                 <div className="flex items-center justify-center h-full text-muted-foreground">
-                  No shipment data available for the selected period
+                  No P&amp;L data available for the selected period
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={monthlyShipmentData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorShipments" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#6b9bd1" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#6b9bd1" stopOpacity={0.2}/>
-                      </linearGradient>
-                    </defs>
+                  <BarChart data={monthlyPnl} margin={{ top: 30, right: 20, left: 0, bottom: 0 }} barGap={4}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                     <XAxis
                       dataKey="month"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                      tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
                     />
                     <YAxis
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                      domain={[0, yAxisMax]}
+                      tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+                      tickFormatter={(v: number) => compactNumber(v)}
                     />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px'
+                        backgroundColor: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
                       }}
-                      formatter={(value: number) => [value, 'Shipments']}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="shipments"
-                      stroke="#6b9bd1"
-                      strokeWidth={2}
-                      fillOpacity={1}
-                      fill="url(#colorShipments)"
-                      name="Shipments"
-                      dot={{ fill: '#6b9bd1', strokeWidth: 2, r: 4 }}
-                      activeDot={{ r: 6, fill: '#6b9bd1' }}
+                      formatter={(value: number, name: string) => [formatCurrency(value, currency), name]}
                     />
                     <Legend
-                      verticalAlign="top"
-                      align="right"
-                      wrapperStyle={{ paddingBottom: '20px' }}
+                      verticalAlign="bottom"
+                      iconType="circle"
+                      wrapperStyle={{ paddingTop: "8px", fontSize: "12px" }}
                     />
-                  </AreaChart>
+                    <Bar dataKey="revenue" name="Revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={28}>
+                      <LabelList
+                        dataKey="grossProfit"
+                        position="top"
+                        content={(props) => <GpLabel {...(props as GpLabelProps)} currency={currency} />}
+                      />
+                    </Bar>
+                    <Bar dataKey="directCost" name="Direct Cost" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                    {/* Hidden bar to keep GP visible in legend */}
+                    <Bar dataKey="grossProfit" name="Gross Profit" fill="#10b981" maxBarSize={0} />
+                  </BarChart>
                 </ResponsiveContainer>
               )}
             </div>
           </div>
 
-          {/* Pie Charts Container */}
+          {/* Right column: donuts + highlights */}
           <div className="space-y-6">
-            {/* Mode Distribution Pie Chart */}
-            <div className="bg-card rounded-lg border border-border shadow-sm p-4">
-              <h3 className="text-emerald-600 font-semibold mb-4">By Mode</h3>
-              <div className="h-[160px]">
-                {isLoading ? (
-                  <div className="flex items-center justify-center h-full">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : modeDistribution.length === 0 ? (
-                  <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-                    No data
-                  </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={modeDistribution}
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={50}
-                        innerRadius={0}
-                        dataKey="value"
-                        label={({ name, value }) => `${name}: ${value}`}
-                        labelLine={false}
-                      >
-                        {modeDistribution.map((entry, index) => (
-                          <Cell key={`cell-mode-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px'
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                )}
-              </div>
+            <div className="grid grid-cols-2 gap-4">
+              <DonutKpi
+                title="Shipment Type Mix"
+                data={typeMix}
+                total={typeTotal}
+                isLoading={isLoading}
+              />
+              <DonutKpi
+                title="Direction Mix"
+                data={directionMix}
+                total={directionTotal}
+                isLoading={isLoading}
+              />
             </div>
 
-            {/* Direction Distribution Pie Chart */}
             <div className="bg-card rounded-lg border border-border shadow-sm p-4">
-              <h3 className="text-emerald-600 font-semibold mb-4">By Direction</h3>
-              <div className="h-[160px]">
-                {isLoading ? (
-                  <div className="flex items-center justify-center h-full">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : directionDistribution.length === 0 ? (
-                  <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-                    No data
-                  </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={directionDistribution}
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={50}
-                        innerRadius={0}
-                        dataKey="value"
-                        label={({ name, value }) => `${name}: ${value}`}
-                        labelLine={false}
-                      >
-                        {directionDistribution.map((entry, index) => (
-                          <Cell key={`cell-dir-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px'
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                )}
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                P and L Highlights
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                <HighlightCard
+                  label="Best Lane"
+                  value={
+                    stats?.bestLane
+                      ? `${stats.bestLane.from} → ${stats.bestLane.to}`
+                      : "—"
+                  }
+                  sub={
+                    stats?.bestLane
+                      ? `${stats.bestLane.grossMarginPercent.toFixed(1)}% GP margin`
+                      : ""
+                  }
+                  isLoading={isLoading}
+                />
+                <HighlightCard
+                  label="Top Customer"
+                  value={stats?.topCustomer?.name ?? "—"}
+                  sub={
+                    stats?.topCustomer
+                      ? `${currency} ${compactNumber(stats.topCustomer.revenue)} revenue`
+                      : ""
+                  }
+                  isLoading={isLoading}
+                />
+                <HighlightCard
+                  label="Expense Trend"
+                  value={
+                    isLoading
+                      ? ""
+                      : `${expenseTrendUp ? "+" : ""}${expenseTrend.toFixed(1)}%`
+                  }
+                  sub="Latest month vs prior (calendar)"
+                  trendUp={expenseTrendUp}
+                  isLoading={isLoading}
+                />
               </div>
             </div>
           </div>
@@ -288,5 +332,166 @@ const Dashboard = () => {
     </MainLayout>
   );
 };
+
+// ---- Helpers / sub-components ----
+
+function compactNumber(value: number): string {
+  if (Math.abs(value) >= 1_000_000) return `${(value / 1_000_000).toFixed(2)}M`;
+  if (Math.abs(value) >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
+  return value.toFixed(0);
+}
+
+function formatCurrency(value: number, currency: string): string {
+  return `${currency} ${compactNumber(value)}`;
+}
+
+interface GpLabelProps {
+  x?: number;
+  y?: number;
+  width?: number;
+  value?: number;
+}
+
+function GpLabel({ x = 0, y = 0, width = 0, value = 0, currency }: GpLabelProps & { currency: string }) {
+  const cx = x + width / 2;
+  const cy = y - 14;
+  const text = `GP ${compactNumber(value)}`;
+  const textWidth = Math.max(46, text.length * 6);
+  return (
+    <g>
+      <rect
+        x={cx - textWidth / 2}
+        y={cy - 10}
+        width={textWidth}
+        height={18}
+        rx={9}
+        fill="#ecfdf5"
+        stroke="#10b981"
+      />
+      <text x={cx} y={cy + 3} textAnchor="middle" fontSize={10} fill="#059669" fontWeight={600}>
+        {text}
+      </text>
+    </g>
+  );
+}
+
+function DonutKpi({
+  title,
+  data,
+  total,
+  isLoading,
+}: {
+  title: string;
+  data: ShipmentDistribution[];
+  total: number;
+  isLoading: boolean;
+}) {
+  return (
+    <div className="bg-card rounded-lg border border-border shadow-sm p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+        {title}
+      </p>
+      <div className="relative h-[140px]">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : data.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-muted-foreground text-xs">
+            No data
+          </div>
+        ) : (
+          <>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={data}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={45}
+                  outerRadius={62}
+                  paddingAngle={2}
+                  dataKey="value"
+                  stroke="none"
+                >
+                  {data.map((entry, idx) => (
+                    <Cell key={`${title}-${idx}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "8px",
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-xl font-bold text-foreground leading-none">{total}</span>
+              <span className="text-[9px] uppercase tracking-wider text-muted-foreground mt-1">
+                Shipments
+              </span>
+            </div>
+          </>
+        )}
+      </div>
+      {!isLoading && data.length > 0 && (
+        <ul className="mt-3 space-y-1">
+          {data.map((d) => (
+            <li key={d.name} className="flex items-center justify-between text-xs">
+              <span className="flex items-center gap-2">
+                <span
+                  className="inline-block w-2 h-2 rounded-full"
+                  style={{ backgroundColor: d.color }}
+                />
+                <span className="text-muted-foreground">{d.name}</span>
+              </span>
+              <span className="font-medium text-foreground">{d.value}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function HighlightCard({
+  label,
+  value,
+  sub,
+  trendUp,
+  isLoading,
+}: {
+  label: string;
+  value: string;
+  sub: string;
+  trendUp?: boolean;
+  isLoading: boolean;
+}) {
+  return (
+    <div className="rounded-md border border-border bg-muted/30 p-3">
+      <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </p>
+      {isLoading ? (
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground mt-1" />
+      ) : (
+        <>
+          <p className="text-sm font-bold text-foreground mt-1 flex items-center gap-1">
+            {trendUp !== undefined &&
+              (trendUp ? (
+                <TrendingUp size={14} className="text-emerald-600" />
+              ) : (
+                <TrendingDown size={14} className="text-red-600" />
+              ))}
+            <span className="truncate">{value}</span>
+          </p>
+          {sub && <p className="text-[10px] text-muted-foreground mt-1 truncate">{sub}</p>}
+        </>
+      )}
+    </div>
+  );
+}
 
 export default Dashboard;

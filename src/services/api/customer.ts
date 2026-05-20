@@ -27,6 +27,9 @@ export interface Customer {
   status?: string;
   salesperson?: string;
   isApproved?: boolean;
+  openingBalance?: number;
+  openingBalanceDate?: string | null;
+  openingBalanceNarration?: string | null;
   createdAt: string;
 }
 
@@ -387,6 +390,14 @@ export const customerApi = {
     fetchApi<CustomerStatement>(
       `/customers/${customerId}/statement?fromDate=${fromDate}&toDate=${toDate}`
     ),
+  setOpeningBalance: (
+    customerId: number,
+    data: { amount: number; date?: string | null; narration?: string | null }
+  ) =>
+    fetchApi<void>(`/customers/${customerId}/opening-balance`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
   approve: (id: number) =>
     fetchApi<void>(`/customers/${id}/approve`, { method: 'POST' }),
   deny: (id: number) =>

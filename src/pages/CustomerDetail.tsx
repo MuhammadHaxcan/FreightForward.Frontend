@@ -110,7 +110,6 @@ const CustomerDetail = () => {
 
   const [activeTab, setActiveTab] = useState("profile");
   const [contactModalOpen, setContactModalOpen] = useState(false);
-  const [openingBalanceModalOpen, setOpeningBalanceModalOpen] = useState(false);
   const [creditNoteModalOpen, setCreditNoteModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -305,11 +304,20 @@ const CustomerDetail = () => {
         approvedCreditAmount: ad.approvedCreditAmount?.toString() || "0.00",
         alertCreditAmount: ad.alertCreditAmount?.toString() || "0.00",
         bcc: ad.bcc || "",
+        openingBalance: customer.openingBalance ? String(customer.openingBalance) : "",
+        openingBalanceDate: customer.openingBalanceDate ? new Date(customer.openingBalanceDate) : null,
+        openingBalanceNarration: customer.openingBalanceNarration ?? "",
       });
     } else if (customer.currencyId) {
       const currency = currencyTypes.find(c => c.id === customer.currencyId);
       if (currency) {
-        setAccountDetails(prev => ({ ...prev, currency: currency.code }));
+        setAccountDetails(prev => ({
+          ...prev,
+          currency: currency.code,
+          openingBalance: customer.openingBalance ? String(customer.openingBalance) : prev.openingBalance,
+          openingBalanceDate: customer.openingBalanceDate ? new Date(customer.openingBalanceDate) : prev.openingBalanceDate,
+          openingBalanceNarration: customer.openingBalanceNarration ?? prev.openingBalanceNarration,
+        }));
       }
     }
   }, [customer, currencyTypes, baseCurrencyCode]);
@@ -475,7 +483,7 @@ const CustomerDetail = () => {
     }
   };
 
-  // Account Details state
+  // Account Details state (includes Opening Balance — locked once saved)
   const [accountDetails, setAccountDetails] = useState({
     acName: "",
     bankAcNo: "",
@@ -490,15 +498,9 @@ const CustomerDetail = () => {
     approvedCreditAmount: "0.00",
     alertCreditAmount: "0.00",
     bcc: "",
-  });
-
-  // Opening Balance form
-  const [openingBalanceForm, setOpeningBalanceForm] = useState({
-    invoiceId: "INVAE251869",
-    invoiceDate: null as Date | null,
-    amount: "",
-    narration: "",
-    currency: baseCurrencyCode
+    openingBalance: "",
+    openingBalanceDate: null as Date | null,
+    openingBalanceNarration: "",
   });
 
   // Credit Note form
@@ -655,7 +657,32 @@ const CustomerDetail = () => {
       const response = await customerApi.updateAccountDetail(parseInt(id), data);
       if (response.error) throw new Error(response.error);
 
+      // Opening balance: save only if not yet locked (server-side guard will also reject
+      // any attempt to modify after it's been set). Skipped if user left it blank.
+      const obLocked = !!customer?.openingBalanceDate || (customer?.openingBalance ?? 0) !== 0;
+      const amountStr = accountDetails.openingBalance.trim();
+      if (!obLocked && amountStr !== "") {
+        const amt = parseFloat(amountStr);
+        if (Number.isNaN(amt)) {
+          toast.error("Opening balance: enter a valid number (negative for payables)");
+        } else {
+          try {
+            await customerApi.setOpeningBalance(parseInt(id), {
+              amount: amt,
+              date: accountDetails.openingBalanceDate
+                ? format(accountDetails.openingBalanceDate, "yyyy-MM-dd")
+                : null,
+              narration: accountDetails.openingBalanceNarration || null,
+            });
+            toast.success("Opening balance saved");
+          } catch (obErr) {
+            toast.error(obErr instanceof Error ? obErr.message : "Failed to save opening balance");
+          }
+        }
+      }
+
       queryClient.invalidateQueries({ queryKey: ['customers', parseInt(id)] });
+      queryClient.invalidateQueries({ queryKey: ['customer', parseInt(id)] });
       toast.success("Account details saved successfully");
     } catch (error) {
       console.error("Error saving account details:", error);
@@ -940,6 +967,70 @@ const CustomerDetail = () => {
         </div>
       </div>
 
+      {/* Opening Balance — editable only when customer has none recorded yet (audit-sensitive: locked once set) */}
+      {(() => {
+        const obLocked = !!customer?.openingBalanceDate || (customer?.openingBalance ?? 0) !== 0;
+        return (
+          <div className="space-y-3 pt-2 border-t">
+            <div className="flex items-baseline justify-between">
+              <h3 className="text-base font-semibold text-primary">Opening Balance</h3>
+              {obLocked && (
+                <span className="text-xs text-muted-foreground italic">Locked — opening balance can only be set once.</span>
+              )}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm">Amount ({accountDetails.currency || "—"})</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={accountDetails.openingBalance}
+                  onChange={e => setAccountDetails({ ...accountDetails, openingBalance: e.target.value })}
+                  disabled={isViewMode || obLocked}
+                  placeholder="0.00 (negative for payables)"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">As-of Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                      disabled={isViewMode || obLocked}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {accountDetails.openingBalanceDate
+                        ? format(accountDetails.openingBalanceDate, "MM/dd/yyyy")
+                        : "mm/dd/yyyy"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={accountDetails.openingBalanceDate || undefined}
+                      onSelect={d => setAccountDetails({ ...accountDetails, openingBalanceDate: d || null })}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Narration</Label>
+                <Input
+                  value={accountDetails.openingBalanceNarration}
+                  onChange={e => setAccountDetails({ ...accountDetails, openingBalanceNarration: e.target.value })}
+                  disabled={isViewMode || obLocked}
+                  placeholder="e.g. Carried forward from legacy system"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Currency follows the Account Details currency above. Use a negative amount for payables. Once saved, opening balance is locked and reflects on the customer ledger, receivables, and payables.
+            </p>
+          </div>
+        );
+      })()}
+
       {!isViewMode && isEditMode && (
         <div className="flex justify-end pt-4">
           <Button className="btn-success" onClick={handleSaveAccountDetails} disabled={saving}>
@@ -1072,11 +1163,19 @@ const CustomerDetail = () => {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold text-primary">Invoices</h2>
-          {!isViewMode && (
-            <Button className="btn-success gap-2" onClick={() => setOpeningBalanceModalOpen(true)}>
-              <Plus size={16} /> Add opening Balance
-            </Button>
-          )}
+          <div className="flex items-center gap-4">
+            {customer?.openingBalance != null && customer.openingBalance !== 0 && (
+              <span className="text-sm">
+                <span className="text-muted-foreground">Opening Balance: </span>
+                <span className="font-semibold">
+                  {customer.currencyCode ?? ""} {customer.openingBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+                {customer.openingBalanceDate && (
+                  <span className="text-muted-foreground"> (as of {format(new Date(customer.openingBalanceDate), "dd-MM-yyyy")})</span>
+                )}
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center justify-between gap-4">
@@ -1949,60 +2048,6 @@ const CustomerDetail = () => {
             <div className="col-span-2 flex justify-end gap-2">
               <Button variant="outline" onClick={() => setContactModalOpen(false)}>Cancel</Button>
               <Button className="btn-success" onClick={handleSaveContact}>Save</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Opening Balance Modal */}
-      <Dialog open={openingBalanceModalOpen} onOpenChange={setOpeningBalanceModalOpen}>
-        <DialogContent className="max-w-modal-md p-0 bg-card">
-          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
-            <DialogTitle className="text-white">Add Opening Balance</DialogTitle>
-            <p className="text-xs text-white/80">{profileData.name}</p>
-          </DialogHeader>
-          <div className="p-6 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-sm">Invoice ID</Label>
-                <Input value={openingBalanceForm.invoiceId} className="text-primary" disabled />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm">Amount</Label>
-                <Input value={openingBalanceForm.amount} onChange={e => setOpeningBalanceForm({...openingBalanceForm, amount: e.target.value})} />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-sm">*Invoice Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {openingBalanceForm.invoiceDate ? format(openingBalanceForm.invoiceDate, "MM/dd/yyyy") : "mm/dd/yyyy"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar mode="single" selected={openingBalanceForm.invoiceDate || undefined} onSelect={(d) => setOpeningBalanceForm({...openingBalanceForm, invoiceDate: d || null})} />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm">Narration</Label>
-                <Input value={openingBalanceForm.narration} onChange={e => setOpeningBalanceForm({...openingBalanceForm, narration: e.target.value})} />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <SearchableSelect
-                options={currencyTypes.map(c => ({ value: c.code, label: c.code }))}
-                value={openingBalanceForm.currency}
-                onValueChange={v => setOpeningBalanceForm({...openingBalanceForm, currency: v})}
-                searchPlaceholder="Search currencies..."
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setOpeningBalanceModalOpen(false)}>Cancel</Button>
-              <Button className="btn-success" onClick={() => setOpeningBalanceModalOpen(false)}>Save</Button>
             </div>
           </div>
         </DialogContent>
