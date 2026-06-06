@@ -189,8 +189,10 @@ export function useCreateInvoice() {
       queryClient.invalidateQueries({ queryKey: ['shipments'] });
       queryClient.invalidateQueries({ queryKey: ['shipment-invoices'] });
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['unpaidInvoices'] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       queryClient.invalidateQueries({ queryKey: ['creditNotes'] });
+      queryClient.invalidateQueries({ queryKey: ['receipts'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Invoice created successfully');
     },
@@ -214,6 +216,8 @@ export function useCreatePurchaseInvoice() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shipments'] });
       queryClient.invalidateQueries({ queryKey: ['purchaseInvoices'] });
+      queryClient.invalidateQueries({ queryKey: ['purchaseInvoice'] });
+      queryClient.invalidateQueries({ queryKey: ['unpaidPurchaseInvoices'] });
       queryClient.invalidateQueries({ queryKey: ['shipment-invoices'] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
@@ -233,18 +237,21 @@ export interface PurchaseInvoiceQueryParams {
   vendorId?: number;
   fromDate?: string;
   toDate?: string;
+  enabled?: boolean;
 }
 
 export function usePurchaseInvoices(params: PurchaseInvoiceQueryParams) {
+  const { enabled = true, ...queryParams } = params;
   return useQuery<PaginatedList<AccountPurchaseInvoice>>({
-    queryKey: ['purchaseInvoices', params],
+    queryKey: ['purchaseInvoices', queryParams],
     queryFn: async () => {
-      const response = await invoiceApi.getAllPurchaseInvoices(params);
+      const response = await invoiceApi.getAllPurchaseInvoices(queryParams);
       if (response.error) {
         throw new Error(response.error);
       }
       return response.data!;
     },
+    enabled,
   });
 }
 
@@ -276,9 +283,11 @@ export function useUpdateInvoice() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shipments'] });
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['unpaidInvoices'] });
       queryClient.invalidateQueries({ queryKey: ['shipment-invoices'] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       queryClient.invalidateQueries({ queryKey: ['creditNotes'] });
+      queryClient.invalidateQueries({ queryKey: ['receipts'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Invoice updated successfully');
     },
@@ -301,9 +310,11 @@ export function useDeleteInvoice() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shipments'] });
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['unpaidInvoices'] });
       queryClient.invalidateQueries({ queryKey: ['shipment-invoices'] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       queryClient.invalidateQueries({ queryKey: ['creditNotes'] });
+      queryClient.invalidateQueries({ queryKey: ['receipts'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Invoice deleted successfully');
     },
@@ -327,6 +338,7 @@ export function useUpdatePurchaseInvoice() {
       queryClient.invalidateQueries({ queryKey: ['shipments'] });
       queryClient.invalidateQueries({ queryKey: ['purchaseInvoices'] });
       queryClient.invalidateQueries({ queryKey: ['purchaseInvoice'] });
+      queryClient.invalidateQueries({ queryKey: ['unpaidPurchaseInvoices'] });
       queryClient.invalidateQueries({ queryKey: ['shipment-invoices'] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
@@ -352,6 +364,7 @@ export function useDeletePurchaseInvoice() {
       queryClient.invalidateQueries({ queryKey: ['shipments'] });
       queryClient.invalidateQueries({ queryKey: ['purchaseInvoices'] });
       queryClient.invalidateQueries({ queryKey: ['purchaseInvoice'] });
+      queryClient.invalidateQueries({ queryKey: ['unpaidPurchaseInvoices'] });
       queryClient.invalidateQueries({ queryKey: ['shipment-invoices'] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
@@ -360,5 +373,31 @@ export function useDeletePurchaseInvoice() {
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to delete purchase invoice');
     },
+  });
+}
+
+export function useNextInvoiceNumber(enabled = true) {
+  return useQuery({
+    queryKey: ['next-invoice-number'],
+    queryFn: async () => {
+      const response = await invoiceApi.getNextInvoiceNumber();
+      if (response.error) throw new Error(response.error);
+      return response.data as string;
+    },
+    enabled,
+    staleTime: 0,
+  });
+}
+
+export function useNextPurchaseNumber(enabled = true) {
+  return useQuery({
+    queryKey: ['next-purchase-number'],
+    queryFn: async () => {
+      const response = await invoiceApi.getNextPurchaseNumber();
+      if (response.error) throw new Error(response.error);
+      return response.data as string;
+    },
+    enabled,
+    staleTime: 0,
   });
 }

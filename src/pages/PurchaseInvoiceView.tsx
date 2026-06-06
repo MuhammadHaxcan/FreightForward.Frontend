@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { formatDate } from "@/lib/utils";
-import { ArrowLeft, Printer, Download, Edit } from "lucide-react";
+import { ArrowLeft, Printer, Download, Edit, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -13,16 +14,26 @@ import {
 import { MainLayout } from "@/components/layout/MainLayout";
 import { usePurchaseInvoiceByIdentifier } from "@/hooks/useInvoices";
 import { useAuth } from "@/contexts/AuthContext";
+import { useShipment } from "@/hooks/useShipments";
 import { API_BASE_URL, fetchBlob } from "@/services/api/base";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function PurchaseInvoiceView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { officeName } = useAuth();
+  const { officeName, hasPermission } = useAuth();
   const baseCurrencyCode = useBaseCurrency();
 
   const { data: invoice, isLoading: loading } = usePurchaseInvoiceByIdentifier(id);
+  const { data: shipment, isLoading: shipmentLoading, isError: shipmentError } = useShipment(invoice?.shipmentId ?? 0);
 
   const handlePrint = () => {
     if (!invoice) return;
@@ -43,9 +54,12 @@ export default function PurchaseInvoiceView() {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
+      } else {
+        toast.error("Failed to download PDF");
       }
     } catch (error) {
       console.error("Error downloading PDF:", error);
+      toast.error("Failed to download PDF");
     }
   };
 
@@ -81,12 +95,21 @@ export default function PurchaseInvoiceView() {
   const subTotal = invoice.items?.reduce((sum, item) => sum + (item.localAmount || 0), 0) || 0;
   const totalTax = invoice.items?.reduce((sum, item) => sum + (item.taxAmount || 0), 0) || 0;
   const total = invoice.amount ?? (subTotal + totalTax);
+  const actionMenuItemClass =
+    "gap-3 rounded-md px-3 py-2 text-sm font-medium focus:text-white data-[highlighted]:text-white";
+  const canEditClosedShipment = hasPermission("ship_edit_closed");
+  const isClosedLinkedShipment = shipment?.jobStatus === "Closed";
+  const hasLinkedPaymentVouchers = (invoice.linkedPaymentVoucherCount ?? 0) > 0;
+  const canEditPurchaseInvoice =
+    hasPermission("purchase_edit") &&
+    !hasLinkedPaymentVouchers &&
+    (!invoice.shipmentId || (!shipmentLoading && !shipmentError && (!isClosedLinkedShipment || canEditClosedShipment)));
 
   return (
     <MainLayout>
       <div className="p-6 space-y-6">
         {/* Action Buttons */}
-        <div className="flex justify-end gap-2 print:hidden">
+        <div className="flex items-center justify-between print:hidden">
           <Button
             variant="default"
             className="bg-gray-800 hover:bg-gray-900 text-white"
@@ -95,18 +118,49 @@ export default function PurchaseInvoiceView() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          <Button className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={() => navigate(`/accounts/purchase-invoices/${invoice ? encodeURIComponent(invoice.purchaseNo) : id}/edit`)}>
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
-          <Button className="btn-success" onClick={handlePrint}>
-            <Printer className="h-4 w-4 mr-2" />
-            Print
-          </Button>
-          <Button className="bg-blue-500 hover:bg-blue-600 text-white" onClick={handleDownload}>
-            <Download className="h-4 w-4 mr-2" />
-            Download
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                className="h-11 w-11 border-slate-300 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
+                aria-label="Purchase invoice actions"
+              >
+                <MoreHorizontal className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-xl"
+            >
+              <DropdownMenuLabel className="px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Purchase Actions
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {canEditPurchaseInvoice && (
+                <DropdownMenuItem
+                  onClick={() => navigate(`/accounts/purchase-invoices/${invoice ? encodeURIComponent(invoice.purchaseNo) : id}/edit`)}
+                  className={`${actionMenuItemClass} text-emerald-700 data-[highlighted]:bg-emerald-500`}
+                >
+                  <Edit className="h-4 w-4" />
+                  Edit
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem
+                onClick={handlePrint}
+                className={`${actionMenuItemClass} text-green-700 data-[highlighted]:bg-green-500`}
+              >
+                <Printer className="h-4 w-4" />
+                Print
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={handleDownload}
+                className={`${actionMenuItemClass} text-blue-700 data-[highlighted]:bg-blue-500`}
+              >
+                <Download className="h-4 w-4" />
+                Download
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Invoice Content */}

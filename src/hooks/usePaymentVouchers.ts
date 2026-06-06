@@ -19,14 +19,17 @@ export function usePaymentVouchers(params: {
   pageSize?: number;
   vendorId?: number;
   searchTerm?: string;
+  enabled?: boolean;
 }) {
+  const { enabled = true, ...queryParams } = params;
   return useQuery({
-    queryKey: ['paymentVouchers', params],
+    queryKey: ['paymentVouchers', queryParams],
     queryFn: async () => {
-      const response = await getPaymentVouchers(params);
+      const response = await getPaymentVouchers(queryParams);
       if (response.error) throw new Error(response.error);
       return response.data;
     },
+    enabled,
   });
 }
 
@@ -101,6 +104,7 @@ export function useCreatePaymentVoucher() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['paymentVouchers'] });
+      queryClient.invalidateQueries({ queryKey: ['paymentVoucher'] });
       queryClient.invalidateQueries({ queryKey: ['nextPaymentNumber'] });
       queryClient.invalidateQueries({ queryKey: ['unpaidPurchaseInvoices'] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });

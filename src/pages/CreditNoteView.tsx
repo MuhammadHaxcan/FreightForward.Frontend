@@ -63,9 +63,12 @@ export default function CreditNoteView() {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
+      } else {
+        toast.error("Failed to download PDF");
       }
     } catch (error) {
       console.error("Error downloading PDF:", error);
+      toast.error("Failed to download PDF");
     }
   };
 

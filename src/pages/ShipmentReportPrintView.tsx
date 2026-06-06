@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
 import { API_BASE_URL } from "@/services/api/base";
 import { useAuthPdf } from "@/hooks/useAuthPdf";
+import { useShipmentByIdentifier } from "@/hooks/useShipments";
 
 const REPORT_TITLES: Record<string, string> = {
   "cargo-manifest": "Cargo Manifest",
@@ -9,14 +10,24 @@ const REPORT_TITLES: Record<string, string> = {
   "freight-certificate": "Freight Certificate",
   "mbl-shipping-instruction": "MBL Shipping Instruction",
   "bill-of-lading": "Bill of Lading",
-  "customs-declaration": "Customs Declaration",
+  "customs-declaration": "Customs Manifest",
+  "cbook": "C Book",
+  "c-list": "C List",
 };
 
 export default function ShipmentReportPrintView() {
   const { shipmentId, reportType } = useParams<{ shipmentId: string; reportType: string }>();
+  const isNumericShipmentId = Boolean(shipmentId && /^\d+$/.test(shipmentId));
+  const { data: shipmentByIdentifier, isLoading: isResolvingShipment } = useShipmentByIdentifier(
+    !isNumericShipmentId && shipmentId ? shipmentId : ""
+  );
 
-  const pdfUrl = shipmentId && reportType
-    ? `${API_BASE_URL}/shipments/${shipmentId}/reports/${reportType}?inline=true`
+  const resolvedShipmentId = isNumericShipmentId
+    ? shipmentId
+    : shipmentByIdentifier?.id?.toString() ?? null;
+
+  const pdfUrl = resolvedShipmentId && reportType
+    ? `${API_BASE_URL}/shipments/${resolvedShipmentId}/reports/${reportType}?inline=true`
     : null;
 
   const { blobUrl, isLoading, error } = useAuthPdf(pdfUrl);
@@ -30,6 +41,14 @@ export default function ShipmentReportPrintView() {
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-gray-600">Loading {title}...</p>
+          </div>
+        </div>
+      )}
+      {!isLoading && isResolvingShipment && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-gray-600">Resolving shipment...</p>
           </div>
         </div>
       )}

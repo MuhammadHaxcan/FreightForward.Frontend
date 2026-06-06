@@ -954,6 +954,9 @@ async function doTokenRefresh(): Promise<boolean> {
     }
 
     const data = await response.json();
+    if (!data?.accessToken || !data?.refreshToken) {
+      return false;
+    }
     if (systemRoute) {
       setSystemTokens(data.accessToken, data.refreshToken);
     } else {

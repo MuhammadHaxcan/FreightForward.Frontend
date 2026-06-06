@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -7,21 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Save, Loader2 } from "lucide-react";
 import { PermissionGate } from "@/components/auth/PermissionGate";
-import { hrAttendancePolicyApi } from "@/services/api/hr";
 import { MutationBlockingOverlay } from "@/components/ui/mutation-blocking-overlay";
+import { useHrAttendancePolicy, useUpdateHrAttendancePolicy } from "@/hooks/useHrAttendance";
 
 const HrAttendancePolicy = () => {
-  const queryClient = useQueryClient();
   const [latesPerAbsent, setLatesPerAbsent] = useState("3");
 
-  const { data: policy, isLoading } = useQuery({
-    queryKey: ["hr-attendance-policy"],
-    queryFn: async () => {
-      const result = await hrAttendancePolicyApi.get();
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-  });
+  const { data: policy, isLoading } = useHrAttendancePolicy();
+  const saveMutation = useUpdateHrAttendancePolicy();
 
   useEffect(() => {
     if (policy) {
@@ -29,31 +21,16 @@ const HrAttendancePolicy = () => {
     }
   }, [policy]);
 
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      const result = await hrAttendancePolicyApi.update({
-        latesPerAbsent: parseInt(latesPerAbsent) || 3,
-        weeklyOffDays: policy?.weeklyOffDays ?? [],
-      });
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    onSuccess: () => {
-      toast.success("Attendance policy updated successfully");
-      queryClient.invalidateQueries({ queryKey: ["hr-attendance-policy"] });
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to update policy");
-    },
-  });
-
   const handleSave = () => {
     const value = parseInt(latesPerAbsent);
     if (!value || value < 1) {
       toast.error("Lates per absent must be at least 1");
       return;
     }
-    saveMutation.mutate();
+    saveMutation.mutate({
+      latesPerAbsent: value,
+      weeklyOffDays: policy?.weeklyOffDays ?? [],
+    });
   };
 
   return (

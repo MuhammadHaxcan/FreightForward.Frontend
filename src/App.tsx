@@ -47,8 +47,10 @@ const InvoiceEdit = lazy(() => import("./pages/InvoiceEdit"));
 const InvoicePrintView = lazy(() => import("./pages/InvoicePrintView"));
 const PurchaseInvoices = lazy(() => import("./pages/PurchaseInvoices"));
 const PurchaseInvoiceView = lazy(() => import("./pages/PurchaseInvoiceView"));
+const PurchaseInvoiceEdit = lazy(() => import("./pages/PurchaseInvoiceEdit"));
 const PurchaseInvoicePrintView = lazy(() => import("./pages/PurchaseInvoicePrintView"));
 const StatementPrintView = lazy(() => import("./pages/StatementPrintView"));
+const CustomerAccountReceivablePrintView = lazy(() => import("./pages/CustomerAccountReceivablePrintView"));
 const ReceiptVouchers = lazy(() => import("./pages/ReceiptVouchers"));
 const ReceiptView = lazy(() => import("./pages/ReceiptView"));
 const ReceiptPrintView = lazy(() => import("./pages/ReceiptPrintView"));
@@ -201,6 +203,11 @@ const AppRoutes = () => (
           <StatementPrintView />
         </ProtectedRoute>
       } />
+      <Route path="/master-customers/:id/account-receivables/print" element={
+        <ProtectedRoute permission="accrec_view">
+          <CustomerAccountReceivablePrintView />
+        </ProtectedRoute>
+      } />
       <Route path="/sales/leads" element={
         <ProtectedRoute permission="leads_view">
           <Leads />
@@ -289,6 +296,11 @@ const AppRoutes = () => (
       <Route path="/accounts/purchase-invoices/:id" element={
         <ProtectedRoute permission="purchase_view">
           <PurchaseInvoiceView />
+        </ProtectedRoute>
+      } />
+      <Route path="/accounts/purchase-invoices/:id/edit" element={
+        <ProtectedRoute permission="purchase_edit">
+          <PurchaseInvoiceEdit />
         </ProtectedRoute>
       } />
       <Route path="/accounts/purchase-invoices/:id/print" element={

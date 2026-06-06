@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -14,11 +14,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import {
   hrAttendanceApi,
-  hrAttendancePolicyApi,
-  DailyAttendanceEmployee,
-  BulkAttendanceEntry,
+  type DailyAttendanceEmployee,
 } from "@/services/api/hr";
 import { MutationBlockingOverlay } from "@/components/ui/mutation-blocking-overlay";
+import { useHrAttendancePolicy, useHrDailyAttendance } from "@/hooks/useHrAttendance";
 
 const statusOptions = [
   { value: "Present", label: "Present" },
@@ -49,7 +48,7 @@ interface LocalEntry {
 }
 
 const HrAttendance = () => {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient(); // still needed for manual invalidation in saveMutation
   const { hasPermission } = useAuth();
   const canUnlock = hasPermission("hr_attend_unlock");
   const [selectedDate, setSelectedDate] = useState(getTodayDateOnly());
@@ -58,27 +57,11 @@ const HrAttendance = () => {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [selectedDepartment, setSelectedDepartment] = useState("");
 
-  const { data: hrPolicy } = useQuery({
-    queryKey: ["hr-attendance-policy"],
-    queryFn: async () => {
-      const result = await hrAttendancePolicyApi.get();
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    staleTime: 0,
-  });
+  const { data: hrPolicy } = useHrAttendancePolicy();
   const weeklyOffDays = hrPolicy?.weeklyOffDays ?? [];
 
   // Fetch daily attendance for selected date
-  const { data: dailyData, isLoading } = useQuery({
-    queryKey: ["hr-attendance-daily", selectedDate],
-    queryFn: async () => {
-      const result = await hrAttendanceApi.getDaily(selectedDate);
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    enabled: !!selectedDate,
-  });
+  const { data: dailyData, isLoading } = useHrDailyAttendance(selectedDate || null);
 
   // Initialize local state from fetched data
   useEffect(() => {
@@ -165,8 +148,8 @@ const HrAttendance = () => {
     onSuccess: () => {
       toast.success("Attendance saved successfully");
       queryClient.invalidateQueries({ queryKey: ["hr-attendance-daily", selectedDate] });
-      const [year, month] = selectedDate.split("-");
-      queryClient.invalidateQueries({ queryKey: ["hr-attendance-summary", year, month] });
+      const [yearStr, monthStr] = selectedDate.split("-");
+      queryClient.invalidateQueries({ queryKey: ["hr-attendance-summary", parseInt(yearStr), parseInt(monthStr)] });
       queryClient.invalidateQueries({ queryKey: ["hr-attendance-summary-emp"] });
       queryClient.invalidateQueries({ queryKey: ["hr-attendance-employee-monthly"] });
       queryClient.invalidateQueries({ queryKey: ["hr-attendance-emp"] });

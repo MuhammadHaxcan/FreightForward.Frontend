@@ -373,22 +373,36 @@ const MasterCustomers = () => {
             >
               Previous
             </Button>
-            {Array.from({ length: Math.min(5, totalPages) }, (_, index) => index + 1).map((page) => (
-              <Button
-                key={page}
-                variant={currentPage === page ? "default" : "outline"}
-                size="sm"
-                className={currentPage === page ? "btn-success" : ""}
-                onClick={() => setCurrentPage(page)}
-              >
-                {page}
-              </Button>
-            ))}
-            {totalPages > 5 && <span className="px-2 text-muted-foreground">...</span>}
-            {totalPages > 5 && (
-              <Button variant="outline" size="sm" onClick={() => setCurrentPage(totalPages)}>
-                {totalPages}
-              </Button>
+            {totalPages > 0 && Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let page: number;
+              if (totalPages <= 5) {
+                page = i + 1;
+              } else if (currentPage <= 3) {
+                page = i + 1;
+              } else if (currentPage >= totalPages - 2) {
+                page = totalPages - 4 + i;
+              } else {
+                page = currentPage - 2 + i;
+              }
+              return (
+                <Button
+                  key={page}
+                  variant={currentPage === page ? "default" : "outline"}
+                  size="sm"
+                  className={currentPage === page ? "btn-success" : ""}
+                  onClick={() => setCurrentPage(page)}
+                >
+                  {page}
+                </Button>
+              );
+            })}
+            {totalPages > 5 && currentPage < totalPages - 2 && (
+              <>
+                <span className="px-2 text-muted-foreground">...</span>
+                <Button variant="outline" size="sm" onClick={() => setCurrentPage(totalPages)}>
+                  {totalPages}
+                </Button>
+              </>
             )}
             <Button
               variant="outline"

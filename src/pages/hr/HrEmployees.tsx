@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -27,12 +26,14 @@ import {
 import { Plus, Pencil, Trash2, Eye } from "lucide-react";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import { formatDate, getTodayDateOnly } from "@/lib/utils";
-import {
-  hrEmployeeApi,
-  EmployeeListItem,
-  CreateEmployeeRequest,
-} from "@/services/api/hr";
+import { type EmployeeListItem, type CreateEmployeeRequest } from "@/services/api/hr";
 import { MutationBlockingOverlay } from "@/components/ui/mutation-blocking-overlay";
+import {
+  useHrEmployees,
+  useHrNextEmployeeCode,
+  useCreateHrEmployee,
+  useDeleteHrEmployee,
+} from "@/hooks/useHrEmployees";
 
 const employmentStatuses = [
   { value: "Active", label: "Active" },
@@ -48,7 +49,6 @@ const genderOptions = [
 ];
 
 const HrEmployees = () => {
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
@@ -85,59 +85,16 @@ const HrEmployees = () => {
   const [bankBranch, setBankBranch] = useState("");
 
   // Fetch employees
-  const { data: empData, isLoading } = useQuery({
-    queryKey: ["hr-employees", pageNumber, pageSize, appliedSearch, filterStatus],
-    queryFn: async () => {
-      const result = await hrEmployeeApi.getAll({
-        pageNumber,
-        pageSize,
-        searchTerm: appliedSearch || undefined,
-        status: filterStatus || undefined,
-      });
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
+  const { data: empData, isLoading } = useHrEmployees({
+    pageNumber,
+    pageSize,
+    searchTerm: appliedSearch || undefined,
+    status: filterStatus || undefined,
   });
 
-  // Create mutation
-  const createMutation = useMutation({
-    mutationFn: async (data: CreateEmployeeRequest) => {
-      const result = await hrEmployeeApi.create(data);
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    onSuccess: () => {
-      toast.success("Employee created successfully");
-      queryClient.invalidateQueries({ queryKey: ["hr-employees"] });
-      queryClient.invalidateQueries({ queryKey: ["hr-employees-dropdown"] });
-      queryClient.invalidateQueries({ queryKey: ["unlinked-employees"] });
-      setModalOpen(false);
-      resetForm();
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to create employee");
-    },
-  });
-
-  // Delete mutation
-  const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const result = await hrEmployeeApi.delete(id);
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    onSuccess: () => {
-      toast.success("Employee deleted successfully");
-      queryClient.invalidateQueries({ queryKey: ["hr-employees"] });
-      queryClient.invalidateQueries({ queryKey: ["hr-employees-dropdown"] });
-      queryClient.invalidateQueries({ queryKey: ["unlinked-employees"] });
-      setDeleteDialogOpen(false);
-      setItemToDelete(null);
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to delete employee");
-    },
-  });
+  const { data: nextCode } = useHrNextEmployeeCode();
+  const createMutation = useCreateHrEmployee();
+  const deleteMutation = useDeleteHrEmployee();
 
   const items = empData?.items || [];
   const totalCount = empData?.totalCount || 0;
@@ -169,13 +126,14 @@ const HrEmployees = () => {
     setBankBranch("");
   };
 
-  const handleAddNew = async () => {
+  // Populate employee code when next code loads
+  useEffect(() => {
+    if (nextCode) setEmployeeCode(nextCode);
+  }, [nextCode]);
+
+  const handleAddNew = () => {
     resetForm();
     setModalOpen(true);
-    const result = await hrEmployeeApi.getNextCode();
-    if (result.data) {
-      setEmployeeCode(result.data);
-    }
   };
 
   const handleDelete = (emp: EmployeeListItem) => {
@@ -190,7 +148,12 @@ const HrEmployees = () => {
 
   const confirmDelete = () => {
     if (itemToDelete) {
-      deleteMutation.mutate(itemToDelete.id);
+      deleteMutation.mutate(itemToDelete.id, {
+        onSuccess: () => {
+          setDeleteDialogOpen(false);
+          setItemToDelete(null);
+        },
+      });
     }
   };
 
@@ -232,7 +195,12 @@ const HrEmployees = () => {
       bankBranch: bankBranch || undefined,
       annualLeaveDays: parseInt(annualLeaveDays) || 30,
     };
-    createMutation.mutate(data);
+    createMutation.mutate(data, {
+      onSuccess: () => {
+        setModalOpen(false);
+        resetForm();
+      },
+    });
   };
 
   const getStatusBadge = (status: string) => {

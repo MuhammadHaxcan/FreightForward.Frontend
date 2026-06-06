@@ -66,6 +66,8 @@ export function useCreateCreditNote() {
       queryClient.invalidateQueries({ queryKey: ['creditNotes'] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['creditNotes', 'unpaidInvoices'] });
+      queryClient.invalidateQueries({ queryKey: ['receipts'] });
       queryClient.invalidateQueries({ queryKey: ['shipments'] });
       queryClient.invalidateQueries({ queryKey: ['shipment-invoices'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
@@ -92,6 +94,8 @@ export function useUpdateCreditNote() {
       queryClient.invalidateQueries({ queryKey: ['creditNotes', variables.id] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['creditNotes', 'unpaidInvoices'] });
+      queryClient.invalidateQueries({ queryKey: ['receipts'] });
       queryClient.invalidateQueries({ queryKey: ['shipments'] });
       queryClient.invalidateQueries({ queryKey: ['shipment-invoices'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
@@ -117,6 +121,8 @@ export function useDeleteCreditNote() {
       queryClient.invalidateQueries({ queryKey: ['creditNotes'] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['creditNotes', 'unpaidInvoices'] });
+      queryClient.invalidateQueries({ queryKey: ['receipts'] });
       queryClient.invalidateQueries({ queryKey: ['shipments'] });
       queryClient.invalidateQueries({ queryKey: ['shipment-invoices'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });

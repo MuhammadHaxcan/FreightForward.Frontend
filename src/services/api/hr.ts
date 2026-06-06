@@ -45,7 +45,7 @@ export interface SalaryComponent {
   id: number; name: string; code?: string; componentType: string; isActive: boolean; createdAt: string;
 }
 export interface CreateSalaryComponentRequest { name: string; code?: string; componentType: string; isActive: boolean; }
-export interface UpdateSalaryComponentRequest extends CreateSalaryComponentRequest {}
+export type UpdateSalaryComponentRequest = CreateSalaryComponentRequest;
 
 // Salary Structure
 export interface SalaryStructureItem {

@@ -47,6 +47,16 @@ export default function PurchaseInvoices() {
     setPageNumber(1);
   };
 
+  const handleVendorChange = (value: string) => {
+    setSelectedVendor(value);
+    setPageNumber(1);
+  };
+
+  const handleDateRangeChange = (value: DateRangeValue | undefined) => {
+    setDateRange(value);
+    setPageNumber(1);
+  };
+
   const handleViewInvoice = (purchaseNo: string) => {
     navigate(`/accounts/purchase-invoices/${encodeURIComponent(purchaseNo)}`);
   };
@@ -78,7 +88,7 @@ export default function PurchaseInvoices() {
                   })),
                 ]}
                 value={selectedVendor}
-                onValueChange={setSelectedVendor}
+                onValueChange={handleVendorChange}
                 placeholder="Select All"
                 searchPlaceholder="Search vendors..."
               />
@@ -88,7 +98,7 @@ export default function PurchaseInvoices() {
               <label className="text-sm font-medium text-green-600">Date</label>
               <DateRangePicker
                 value={dateRange}
-                onApply={setDateRange}
+                onApply={handleDateRangeChange}
                 className="w-full"
               />
             </div>

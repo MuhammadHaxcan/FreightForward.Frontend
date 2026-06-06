@@ -53,16 +53,18 @@ import {
   useDeleteShipmentCosting,
 } from "@/hooks/useShipments";
 import { useDeleteInvoice, useDeletePurchaseInvoice } from "@/hooks/useInvoices";
-import { useAllCustomerCategoryTypes, useAllIncoTerms, useAllPackageTypes, useAllPorts } from "@/hooks/useSettings";
+import { useAllCountries, useAllCustomerCategoryTypes, useAllIncoTerms, useAllPackageTypes, useAllPorts } from "@/hooks/useSettings";
 import { CargoContainerTab, CargoFormEntry } from "@/components/shipments/CargoContainerTab";
 import { calculateCbm } from "@/lib/cargoCalculations";
 import { useCustomers } from "@/hooks/useCustomers";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   MasterType,
   Customer,
   shipmentApi,
   settingsApi,
   fileApi,
+  fetchBlob,
   ShipmentInvoicesResult,
   AddShipmentContainerRequest,
   UpdateShipmentContainerRequest,
@@ -250,12 +252,19 @@ const emptyCargoEntry: CargoFormEntry = {
   totalCBM: "",
   totalWeight: "",
   description: "",
+  marksNumbers: "",
+  hsCode: "",
+  countryOfOriginId: "",
+  isDangerousGoods: false,
+  imcoClass: "",
+  unNo: "",
 };
 
 
 const ShipmentDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
 
   const queryClient = useQueryClient();
 
@@ -264,6 +273,14 @@ const ShipmentDetail = () => {
 
   // Numeric ID for mutations — derived from loaded shipment data
   const shipmentId = shipmentData?.id ?? 0;
+  const isClosedShipment = shipmentData?.jobStatus === "Closed";
+  const canEditShipment = hasPermission("ship_edit") && (!isClosedShipment || hasPermission("ship_edit_closed"));
+  const isReadOnly = !canEditShipment;
+  const readOnlyMessage = !hasPermission("ship_edit")
+    ? "Your role has view-only access to shipments. Editing is disabled on this page."
+    : isClosedShipment && !hasPermission("ship_edit_closed")
+      ? "This shipment is closed and your role does not have permission to edit after closure. The page is in view-only mode."
+      : "This shipment is currently in view-only mode.";
 
   // Mutations
   const updateShipmentMutation = useUpdateShipment();
@@ -284,6 +301,7 @@ const ShipmentDetail = () => {
   const [cargoDetails, setCargoDetails] = useState<ShipmentCargo[]>([]);
   const [newCargoEntry, setNewCargoEntry] = useState<CargoFormEntry>(emptyCargoEntry);
   const [cargoCalculationMode, setCargoCalculationMode] = useState("units");
+  const [editingCargoId, setEditingCargoId] = useState<number | null>(null);
   const [isSavingCargo, setIsSavingCargo] = useState(false);
   const [documents, setDocuments] = useState<ShipmentDocument[]>([]);
   const [documentModalOpen, setDocumentModalOpen] = useState(false);
@@ -348,6 +366,7 @@ const ShipmentDetail = () => {
     setStatusLogModalOpen(false);
     setCargoCalculationMode("units");
     setNewCargoEntry(emptyCargoEntry);
+    setEditingCargoId(null);
     setIsSaving(false);
     setIsSavingCargo(false);
     setIsDeleting(false);
@@ -369,6 +388,7 @@ const ShipmentDetail = () => {
 
   // Fetch Package Types for cargo dropdown
   const { data: packageTypes = [] } = useAllPackageTypes();
+  const { data: countries = [] } = useAllCountries();
 
   // Group package types by category
   const packageTypesByCategory = useMemo(() => {
@@ -521,10 +541,12 @@ const ShipmentDetail = () => {
   }, [selectedCategoryId]);
 
   const handleInputChange = (field: string, value: string | boolean) => {
+    if (isReadOnly) return;
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleAddParty = async () => {
+    if (isReadOnly) return;
     if (!selectedCustomer) {
       toast.error("Please select a customer");
       return;
@@ -590,6 +612,7 @@ const ShipmentDetail = () => {
   };
 
   const handleDeleteParty = (partyId: number, partyName?: string) => {
+    if (isReadOnly) return;
     if (!shipmentId) return;
     setDeleteModalConfig({ type: 'party', id: partyId, name: partyName });
     setDeleteModalOpen(true);
@@ -597,6 +620,7 @@ const ShipmentDetail = () => {
 
   // Container handlers
   const handleSaveContainer = async (containerData: Partial<ShipmentContainer> & { sNo?: number | string }) => {
+    if (isReadOnly) return;
     if (!shipmentId) {
       toast.error("Please save the shipment first");
       return;
@@ -646,12 +670,14 @@ const ShipmentDetail = () => {
   const [editingContainerIndex, setEditingContainerIndex] = useState<number | null>(null);
 
   const handleEditContainer = (container: ShipmentContainer, index: number) => {
+    if (isReadOnly) return;
     setEditingContainer(container);
     setEditingContainerIndex(index);
     setContainerModalOpen(true);
   };
 
   const handleDeleteContainer = (containerId: number, containerNumber?: string) => {
+    if (isReadOnly) return;
     if (!shipmentId) return;
     setDeleteModalConfig({ type: 'container', id: containerId, name: containerNumber });
     setDeleteModalOpen(true);
@@ -659,6 +685,7 @@ const ShipmentDetail = () => {
 
   // Costing handlers
   const handleSaveCosting = async (costingData: Partial<ShipmentCosting>) => {
+    if (isReadOnly) return;
     if (!shipmentId) {
       toast.error("Please save the shipment first");
       return;
@@ -781,23 +808,60 @@ const ShipmentDetail = () => {
   };
 
   const handleEditCosting = (costing: ShipmentCosting) => {
+    if (isReadOnly) return;
     setEditingCosting(costing);
     setCostingModalOpen(true);
   };
 
   const handleDeleteCosting = (costingId: number, description?: string) => {
+    if (isReadOnly) return;
     if (!shipmentId) return;
     setDeleteModalConfig({ type: 'costing', id: costingId, name: description });
     setDeleteModalOpen(true);
   };
 
   const handleDeleteCargo = (cargoId: number, description?: string) => {
+    if (isReadOnly) return;
     if (!shipmentId) return;
     setDeleteModalConfig({ type: 'cargo', id: cargoId, name: description || `Cargo #${cargoId}` });
     setDeleteModalOpen(true);
   };
 
+  const resetCargoForm = () => {
+    setNewCargoEntry(emptyCargoEntry);
+    setCargoCalculationMode("units");
+    setEditingCargoId(null);
+  };
+
+  const handleEditCargo = (cargo: ShipmentCargo) => {
+    if (isReadOnly) return;
+
+    setEditingCargoId(cargo.id);
+    setCargoCalculationMode(cargo.calculationMode || "units");
+    setNewCargoEntry({
+      quantity: cargo.quantity?.toString() || "",
+      packageTypeId: cargo.packageTypeId?.toString() || "",
+      loadType: cargo.loadType || "",
+      length: cargo.length?.toString() || "",
+      width: cargo.width?.toString() || "",
+      height: cargo.height?.toString() || "",
+      volumeUnit: cargo.volumeUnit || "cm",
+      weight: cargo.weight?.toString() || "",
+      weightUnit: cargo.weightUnit || "kg",
+      totalCBM: cargo.totalCBM?.toString() || "",
+      totalWeight: cargo.totalWeight?.toString() || "",
+      description: cargo.description || "",
+      marksNumbers: cargo.marksNumbers || "",
+      hsCode: cargo.hsCode || "",
+      countryOfOriginId: cargo.countryOfOriginId?.toString() || "",
+      isDangerousGoods: cargo.isDangerousGoods === true,
+      imcoClass: cargo.imcoClass || "",
+      unNo: cargo.unNo || "",
+    });
+  };
+
   const handleAddCargo = async () => {
+    if (isReadOnly) return;
     if (!shipmentId) return;
     if (!newCargoEntry.quantity) {
       toast.error("Quantity is required");
@@ -831,10 +895,53 @@ const ShipmentDetail = () => {
           : (cbm != null ? cbm * qty : null),
         totalWeight: parseFloat(newCargoEntry.totalWeight) || null,
         description: newCargoEntry.description || undefined,
+        marksNumbers: newCargoEntry.marksNumbers || undefined,
+        hsCode: newCargoEntry.hsCode || undefined,
+        countryOfOriginId: newCargoEntry.countryOfOriginId ? parseInt(newCargoEntry.countryOfOriginId) : null,
+        isDangerousGoods: newCargoEntry.isDangerousGoods,
+        imcoClass: newCargoEntry.imcoClass || undefined,
+        unNo: newCargoEntry.unNo || undefined,
       };
+      const selectedCountry = countries.find(country => country.id.toString() === newCargoEntry.countryOfOriginId);
 
-      const response = await shipmentApi.addCargo(shipmentId, request);
-      if (response.data) {
+      if (editingCargoId) {
+        const response = await shipmentApi.updateCargo(editingCargoId, request);
+        if (response.error) throw new Error(response.error);
+
+        setCargoDetails(prev => prev.map(cargo => cargo.id === editingCargoId
+          ? {
+              ...cargo,
+              calculationMode: request.calculationMode,
+              quantity: request.quantity,
+              packageTypeId: request.packageTypeId || undefined,
+              packageTypeName: selectedPackageType?.name,
+              loadType: request.loadType,
+              length: request.length || undefined,
+              width: request.width || undefined,
+              height: request.height || undefined,
+              volumeUnit: request.volumeUnit,
+              cbm: request.cbm || undefined,
+              weight: request.weight || undefined,
+              weightUnit: request.weightUnit,
+              totalCBM: request.totalCBM || undefined,
+              totalWeight: request.totalWeight || undefined,
+              description: request.description,
+              marksNumbers: request.marksNumbers,
+              hsCode: request.hsCode,
+              countryOfOriginId: request.countryOfOriginId || undefined,
+              countryOfOriginName: selectedCountry?.name,
+              isDangerousGoods: request.isDangerousGoods || false,
+              imcoClass: request.imcoClass,
+              unNo: request.unNo,
+            }
+          : cargo));
+        resetCargoForm();
+        toast.success("Cargo updated successfully");
+      } else {
+        const response = await shipmentApi.addCargo(shipmentId, request);
+        if (response.error) throw new Error(response.error);
+        if (response.data == null) throw new Error("Cargo was created but no ID was returned.");
+
         const newCargo: ShipmentCargo = {
           id: response.data,
           calculationMode: request.calculationMode,
@@ -852,16 +959,20 @@ const ShipmentDetail = () => {
           totalCBM: request.totalCBM || undefined,
           totalWeight: request.totalWeight || undefined,
           description: request.description,
+          marksNumbers: request.marksNumbers,
+          hsCode: request.hsCode,
+          countryOfOriginId: request.countryOfOriginId || undefined,
+          countryOfOriginName: selectedCountry?.name,
+          isDangerousGoods: request.isDangerousGoods || false,
+          imcoClass: request.imcoClass,
+          unNo: request.unNo,
         };
         setCargoDetails(prev => [...prev, newCargo]);
-        setNewCargoEntry({
-          quantity: "", packageTypeId: "", loadType: "", length: "", width: "", height: "",
-          volumeUnit: "cm", weight: "", weightUnit: "kg", totalCBM: "", totalWeight: "", description: "",
-        });
+        resetCargoForm();
         toast.success("Cargo added successfully");
       }
     } catch (error) {
-      toast.error("Failed to add cargo");
+      toast.error(error instanceof Error ? error.message : editingCargoId ? "Failed to update cargo" : "Failed to add cargo");
     } finally {
       setIsSavingCargo(false);
     }
@@ -869,6 +980,7 @@ const ShipmentDetail = () => {
 
   // Handle delete confirmation
   const handleConfirmDelete = async () => {
+    if (isReadOnly) return;
     if (!shipmentId || !deleteModalConfig) return;
     setIsDeleting(true);
 
@@ -904,12 +1016,17 @@ const ShipmentDetail = () => {
           }
           break;
         case 'cargo':
-          await shipmentApi.deleteCargo(deleteModalConfig.id);
+        {
+          const response = await shipmentApi.deleteCargo(deleteModalConfig.id);
+          if (response.error) throw new Error(response.error);
           setCargoDetails(prev => prev.filter(c => c.id !== deleteModalConfig.id));
           toast.success("Cargo deleted successfully");
           break;
+        }
         case 'document':
-          await shipmentApi.deleteDocument(deleteModalConfig.id);
+        {
+          const response = await shipmentApi.deleteDocument(deleteModalConfig.id);
+          if (response.error) throw new Error(response.error);
           // Also delete the file from server if it exists
           if (deleteModalConfig.filePath) {
             try {
@@ -921,11 +1038,15 @@ const ShipmentDetail = () => {
           setDocuments(prev => prev.filter(d => d.id !== deleteModalConfig.id));
           toast.success("Document deleted successfully");
           break;
+        }
         case 'statusLog':
-          await shipmentApi.deleteStatusLog(deleteModalConfig.id);
+        {
+          const response = await shipmentApi.deleteStatusLog(deleteModalConfig.id);
+          if (response.error) throw new Error(response.error);
           setStatusLogs(prev => prev.filter(l => l.id !== deleteModalConfig.id));
           toast.success("Status log deleted successfully");
           break;
+        }
         case 'invoice':
           await deleteInvoiceMutation.mutateAsync(deleteModalConfig.id);
           break;
@@ -937,7 +1058,11 @@ const ShipmentDetail = () => {
       setDeleteModalOpen(false);
       setDeleteModalConfig(null);
     } catch (error) {
-      // Error handled by mutation
+      // Invoice/purchase invoice mutations handle their own error toasts via onError;
+      // only toast here for non-mutation failures (e.g. status log direct API call).
+      if (deleteModalConfig?.type !== 'invoice' && deleteModalConfig?.type !== 'purchaseInvoice') {
+        toast.error(error instanceof Error ? error.message : "Failed to delete item");
+      }
     } finally {
       setIsDeleting(false);
     }
@@ -945,6 +1070,7 @@ const ShipmentDetail = () => {
 
   // Handle add/update document
   const handleSaveDocument = async (documentData: AddShipmentDocumentRequest) => {
+    if (isReadOnly) return;
     if (!shipmentId) {
       toast.error("Please save the shipment first");
       return;
@@ -958,19 +1084,20 @@ const ShipmentDetail = () => {
         toast.success("Document updated successfully");
       } else {
         const newDocumentId = await shipmentApi.addDocument(shipmentId, documentData);
-        if (newDocumentId.data) {
-          refetchShipment();
-          toast.success("Document added successfully");
-        }
+        if (newDocumentId.error) throw new Error(newDocumentId.error);
+        if (newDocumentId.data == null) throw new Error("Document was created but no ID was returned.");
+        refetchShipment();
+        toast.success("Document added successfully");
       }
     } catch (error) {
       console.error("Failed to save document:", error);
-      toast.error(documentModalMode === "edit" ? "Failed to update document" : "Failed to add document");
+      toast.error(error instanceof Error ? error.message : documentModalMode === "edit" ? "Failed to update document" : "Failed to add document");
       throw error;
     }
   };
 
   const handleEditDocument = (doc: ShipmentDocument) => {
+    if (isReadOnly) return;
     setEditingDocument(doc);
     setDocumentModalMode("edit");
     setDocumentModalOpen(true);
@@ -978,6 +1105,7 @@ const ShipmentDetail = () => {
 
   // Handle delete document
   const handleDeleteDocument = (doc: ShipmentDocument) => {
+    if (isReadOnly) return;
     setDeleteModalConfig({
       type: 'document',
       id: doc.id,
@@ -987,8 +1115,32 @@ const ShipmentDetail = () => {
     setDeleteModalOpen(true);
   };
 
+  const handleDownloadDocument = async (filePath: string, originalFileName?: string) => {
+    try {
+      const response = await fetchBlob(fileApi.getDownloadUrl(filePath));
+
+      if (!response.ok) {
+        throw new Error("Download failed");
+      }
+
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = originalFileName || filePath.split("/").pop() || "document";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error("Failed to download shipment document:", error);
+      toast.error("Failed to download file");
+    }
+  };
+
   // Handle add status log from modal
   const handleAddStatusLogFromModal = async (statusLogData: AddShipmentStatusLogRequest) => {
+    if (isReadOnly) return;
     if (!shipmentId) {
       toast.error("Please save the shipment first");
       return;
@@ -996,20 +1148,22 @@ const ShipmentDetail = () => {
 
     try {
       const response = await shipmentApi.addStatusLog(shipmentId, statusLogData);
-      if (response.data) {
-        // Refetch shipment to get updated status logs
-        refetchShipment();
-        toast.success("Status log added successfully");
-      }
+      if (response.error) throw new Error(response.error);
+      if (response.data == null) throw new Error("Status log was created but no ID was returned.");
+
+      // Refetch shipment to get updated status logs
+      refetchShipment();
+      toast.success("Status log added successfully");
     } catch (error) {
       console.error("Failed to add status log:", error);
-      toast.error("Failed to add status log");
+      toast.error(error instanceof Error ? error.message : "Failed to add status log");
       throw error;
     }
   };
 
   // Handle delete status log
   const handleDeleteStatusLog = (statusLog: ShipmentStatusLog) => {
+    if (isReadOnly) return;
     setDeleteModalConfig({
       type: 'statusLog',
       id: statusLog.id,
@@ -1028,6 +1182,7 @@ const ShipmentDetail = () => {
 
   // Handle save shipment
   const handleSaveShipment = async () => {
+    if (isReadOnly) return;
     if (!shipmentId) return;
     setIsSaving(true);
     try {
@@ -1109,7 +1264,7 @@ const ShipmentDetail = () => {
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold text-foreground">
-            Edit Shipment - Job No : <span className="font-bold">{formData.jobNumber}</span>
+            {isReadOnly ? "View Shipment" : "Edit Shipment"} - Job No : <span className="font-bold">{formData.jobNumber}</span>
           </h1>
           <div className="flex gap-2">
             <Button
@@ -1119,25 +1274,33 @@ const ShipmentDetail = () => {
               <FileText className="h-4 w-4 mr-2" />
               Reports
             </Button>
-            <Button
-              className="btn-success"
-              onClick={handleSaveShipment}
-              disabled={isSaving}
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save"
-              )}
-            </Button>
+            {!isReadOnly && (
+              <Button
+                className="btn-success"
+                onClick={handleSaveShipment}
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save"
+                )}
+              </Button>
+            )}
             <Button variant="outline" className="bg-modal-header hover:bg-modal-header/80 text-modal-header-foreground border-modal-header" onClick={() => navigate("/shipments")}>
               Back
             </Button>
           </div>
         </div>
+
+        {isReadOnly && (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            {readOnlyMessage}
+          </div>
+        )}
 
         {/* Loading State */}
         {isLoadingShipment && (
@@ -1213,7 +1376,7 @@ const ShipmentDetail = () => {
 
           {/* Shipment Info Tab */}
           <TabsContent value="shipment-info" className="mt-0">
-            <div className="space-y-6">
+            <div className={`space-y-6 ${isReadOnly ? "pointer-events-none opacity-75" : ""}`}>
               {/* Section 1: Basic Shipment Details */}
               <div className="bg-card border border-border rounded-lg p-6 space-y-4">
                 <h3 className="text-emerald-600 font-semibold text-lg border-b border-border pb-2">Basic Shipment Details</h3>
@@ -1263,6 +1426,7 @@ const ShipmentDetail = () => {
                       ]}
                       value={formData.mode}
                       onValueChange={(v) => {
+                        if (isReadOnly) return;
                         handleInputChange("mode", v);
                         const isAir = v === 'Air Freight';
                         setFormData(prev => ({
@@ -1690,20 +1854,22 @@ const ShipmentDetail = () => {
                   </div>
                 </div>
 
-                <Button
-                  className="btn-success"
-                  onClick={handleSaveShipment}
-                  disabled={isSaving}
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    "Update & Continue"
-                  )}
-                </Button>
+                {!isReadOnly && (
+                  <Button
+                    className="btn-success"
+                    onClick={handleSaveShipment}
+                    disabled={isSaving}
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Update & Continue"
+                    )}
+                  </Button>
+                )}
               </div>
             </div>
           </TabsContent>
@@ -1723,6 +1889,7 @@ const ShipmentDetail = () => {
                     }))}
                     value={selectedCategoryId}
                     onValueChange={(v) => setSelectedCategoryId(v)}
+                    disabled={isReadOnly}
                     searchPlaceholder="Search types..."
                   />
                 </div>
@@ -1735,7 +1902,7 @@ const ShipmentDetail = () => {
                     })) : []}
                     value={selectedCustomerId}
                     onValueChange={setSelectedCustomerId}
-                    disabled={!selectedCategoryId || isLoadingCustomers}
+                    disabled={isReadOnly || !selectedCategoryId || isLoadingCustomers}
                     placeholder={
                       !selectedCategoryId ? "Select a customer type first" :
                       isLoadingCustomers ? "Loading..." :
@@ -1752,7 +1919,7 @@ const ShipmentDetail = () => {
                     data-audit-track="action"
                     data-audit-entity="ShipmentParty"
                     data-audit-label="Add Party"
-                    disabled={!selectedCustomer || addPartyMutation.isPending}
+                    disabled={isReadOnly || !selectedCustomer || addPartyMutation.isPending}
                   >
                     {addPartyMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     Add Party
@@ -1800,15 +1967,17 @@ const ShipmentDetail = () => {
                           <TableCell>{party.phone || "-"}</TableCell>
                           <TableCell className="text-emerald-600">{party.email || "-"}</TableCell>
                           <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded"
-                              onClick={() => handleDeleteParty(party.id, party.customerName)}
-                              disabled={deletePartyMutation.isPending}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            {!isReadOnly && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded"
+                                onClick={() => handleDeleteParty(party.id, party.customerName)}
+                                disabled={deletePartyMutation.isPending}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))
@@ -1822,6 +1991,7 @@ const ShipmentDetail = () => {
           {/* Cargo & Containers Tab */}
           <TabsContent value="cargo-containers" className="mt-0">
             <CargoContainerTab
+              isReadOnly={isReadOnly}
               showContainers={isFCL || isLCL}
               containers={containers}
               containerSummary={containerSummary}
@@ -1834,10 +2004,13 @@ const ShipmentDetail = () => {
               cargoCalculationMode={cargoCalculationMode}
               onCargoCalculationModeChange={setCargoCalculationMode}
               onAddCargo={handleAddCargo}
+              onEditCargo={handleEditCargo}
+              onCancelCargoEdit={resetCargoForm}
               onDeleteCargo={handleDeleteCargo}
               isSavingCargo={isSavingCargo}
               isShipmentSaved={true}
               packageTypesByCategory={packageTypesByCategory}
+              editingCargoId={editingCargoId}
             />
           </TabsContent>
 
@@ -1847,33 +2020,37 @@ const ShipmentDetail = () => {
               <div className="flex justify-between items-center">
                 <h3 className="text-emerald-600 font-semibold text-lg">Costing</h3>
                 <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    className="btn-success h-9 px-4"
-                    onClick={() => {
-                      setEditingCosting(null);
-                      setCostingModalOpen(true);
-                    }}
-                  >
-                    <Plus className="h-4 w-4 mr-1.5" />
-                    Create
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="btn-success h-9 px-4"
-                    onClick={() => setInvoiceModalOpen(true)}
-                  >
-                    <Plus className="h-4 w-4 mr-1.5" />
-                    Generate Invoice
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="btn-success h-9 px-4"
-                    onClick={() => setPurchaseModalOpen(true)}
-                  >
-                    <Plus className="h-4 w-4 mr-1.5" />
-                    Book Purchase Invoice
-                  </Button>
+                  {!isReadOnly && (
+                    <>
+                      <Button
+                        size="sm"
+                        className="btn-success h-9 px-4"
+                        onClick={() => {
+                          setEditingCosting(null);
+                          setCostingModalOpen(true);
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-1.5" />
+                        Create
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="btn-success h-9 px-4"
+                        onClick={() => setInvoiceModalOpen(true)}
+                      >
+                        <Plus className="h-4 w-4 mr-1.5" />
+                        Generate Invoice
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="btn-success h-9 px-4"
+                        onClick={() => setPurchaseModalOpen(true)}
+                      >
+                        <Plus className="h-4 w-4 mr-1.5" />
+                        Book Purchase Invoice
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -1949,24 +2126,26 @@ const ShipmentDetail = () => {
                           <TableCell>{cost.unitName}</TableCell>
                           <TableCell className="text-emerald-600 font-semibold">{cost.gp?.toFixed(2)}</TableCell>
                           <TableCell>
-                            <div className="flex gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className={`h-8 w-8 rounded ${cost.saleInvoiced && cost.purchaseInvoiced ? "bg-slate-500 hover:bg-slate-600 text-white" : "btn-success"}`}
-                                onClick={() => handleEditCosting(cost)}
-                              >
-                                {cost.saleInvoiced && cost.purchaseInvoiced ? <Eye className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded"
-                                onClick={() => handleDeleteCosting(cost.id, cost.description)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
+                            {!isReadOnly && (
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className={`h-8 w-8 rounded ${cost.saleInvoiced && cost.purchaseInvoiced ? "bg-slate-500 hover:bg-slate-600 text-white" : "btn-success"}`}
+                                  onClick={() => handleEditCosting(cost)}
+                                >
+                                  {cost.saleInvoiced && cost.purchaseInvoiced ? <Eye className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded"
+                                  onClick={() => handleDeleteCosting(cost.id, cost.description)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
                           </TableCell>
                         </TableRow>
                         );
@@ -2016,27 +2195,29 @@ const ShipmentDetail = () => {
                                   </span>
                                 </TableCell>
                                 <TableCell className="text-xs">
-                                  <div className="flex gap-1">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-7 w-7"
-                                      onClick={() => window.open(`/accounts/invoices/${encodeURIComponent(inv.invoiceNo)}/edit`, "_blank")}
-                                    >
-                                      <Edit className="h-3.5 w-3.5 text-primary" />
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-7 w-7"
-                                      onClick={() => {
-                                        setDeleteModalConfig({ type: 'invoice', id: inv.id, name: inv.invoiceNo });
-                                        setDeleteModalOpen(true);
-                                      }}
-                                    >
-                                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                                    </Button>
-                                  </div>
+                                  {!isReadOnly && (
+                                    <div className="flex gap-1">
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        onClick={() => window.open(`/accounts/invoices/${encodeURIComponent(inv.invoiceNo)}/edit`, "_blank")}
+                                      >
+                                        <Edit className="h-3.5 w-3.5 text-primary" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        onClick={() => {
+                                          setDeleteModalConfig({ type: 'invoice', id: inv.id, name: inv.invoiceNo });
+                                          setDeleteModalOpen(true);
+                                        }}
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                      </Button>
+                                    </div>
+                                  )}
                                 </TableCell>
                               </TableRow>
                             );
@@ -2082,30 +2263,34 @@ const ShipmentDetail = () => {
                                   </span>
                                 </TableCell>
                                 <TableCell className="text-xs">
-                                  <div className="flex gap-1">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-7 w-7"
-                                      onClick={() => {
-                                        setEditPurchaseInvoiceId(inv.id);
-                                        setPurchaseModalOpen(true);
-                                      }}
-                                    >
-                                      <Edit className="h-3.5 w-3.5 text-primary" />
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-7 w-7"
-                                      onClick={() => {
-                                        setDeleteModalConfig({ type: 'purchaseInvoice', id: inv.id, name: inv.purchaseNo });
-                                        setDeleteModalOpen(true);
-                                      }}
-                                    >
-                                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                                    </Button>
-                                  </div>
+                                  {!isReadOnly && (
+                                    <div className="flex gap-1">
+                                      {(inv.paymentStatus !== 'Paid' && inv.paymentStatus !== 'PartiallyPaid') && (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        onClick={() => {
+                                          setEditPurchaseInvoiceId(inv.id);
+                                          setPurchaseModalOpen(true);
+                                        }}
+                                      >
+                                        <Edit className="h-3.5 w-3.5 text-primary" />
+                                      </Button>
+                                      )}
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        onClick={() => {
+                                          setDeleteModalConfig({ type: 'purchaseInvoice', id: inv.id, name: inv.purchaseNo });
+                                          setDeleteModalOpen(true);
+                                        }}
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                      </Button>
+                                    </div>
+                                  )}
                                 </TableCell>
                               </TableRow>
                             );
@@ -2126,17 +2311,19 @@ const ShipmentDetail = () => {
             <div className="bg-card border border-border rounded-lg p-6 space-y-6">
               <div className="flex justify-between items-center">
                 <h3 className="text-emerald-600 font-semibold text-lg">Documents</h3>
-                <Button
-                  className="btn-success"
-                  onClick={() => {
-                    setEditingDocument(null);
-                    setDocumentModalMode("add");
-                    setDocumentModalOpen(true);
-                  }}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create
-                </Button>
+                {!isReadOnly && (
+                  <Button
+                    className="btn-success"
+                    onClick={() => {
+                      setEditingDocument(null);
+                      setDocumentModalMode("add");
+                      setDocumentModalOpen(true);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create
+                  </Button>
+                )}
               </div>
 
               <Table>
@@ -2165,36 +2352,37 @@ const ShipmentDetail = () => {
                         <TableCell>{doc.docDate}</TableCell>
                         <TableCell>
                           {doc.filePath ? (
-                            <a
-                              href={fileApi.getDownloadUrl(doc.filePath)}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadDocument(doc.filePath!, doc.originalFileName)}
                               className="text-blue-500 hover:underline"
                             >
                               {doc.originalFileName || 'Download'}
-                            </a>
+                            </button>
                           ) : '-'}
                         </TableCell>
                         <TableCell>{doc.remarks || '-'}</TableCell>
                         <TableCell>
-                          <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 btn-success rounded"
-                              onClick={() => handleEditDocument(doc)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded"
-                              onClick={() => handleDeleteDocument(doc)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          {!isReadOnly && (
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 btn-success rounded"
+                                onClick={() => handleEditDocument(doc)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded"
+                                onClick={() => handleDeleteDocument(doc)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))
@@ -2202,14 +2390,16 @@ const ShipmentDetail = () => {
                 </TableBody>
               </Table>
 
-              <div className="text-sm text-muted-foreground">Showing 0 to 0 of 0 entries</div>
+              <div className="text-sm text-muted-foreground">
+                Showing {documents.length > 0 ? 1 : 0} to {documents.length} of {documents.length} entries
+              </div>
             </div>
           </TabsContent>
 
           {/* Shipment Status Tab */}
           {/* Customs Tab */}
           <TabsContent value="customs" className="mt-0">
-            <CustomsTab shipmentId={shipmentId} />
+            <CustomsTab shipmentId={shipmentId} isReadOnly={isReadOnly} />
           </TabsContent>
 
           <TabsContent value="shipment-status" className="mt-0">
@@ -2226,23 +2416,26 @@ const ShipmentDetail = () => {
                     ]}
                     value={formData.jobStatus || 'Opened'}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, jobStatus: value as ShipmentStatus }))}
+                    disabled={isReadOnly}
                     triggerClassName="w-[180px] bg-background border-border"
                   />
                 </div>
-                <Button
-                  className="btn-success"
-                  onClick={handleSaveShipment}
-                  disabled={isSaving}
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    "Save Status"
-                  )}
-                </Button>
+                {!isReadOnly && (
+                  <Button
+                    className="btn-success"
+                    onClick={handleSaveShipment}
+                    disabled={isSaving}
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save Status"
+                    )}
+                  </Button>
+                )}
               </div>
 
               {/* Journey Calendar */}
@@ -2254,19 +2447,22 @@ const ShipmentDetail = () => {
               {/* Status History Header */}
               <div className="flex justify-between items-center">
                 <h3 className="text-emerald-600 font-semibold text-lg">Status History / Tracking Events</h3>
-                <Button
-                  className="btn-success"
-                  onClick={() => setStatusLogModalOpen(true)}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Event
-                </Button>
+                {!isReadOnly && (
+                  <Button
+                    className="btn-success"
+                    onClick={() => setStatusLogModalOpen(true)}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Event
+                  </Button>
+                )}
               </div>
 
               {/* Status Timeline */}
               <StatusTimeline
                 statusLogs={statusLogs}
                 onDelete={handleDeleteStatusLogById}
+                isReadOnly={isReadOnly}
               />
             </div>
           </TabsContent>
@@ -2405,14 +2601,16 @@ const ShipmentDetail = () => {
                   { no: 3, name: "CARGO ARRIVAL", slug: "cargo-arrival-notice" },
                   { no: 4, name: "FREIGHT CERTIFICATE", slug: "freight-certificate" },
                   { no: 5, name: "MBL SHIPPING", slug: "mbl-shipping-instruction" },
-                  { no: 6, name: "CUSTOMS DECLARATION", slug: "customs-declaration" },
+                  { no: 6, name: "CUSTOMS MANIFEST", slug: "customs-declaration" },
+                  { no: 7, name: "C BOOK", slug: "cbook" },
+                  { no: 8, name: "C LIST", slug: "c-list" },
                 ].map((report) => (
                   <tr key={report.slug} className="border-b hover:bg-muted/50">
                     <td className="py-2 px-2 text-sm">{report.no}</td>
                     <td className="py-2 px-2">
                       <button
                         className="text-emerald-600 hover:text-emerald-700 hover:underline font-medium text-sm"
-                        onClick={() => window.open(`/shipments/${id}/reports/${report.slug}`, '_blank')}
+                        onClick={() => window.open(`/shipments/${shipmentId}/reports/${report.slug}`, '_blank')}
                       >
                         {report.name}
                       </button>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -104,6 +104,7 @@ export default function QuotationForm() {
   // Get rateRequestId from location state (when converting from Rate Request)
   const rateRequestIdFromState = (location.state as { rateRequestId?: number })?.rateRequestId;
   const [conversionRateRequestId] = useState<number | null>(rateRequestIdFromState || null);
+  const conversionAppliedRef = useRef(false);
 
   // Form state
   const [formData, setFormData] = useState<FormData>({
@@ -162,7 +163,12 @@ export default function QuotationForm() {
 
   // Handle conversion pre-fill from Rate Request
   useEffect(() => {
-    if (conversionRateRequestId && conversionData && packageTypesData) {
+    if (!conversionRateRequestId) {
+      conversionAppliedRef.current = false;
+      return;
+    }
+    if (conversionRateRequestId && conversionData && packageTypesData && !conversionAppliedRef.current) {
+      conversionAppliedRef.current = true;
       let mode = "";
       const freightMode = conversionData.freightMode?.toLowerCase() || "";
       const shippingType = conversionData.shippingType || "";

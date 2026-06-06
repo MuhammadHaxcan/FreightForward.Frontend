@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,9 +10,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Pencil, Trash2, Loader2, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { rolesApi, permissionsApi } from "../services/api/auth";
 import { PermissionGate } from "../components/auth/PermissionGate";
 import type { Permission, RoleListItem, CreateRoleRequest, UpdateRoleRequest } from "../types/auth";
+import { useRoles, useRole, usePermissionsGrouped, useCreateRole, useUpdateRole, useDeleteRole } from "@/hooks/useRoles";
 
 // Minimum required permissions - always selected, cannot be unchecked
 // Settings view permissions are required for dropdowns to work in shipments, customers, etc.
@@ -113,7 +112,6 @@ const SIDEBAR_GROUPS = [
 ];
 
 const PermissionRoles = () => {
-  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [currentPage, setCurrentPage] = useState(1);
@@ -125,82 +123,18 @@ const PermissionRoles = () => {
   const [expandedSidebarGroups, setExpandedSidebarGroups] = useState<Set<string>>(new Set());
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [roleToDelete, setRoleToDelete] = useState<RoleListItem | null>(null);
+  const [editingRoleId, setEditingRoleId] = useState<number | null>(null);
 
-  // Fetch roles
-  const { data: rolesData, isLoading: rolesLoading } = useQuery({
-    queryKey: ["roles", currentPage, entriesPerPage, searchTerm],
-    queryFn: async () => {
-      const result = await rolesApi.getAll({
-        pageNumber: currentPage,
-        pageSize: parseInt(entriesPerPage, 10) || 10,
-        searchTerm: searchTerm || undefined,
-      });
-      if (result.error) throw new Error(result.error);
-      return result.data!;
-    },
+  const { data: rolesData, isLoading: rolesLoading } = useRoles({
+    pageNumber: currentPage,
+    pageSize: parseInt(entriesPerPage, 10) || 10,
+    searchTerm: searchTerm || undefined,
   });
-
-  // Fetch permissions grouped
-  const { data: permissionGroups } = useQuery({
-    queryKey: ["permissions", "grouped"],
-    queryFn: async () => {
-      const result = await permissionsApi.getGrouped();
-      if (result.error) throw new Error(result.error);
-      return result.data!;
-    },
-  });
-
-  // Create role mutation
-  const createRoleMutation = useMutation({
-    mutationFn: async (data: CreateRoleRequest) => {
-      const result = await rolesApi.create(data);
-      if (result.error) throw new Error(result.error);
-      return result.data!;
-    },
-    onSuccess: () => {
-      toast.success("Role created successfully");
-      queryClient.invalidateQueries({ queryKey: ["roles"] });
-      closeModal();
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to create role");
-    },
-  });
-
-  // Update role mutation
-  const updateRoleMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: UpdateRoleRequest }) => {
-      const result = await rolesApi.update(id, data);
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    onSuccess: () => {
-      toast.success("Role updated successfully");
-      queryClient.invalidateQueries({ queryKey: ["roles"] });
-      closeModal();
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to update role");
-    },
-  });
-
-  // Delete role mutation
-  const deleteRoleMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const result = await rolesApi.delete(id);
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    onSuccess: () => {
-      toast.success("Role deleted successfully");
-      queryClient.invalidateQueries({ queryKey: ["roles"] });
-      setDeleteConfirmOpen(false);
-      setRoleToDelete(null);
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to delete role");
-    },
-  });
+  const { data: permissionGroups } = usePermissionsGrouped();
+  const { data: editingRoleData } = useRole(editingRoleId);
+  const createRoleMutation = useCreateRole();
+  const updateRoleMutation = useUpdateRole();
+  const deleteRoleMutationBase = useDeleteRole();
 
   // Get minimum required permission IDs from the permission groups
   const getMinimumRequiredPermissionIds = (groups: Record<string, Permission[]> | undefined): Set<number> => {
@@ -218,11 +152,18 @@ const PermissionRoles = () => {
 
   const minimumRequiredIds = getMinimumRequiredPermissionIds(permissionGroups);
 
+  useEffect(() => {
+    if (!editingRoleData) return;
+    const permIds = new Set<number>(editingRoleData.permissions?.map((p: Permission) => p.id) || []);
+    getMinimumRequiredPermissionIds(permissionGroups).forEach((id) => permIds.add(id));
+    setSelectedPermissionIds(permIds);
+  }, [editingRoleData, permissionGroups]);
+
   const togglePermission = (permissionId: number) => {
     if (minimumRequiredIds.has(permissionId)) return;
     setSelectedPermissionIds((prev) => {
       const next = new Set(prev);
-      next.has(permissionId) ? next.delete(permissionId) : next.add(permissionId);
+      if (next.has(permissionId)) { next.delete(permissionId); } else { next.add(permissionId); }
       return next;
     });
   };
@@ -266,7 +207,7 @@ const PermissionRoles = () => {
   const toggleSidebarGroup = (groupKey: string) => {
     setExpandedSidebarGroups((prev) => {
       const next = new Set(prev);
-      next.has(groupKey) ? next.delete(groupKey) : next.add(groupKey);
+      if (next.has(groupKey)) { next.delete(groupKey); } else { next.add(groupKey); }
       return next;
     });
   };
@@ -274,6 +215,7 @@ const PermissionRoles = () => {
   const closeModal = () => {
     setRoleModalOpen(false);
     setEditingRole(null);
+    setEditingRoleId(null);
     setRoleName("");
     setRoleDescription("");
     setSelectedPermissionIds(new Set());
@@ -289,21 +231,12 @@ const PermissionRoles = () => {
     setRoleModalOpen(true);
   };
 
-  const openEditModal = async (role: RoleListItem) => {
+  const openEditModal = (role: RoleListItem) => {
     setEditingRole(role);
+    setEditingRoleId(role.id);
     setRoleName(role.name);
     setRoleDescription(role.description || "");
-
-    const result = await rolesApi.getById(role.id);
-    if (result.error) {
-      toast.error("Failed to load role details");
-      return;
-    }
-
-    const fullRole = result.data!;
-    const permIds = new Set<number>(fullRole.permissions?.map((p) => p.id) || []);
-    minimumRequiredIds.forEach((id) => permIds.add(id));
-    setSelectedPermissionIds(permIds);
+    setSelectedPermissionIds(new Set(minimumRequiredIds));
     setExpandedSidebarGroups(new Set());
     setRoleModalOpen(true);
   };
@@ -316,6 +249,7 @@ const PermissionRoles = () => {
 
     const permissionIds = Array.from(selectedPermissionIds);
 
+    const onSuccess = () => closeModal();
     if (editingRole) {
       updateRoleMutation.mutate({
         id: editingRole.id,
@@ -324,19 +258,32 @@ const PermissionRoles = () => {
           description: roleDescription.trim() || undefined,
           permissionIds,
         },
-      });
+      }, { onSuccess });
     } else {
       createRoleMutation.mutate({
         name: roleName.trim(),
         description: roleDescription.trim() || undefined,
         permissionIds,
-      });
+      }, { onSuccess });
     }
   };
 
   const handleDeleteClick = (role: RoleListItem) => {
     setRoleToDelete(role);
     setDeleteConfirmOpen(true);
+  };
+
+  const deleteRoleMutation = {
+    ...deleteRoleMutationBase,
+    mutate: (id: number) => {
+      deleteRoleMutationBase.mutate(id, {
+        onSuccess: () => {
+          setDeleteConfirmOpen(false);
+          setRoleToDelete(null);
+        },
+      });
+    },
+    isPending: deleteRoleMutationBase.isPending,
   };
 
   const confirmDelete = () => {

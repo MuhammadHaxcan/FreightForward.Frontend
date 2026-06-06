@@ -20,23 +20,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  customerApi,
-  bankApi,
-  settingsApi,
-  type Customer,
-  type Bank,
   type PaymentMode,
-  type CurrencyType,
 } from "@/services/api";
 import {
-  getNextPaymentNumber,
-  getUnpaidPurchaseInvoices,
-  getPaymentVoucherPaymentTypes,
-  createPaymentVoucher,
   type UnpaidPurchaseInvoice,
-  type PaymentType,
   type CreatePaymentVoucherRequest,
 } from "@/services/api/payment";
+import {
+  useCreatePaymentVoucher,
+  usePaymentVoucherPaymentTypes,
+  useNextPaymentNumber,
+  useUnpaidPurchaseInvoices,
+} from "@/hooks/usePaymentVouchers";
+import { useAllCreditors } from "@/hooks/useCustomers";
+import { useAllBanks } from "@/hooks/useBanks";
+import { useAllCurrencyTypes } from "@/hooks/useSettings";
 import { toast } from "sonner";
 
 interface RecordPaymentModalProps {
@@ -60,13 +58,15 @@ export function RecordPaymentModal({
   onOpenChange,
   onSuccess,
 }: RecordPaymentModalProps) {
-  const [loading, setLoading] = useState(false);
-  const [vendors, setVendors] = useState<Customer[]>([]);
-  const [banks, setBanks] = useState<Bank[]>([]);
-  const [paymentTypes, setPaymentTypes] = useState<PaymentType[]>([]);
-  const [currencies, setCurrencies] = useState<CurrencyType[]>([]);
-  const [unpaidInvoices, setUnpaidInvoices] = useState<UnpaidPurchaseInvoice[]>([]);
-  const [nextPaymentNo, setNextPaymentNo] = useState("");
+  const createMutation = useCreatePaymentVoucher();
+
+  // Data hooks (always fetch, caching handles efficiency)
+  const { data: vendors = [] } = useAllCreditors();
+  const { data: banksData } = useAllBanks();
+  const banks = banksData ?? [];
+  const { data: paymentTypes = [] } = usePaymentVoucherPaymentTypes();
+  const { data: currencies = [] } = useAllCurrencyTypes();
+  const { data: nextPaymentNo = "" } = useNextPaymentNumber();
 
   // Form state
   const [vendorId, setVendorId] = useState<number | null>(null);
@@ -81,124 +81,43 @@ export function RecordPaymentModal({
   const [postDatedValidDate, setPostDatedValidDate] = useState("");
   const [narration, setNarration] = useState("");
 
+  // Unpaid invoices — only fetch when vendorId is set
+  const { data: unpaidInvoices = [] } = useUnpaidPurchaseInvoices(vendorId);
+
   // Get current payment type config
   const currentPaymentType = paymentTypes.find(pt => pt.code === paymentMode);
   const requiresBank = currentPaymentType?.requiresBank ?? false;
   const requiresChequeDetails = currentPaymentType?.requiresChequeDetails ?? false;
 
-  // Fetch initial data
+  // Reset form when modal closes
   useEffect(() => {
-    if (open) {
-      fetchVendors();
-      fetchBanks();
-      fetchPaymentTypes();
-      fetchCurrencies();
-      fetchNextPaymentNumber();
-      resetForm();
+    if (!open) {
+      setVendorId(null);
+      setSelectedInvoices([]);
+      setPaymentMode("Cash");
+      setPaymentDate(format(new Date(), "yyyy-MM-dd"));
+      setCurrencyId(null);
+      setBankId(null);
+      setChequeNo("");
+      setChequeDate("");
+      setChequeBank("");
+      setPostDatedValidDate("");
+      setNarration("");
     }
   }, [open]);
 
-  // Fetch unpaid invoices when vendor changes
+  // Set currency when vendor changes
   useEffect(() => {
     if (vendorId) {
-      fetchUnpaidInvoices(vendorId);
-      // Set currency to vendor's currency
       const selectedVendor = vendors.find(v => v.id === vendorId);
       if (selectedVendor?.currencyId) {
         setCurrencyId(selectedVendor.currencyId);
       }
+      setSelectedInvoices([]);
     } else {
-      setUnpaidInvoices([]);
       setSelectedInvoices([]);
     }
   }, [vendorId, vendors]);
-
-  const fetchVendors = async () => {
-    try {
-      const response = await customerApi.getAll({ pageSize: 1000, masterType: 'Creditors' });
-      if (response.data) {
-        setVendors(response.data.items);
-      }
-    } catch (error) {
-      toast.error("Failed to load vendors");
-    }
-  };
-
-  const fetchBanks = async () => {
-    try {
-      const response = await bankApi.getAll();
-      if (response.data) {
-        setBanks(response.data.items);
-      }
-    } catch (error) {
-      toast.error("Failed to load banks");
-    }
-  };
-
-  const fetchPaymentTypes = async () => {
-    try {
-      const response = await getPaymentVoucherPaymentTypes();
-      if (response.data) {
-        setPaymentTypes(response.data);
-      }
-    } catch (error) {
-      // Fallback to default payment types
-      setPaymentTypes([
-        { id: 1, code: "Cash", name: "Cash", requiresBank: false, requiresChequeDetails: false, sortOrder: 1 },
-        { id: 2, code: "Card", name: "Card", requiresBank: true, requiresChequeDetails: false, sortOrder: 2 },
-        { id: 3, code: "Cheque", name: "Cheque", requiresBank: true, requiresChequeDetails: true, sortOrder: 3 },
-        { id: 4, code: "BankWire", name: "Bank Wire", requiresBank: true, requiresChequeDetails: false, sortOrder: 4 },
-        { id: 6, code: "PostDatedCheque", name: "Post Dated Cheque", requiresBank: true, requiresChequeDetails: true, sortOrder: 6 },
-      ]);
-    }
-  };
-
-  const fetchCurrencies = async () => {
-    try {
-      const response = await settingsApi.getAllCurrencyTypes();
-      if (response.data) {
-        setCurrencies(response.data);
-      }
-    } catch (error) {
-      toast.error("Failed to load currencies");
-    }
-  };
-
-  const fetchNextPaymentNumber = async () => {
-    try {
-      const response = await getNextPaymentNumber();
-      if (response.data) {
-        setNextPaymentNo(response.data);
-      }
-    } catch (error) {
-      toast.error("Failed to get payment number");
-    }
-  };
-
-  const fetchUnpaidInvoices = async (vId: number) => {
-    try {
-      const response = await getUnpaidPurchaseInvoices(vId);
-      if (response.data) {
-        setUnpaidInvoices(response.data);
-      }
-    } catch (error) {
-      toast.error("Failed to load unpaid invoices");
-    }
-  };
-
-  const resetForm = () => {
-    setVendorId(null);
-    setSelectedInvoices([]);
-    setPaymentMode("Cash");
-    setPaymentDate(format(new Date(), "yyyy-MM-dd"));
-    setCurrencyId(null);
-    setBankId(null);
-    setChequeNo("");
-    setChequeDate("");
-    setChequeBank("");
-    setPostDatedValidDate("");
-    setNarration("");
-  };
 
   const handleInvoiceSelect = (invoice: UnpaidPurchaseInvoice, isSelected: boolean) => {
     if (isSelected) {
@@ -266,38 +185,33 @@ export function RecordPaymentModal({
       return;
     }
 
-    setLoading(true);
-    try {
-      const request: CreatePaymentVoucherRequest = {
-        paymentDate: paymentDate,
-        vendorId: vendorId,
-        paymentMode: paymentMode,
-        currencyId: currencyId || 0,
-        amount: totalAmount,
-        narration: narration || undefined,
-        bankId: bankId || undefined,
-        chequeNo: chequeNo || undefined,
-        chequeDate: chequeDate || undefined,
-        chequeBank: chequeBank || undefined,
-        postDatedValidDate: paymentMode === "PostDatedCheque" ? (postDatedValidDate || undefined) : undefined,
-        purchaseInvoices: selectedInvoices.map(inv => ({
-          purchaseInvoiceId: inv.purchaseInvoiceId,
-          amount: inv.payingAmount,
-          currencyId: inv.currencyId,
-        })),
-      };
-
-      const response = await createPaymentVoucher(request);
-      if (response.error) {
-        throw new Error(response.error);
-      }
-      toast.success("Payment voucher recorded successfully");
-      onSuccess();
-    } catch (error) {
-      toast.error("Failed to record payment voucher");
-    } finally {
-      setLoading(false);
+    if (!currencyId) {
+      toast.error("Please select a currency");
+      return;
     }
+
+    const request: CreatePaymentVoucherRequest = {
+      paymentDate: paymentDate,
+      vendorId: vendorId,
+      paymentMode: paymentMode,
+      currencyId: currencyId,
+      amount: totalAmount,
+      narration: narration || undefined,
+      bankId: bankId || undefined,
+      chequeNo: chequeNo || undefined,
+      chequeDate: chequeDate || undefined,
+      chequeBank: chequeBank || undefined,
+      postDatedValidDate: paymentMode === "PostDatedCheque" ? (postDatedValidDate || undefined) : undefined,
+      purchaseInvoices: selectedInvoices.map(inv => ({
+        purchaseInvoiceId: inv.purchaseInvoiceId,
+        amount: inv.payingAmount,
+        currencyId: inv.currencyId,
+      })),
+    };
+
+    createMutation.mutate(request, {
+      onSuccess: () => onSuccess(),
+    });
   };
 
   return (
@@ -566,9 +480,9 @@ export function RecordPaymentModal({
           <Button
             className="btn-success"
             onClick={handleSubmit}
-            disabled={loading}
+            disabled={createMutation.isPending}
           >
-            {loading ? "Submitting..." : "Submit"}
+            {createMutation.isPending ? "Submitting..." : "Submit"}
           </Button>
         </div>
       </DialogContent>

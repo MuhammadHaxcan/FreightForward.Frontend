@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -15,7 +14,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
-import { customerApi, AccountPayable } from "@/services/api";
+import { useCustomerAccountPayables } from "@/hooks/useCustomers";
 
 interface VendorPayableDetailsModalProps {
   vendorId: number | null;
@@ -32,26 +31,12 @@ export function VendorPayableDetailsModal({
   open,
   onOpenChange,
 }: VendorPayableDetailsModalProps) {
-  const [items, setItems] = useState<AccountPayable[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { data, isLoading: loading } = useCustomerAccountPayables(
+    vendorId ?? 0,
+    { pageSize: 1000, enabled: open && !!vendorId }
+  );
 
-  useEffect(() => {
-    if (!open || !vendorId) return;
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const response = await customerApi.getAllAccountPayables(vendorId);
-        if (response.data) {
-          setItems(response.data);
-        }
-      } catch {
-        setItems([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [open, vendorId]);
+  const items = data?.items ?? [];
 
   if (!open) return null;
 

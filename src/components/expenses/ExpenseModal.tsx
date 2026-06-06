@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -13,8 +13,9 @@ import { DateInput } from "@/components/ui/date-input";
 import { format } from "date-fns";
 import { useExpenseTypesByDirection, useAllCurrencyTypes } from "@/hooks/useSettings";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
-import { Expense as ApiExpense, Bank } from "@/services/api";
+import { Expense as ApiExpense, Bank, fileApi } from "@/services/api";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 // Map PaymentMode enum values to display labels
 const paymentModeLabels: Record<string, string> = {
@@ -80,6 +81,9 @@ export function ExpenseModal({
   isSubmitting = false,
 }: ExpenseModalProps) {
   const baseCurrencyCode = useBaseCurrency();
+  const billCopyInputRef = useRef<HTMLInputElement>(null);
+  const [billCopyPath, setBillCopyPath] = useState<string | null>(null);
+  const [isUploadingBillCopy, setIsUploadingBillCopy] = useState(false);
   const [formData, setFormData] = useState({
     date: format(new Date(), "yyyy-MM-dd"),
     paymentType: "" as "" | "Inwards" | "Outwards",
@@ -142,11 +146,28 @@ export function ExpenseModal({
         chequeDate: "",
         postDatedValidDate: "",
       });
+      setBillCopyPath(null);
+      if (billCopyInputRef.current) billCopyInputRef.current.value = "";
     }
   }, [expense, open, banks]);
 
   const requiresBank = paymentModeConfig[formData.paymentMode]?.requiresBank ?? false;
   const requiresChequeDetails = paymentModeConfig[formData.paymentMode]?.requiresChequeDetails ?? false;
+
+  const handleBillCopyChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingBillCopy(true);
+    try {
+      const result = await fileApi.upload(file, "documents/expenses");
+      setBillCopyPath(result.fileName);
+    } catch {
+      toast.error("Failed to upload bill copy. Please try again.");
+      if (billCopyInputRef.current) billCopyInputRef.current.value = "";
+    } finally {
+      setIsUploadingBillCopy(false);
+    }
+  };
 
   const handlePaymentTypeChange = (value: "Inwards" | "Outwards") => {
     // Clear category when payment type changes since categories are different per type
@@ -169,7 +190,7 @@ export function ExpenseModal({
       category: formData.category,
       bankId: formData.bankId,
       description: formData.description,
-      receipt: formData.receipt,
+      receipt: billCopyPath || formData.receipt,
       currencyId,
       expenseTypeId,
       amount: formData.amount,
@@ -256,7 +277,21 @@ export function ExpenseModal({
             </div>
             <div>
               <label className="form-label">Bill Copy</label>
-              <Input type="file" className="cursor-pointer" />
+              <Input
+                ref={billCopyInputRef}
+                type="file"
+                className="cursor-pointer"
+                onChange={handleBillCopyChange}
+                disabled={isUploadingBillCopy}
+              />
+              {isUploadingBillCopy && (
+                <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                  <Loader2 className="h-3 w-3 animate-spin" /> Uploading...
+                </p>
+              )}
+              {billCopyPath && !isUploadingBillCopy && (
+                <p className="text-xs text-primary mt-1">File uploaded</p>
+              )}
             </div>
           </div>
 
@@ -336,8 +371,8 @@ export function ExpenseModal({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" className="btn-success" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            <Button type="submit" className="btn-success" disabled={isSubmitting || isUploadingBillCopy}>
+              {(isSubmitting || isUploadingBillCopy) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Submit
             </Button>
           </div>

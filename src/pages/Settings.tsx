@@ -48,6 +48,7 @@ import {
   useUpdateBank,
   useDeleteBank,
 } from "@/hooks/useBanks";
+import { useCompanies, useCreateCompany, useUpdateCompany } from "@/hooks/useCompanies";
 import { DeleteConfirmationModal } from "@/components/ui/delete-confirmation-modal";
 import {
   CurrencyType,
@@ -58,7 +59,6 @@ import {
   Bank,
   InvoiceNote,
   InvoiceNoteType,
-  companyApi,
   fileApi,
 } from "@/services/api";
 import { toast } from "sonner";
@@ -197,9 +197,10 @@ const Settings = () => {
   const [editNote, setEditNote] = useState<InvoiceNote | null>(null);
 
   // Company profile state
-  const [companyId, setCompanyId] = useState<number | null>(null);
-  const [companyLoading, setCompanyLoading] = useState(true);
-  const [companySaving, setCompanySaving] = useState(false);
+  const { data: companyData, isLoading: companyLoading } = useCompanies({ pageNumber: 1, pageSize: 1 });
+  const companyId = companyData?.items[0]?.id ?? null;
+  const updateCompanyMutation = useUpdateCompany();
+  const createCompanyMutation = useCreateCompany();
   const { data: allBanksData } = useAllBanks();
   const allBanks = allBanksData ?? [];
   const { data: allCurrenciesData } = useAllCurrencyTypes();
@@ -222,6 +223,8 @@ const Settings = () => {
     logoPath: "",
     sealPath: "",
     bankId: null as number | null,
+    defaultLocalBankId: null as number | null,
+    defaultInternationalBankId: null as number | null,
     baseCurrencyId: null as number | null,
   });
 
@@ -645,45 +648,39 @@ const Settings = () => {
 
   const { data: countriesData } = useAllCountries();
   const countries = (countriesData || []).map((c) => c.name);
+  const bankOptions = allBanks.map((bank) => ({
+    value: bank.id.toString(),
+    label: bank.acNumber ? `${bank.bankName} - ${bank.acNumber}` : bank.bankName,
+  }));
 
-  // Load company profile on mount
+  // Populate company profile form when query data arrives
   useEffect(() => {
-    const loadCompanyData = async () => {
-      setCompanyLoading(true);
-      try {
-        const companyRes = await companyApi.getAll({ pageNumber: 1, pageSize: 1 });
-        if (companyRes.data && companyRes.data.items.length > 0) {
-          const c = companyRes.data.items[0];
-          setCompanyId(c.id);
-          setCompanyProfile({
-            name: c.name || "",
-            companyType: c.companyType || "",
-            legalTradingName: c.legalTradingName || "",
-            registrationNumber: c.registrationNumber || "",
-            contactNumber: c.contactNumber || "",
-            email: c.email || "",
-            website: c.website || "",
-            vatId: c.vatId || "",
-            addressLine1: c.addressLine1 || "",
-            addressLine2: c.addressLine2 || "",
-            city: c.city || "",
-            stateProvince: c.stateProvince || "",
-            zipCode: c.zipCode || "",
-            country: c.country || "",
-            logoPath: c.logoPath || "",
-            sealPath: c.sealPath || "",
-            bankId: c.bankId ?? null,
-            baseCurrencyId: c.baseCurrencyId ?? null,
-          });
-        }
-      } catch (err) {
-        console.error("Failed to load company data", err);
-      } finally {
-        setCompanyLoading(false);
-      }
-    };
-    loadCompanyData();
-  }, []);
+    const c = companyData?.items[0];
+    if (c) {
+      setCompanyProfile({
+        name: c.name || "",
+        companyType: c.companyType || "",
+        legalTradingName: c.legalTradingName || "",
+        registrationNumber: c.registrationNumber || "",
+        contactNumber: c.contactNumber || "",
+        email: c.email || "",
+        website: c.website || "",
+        vatId: c.vatId || "",
+        addressLine1: c.addressLine1 || "",
+        addressLine2: c.addressLine2 || "",
+        city: c.city || "",
+        stateProvince: c.stateProvince || "",
+        zipCode: c.zipCode || "",
+        country: c.country || "",
+        logoPath: c.logoPath || "",
+        sealPath: c.sealPath || "",
+        bankId: c.bankId ?? null,
+        defaultLocalBankId: c.defaultLocalBankId ?? null,
+        defaultInternationalBankId: c.defaultInternationalBankId ?? null,
+        baseCurrencyId: c.baseCurrencyId ?? null,
+      });
+    }
+  }, [companyData]);
 
   const handleFileUpload = async (file: File, field: "logoPath" | "sealPath") => {
     try {
@@ -695,47 +692,37 @@ const Settings = () => {
     }
   };
 
-  const handleSaveCompany = async () => {
+  const handleSaveCompany = () => {
     if (!companyProfile.name.trim()) {
       toast.error("Company name is required");
       return;
     }
-    setCompanySaving(true);
-    try {
-      const payload = {
-        name: companyProfile.name,
-        companyType: companyProfile.companyType || undefined,
-        legalTradingName: companyProfile.legalTradingName || undefined,
-        registrationNumber: companyProfile.registrationNumber || undefined,
-        contactNumber: companyProfile.contactNumber || undefined,
-        email: companyProfile.email || undefined,
-        website: companyProfile.website || undefined,
-        vatId: companyProfile.vatId || undefined,
-        addressLine1: companyProfile.addressLine1 || undefined,
-        addressLine2: companyProfile.addressLine2 || undefined,
-        city: companyProfile.city || undefined,
-        stateProvince: companyProfile.stateProvince || undefined,
-        zipCode: companyProfile.zipCode || undefined,
-        country: companyProfile.country || undefined,
-        logoPath: companyProfile.logoPath || undefined,
-        sealPath: companyProfile.sealPath || undefined,
-        bankId: companyProfile.bankId ?? undefined,
-        baseCurrencyId: companyProfile.baseCurrencyId ?? undefined,
-      };
-      if (companyId) {
-        const res = await companyApi.update(companyId, { ...payload, id: companyId });
-        if (res.error) throw new Error(res.error);
-        toast.success("Company updated successfully");
-      } else {
-        const res = await companyApi.create(payload);
-        if (res.error) throw new Error(res.error);
-        setCompanyId(res.data!);
-        toast.success("Company created successfully");
-      }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save company");
-    } finally {
-      setCompanySaving(false);
+    const payload = {
+      name: companyProfile.name,
+      companyType: companyProfile.companyType || undefined,
+      legalTradingName: companyProfile.legalTradingName || undefined,
+      registrationNumber: companyProfile.registrationNumber || undefined,
+      contactNumber: companyProfile.contactNumber || undefined,
+      email: companyProfile.email || undefined,
+      website: companyProfile.website || undefined,
+      vatId: companyProfile.vatId || undefined,
+      addressLine1: companyProfile.addressLine1 || undefined,
+      addressLine2: companyProfile.addressLine2 || undefined,
+      city: companyProfile.city || undefined,
+      stateProvince: companyProfile.stateProvince || undefined,
+      zipCode: companyProfile.zipCode || undefined,
+      country: companyProfile.country || undefined,
+      logoPath: companyProfile.logoPath || undefined,
+      sealPath: companyProfile.sealPath || undefined,
+      bankId: companyProfile.defaultLocalBankId ?? companyProfile.bankId ?? undefined,
+      defaultLocalBankId: companyProfile.defaultLocalBankId ?? undefined,
+      defaultInternationalBankId: companyProfile.defaultInternationalBankId ?? undefined,
+      baseCurrencyId: companyProfile.baseCurrencyId ?? undefined,
+    };
+    if (companyId) {
+      updateCompanyMutation.mutate({ id: companyId, data: { ...payload, id: companyId } });
+    } else {
+      createCompanyMutation.mutate(payload);
     }
   };
 
@@ -1535,12 +1522,22 @@ const Settings = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-foreground mb-1">Bank</label>
+                        <label className="block text-sm font-medium text-foreground mb-1">Default Local Bank</label>
                         <SearchableSelect
-                          options={allBanks.map((b) => ({ value: b.id.toString(), label: b.bankName }))}
-                          value={companyProfile.bankId?.toString() ?? ""}
-                          onValueChange={(val) => setCompanyProfile({ ...companyProfile, bankId: val ? parseInt(val) : null })}
-                          placeholder="Select Bank"
+                          options={bankOptions}
+                          value={companyProfile.defaultLocalBankId?.toString() ?? ""}
+                          onValueChange={(val) => setCompanyProfile({ ...companyProfile, defaultLocalBankId: val ? parseInt(val) : null })}
+                          placeholder="Select Default Local Bank"
+                          searchPlaceholder="Search banks..."
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">Default International Bank</label>
+                        <SearchableSelect
+                          options={bankOptions}
+                          value={companyProfile.defaultInternationalBankId?.toString() ?? ""}
+                          onValueChange={(val) => setCompanyProfile({ ...companyProfile, defaultInternationalBankId: val ? parseInt(val) : null })}
+                          placeholder="Select Default International Bank"
                           searchPlaceholder="Search banks..."
                         />
                       </div>
@@ -1564,9 +1561,9 @@ const Settings = () => {
                     <Button
                       className="btn-success"
                       onClick={handleSaveCompany}
-                      disabled={companySaving}
+                      disabled={updateCompanyMutation.isPending || createCompanyMutation.isPending}
                     >
-                      {companySaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      {(updateCompanyMutation.isPending || createCompanyMutation.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       {companyId ? "Update" : "Save"}
                     </Button>
                   </div>

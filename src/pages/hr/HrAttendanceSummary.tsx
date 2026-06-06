@@ -1,11 +1,17 @@
 import { useState, useRef } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Printer, ArrowLeft } from "lucide-react";
 import { PermissionGate } from "@/components/auth/PermissionGate";
-import { hrAttendanceApi, hrEmployeeApi, hrAttendancePolicyApi } from "@/services/api/hr";
+import { hrAttendanceApi } from "@/services/api/hr";
+import {
+  useHrAttendancePolicy,
+  useHrAttendanceSummary,
+  useHrEmployeeMonthlyAttendance,
+} from "@/hooks/useHrAttendance";
+import { useHrEmployeeDropdown } from "@/hooks/useHrEmployees";
 import {
   Dialog,
   DialogContent,
@@ -92,15 +98,7 @@ const HrAttendanceSummary = () => {
   const queryClient = useQueryClient();
   const unlockedDateRef = useRef<string>("");
 
-  const { data: hrPolicy } = useQuery({
-    queryKey: ["hr-attendance-policy"],
-    queryFn: async () => {
-      const result = await hrAttendancePolicyApi.get();
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    staleTime: 0,
-  });
+  const { data: hrPolicy } = useHrAttendancePolicy();
   const weeklyOffDays = hrPolicy?.weeklyOffDays ?? [];
 
   const yearOptions = Array.from({ length: 10 }, (_, i) => {
@@ -110,42 +108,19 @@ const HrAttendanceSummary = () => {
 
   const isEmployeeView = selectedEmployee !== "";
 
-  // Fetch employee dropdown
-  const { data: empDropdown } = useQuery({
-    queryKey: ["hr-employees-dropdown"],
-    queryFn: async () => {
-      const result = await hrEmployeeApi.getDropdown();
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-  });
+  const { data: empDropdown } = useHrEmployeeDropdown();
   const employees = empDropdown || [];
 
-  // Fetch all-employees summary
-  const { data: summaryData, isLoading: summaryLoading } = useQuery({
-    queryKey: ["hr-attendance-summary", selectedYear, selectedMonth],
-    queryFn: async () => {
-      const result = await hrAttendanceApi.getSummary(parseInt(selectedYear), parseInt(selectedMonth));
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    enabled: !isEmployeeView,
-  });
+  const { data: summaryData, isLoading: summaryLoading } = useHrAttendanceSummary(
+    !isEmployeeView ? parseInt(selectedYear) : null,
+    !isEmployeeView ? parseInt(selectedMonth) : null,
+  );
 
-  // Fetch single-employee monthly detail
-  const { data: employeeMonthlyData, isLoading: employeeLoading } = useQuery({
-    queryKey: ["hr-attendance-employee-monthly", selectedEmployee, selectedYear, selectedMonth],
-    queryFn: async () => {
-      const result = await hrAttendanceApi.getEmployeeMonthly(
-        parseInt(selectedEmployee),
-        parseInt(selectedYear),
-        parseInt(selectedMonth)
-      );
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    enabled: isEmployeeView,
-  });
+  const { data: employeeMonthlyData, isLoading: employeeLoading } = useHrEmployeeMonthlyAttendance(
+    isEmployeeView ? parseInt(selectedEmployee) : null,
+    isEmployeeView ? parseInt(selectedYear) : null,
+    isEmployeeView ? parseInt(selectedMonth) : null,
+  );
 
   // Unlock mutation
   const unlockMutation = useMutation({
@@ -171,16 +146,14 @@ const HrAttendanceSummary = () => {
     onSuccess: () => {
       toast.success("Attendance updated successfully");
       queryClient.invalidateQueries({
-        queryKey: ["hr-attendance-employee-monthly", selectedEmployee, selectedYear, selectedMonth],
+        queryKey: ["hr-attendance-employee-monthly", parseInt(selectedEmployee), parseInt(selectedYear), parseInt(selectedMonth)],
       });
       queryClient.invalidateQueries({
-        queryKey: ["hr-attendance-summary", selectedYear, selectedMonth],
+        queryKey: ["hr-attendance-summary", parseInt(selectedYear), parseInt(selectedMonth)],
       });
       queryClient.invalidateQueries({
         queryKey: ["hr-attendance-daily", unlockedDateRef.current],
       });
-      queryClient.invalidateQueries({ queryKey: ["hr-attendance-emp", parseInt(selectedEmployee)] });
-      queryClient.invalidateQueries({ queryKey: ["hr-attendance-summary-emp", parseInt(selectedEmployee)] });
       setUnlockModal({ open: false, dateStr: "", dayLabel: "", employeeId: 0 });
       setUnlockReason("");
       setUnlockStatus("Present");

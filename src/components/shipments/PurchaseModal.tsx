@@ -21,10 +21,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Loader2, Plus } from "lucide-react";
-import { ShipmentParty, ShipmentCosting, CreatePurchaseInvoiceItemRequest, UpdatePurchaseInvoiceItemRequest, invoiceApi, customerApi, AccountPurchaseInvoiceDetail, shipmentApi, AddShipmentCostingRequest, UpdateShipmentCostingRequest } from "@/services/api";
+import { ShipmentParty, ShipmentCosting, CreatePurchaseInvoiceItemRequest, UpdatePurchaseInvoiceItemRequest, AccountPurchaseInvoiceDetail, shipmentApi, AddShipmentCostingRequest, UpdateShipmentCostingRequest } from "@/services/api";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 import { useAllCurrencyTypes } from "@/hooks/useSettings";
-import { useCreatePurchaseInvoice, useUpdatePurchaseInvoice } from "@/hooks/useInvoices";
+import { useCreatePurchaseInvoice, useUpdatePurchaseInvoice, usePurchaseInvoice, useNextPurchaseNumber } from "@/hooks/useInvoices";
+import { useCustomer } from "@/hooks/useCustomers";
 import { useAddShipmentCosting, useUpdateShipmentCosting } from "@/hooks/useShipments";
 import { CostingModal, type CostingModalData } from "@/components/shipments/CostingModal";
 
@@ -51,6 +52,7 @@ interface PurchaseModalProps {
   parties: ShipmentParty[];
   onSave: (purchase: PurchaseSaveResult) => void | Promise<void>;
   editPurchaseInvoiceId?: number | null;
+  asPage?: boolean;
 }
 
 // Helper function to deduplicate parties by customerId
@@ -64,7 +66,7 @@ const deduplicateByCustomerId = (partyList: ShipmentParty[]): ShipmentParty[] =>
   });
 };
 
-export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, chargesDetails, parties, onSave, editPurchaseInvoiceId }: PurchaseModalProps) {
+export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, chargesDetails, parties, onSave, editPurchaseInvoiceId, asPage = false }: PurchaseModalProps) {
   const baseCurrencyCode = useBaseCurrency();
   const isBaseCurrency = (currencyCode?: string): boolean =>
     (currencyCode || "").trim().toUpperCase() === (baseCurrencyCode || "").trim().toUpperCase();
@@ -73,6 +75,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
   const addCostingMutation = useAddShipmentCosting();
   const updateCostingMutation = useUpdateShipmentCosting();
   const isEditMode = !!editPurchaseInvoiceId;
+  const isActive = asPage ? true : open;
 
   // Filter parties to only show Creditors and deduplicate by customerId
   const creditorParties = useMemo(() =>
@@ -81,10 +84,24 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
   );
 
   const { data: currencies = [] } = useAllCurrencyTypes();
-  const [editInvoiceData, setEditInvoiceData] = useState<AccountPurchaseInvoiceDetail | null>(null);
-  const [isLoadingEdit, setIsLoadingEdit] = useState(false);
-  // Map of costing id -> existing purchase invoice item id (for updates)
-  const [existingItemIds, setExistingItemIds] = useState<Map<number, number>>(new Map());
+
+  // Fetch purchase invoice data via hook (edit mode) or next purchase number (create mode)
+  const { data: fetchedInvoice, isLoading: isLoadingEdit } = usePurchaseInvoice(isActive && isEditMode ? editPurchaseInvoiceId ?? undefined : undefined);
+  const { data: nextPurchaseNumber } = useNextPurchaseNumber(isActive && !isEditMode);
+
+  // editInvoiceData derived from query
+  const editInvoiceData: AccountPurchaseInvoiceDetail | null = fetchedInvoice ?? null;
+
+  // Map of costing id -> existing purchase invoice item id (for updates), derived from fetched data
+  const existingItemIds = useMemo(() => {
+    const map = new Map<number, number>();
+    if (fetchedInvoice) {
+      fetchedInvoice.items.forEach(item => {
+        if (item.shipmentCostingId) map.set(item.shipmentCostingId, item.id);
+      });
+    }
+    return map;
+  }, [fetchedInvoice]);
 
   // Costing integration state (edit mode)
   const [localCostings, setLocalCostings] = useState<ShipmentCosting[]>([]);
@@ -105,9 +122,9 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
     selectedCharges: [] as number[],
   });
 
-  // Reset form and fetch data when modal opens
+  // Reset form and fetch data when modal opens/closes
   useEffect(() => {
-    if (open) {
+    if (!isActive) {
       setFormData({
         purchaseId: "",
         companyName: "",
@@ -120,70 +137,52 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
         remarks: "",
         selectedCharges: [],
       });
-      setEditInvoiceData(null);
-      setExistingItemIds(new Map());
-      setLocalCostings(chargesDetails);
+      setLocalCostings([]);
       setCostingModalOpen(false);
       setEditingCostingForModal(undefined);
       setPendingAutoSelect(null);
-
-      if (isEditMode && editPurchaseInvoiceId) {
-        // Edit mode: fetch existing purchase invoice data
-        setIsLoadingEdit(true);
-        invoiceApi.getPurchaseInvoiceById(editPurchaseInvoiceId).then(response => {
-          if (response.data) {
-            const inv = response.data;
-            setEditInvoiceData(inv);
-
-            // Build map of costingId -> purchaseInvoiceItemId
-            const itemIdMap = new Map<number, number>();
-            inv.items.forEach(item => {
-              if (item.shipmentCostingId) {
-                itemIdMap.set(item.shipmentCostingId, item.id);
-              }
-            });
-            setExistingItemIds(itemIdMap);
-
-            // Find the party matching the vendor
-            const matchingParty = creditorParties.find(p => p.customerId === inv.vendorId);
-            const costingIds = inv.items
-              .filter(item => item.shipmentCostingId)
-              .map(item => item.shipmentCostingId!);
-
-            setFormData({
-              purchaseId: inv.purchaseNo,
-              companyName: inv.vendorName || "",
-              customerId: matchingParty ? matchingParty.id.toString() : "",
-              invoiceDate: inv.purchaseDate,
-              invoiceNo: inv.vendorInvoiceNo || "",
-              vDate: inv.vendorInvoiceDate || getTodayDateOnly(),
-              currencyId: inv.currencyId || 1,
-              currencyCode: baseCurrencyCode,
-              remarks: inv.remarks || "",
-              selectedCharges: costingIds,
-            });
-          }
-          setIsLoadingEdit(false);
-        });
-      } else {
-        // Create mode: fetch next purchase number
-        invoiceApi.getNextPurchaseNumber().then(response => {
-          if (response.data) {
-            setFormData(prev => ({ ...prev, purchaseId: response.data as string }));
-          }
-        });
-      }
+    } else {
+      setLocalCostings(chargesDetails);
     }
-  }, [open, editPurchaseInvoiceId]);
+  }, [isActive]);
 
-  // Resolve currencyCode once editInvoiceData and currencies are both available
+  // Populate form from fetched purchase invoice data (edit mode)
   useEffect(() => {
-    if (!editInvoiceData || currencies.length === 0) return;
-    const currency = currencies.find(c => c.id === editInvoiceData.currencyId);
-    if (currency) {
-      setFormData(prev => ({ ...prev, currencyCode: currency.code }));
+    if (fetchedInvoice && isEditMode) {
+      const inv = fetchedInvoice;
+      const matchingParty = creditorParties.find(p => p.customerId === inv.vendorId);
+      const costingIds = inv.items
+        .filter(item => item.shipmentCostingId)
+        .map(item => item.shipmentCostingId!);
+      const currency = currencies.find(c => c.id === inv.currencyId);
+      setFormData({
+        purchaseId: inv.purchaseNo,
+        companyName: inv.vendorName || "",
+        customerId: matchingParty ? matchingParty.id.toString() : "",
+        invoiceDate: inv.purchaseDate,
+        invoiceNo: inv.vendorInvoiceNo || "",
+        vDate: inv.vendorInvoiceDate || getTodayDateOnly(),
+        currencyId: inv.currencyId || 1,
+        currencyCode: currency?.code || baseCurrencyCode,
+        remarks: inv.remarks || "",
+        selectedCharges: costingIds,
+      });
     }
-  }, [editInvoiceData, currencies]);
+  }, [fetchedInvoice, isEditMode]);
+
+  // Populate next purchase number (create mode)
+  useEffect(() => {
+    if (nextPurchaseNumber && !isEditMode) {
+      setFormData(prev => ({ ...prev, purchaseId: nextPurchaseNumber }));
+    }
+  }, [nextPurchaseNumber, isEditMode]);
+
+  // Keep available costings list in sync when parent refreshes while modal is open
+  useEffect(() => {
+    if (isActive) {
+      setLocalCostings(chargesDetails);
+    }
+  }, [chargesDetails]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Filter charges: show uninvoiced charges + charges from this purchase invoice
   const filteredCharges = useMemo(() => {
@@ -212,26 +211,35 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
     });
   }, [localCostings, formData.customerId, creditorParties, editInvoiceData]);
 
+  // Derive the selected party's customerId for currency lookup (create mode only)
+  const selectedPartyCustomerId = useMemo(() => {
+    if (!formData.customerId || isEditMode) return undefined;
+    const selectedParty = creditorParties.find(p => p.id.toString() === formData.customerId);
+    return selectedParty?.customerId;
+  }, [formData.customerId, creditorParties, isEditMode]);
+
+  const { data: selectedCustomerData } = useCustomer(selectedPartyCustomerId ?? 0);
+
   // Update currency when company selection changes (only in create mode)
   useEffect(() => {
-    if (formData.customerId && !isEditMode) {
-      const selectedParty = creditorParties.find(p => p.id.toString() === formData.customerId);
-      if (selectedParty?.customerId) {
-        setFormData(prev => ({ ...prev, companyName: selectedParty.customerName }));
-        customerApi.getById(selectedParty.customerId).then(customerResponse => {
-          if (customerResponse.data) {
-            const custCurrencyId = customerResponse.data.currencyId || 1;
-            const currency = currencies.find(c => c.id === custCurrencyId);
-            setFormData(prev => ({
-              ...prev,
-              currencyId: custCurrencyId,
-              currencyCode: currency?.code || baseCurrencyCode,
-            }));
-          }
-        });
-      }
+    if (!formData.customerId || isEditMode) return;
+    const selectedParty = creditorParties.find(p => p.id.toString() === formData.customerId);
+    if (selectedParty) {
+      setFormData(prev => ({ ...prev, companyName: selectedParty.customerName }));
     }
-  }, [formData.customerId, creditorParties, currencies, isEditMode]);
+  }, [formData.customerId, creditorParties, isEditMode]);
+
+  useEffect(() => {
+    if (selectedCustomerData && !isEditMode) {
+      const custCurrencyId = selectedCustomerData.currencyId || 1;
+      const currency = currencies.find(c => c.id === custCurrencyId);
+      setFormData(prev => ({
+        ...prev,
+        currencyId: custCurrencyId,
+        currencyCode: currency?.code || baseCurrencyCode,
+      }));
+    }
+  }, [selectedCustomerData, currencies, isEditMode, baseCurrencyCode]);
 
   // Sale-only charges: costings that have sale data but no cost data (edit mode only)
   const saleOnlyCharges = useMemo(() => {
@@ -580,20 +588,13 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
   );
   const totalWithTax = totalCost + totalTax;
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-modal-6xl max-h-[90vh] overflow-y-auto bg-card border border-border p-0">
-        <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
-          <DialogTitle className="text-white text-lg font-semibold">
-            {isEditMode ? "Edit Purchase Invoice" : "New Purchase Invoice"}
-          </DialogTitle>
-        </DialogHeader>
-
-        {isLoadingEdit ? (
-          <div className="flex items-center justify-center p-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : (
+  const modalContent = (
+    <>
+      {isLoadingEdit ? (
+        <div className="flex items-center justify-center p-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : (
         <div className="space-y-4 p-6 pt-4">
           {/* Purchase Section Header */}
           <h3 className="text-primary font-semibold">Purchase</h3>
@@ -849,8 +850,33 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
             </Button>
           </div>
         </div>
-        )}
-      </DialogContent>
+      )}
+    </>
+  );
+
+  return (
+    <>
+      {asPage ? (
+        <div className="bg-card border border-border rounded-lg">
+          <div className="bg-modal-header text-white p-4 rounded-t-lg">
+            <h2 className="text-white text-lg font-semibold">
+              {isEditMode ? "Edit Purchase Invoice" : "New Purchase Invoice"}
+            </h2>
+          </div>
+          {modalContent}
+        </div>
+      ) : (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+          <DialogContent className="max-w-modal-6xl max-h-[90vh] overflow-y-auto bg-card border border-border p-0">
+            <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+              <DialogTitle className="text-white text-lg font-semibold">
+                {isEditMode ? "Edit Purchase Invoice" : "New Purchase Invoice"}
+              </DialogTitle>
+            </DialogHeader>
+            {modalContent}
+          </DialogContent>
+        </Dialog>
+      )}
 
       {isEditMode && (
         <CostingModal
@@ -870,6 +896,6 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
           defaultActiveTab={editingCostingForModal ? "cost" : undefined}
         />
       )}
-    </Dialog>
+    </>
   );
 }

@@ -42,6 +42,7 @@ export function useCreateCompany() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['companies'] });
+      queryClient.invalidateQueries({ queryKey: ['baseCurrency'] });
       toast.success('Company created successfully');
     },
     onError: (error: Error) => {
@@ -63,6 +64,7 @@ export function useUpdateCompany() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['companies'] });
+      queryClient.invalidateQueries({ queryKey: ['baseCurrency'] });
       toast.success('Company updated successfully');
     },
     onError: (error: Error) => {

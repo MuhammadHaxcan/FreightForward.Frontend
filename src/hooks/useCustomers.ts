@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { customerApi, CreateCustomerRequest, UpdateCustomerRequest, MasterType, CustomerApprovalStatus } from '@/services/api';
+import { customerApi, CreateCustomerRequest, UpdateCustomerRequest, MasterType, CustomerApprovalStatus, CustomerAccountDetail, type CreateCustomerContactRequest } from '@/services/api';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
 
@@ -303,6 +303,77 @@ export function useDenyCustomer() {
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to deny customer');
+    },
+  });
+}
+
+export function useUpdateCustomerAccountDetail() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ customerId, data }: { customerId: number; data: Omit<CustomerAccountDetail, 'id'> }) => {
+      const response = await customerApi.updateAccountDetail(customerId, data);
+      if (response.error) throw new Error(response.error);
+    },
+    onSuccess: (_, { customerId }) => {
+      queryClient.invalidateQueries({ queryKey: ['customers', customerId] });
+      toast.success("Account details saved successfully");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to save account details");
+    },
+  });
+}
+
+export function useCreateContact() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ customerId, data }: { customerId: number; data: CreateCustomerContactRequest }) => {
+      const response = await customerApi.createContact(customerId, data);
+      if (response.error) throw new Error(response.error);
+      return response.data;
+    },
+    onSuccess: (_, { customerId }) => {
+      queryClient.invalidateQueries({ queryKey: ['customers', customerId] });
+      toast.success('Contact added successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to add contact');
+    },
+  });
+}
+
+export function useDeleteContact() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ contactId, customerId }: { contactId: number; customerId: number }) => {
+      const response = await customerApi.deleteContact(contactId);
+      if (response.error) throw new Error(response.error);
+      return customerId;
+    },
+    onSuccess: (customerId) => {
+      queryClient.invalidateQueries({ queryKey: ['customers', customerId] });
+      toast.success('Contact deleted successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to delete contact');
+    },
+  });
+}
+
+export function useSetOpeningBalance() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ customerId, data }: { customerId: number; data: { amount: number; date?: string | null; narration?: string | null } }) => {
+      const response = await customerApi.setOpeningBalance(customerId, data);
+      if (response.error) throw new Error(response.error);
+    },
+    onSuccess: (_, { customerId }) => {
+      queryClient.invalidateQueries({ queryKey: ['customers', customerId] });
+      queryClient.invalidateQueries({ queryKey: ['customer', customerId] });
+      toast.success('Opening balance saved');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to save opening balance');
     },
   });
 }

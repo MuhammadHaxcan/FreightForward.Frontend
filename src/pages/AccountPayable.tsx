@@ -53,9 +53,9 @@ export default function AccountPayable() {
 
   const handlePrint = () => {
     const params = new URLSearchParams();
-    if (dateRange?.from) params.append('fromDate', formatDateToISO(dateRange.from));
-    if (dateRange?.to) params.append('toDate', formatDateToISO(dateRange.to));
-    if (selectedVendor !== "all") params.append('vendorId', selectedVendor);
+    if (appliedDateRange?.from) params.append('fromDate', formatDateToISO(appliedDateRange.from));
+    if (appliedDateRange?.to) params.append('toDate', formatDateToISO(appliedDateRange.to));
+    if (appliedVendor !== "all") params.append('vendorId', appliedVendor);
     if (appliedSearch) params.append('searchTerm', appliedSearch);
     window.open(`/accounts/account-payable/print?${params.toString()}`, '_blank');
   };

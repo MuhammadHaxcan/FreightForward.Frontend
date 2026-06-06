@@ -12,15 +12,15 @@ import {
 } from "@/components/ui/dialog";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
-  receiptApi,
-  bankApi,
-  type Bank,
-  type PaymentType,
   type PaymentMode,
-  type ReceiptDetail,
   type UpdateReceiptRequest,
 } from "@/services/api";
-import { useUpdateReceipt } from "@/hooks/useReceipts";
+import {
+  useUpdateReceipt,
+  useReceipt,
+  useReceiptPaymentTypes,
+} from "@/hooks/useReceipts";
+import { useAllBanks } from "@/hooks/useBanks";
 import { toast } from "sonner";
 
 interface UpdateReceiptModalProps {
@@ -36,12 +36,13 @@ export function UpdateReceiptModal({
   receiptId,
   onSuccess,
 }: UpdateReceiptModalProps) {
+  // Data hooks
+  const { data: receipt, isLoading: fetchingData } = useReceipt(open ? receiptId : null);
+  const { data: paymentTypes = [] } = useReceiptPaymentTypes();
+  const { data: banksData } = useAllBanks();
+  const banks = banksData ?? [];
+
   const updateReceiptMutation = useUpdateReceipt();
-  const [loading, setLoading] = useState(false);
-  const [fetchingData, setFetchingData] = useState(false);
-  const [banks, setBanks] = useState<Bank[]>([]);
-  const [paymentTypes, setPaymentTypes] = useState<PaymentType[]>([]);
-  const [receipt, setReceipt] = useState<ReceiptDetail | null>(null);
 
   // Form state
   const [customerId, setCustomerId] = useState<number | null>(null);
@@ -66,70 +67,56 @@ export function UpdateReceiptModal({
   const requiresBank = currentPaymentType?.requiresBank ?? false;
   const requiresChequeDetails = currentPaymentType?.requiresChequeDetails ?? false;
 
-  // Fetch initial data
+  // Populate form when receipt data loads
   useEffect(() => {
-    if (open && receiptId) {
-      setFetchingData(true);
-      fetchInitialData();
-      fetchReceiptDetails();
-    }
-  }, [open, receiptId]);
+    if (receipt) {
+      setCustomerId(receipt.customerId);
+      setCustomerName(receipt.customerName || "");
+      setPaymentMode(receipt.paymentMode);
+      setReceiptNo(receipt.receiptNo);
+      setReceiptDate(format(new Date(receipt.receiptDate), "yyyy-MM-dd"));
+      setNarration(receipt.narration || "");
+      setRemarks(receipt.remarks || "");
+      setCurrencyId(receipt.currencyId || null);
+      setCurrencyCode(receipt.currencyCode || "");
+      setBankId(receipt.bankId || null);
+      setChequeNo(receipt.chequeNo || "");
+      setChequeDate(receipt.chequeDate ? format(new Date(receipt.chequeDate), "yyyy-MM-dd") : "");
+      setChequeBank(receipt.chequeBank || "");
+      setPostDatedValidDate(receipt.postDatedValidDate ? format(new Date(receipt.postDatedValidDate), "yyyy-MM-dd") : "");
+      setAmount(receipt.amount);
 
-  const fetchInitialData = async () => {
-    try {
-      const [banksRes, paymentTypesRes] = await Promise.all([
-        bankApi.getAll(),
-        receiptApi.getPaymentTypes(),
-      ]);
-
-      if (banksRes.data) setBanks(banksRes.data.items);
-      if (paymentTypesRes.data) setPaymentTypes(paymentTypesRes.data);
-    } catch (error) {
-      console.error("Error fetching initial data:", error);
-      toast.error("Failed to load receipt data");
-    }
-  };
-
-  const fetchReceiptDetails = async () => {
-    if (!receiptId) return;
-    setFetchingData(true);
-    try {
-      const response = await receiptApi.getById(receiptId);
-      if (response.data) {
-        const data = response.data;
-        setReceipt(data);
-        setCustomerId(data.customerId);
-        setCustomerName(data.customerName || "");
-        setPaymentMode(data.paymentMode);
-        setReceiptNo(data.receiptNo);
-        setReceiptDate(format(new Date(data.receiptDate), "yyyy-MM-dd"));
-        setNarration(data.narration || "");
-        setRemarks(data.remarks || "");
-        setCurrencyId(data.currencyId || null);
-        setCurrencyCode(data.currencyCode || "");
-        setBankId(data.bankId || null);
-        setChequeNo(data.chequeNo || "");
-        setChequeDate(data.chequeDate ? format(new Date(data.chequeDate), "yyyy-MM-dd") : "");
-        setChequeBank(data.chequeBank || "");
-        setPostDatedValidDate(data.postDatedValidDate ? format(new Date(data.postDatedValidDate), "yyyy-MM-dd") : "");
-        setAmount(data.amount);
-
-        // Set all invoice numbers for display
-        if (data.invoices && data.invoices.length > 0) {
-          setInvoiceNumbers(
-            data.invoices
-              .map(inv => inv.invoiceNo)
-              .filter((no): no is string => !!no)
-          );
-        }
+      if (receipt.invoices && receipt.invoices.length > 0) {
+        setInvoiceNumbers(
+          receipt.invoices
+            .map(inv => inv.invoiceNo)
+            .filter((no): no is string => !!no)
+        );
       }
-    } catch (error) {
-      console.error("Error fetching receipt details:", error);
-      toast.error("Failed to load receipt details");
-    } finally {
-      setFetchingData(false);
     }
-  };
+  }, [receipt]);
+
+  // Reset form state when modal closes
+  useEffect(() => {
+    if (!open) {
+      setCustomerId(null);
+      setCustomerName("");
+      setInvoiceNumbers([]);
+      setPaymentMode("Cash");
+      setReceiptNo("");
+      setReceiptDate("");
+      setNarration("");
+      setRemarks("");
+      setCurrencyId(null);
+      setCurrencyCode("");
+      setBankId(null);
+      setChequeNo("");
+      setChequeDate("");
+      setChequeBank("");
+      setPostDatedValidDate("");
+      setAmount(0);
+    }
+  }, [open]);
 
   const handleSubmit = async () => {
     if (!receiptId || !customerId) {
@@ -147,30 +134,26 @@ export function UpdateReceiptModal({
       return;
     }
 
-    setLoading(true);
-    try {
-      const request: UpdateReceiptRequest = {
-        customerId: customerId,
-        paymentMode: paymentMode,
-        receiptDate: receiptDate,
-        narration: narration || undefined,
-        remarks: remarks || undefined,
-        currencyId: currencyId || undefined,
-        bankId: requiresBank ? (bankId || undefined) : undefined,
-        chequeNo: requiresChequeDetails ? (chequeNo || undefined) : undefined,
-        chequeDate: requiresChequeDetails ? (chequeDate || undefined) : undefined,
-        chequeBank: requiresChequeDetails ? (chequeBank || undefined) : undefined,
-        postDatedValidDate: paymentMode === "PostDatedCheque" ? (postDatedValidDate || undefined) : undefined,
-        amount: amount,
-      };
+    const request: UpdateReceiptRequest = {
+      customerId: customerId,
+      paymentMode: paymentMode,
+      receiptDate: receiptDate,
+      narration: narration || undefined,
+      remarks: remarks || undefined,
+      currencyId: currencyId || undefined,
+      bankId: requiresBank ? (bankId || undefined) : undefined,
+      chequeNo: requiresChequeDetails ? (chequeNo || undefined) : undefined,
+      chequeDate: requiresChequeDetails ? (chequeDate || undefined) : undefined,
+      chequeBank: requiresChequeDetails ? (chequeBank || undefined) : undefined,
+      postDatedValidDate: paymentMode === "PostDatedCheque" ? (postDatedValidDate || undefined) : undefined,
+      amount: amount,
+    };
 
+    try {
       await updateReceiptMutation.mutateAsync({ id: receiptId, request });
       onSuccess();
-    } catch (error) {
-      console.error("Error updating receipt:", error);
+    } catch {
       // toast already shown by mutation's onError
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -233,11 +216,9 @@ export function UpdateReceiptModal({
               value={paymentMode}
               onValueChange={(v) => {
                 setPaymentMode(v as PaymentMode);
-                // Reset bank-related fields when changing payment type
                 if (!paymentTypes.find(pt => pt.code === v)?.requiresBank) {
                   setBankId(null);
                 }
-                // Reset cheque fields when changing away from Cheque
                 if (!paymentTypes.find(pt => pt.code === v)?.requiresChequeDetails) {
                   setChequeNo("");
                   setChequeDate("");
@@ -378,9 +359,9 @@ export function UpdateReceiptModal({
           <Button
             className="btn-success"
             onClick={handleSubmit}
-            disabled={loading}
+            disabled={updateReceiptMutation.isPending}
           >
-            {loading ? "Updating..." : "Update"}
+            {updateReceiptMutation.isPending ? "Updating..." : "Update"}
           </Button>
         </div>
       </DialogContent>

@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -18,15 +17,15 @@ import { ArrowLeft, Save, Plus, Loader2, Trash2 } from "lucide-react";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import { formatDate, getTodayDateOnly } from "@/lib/utils";
 import {
-  hrEmployeeApi,
-  hrSalaryApi,
-  hrAttendanceApi,
-  hrAdvanceApi,
-  hrPayrollApi,
-  UpdateEmployeeRequest,
-  SetSalaryStructureRequest,
+  type UpdateEmployeeRequest,
+  type SetSalaryStructureRequest,
 } from "@/services/api/hr";
 import { MutationBlockingOverlay } from "@/components/ui/mutation-blocking-overlay";
+import { useHrEmployee, useUpdateHrEmployee } from "@/hooks/useHrEmployees";
+import { useHrSalaryStructure, useHrActiveSalaryComponents, useSetHrSalaryStructure } from "@/hooks/useHrSalary";
+import { useHrAttendance, useHrAttendanceSummary } from "@/hooks/useHrAttendance";
+import { useHrPayrolls } from "@/hooks/useHrPayroll";
+import { useHrAdvancesByEmployee } from "@/hooks/useHrAdvances";
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -56,7 +55,6 @@ const genderOptions = [
 const HrEmployeeDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const employeeId = parseInt(id || "0");
   const [activeTab, setActiveTab] = useState("profile");
 
@@ -102,15 +100,7 @@ const HrEmployeeDetail = () => {
   const [salaryEffectiveFrom, setSalaryEffectiveFrom] = useState(getTodayDateOnly());
 
   // ========== Fetch Employee Detail ==========
-  const { data: employee, isLoading: empLoading } = useQuery({
-    queryKey: ["hr-employee", employeeId],
-    queryFn: async () => {
-      const result = await hrEmployeeApi.getById(employeeId);
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    enabled: employeeId > 0,
-  });
+  const { data: employee, isLoading: empLoading } = useHrEmployee(employeeId > 0 ? employeeId : null);
 
   // Populate profile form when employee data loads
   if (employee && !profileLoaded) {
@@ -141,105 +131,49 @@ const HrEmployeeDetail = () => {
   }
 
   // ========== Salary Tab Data ==========
-  const { data: salaryStructure, isLoading: salaryLoading } = useQuery({
-    queryKey: ["hr-salary-structure", employeeId],
-    queryFn: async () => {
-      const result = await hrSalaryApi.getStructure(employeeId);
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    enabled: activeTab === "salary" && employeeId > 0,
-  });
-
-  const { data: activeComponents } = useQuery({
-    queryKey: ["hr-salary-components-active"],
-    queryFn: async () => {
-      const result = await hrSalaryApi.getActiveComponents();
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    enabled: activeTab === "salary",
-  });
+  const { data: salaryStructure, isLoading: salaryLoading } = useHrSalaryStructure(
+    activeTab === "salary" && employeeId > 0 ? employeeId : null
+  );
+  const { data: activeComponents } = useHrActiveSalaryComponents();
 
   // ========== Attendance Tab Data ==========
-  const { data: attendanceData, isLoading: attLoading } = useQuery({
-    queryKey: ["hr-attendance-emp", employeeId],
-    queryFn: async () => {
-      const result = await hrAttendanceApi.getAll({ employeeId, pageSize: 50 });
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    enabled: activeTab === "attendance" && employeeId > 0,
-  });
+  const { data: attendanceData, isLoading: attLoading } = useHrAttendance(
+    activeTab === "attendance" && employeeId > 0 ? { employeeId, pageSize: 50 } : undefined
+  );
 
   // ========== Attendance Summary Tab Data ==========
-  const { data: attendanceSummaryData, isLoading: summaryLoading } = useQuery({
-    queryKey: ["hr-attendance-summary-emp", employeeId, summaryYear, summaryMonth],
-    queryFn: async () => {
-      const result = await hrAttendanceApi.getSummary(summaryYear, summaryMonth);
-      if (result.error) throw new Error(result.error);
-      return (result.data || []).find((s) => s.employeeId === employeeId) ?? null;
-    },
-    enabled: activeTab === "attendance-summary" && employeeId > 0,
-  });
+  const { data: attendanceSummaryRaw, isLoading: summaryLoading } = useHrAttendanceSummary(
+    activeTab === "attendance-summary" && employeeId > 0 ? summaryYear : null,
+    activeTab === "attendance-summary" && employeeId > 0 ? summaryMonth : null,
+  );
+  const attendanceSummaryData = (attendanceSummaryRaw || []).find(s => s.employeeId === employeeId) ?? null;
 
   // ========== Payroll Tab Data ==========
-  const { data: payrollData, isLoading: payrollLoading } = useQuery({
-    queryKey: ["hr-payroll-emp", employeeId],
-    queryFn: async () => {
-      const result = await hrPayrollApi.getAll({ employeeId, pageSize: 100 });
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    enabled: activeTab === "payroll" && employeeId > 0,
-  });
+  const { data: payrollData, isLoading: payrollLoading } = useHrPayrolls(
+    activeTab === "payroll" && employeeId > 0 ? { employeeId, pageSize: 100 } : undefined
+  );
 
   // ========== Advances Tab Data ==========
-  const { data: advancesData, isLoading: advLoading } = useQuery({
-    queryKey: ["hr-advances-emp", employeeId],
-    queryFn: async () => {
-      const result = await hrAdvanceApi.getByEmployee(employeeId);
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    enabled: activeTab === "advances" && employeeId > 0,
-  });
+  const { data: advancesData, isLoading: advLoading } = useHrAdvancesByEmployee(
+    activeTab === "advances" && employeeId > 0 ? employeeId : null
+  );
 
   // ========== Mutations ==========
-  const updateMutation = useMutation({
-    mutationFn: async (data: UpdateEmployeeRequest) => {
-      const result = await hrEmployeeApi.update(employeeId, data);
-      if (result.error) throw new Error(result.error);
-      return result.data;
+  const updateMutation = useUpdateHrEmployee();
+  const setSalaryMutationBase = useSetHrSalaryStructure();
+  const setSalaryMutation = {
+    ...setSalaryMutationBase,
+    mutate: (data: SetSalaryStructureRequest, opts?: { onSuccess?: () => void }) => {
+      setSalaryMutationBase.mutate({ employeeId, data }, {
+        ...opts,
+        onSuccess: () => {
+          setSalaryModalOpen(false);
+          opts?.onSuccess?.();
+        },
+      });
     },
-    onSuccess: () => {
-      toast.success("Employee updated successfully");
-      queryClient.invalidateQueries({ queryKey: ["hr-employee", employeeId] });
-      queryClient.invalidateQueries({ queryKey: ["hr-employees"] });
-      queryClient.invalidateQueries({ queryKey: ["hr-employees-dropdown"] });
-      queryClient.invalidateQueries({ queryKey: ["unlinked-employees"] });
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to update employee");
-    },
-  });
-
-  const setSalaryMutation = useMutation({
-    mutationFn: async (data: SetSalaryStructureRequest) => {
-      const result = await hrSalaryApi.setStructure(employeeId, data);
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    onSuccess: () => {
-      toast.success("Salary structure updated successfully");
-      queryClient.invalidateQueries({ queryKey: ["hr-salary-structure", employeeId] });
-      queryClient.invalidateQueries({ queryKey: ["hr-salary-components-active"] });
-      setSalaryModalOpen(false);
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to update salary structure");
-    },
-  });
+    isPending: setSalaryMutationBase.isPending,
+  };
 
   const handleSaveProfile = () => {
     if (!firstName.trim()) {
@@ -274,7 +208,7 @@ const HrEmployeeDetail = () => {
       bankBranch: bankBranch || undefined,
       annualLeaveDays: parseInt(annualLeaveDays) || 30,
     };
-    updateMutation.mutate(data);
+    updateMutation.mutate({ id: employeeId, data });
   };
 
   const handleOpenSalaryModal = () => {

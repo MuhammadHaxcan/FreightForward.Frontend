@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -10,13 +9,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Pencil, Trash2 } from "lucide-react";
-import { usersApi, rolesApi } from "../services/api/auth";
-import { hrEmployeeApi, type EmployeeDropdown } from "../services/api/hr";
+import type { EmployeeDropdown } from "../services/api/hr";
 import { PermissionGate } from "../components/auth/PermissionGate";
 import type { UserListItem, CreateUserRequest, UpdateUserRequest } from "../types/auth";
+import {
+  useUsers,
+  useUserById,
+  useAllRolesList,
+  useUnlinkedEmployees,
+  useCreateUser,
+  useUpdateUser,
+  useDeleteUser,
+} from "@/hooks/useUsers";
 
 const AllUsers = () => {
-  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
   const [currentPage, setCurrentPage] = useState(1);
@@ -40,96 +46,44 @@ const AllUsers = () => {
   const [employeeId, setEmployeeId] = useState("");
   const [currentLinkedEmployee, setCurrentLinkedEmployee] = useState<{ id: number; employeeCode: string; fullName: string; } | null>(null);
 
-  // Fetch users
-  const { data: usersData, isLoading: usersLoading } = useQuery({
-    queryKey: ["users", currentPage, parseInt(entriesPerPage, 10) || 10, searchTerm],
-    queryFn: async () => {
-      const result = await usersApi.getAll({
-        pageNumber: currentPage,
-        pageSize: parseInt(entriesPerPage, 10) || 10,
-        searchTerm: searchTerm || undefined,
-      });
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
+  // Data hooks
+  const { data: usersData, isLoading: usersLoading } = useUsers({
+    pageNumber: currentPage,
+    pageSize: parseInt(entriesPerPage, 10) || 10,
+    searchTerm: searchTerm || undefined,
   });
 
-  // Fetch all roles for dropdown
-  const { data: rolesData } = useQuery({
-    queryKey: ["roles-list"],
-    queryFn: async () => {
-      const result = await rolesApi.getAllList();
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-  });
+  const { data: rolesData } = useAllRolesList();
+  const { data: unlinkedEmployees } = useUnlinkedEmployees(modalOpen);
 
-  // Fetch unlinked employees for dropdown (both add and edit mode)
-  const { data: unlinkedEmployees } = useQuery({
-    queryKey: ["unlinked-employees"],
-    queryFn: async () => {
-      const result = await hrEmployeeApi.getUnlinkedDropdown();
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    enabled: modalOpen,
-  });
+  // Fetch user details when editing
+  const { data: editUserData } = useUserById(modalMode === "edit" ? editingUserId : null);
 
-  // Create user mutation
-  const createUserMutation = useMutation({
-    mutationFn: async (data: CreateUserRequest) => {
-      const result = await usersApi.create(data);
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    onSuccess: () => {
-      toast.success("User created successfully");
-      queryClient.invalidateQueries({ queryKey: ["users"] });
-      queryClient.invalidateQueries({ queryKey: ["unlinked-employees"] });
-      setModalOpen(false);
-      resetForm();
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to create user");
-    },
-  });
+  // Populate form when edit user data arrives
+  useEffect(() => {
+    if (editUserData && modalMode === "edit") {
+      setUsername(editUserData.username);
+      setFirstName(editUserData.firstName);
+      setLastName(editUserData.lastName);
+      setContactNumber(editUserData.contactNumber || "");
+      setEmail(editUserData.email);
+      setPassword("");
+      setIsActive(editUserData.isActive);
+      setSelectedRoleIds(editUserData.roles.map((r: { id: number }) => r.id.toString()));
+      if (editUserData.linkedEmployee) {
+        setCurrentLinkedEmployee(editUserData.linkedEmployee);
+        setEmployeeId(editUserData.linkedEmployee.id.toString());
+      } else {
+        setCurrentLinkedEmployee(null);
+        setEmployeeId("");
+      }
+    }
+  }, [editUserData, modalMode]);
 
-  // Update user mutation
-  const updateUserMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: UpdateUserRequest }) => {
-      const result = await usersApi.update(id, data);
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    onSuccess: () => {
-      toast.success("User updated successfully");
-      queryClient.invalidateQueries({ queryKey: ["users"] });
-      queryClient.invalidateQueries({ queryKey: ["unlinked-employees"] });
-      setModalOpen(false);
-      resetForm();
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to update user");
-    },
-  });
-
-  // Delete user mutation
-  const deleteUserMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const result = await usersApi.delete(id);
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    onSuccess: () => {
-      toast.success("User deleted successfully");
-      queryClient.invalidateQueries({ queryKey: ["users"] });
-      setDeleteDialogOpen(false);
-      setUserToDelete(null);
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to delete user");
-    },
-  });
+  // Mutation hooks
+  const createUserMutation = useCreateUser();
+  const updateUserMutation = useUpdateUser();
+  const deleteUserMutation = useDeleteUser();
 
   const users = usersData?.items || [];
   const totalCount = usersData?.totalCount || 0;
@@ -159,30 +113,8 @@ const AllUsers = () => {
     setModalOpen(true);
   };
 
-  const handleEdit = async (user: UserListItem) => {
-    // Fetch full user details to get role IDs
-    const result = await usersApi.getById(user.id);
-    if (result.error) {
-      toast.error("Failed to load user details");
-      return;
-    }
-    const fullUser = result.data!;
-
-    setUsername(fullUser.username);
-    setFirstName(fullUser.firstName);
-    setLastName(fullUser.lastName);
-    setContactNumber(fullUser.contactNumber || "");
-    setEmail(fullUser.email);
-    setPassword("");
-    setIsActive(fullUser.isActive);
-    setSelectedRoleIds(fullUser.roles.map(r => r.id.toString()));
-    if (fullUser.linkedEmployee) {
-      setCurrentLinkedEmployee(fullUser.linkedEmployee);
-      setEmployeeId(fullUser.linkedEmployee.id.toString());
-    } else {
-      setCurrentLinkedEmployee(null);
-      setEmployeeId("");
-    }
+  const handleEdit = (user: UserListItem) => {
+    resetForm();
     setModalMode("edit");
     setEditingUserId(user.id);
     setModalOpen(true);
@@ -195,7 +127,12 @@ const AllUsers = () => {
 
   const confirmDelete = () => {
     if (userToDelete) {
-      deleteUserMutation.mutate(userToDelete.id);
+      deleteUserMutation.mutate(userToDelete.id, {
+        onSuccess: () => {
+          setDeleteDialogOpen(false);
+          setUserToDelete(null);
+        },
+      });
     }
   };
 
@@ -224,7 +161,12 @@ const AllUsers = () => {
         roleIds: getSelectedRoleIdsAsNumbers(),
         employeeId: employeeId ? parseInt(employeeId) : undefined,
       };
-      createUserMutation.mutate(createData);
+      createUserMutation.mutate(createData, {
+        onSuccess: () => {
+          setModalOpen(false);
+          resetForm();
+        },
+      });
     } else if (editingUserId) {
       const updateData: UpdateUserRequest = {
         username,
@@ -237,11 +179,15 @@ const AllUsers = () => {
         roleIds: getSelectedRoleIdsAsNumbers(),
         employeeId: employeeId ? parseInt(employeeId) : undefined,
       };
-      updateUserMutation.mutate({ id: editingUserId, data: updateData });
+      updateUserMutation.mutate({ id: editingUserId, data: updateData }, {
+        onSuccess: () => {
+          setModalOpen(false);
+          resetForm();
+        },
+      });
     }
   };
 
-  
   return (
     <MainLayout>
       <div className="p-6 space-y-4">
@@ -403,7 +349,7 @@ const AllUsers = () => {
       </div>
 
       {/* Add/Edit User Modal */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+      <Dialog open={modalOpen} onOpenChange={(open) => { setModalOpen(open); if (!open) resetForm(); }}>
         <DialogContent className="sm:max-w-modal-xl max-h-[85vh] overflow-y-auto p-0 bg-card">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white">

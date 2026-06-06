@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -8,8 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { ArrowLeft, Loader2, Play, AlertTriangle, Info } from "lucide-react";
-import { hrPayrollApi, hrEmployeeApi } from "@/services/api/hr";
 import { MutationBlockingOverlay } from "@/components/ui/mutation-blocking-overlay";
+import { useHrEmployeeDropdown } from "@/hooks/useHrEmployees";
+import { useHrPreGenerateInfo, useHrPayrolls, useGenerateHrPayroll } from "@/hooks/useHrPayroll";
 
 const monthNames = [
   "", "January", "February", "March", "April", "May", "June",
@@ -23,7 +24,7 @@ const months = monthNames.slice(1).map((name, i) => ({
 
 const HrPayrollGenerate = () => {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient(); // needed for manual invalidation in generateMutation
   const currentDate = new Date();
 
   const [employeeId, setEmployeeId] = useState("");
@@ -33,82 +34,50 @@ const HrPayrollGenerate = () => {
 
   const canFetchInfo = !!employeeId && !!year && !!month;
 
-  // Employee dropdown
-  const { data: empDropdown } = useQuery({
-    queryKey: ["hr-employees-dropdown"],
-    queryFn: async () => {
-      const result = await hrEmployeeApi.getDropdown();
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-  });
+  const { data: empDropdown } = useHrEmployeeDropdown();
   const employees = empDropdown || [];
 
-  // Pre-generate info
-  const { data: preGenInfo, isLoading: infoLoading, isFetching: infoFetching } = useQuery({
-    queryKey: ["hr-payroll-pregenerate", employeeId, year, month],
-    queryFn: async () => {
-      const result = await hrPayrollApi.getPreGenerateInfo(parseInt(employeeId), parseInt(year), parseInt(month));
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    enabled: canFetchInfo,
-  });
+  const { data: preGenInfo, isLoading: infoLoading, isFetching: infoFetching } = useHrPreGenerateInfo(
+    canFetchInfo ? parseInt(employeeId) : null,
+    canFetchInfo ? parseInt(year) : null,
+    canFetchInfo ? parseInt(month) : null,
+  );
 
-  // Check if payroll already exists for this employee/period
-  const { data: existingPayrollData, isLoading: existingPayrollLoading } = useQuery({
-    queryKey: ["hr-payroll-exists", employeeId, year, month],
-    queryFn: async () => {
-      const result = await hrPayrollApi.getAll({
-        employeeId: parseInt(employeeId),
-        year: parseInt(year),
-        monthFrom: parseInt(month),
-        monthTo: parseInt(month),
-        pageSize: 1,
-      });
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    enabled: canFetchInfo,
-  });
+  const { data: existingPayrollData, isLoading: existingPayrollLoading } = useHrPayrolls(
+    canFetchInfo
+      ? { employeeId: parseInt(employeeId), year: parseInt(year), monthFrom: parseInt(month), monthTo: parseInt(month), pageSize: 1 }
+      : undefined,
+  );
 
   const existingPayroll = existingPayrollData?.items?.[0] ?? null;
   const isPayrollPaid = existingPayroll?.status === "Paid";
   const isPayrollDraft = existingPayroll?.status === "Draft";
   const isPayrollBlocked = isPayrollPaid || isPayrollDraft;
 
-  // Year options
   const yearOptions = Array.from({ length: 10 }, (_, i) => {
     const y = currentDate.getFullYear() - 5 + i;
     return { value: y.toString(), label: y.toString() };
   });
 
-  // R5: Capture employeeId at mutate() call time so onSuccess invalidates the correct employee
-  // even if user switched employees while mutation was in-flight
-  const generateMutation = useMutation({
-    mutationFn: async (empId: number) => {
-      const result = await hrPayrollApi.generate(empId, {
-        year: parseInt(year),
-        month: parseInt(month),
-        annualLeavesToConsume: parseInt(annualLeavesToConsume) || 0,
-      });
-      if (result.error) throw new Error(result.error);
-      return result.data;
+  const generateMutationBase = useGenerateHrPayroll();
+  // Wrap to add extra invalidations and navigation on success
+  const generateMutation = {
+    ...generateMutationBase,
+    mutate: (empId: number) => {
+      generateMutationBase.mutate(
+        { employeeId: empId, data: { year: parseInt(year), month: parseInt(month), annualLeavesToConsume: parseInt(annualLeavesToConsume) || 0 } },
+        {
+          onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["hr-payrolls"] });
+            queryClient.invalidateQueries({ queryKey: ["hr-pre-generate-info"] });
+            queryClient.invalidateQueries({ queryKey: ["hr-advances-employee"] });
+            navigate("/hr/payroll");
+          },
+        }
+      );
     },
-    onSuccess: (_data, empId) => {
-      toast.success("Payroll generated successfully");
-      queryClient.invalidateQueries({ queryKey: ["hr-payroll"] });
-      queryClient.invalidateQueries({ queryKey: ["hr-payroll-pregenerate"] });
-      queryClient.invalidateQueries({ queryKey: ["hr-payroll-exists"] });
-      queryClient.invalidateQueries({ queryKey: ["hr-payroll-emp", empId] });
-      queryClient.invalidateQueries({ queryKey: ["hr-advances"] });
-      queryClient.invalidateQueries({ queryKey: ["hr-advances-emp", empId] });
-      navigate("/hr/payroll");
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to generate payroll");
-    },
-  });
+    isPending: generateMutationBase.isPending,
+  };
 
   // Guard against future periods
   const selectedPeriodYear = parseInt(year);
@@ -140,8 +109,7 @@ const HrPayrollGenerate = () => {
   const prevEmployeeIdRef = useRef<string>("");
   useEffect(() => {
     if (prevEmployeeIdRef.current && prevEmployeeIdRef.current !== employeeId) {
-      queryClient.invalidateQueries({ queryKey: ["hr-payroll-pregenerate", prevEmployeeIdRef.current] });
-      queryClient.invalidateQueries({ queryKey: ["hr-payroll-exists", prevEmployeeIdRef.current] });
+      queryClient.invalidateQueries({ queryKey: ["hr-pre-generate-info", parseInt(prevEmployeeIdRef.current) || undefined] });
     }
     prevEmployeeIdRef.current = employeeId;
   }, [employeeId, queryClient]);

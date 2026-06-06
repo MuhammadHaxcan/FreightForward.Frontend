@@ -63,6 +63,7 @@ export function useAcceptPortalLead() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['portalLeads'] });
       queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
       toast.success(`Lead accepted! Local Lead No: ${data.leadNo}`);
     },
     onError: (error: Error) => {
@@ -160,6 +161,7 @@ export function useUpdateLead() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['quotations'] });
       toast.success('Lead updated successfully');
     },
     onError: (error: Error) => {
@@ -406,11 +408,16 @@ export function useConvertQuotationToShipment() {
 
 // Quotation for Shipment conversion
 export function useSendRateRequestEmail() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: RateRequestSendEmailRequest }) => {
       const response = await rateRequestApi.sendEmail(id, data);
       if (response.error) throw new Error(response.error);
       return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rateRequests'] });
+      toast.success('Email sent successfully');
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to send email');

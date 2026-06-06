@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -15,7 +14,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
-import { customerApi, AccountReceivable } from "@/services/api";
+import { useCustomerAccountReceivables } from "@/hooks/useCustomers";
 
 interface CustomerReceivableDetailsModalProps {
   customerId: number | null;
@@ -32,26 +31,12 @@ export function CustomerReceivableDetailsModal({
   open,
   onOpenChange,
 }: CustomerReceivableDetailsModalProps) {
-  const [items, setItems] = useState<AccountReceivable[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { data, isLoading: loading } = useCustomerAccountReceivables(
+    customerId ?? 0,
+    { pageSize: 1000, enabled: open && !!customerId }
+  );
 
-  useEffect(() => {
-    if (!open || !customerId) return;
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const response = await customerApi.getAllAccountReceivables(customerId);
-        if (response.data) {
-          setItems(response.data);
-        }
-      } catch {
-        setItems([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [open, customerId]);
+  const items = data?.items ?? [];
 
   if (!open) return null;
 

@@ -8,12 +8,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { ArrowLeft, Plus, CalendarIcon, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, CalendarIcon, Pencil, Trash2, Printer, FileSpreadsheet, Loader2 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { formatDate, formatDateToISO, cn } from "@/lib/utils";
-import { customerApi, PaymentStatus } from "@/services/api";
+import { PaymentStatus, API_BASE_URL, fetchBlob } from "@/services/api";
 import { usePurchaseInvoices } from "@/hooks/useInvoices";
 import { usePaymentVouchers } from "@/hooks/usePaymentVouchers";
 import {
@@ -26,6 +26,10 @@ import {
   useCustomerAccountReceivables,
   useCustomerAccountPayables,
   useCustomerStatement,
+  useCreateContact,
+  useDeleteContact,
+  useUpdateCustomerAccountDetail,
+  useSetOpeningBalance,
 } from "@/hooks/useCustomers";
 import { useCreateCreditNote, useCustomerCreditNoteUnpaidInvoices } from "@/hooks/useCreditNotes";
 import {
@@ -37,6 +41,7 @@ import { hrEmployeeApi } from "@/services/api/hr";
 import { toast } from "sonner";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 import { useAllCountries } from "@/hooks/useSettings";
+import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { DateRangePicker, DateRangeValue } from "@/components/ui/date-range-picker";
 
@@ -87,22 +92,29 @@ const creditorTabs = [
 ];
 
 // Function to get tabs based on master type
-const getTabsForMasterType = (masterType: string) => {
+const getTabsForMasterType = (masterType: string, canViewAccountReceivable: boolean) => {
   if (masterType === "Creditors") {
     return [...baseTabs, ...creditorTabs];
   }
+
+  const debtorTabsForUser = canViewAccountReceivable
+    ? debtorTabs
+    : debtorTabs.filter(tab => tab.id !== "account-receivable");
+
   // Debtors and Neutral get debtor tabs
-  return [...baseTabs, ...debtorTabs];
+  return [...baseTabs, ...debtorTabsForUser];
 };
 
 const CustomerDetail = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+
   const baseCurrencyCode = useBaseCurrency();
+  const { hasPermission } = useAuth();
   const { data: countriesData } = useAllCountries();
   const countries = countriesData || [];
+  const canViewAccountReceivable = hasPermission("accrec_view");
   const isViewMode = searchParams.get("mode") === "view";
   const isEditMode = !!id;
   const customerId = id ? parseInt(id) : 0;
@@ -111,7 +123,7 @@ const CustomerDetail = () => {
   const [activeTab, setActiveTab] = useState("profile");
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [creditNoteModalOpen, setCreditNoteModalOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [isSoaExporting, setIsSoaExporting] = useState(false);
 
   // Pagination state for each tab
   const [invoicesPageNumber, setInvoicesPageNumber] = useState(1);
@@ -207,7 +219,7 @@ const CustomerDetail = () => {
     pageSize: arPageSize,
     fromDate: soaDateRange?.from ? formatDateToISO(soaDateRange.from) : undefined,
     toDate: soaDateRange?.to ? formatDateToISO(soaDateRange.to) : undefined,
-    enabled: activeTab === 'account-receivable',
+    enabled: activeTab === 'account-receivable' && canViewAccountReceivable,
   });
   const accountReceivables = arPage?.items ?? [];
   const arTotalCount = arPage?.totalCount ?? 0;
@@ -227,11 +239,9 @@ const CustomerDetail = () => {
     vendorId: customerId,
     pageNumber: pvPageNumber,
     pageSize: pvPageSize,
+    enabled: activeTab === 'payment-vouchers' && profileData.masterType === 'Creditors',
   });
-  // Gate via enabled through the mounted component — we only read it when Creditor tab is active
-  const paymentVouchers = (activeTab === 'payment-vouchers' && profileData.masterType === 'Creditors')
-    ? (pvPage?.items ?? [])
-    : [];
+  const paymentVouchers = pvPage?.items ?? [];
   const pvTotalCount = pvPage?.totalCount ?? 0;
   const pvTotalPages = pvPage?.totalPages ?? 0;
 
@@ -239,10 +249,9 @@ const CustomerDetail = () => {
     vendorId: customerId,
     pageNumber: piPageNumber,
     pageSize: piPageSize,
+    enabled: activeTab === 'purchase-invoices' && profileData.masterType === 'Creditors',
   });
-  const purchaseInvoices = (activeTab === 'purchase-invoices' && profileData.masterType === 'Creditors')
-    ? (piPage?.items ?? [])
-    : [];
+  const purchaseInvoices = piPage?.items ?? [];
   const piTotalCount = piPage?.totalCount ?? 0;
   const piTotalPages = piPage?.totalPages ?? 0;
 
@@ -342,6 +351,12 @@ const CustomerDetail = () => {
     }
   }, [customer?.contacts]);
 
+  useEffect(() => {
+    if (!canViewAccountReceivable && activeTab === "account-receivable") {
+      setActiveTab("profile");
+    }
+  }, [activeTab, canViewAccountReceivable]);
+
   // Charge items and CN unpaid invoices are loaded via shared hooks (declared below).
 
   // Save credit note handler
@@ -354,7 +369,7 @@ const CustomerDetail = () => {
     setCnSaving(true);
     try {
       // Auto-add pending charge if filled but not explicitly added
-      let allCharges = [...chargeDetails];
+      const allCharges = [...chargeDetails];
       if (newCharge.chargeDetails && newCharge.amount) {
         allCharges.push({ ...newCharge, id: Date.now() } as ChargeDetail);
       }
@@ -424,13 +439,18 @@ const CustomerDetail = () => {
   // Save handler
   const createCustomerMutation = useCreateCustomer();
   const updateCustomerMutation = useUpdateCustomer();
+  const createContactMutation = useCreateContact();
+  const deleteContactMutation = useDeleteContact();
+  const updateAccountDetailMutation = useUpdateCustomerAccountDetail();
+  const setOpeningBalanceMutation = useSetOpeningBalance();
+  const saving = createCustomerMutation.isPending || updateCustomerMutation.isPending;
+  const accountDetailSaving = updateAccountDetailMutation.isPending || setOpeningBalanceMutation.isPending;
   const handleSave = async () => {
     if (!profileData.name.trim()) {
       toast.error("Customer name is required");
       return;
     }
 
-    setSaving(true);
     try {
       const selectedCurrency = currencyTypes.find(c => c.code === accountDetails.currency);
       const currencyId = selectedCurrency?.id;
@@ -478,8 +498,6 @@ const CustomerDetail = () => {
       }
     } catch {
       // toast already shown by mutation's onError
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -572,7 +590,7 @@ const CustomerDetail = () => {
     }
   };
 
-  const handleSaveContact = async () => {
+  const handleSaveContact = () => {
     if (!contactForm.name) return;
 
     if (!id) {
@@ -583,113 +601,88 @@ const CustomerDetail = () => {
       return;
     }
 
-    try {
-      const response = await customerApi.createContact(parseInt(id), {
+    createContactMutation.mutate(
+      {
         customerId: parseInt(id),
-        name: contactForm.name,
-        email: contactForm.email || undefined,
-        mobile: contactForm.mobile || undefined,
-        position: contactForm.position || undefined,
-        phone: contactForm.phone || undefined,
-        designation: contactForm.designation || undefined,
-        department: contactForm.department || undefined,
-        directTel: contactForm.directTel || undefined,
-        whatsapp: contactForm.whatsapp || undefined,
-        skype: contactForm.skype || undefined,
-        enableRateRequest: contactForm.enableRateRequest || false,
-      });
-      if (response.error) throw new Error(response.error);
-
-      // Let the useCustomer hook refetch; contacts sync useEffect will pick up the new list.
-      queryClient.invalidateQueries({ queryKey: ['customers', parseInt(id)] });
-
-      toast.success("Contact added successfully");
-      setContactForm({});
-      setContactModalOpen(false);
-    } catch (error) {
-      console.error("Error saving contact:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to add contact");
-    }
+        data: {
+          customerId: parseInt(id),
+          name: contactForm.name,
+          email: contactForm.email || undefined,
+          mobile: contactForm.mobile || undefined,
+          position: contactForm.position || undefined,
+          phone: contactForm.phone || undefined,
+          designation: contactForm.designation || undefined,
+          department: contactForm.department || undefined,
+          directTel: contactForm.directTel || undefined,
+          whatsapp: contactForm.whatsapp || undefined,
+          skype: contactForm.skype || undefined,
+          enableRateRequest: contactForm.enableRateRequest || false,
+        },
+      },
+      {
+        onSuccess: () => {
+          setContactForm({});
+          setContactModalOpen(false);
+        },
+      }
+    );
   };
 
-  const handleDeleteContact = async (contactId: number) => {
+  const handleDeleteContact = (contactId: number) => {
     if (!id) {
       setContacts(contacts.filter(c => c.id !== contactId));
       return;
     }
 
-    try {
-      const response = await customerApi.deleteContact(contactId);
-      if (response.error) throw new Error(response.error);
-
-      // Optimistic local update; server truth will sync via invalidation.
-      setContacts(contacts.filter(c => c.id !== contactId));
-      queryClient.invalidateQueries({ queryKey: ['customers', parseInt(id)] });
-      toast.success("Contact deleted successfully");
-    } catch (error) {
-      console.error("Error deleting contact:", error);
-      toast.error("Failed to delete contact");
-    }
+    // Optimistic local update
+    setContacts(contacts.filter(c => c.id !== contactId));
+    deleteContactMutation.mutate({ contactId, customerId: parseInt(id) });
   };
 
-  const handleSaveAccountDetails = async () => {
+  const handleSaveAccountDetails = () => {
     if (!id) return;
 
-    setSaving(true);
-    try {
-      const selectedCurrency = currencyTypes.find(c => c.code === accountDetails.currency);
-      const data = {
-        acName: accountDetails.acName || undefined,
-        bankAcNo: accountDetails.bankAcNo || undefined,
-        currencyId: selectedCurrency?.id || undefined,
-        type: accountDetails.type || undefined,
-        notes: accountDetails.notes || undefined,
-        swiftCode: accountDetails.swiftCode || undefined,
-        acType: accountDetails.acType || undefined,
-        approvedCreditDays: accountDetails.approvedCreditDays ? parseInt(accountDetails.approvedCreditDays) : undefined,
-        alertCreditDays: accountDetails.alertCreditDays ? parseInt(accountDetails.alertCreditDays) : undefined,
-        approvedCreditAmount: accountDetails.approvedCreditAmount ? parseFloat(accountDetails.approvedCreditAmount) : undefined,
-        alertCreditAmount: accountDetails.alertCreditAmount ? parseFloat(accountDetails.alertCreditAmount) : undefined,
-        cc: accountDetails.cc || undefined,
-        bcc: accountDetails.bcc || undefined,
-      };
+    const selectedCurrency = currencyTypes.find(c => c.code === accountDetails.currency);
+    const data = {
+      acName: accountDetails.acName || undefined,
+      bankAcNo: accountDetails.bankAcNo || undefined,
+      currencyId: selectedCurrency?.id || undefined,
+      type: accountDetails.type || undefined,
+      notes: accountDetails.notes || undefined,
+      swiftCode: accountDetails.swiftCode || undefined,
+      acType: accountDetails.acType || undefined,
+      approvedCreditDays: accountDetails.approvedCreditDays ? parseInt(accountDetails.approvedCreditDays) : undefined,
+      alertCreditDays: accountDetails.alertCreditDays ? parseInt(accountDetails.alertCreditDays) : undefined,
+      approvedCreditAmount: accountDetails.approvedCreditAmount ? parseFloat(accountDetails.approvedCreditAmount) : undefined,
+      alertCreditAmount: accountDetails.alertCreditAmount ? parseFloat(accountDetails.alertCreditAmount) : undefined,
+      cc: accountDetails.cc || undefined,
+      bcc: accountDetails.bcc || undefined,
+    };
 
-      const response = await customerApi.updateAccountDetail(parseInt(id), data);
-      if (response.error) throw new Error(response.error);
-
-      // Opening balance: save only if not yet locked (server-side guard will also reject
-      // any attempt to modify after it's been set). Skipped if user left it blank.
-      const obLocked = !!customer?.openingBalanceDate || (customer?.openingBalance ?? 0) !== 0;
-      const amountStr = accountDetails.openingBalance.trim();
-      if (!obLocked && amountStr !== "") {
-        const amt = parseFloat(amountStr);
-        if (Number.isNaN(amt)) {
-          toast.error("Opening balance: enter a valid number (negative for payables)");
-        } else {
-          try {
-            await customerApi.setOpeningBalance(parseInt(id), {
-              amount: amt,
-              date: accountDetails.openingBalanceDate
-                ? format(accountDetails.openingBalanceDate, "yyyy-MM-dd")
-                : null,
-              narration: accountDetails.openingBalanceNarration || null,
+    updateAccountDetailMutation.mutate({ customerId: parseInt(id), data }, {
+      onSuccess: () => {
+        // Opening balance: save only if not yet locked
+        const obLocked = !!customer?.openingBalanceDate || (customer?.openingBalance ?? 0) !== 0;
+        const amountStr = accountDetails.openingBalance.trim();
+        if (!obLocked && amountStr !== "") {
+          const amt = parseFloat(amountStr);
+          if (Number.isNaN(amt)) {
+            toast.error("Opening balance: enter a valid number (negative for payables)");
+          } else {
+            setOpeningBalanceMutation.mutate({
+              customerId: parseInt(id),
+              data: {
+                amount: amt,
+                date: accountDetails.openingBalanceDate
+                  ? format(accountDetails.openingBalanceDate, "yyyy-MM-dd")
+                  : null,
+                narration: accountDetails.openingBalanceNarration || null,
+              },
             });
-            toast.success("Opening balance saved");
-          } catch (obErr) {
-            toast.error(obErr instanceof Error ? obErr.message : "Failed to save opening balance");
           }
         }
-      }
-
-      queryClient.invalidateQueries({ queryKey: ['customers', parseInt(id)] });
-      queryClient.invalidateQueries({ queryKey: ['customer', parseInt(id)] });
-      toast.success("Account details saved successfully");
-    } catch (error) {
-      console.error("Error saving account details:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to save account details");
-    } finally {
-      setSaving(false);
-    }
+      },
+    });
   };
 
   const lockPendingEditableFields = isViewMode || (isEditMode && !isPendingCustomer);
@@ -1033,8 +1026,8 @@ const CustomerDetail = () => {
 
       {!isViewMode && isEditMode && (
         <div className="flex justify-end pt-4">
-          <Button className="btn-success" onClick={handleSaveAccountDetails} disabled={saving}>
-            {saving ? "Saving..." : "Save Account Details"}
+          <Button className="btn-success" onClick={handleSaveAccountDetails} disabled={accountDetailSaving}>
+            {accountDetailSaving ? "Saving..." : "Save Account Details"}
           </Button>
         </div>
       )}
@@ -1327,12 +1320,26 @@ const CustomerDetail = () => {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold text-primary">Statement of Account</h2>
-          <DateRangePicker
-            value={soaDateRange}
-            onApply={setSoaDateRange}
-            placeholder="Filter by date range"
-            className="min-w-[240px]"
-          />
+          <div className="flex items-center gap-3">
+            <DateRangePicker
+              value={soaDateRange}
+              onApply={setSoaDateRange}
+              placeholder="Filter by date range"
+              className="min-w-[240px]"
+            />
+            <Button variant="outline" onClick={handlePrintSoa}>
+              <Printer className="mr-2 h-4 w-4" />
+              Print
+            </Button>
+            <Button variant="outline" onClick={handleExportSoaExcel} disabled={isSoaExporting}>
+              {isSoaExporting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+              )}
+              Excel
+            </Button>
+          </div>
         </div>
 
         <div className="flex items-center justify-between gap-4">
@@ -1350,10 +1357,6 @@ const CustomerDetail = () => {
               triggerClassName="w-[90px] h-8"
             />
             <span className="text-sm text-muted-foreground">entries</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Search:</span>
-            <Input className="w-[200px] h-8" />
           </div>
         </div>
 
@@ -1707,6 +1710,59 @@ const CustomerDetail = () => {
     window.open(`/master-customers/${id}/statement/print?fromDate=${fromDateStr}&toDate=${toDateStr}`, '_blank');
   };
 
+  const handlePrintSoa = () => {
+    if (!id) return;
+
+    const params = new URLSearchParams();
+    if (soaDateRange?.from) params.append("fromDate", formatDateToISO(soaDateRange.from));
+    if (soaDateRange?.to) params.append("toDate", formatDateToISO(soaDateRange.to));
+
+    const queryString = params.toString();
+    const target = queryString
+      ? `/master-customers/${id}/account-receivables/print?${queryString}`
+      : `/master-customers/${id}/account-receivables/print`;
+
+    window.open(target, "_blank");
+  };
+
+  const handleExportSoaExcel = async () => {
+    if (!id) return;
+
+    setIsSoaExporting(true);
+    try {
+      const params = new URLSearchParams();
+      if (soaDateRange?.from) params.append("fromDate", formatDateToISO(soaDateRange.from));
+      if (soaDateRange?.to) params.append("toDate", formatDateToISO(soaDateRange.to));
+
+      const queryString = params.toString();
+      const url = queryString
+        ? `${API_BASE_URL}/customers/${id}/account-receivables/excel?${queryString}`
+        : `${API_BASE_URL}/customers/${id}/account-receivables/excel`;
+
+      const response = await fetchBlob(url);
+      if (!response.ok) {
+        throw new Error(`Export failed (${response.status})`);
+      }
+
+      const blob = await response.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const fromLabel = soaDateRange?.from ? formatDateToISO(soaDateRange.from) : "all";
+      const toLabel = soaDateRange?.to ? formatDateToISO(soaDateRange.to) : "all";
+
+      link.href = downloadUrl;
+      link.download = `CustomerSOA-${id}-${fromLabel}-${toLabel}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(downloadUrl);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to export Statement of Account");
+    } finally {
+      setIsSoaExporting(false);
+    }
+  };
+
   const renderStatementAccountTab = () => {
     const formatAmount = (amount: number) => amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -1979,7 +2035,7 @@ const CustomerDetail = () => {
 
         {/* Horizontal Tabs - Dynamic based on customer type */}
         <div className="bg-card border border-border rounded-lg p-1 flex flex-wrap gap-1">
-          {getTabsForMasterType(profileData.masterType).map(tab => (
+          {getTabsForMasterType(profileData.masterType, canViewAccountReceivable).map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}

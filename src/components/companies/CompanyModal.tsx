@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Upload, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/dialog";
 import { useCreateCompany, useUpdateCompany } from "@/hooks/useCompanies";
 import { Company } from "@/services/api";
+import { fileApi } from "@/services/api/shipment";
+import { toast } from "sonner";
 
 interface CompanyModalProps {
   open: boolean;
@@ -34,6 +36,12 @@ const countries = [
 ];
 
 export function CompanyModal({ open, onOpenChange, company, mode }: CompanyModalProps) {
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [sealFile, setSealFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const sealInputRef = useRef<HTMLInputElement>(null);
+
   const [formData, setFormData] = useState({
     companyName: "",
     companyType: "",
@@ -57,6 +65,11 @@ export function CompanyModal({ open, onOpenChange, company, mode }: CompanyModal
   const isLoading = createMutation.isPending || updateMutation.isPending;
 
   useEffect(() => {
+    setLogoFile(null);
+    setSealFile(null);
+    if (logoInputRef.current) logoInputRef.current.value = "";
+    if (sealInputRef.current) sealInputRef.current.value = "";
+
     if (company && mode === "edit") {
       setFormData({
         companyName: company.name || "",
@@ -101,7 +114,28 @@ export function CompanyModal({ open, onOpenChange, company, mode }: CompanyModal
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Map frontend formData to backend expected format
+    let logoPath = mode === "edit" ? (company?.logoPath ?? undefined) : undefined;
+    let sealPath = mode === "edit" ? (company?.sealPath ?? undefined) : undefined;
+
+    if (logoFile || sealFile) {
+      setIsUploading(true);
+      try {
+        if (logoFile) {
+          const result = await fileApi.upload(logoFile, "company-assets");
+          logoPath = result.filePath;
+        }
+        if (sealFile) {
+          const result = await fileApi.upload(sealFile, "company-assets");
+          sealPath = result.filePath;
+        }
+      } catch {
+        toast.error("Failed to upload image. Please try again.");
+        setIsUploading(false);
+        return;
+      }
+      setIsUploading(false);
+    }
+
     const requestData = {
       name: formData.companyName,
       companyType: formData.companyType,
@@ -117,6 +151,8 @@ export function CompanyModal({ open, onOpenChange, company, mode }: CompanyModal
       stateProvince: formData.stateProvince,
       zipCode: formData.zipCode,
       country: formData.country,
+      logoPath,
+      sealPath,
     };
 
     if (mode === "add") {
@@ -196,9 +232,17 @@ export function CompanyModal({ open, onOpenChange, company, mode }: CompanyModal
                   <label className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-md cursor-pointer hover:bg-secondary/80 transition-colors text-sm font-medium border border-input">
                     <Upload size={16} />
                     Choose file
-                    <input type="file" className="hidden" accept=".gif,.png,.jpg,.jpeg" />
+                    <input
+                      ref={logoInputRef}
+                      type="file"
+                      className="hidden"
+                      accept=".gif,.png,.jpg,.jpeg"
+                      onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)}
+                    />
                   </label>
-                  <span className="text-sm text-muted-foreground">No file chosen</span>
+                  <span className="text-sm text-muted-foreground truncate max-w-[140px]">
+                    {logoFile ? logoFile.name : (company?.logoPath ? "Current logo" : "No file chosen")}
+                  </span>
                 </div>
               </div>
             </div>
@@ -238,9 +282,17 @@ export function CompanyModal({ open, onOpenChange, company, mode }: CompanyModal
                   <label className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground rounded-md cursor-pointer hover:bg-secondary/80 transition-colors text-sm font-medium border border-input">
                     <Upload size={16} />
                     Choose file
-                    <input type="file" className="hidden" accept=".gif,.png,.jpg,.jpeg" />
+                    <input
+                      ref={sealInputRef}
+                      type="file"
+                      className="hidden"
+                      accept=".gif,.png,.jpg,.jpeg"
+                      onChange={(e) => setSealFile(e.target.files?.[0] ?? null)}
+                    />
                   </label>
-                  <span className="text-sm text-muted-foreground">No file chosen</span>
+                  <span className="text-sm text-muted-foreground truncate max-w-[140px]">
+                    {sealFile ? sealFile.name : (company?.sealPath ? "Current seal" : "No file chosen")}
+                  </span>
                 </div>
               </div>
             </div>
@@ -311,12 +363,12 @@ export function CompanyModal({ open, onOpenChange, company, mode }: CompanyModal
             </div>
           </div>
           <div className="flex justify-end gap-3 pt-6">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading || isUploading}>
               Cancel
             </Button>
-            <Button type="submit" className="btn-success px-8" disabled={isLoading}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {mode === "add" ? "Save" : "Update"}
+            <Button type="submit" className="btn-success px-8" disabled={isLoading || isUploading}>
+              {(isLoading || isUploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isUploading ? "Uploading..." : mode === "add" ? "Save" : "Update"}
             </Button>
           </div>
         </form>

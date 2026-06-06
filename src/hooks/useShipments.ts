@@ -122,6 +122,9 @@ export function useDeleteShipment() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shipments'] });
+      queryClient.invalidateQueries({ queryKey: ['shipment-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['purchaseInvoices'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Shipment deleted successfully');
     },
@@ -145,6 +148,7 @@ export function useAddShipmentParty() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shipments'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Party added successfully');
     },
     onError: (error: Error) => {
@@ -166,6 +170,7 @@ export function useDeleteShipmentParty() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shipments'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Party removed successfully');
     },
     onError: (error: Error) => {
@@ -188,6 +193,7 @@ export function useAddShipmentContainer() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shipments'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Container added successfully');
     },
     onError: (error: Error) => {
@@ -209,6 +215,7 @@ export function useUpdateShipmentContainer() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shipments'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Container updated successfully');
     },
     onError: (error: Error) => {
@@ -230,6 +237,7 @@ export function useDeleteShipmentContainer() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shipments'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Container removed successfully');
     },
     onError: (error: Error) => {
@@ -253,6 +261,9 @@ export function useAddShipmentCosting() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['shipments'] });
       queryClient.invalidateQueries({ queryKey: ['shipment-invoices', variables.shipmentId] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['purchaseInvoices'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Costing added successfully');
     },
     onError: (error: Error) => {
@@ -275,6 +286,9 @@ export function useUpdateShipmentCosting() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['shipments'] });
       queryClient.invalidateQueries({ queryKey: ['shipment-invoices', variables.shipmentId] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['purchaseInvoices'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Costing updated successfully');
     },
     onError: (error: Error) => {
@@ -297,6 +311,9 @@ export function useDeleteShipmentCosting() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['shipments'] });
       queryClient.invalidateQueries({ queryKey: ['shipment-invoices', variables.shipmentId] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['purchaseInvoices'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Costing removed successfully');
     },
     onError: (error: Error) => {

@@ -13,17 +13,19 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { Edit, Search, CheckCircle, Loader2, Plus, MapPin, FileText } from "lucide-react";
+import { Edit, Eye, Search, CheckCircle, Loader2, Plus, MapPin, FileText } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useShipments } from "@/hooks/useShipments";
 import { Shipment, ShipmentStatus } from "@/services/api";
 import { formatEventDateOnly } from "@/lib/status-event-utils";
 import { PermissionGate } from "@/components/auth/PermissionGate";
+import { useAuth } from "@/contexts/AuthContext";
 import { DateRangePicker, DateRangeValue } from "@/components/ui/date-range-picker";
 
 const Shipments = () => {
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [entriesPerPage, setEntriesPerPage] = useState("10");
@@ -81,6 +83,9 @@ const Shipments = () => {
   const handleEdit = (shipment: Shipment) => {
     navigate(`/shipments/${shipment.jobNumber}/edit`);
   };
+
+  const canEditShipment = (shipment: Shipment) =>
+    hasPermission("ship_edit") && (shipment.jobStatus !== "Closed" || hasPermission("ship_edit_closed"));
 
   const handleAddNew = () => {
     navigate('/shipments/add');
@@ -266,7 +271,7 @@ const Shipments = () => {
                     >
                       <TableCell>
                         <div className="flex gap-1">
-                          <PermissionGate permission="ship_edit">
+                          {canEditShipment(shipment) ? (
                             <Button
                               variant="ghost"
                               size="icon"
@@ -275,7 +280,18 @@ const Shipments = () => {
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
-                          </PermissionGate>
+                          ) : (
+                            <PermissionGate permission="ship_view">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 bg-slate-500 hover:bg-slate-600 text-white rounded"
+                                onClick={() => handleEdit(shipment)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </PermissionGate>
+                          )}
                           <PermissionGate permission="ship_view">
                             <Button
                               variant="ghost"
@@ -299,16 +315,16 @@ const Shipments = () => {
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
-                          <div className="text-emerald-600 text-sm">HBL - {shipment.houseBLNo || "-"}</div>
-                          <div className="text-emerald-600 text-sm">MBL - {shipment.mblNumber || "-"}</div>
+                          <div className="text-foreground font-semibold text-sm">HBL - {shipment.houseBLNo || "-"}</div>
+                          <div className="text-foreground font-semibold text-sm">MBL - {shipment.mblNumber || "-"}</div>
                         </div>
                       </TableCell>
                       <TableCell className="max-w-[200px]">
                         {shipment.customerNames && shipment.customerNames.length > 0
                           ? shipment.customerNames.map((name, i) => (
-                              <div key={i} className="text-emerald-600 text-sm">{name}</div>
+                              <div key={i} className="text-foreground font-semibold text-sm">{name}</div>
                             ))
-                          : <span className="text-emerald-600">-</span>
+                          : <span className="text-foreground font-semibold">-</span>
                         }
                       </TableCell>
                       <TableCell>
@@ -322,7 +338,7 @@ const Shipments = () => {
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
-                          <span className="text-emerald-600">{shipment.portOfLoadingName || "-"}</span>
+                          <span className="text-foreground font-semibold">{shipment.portOfLoadingName || "-"}</span>
                           <div className="text-xs text-muted-foreground">ETD: {formatDate(shipment.etd, "dd/MM/yyyy")}</div>
                         </div>
                       </TableCell>
@@ -334,8 +350,8 @@ const Shipments = () => {
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1 text-sm">
-                          <div className="text-emerald-600">{shipment.carrier || "-"}</div>
-                          <div>{shipment.vessel || "-"}</div>
+                          <div className="text-foreground font-semibold">{shipment.carrier || "-"}</div>
+                          <div className="text-foreground font-semibold">{shipment.vessel || "-"}</div>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -434,7 +450,9 @@ const Shipments = () => {
                   { no: 3, name: "CARGO ARRIVAL", slug: "cargo-arrival-notice" },
                   { no: 4, name: "FREIGHT CERTIFICATE", slug: "freight-certificate" },
                   { no: 5, name: "MBL SHIPPING", slug: "mbl-shipping-instruction" },
-                  { no: 6, name: "CUSTOMS DECLARATION", slug: "customs-declaration" },
+                  { no: 6, name: "CUSTOMS MANIFEST", slug: "customs-declaration" },
+                  { no: 7, name: "C BOOK", slug: "cbook" },
+                  { no: 8, name: "C LIST", slug: "c-list" },
                 ].map((report) => (
                   <tr key={report.slug} className="border-b hover:bg-muted/50">
                     <td className="py-2 px-2 text-sm">{report.no}</td>

@@ -10,10 +10,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ArrowLeft, Plus, Pencil, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { customerApi, settingsApi, CustomerCategoryType, CurrencyType } from "@/services/api";
 import { toast } from "sonner";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
-import { useAllCountries } from "@/hooks/useSettings";
+import { useAllCountries, useAllCustomerCategoryTypes, useAllCurrencyTypes } from "@/hooks/useSettings";
+import { useCustomer, useCreateCustomer, useUpdateCustomer, useUpdateCustomerAccountDetail } from "@/hooks/useCustomers";
 
 interface Contact {
   id: number;
@@ -48,10 +48,14 @@ const NeutralDetail = () => {
 
   const [activeTab, setActiveTab] = useState("profile");
   const [contactModalOpen, setContactModalOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [categoryTypes, setCategoryTypes] = useState<CustomerCategoryType[]>([]);
-  const [currencyTypes, setCurrencyTypes] = useState<CurrencyType[]>([]);
+
+  // Data hooks
+  const { data: categoryTypes = [] } = useAllCustomerCategoryTypes();
+  const { data: currencyTypes = [] } = useAllCurrencyTypes();
+  const { data: customerData, isLoading: loading } = useCustomer(id ? parseInt(id) : 0);
+  const createCustomerMutation = useCreateCustomer();
+  const updateCustomerMutation = useUpdateCustomer();
+  const updateAccountDetailMutation = useUpdateCustomerAccountDetail();
 
   // Profile form state
   const [profileData, setProfileData] = useState({
@@ -92,102 +96,76 @@ const NeutralDetail = () => {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [contactForm, setContactForm] = useState<Partial<Contact>>({});
 
-  // Load category types and customer data
+  // Populate form when customer data loads
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        // Load category types
-        const categoryResponse = await settingsApi.getAllCustomerCategoryTypes();
-        if (categoryResponse.data) {
-          setCategoryTypes(categoryResponse.data);
-        }
+    if (customerData && id) {
+      const customer = customerData;
+      setProfileData({
+        code: customer.code,
+        masterType: "Neutral",
+        categoryIds: customer.categories?.map(c => c.id.toString()) || [],
+        name: customer.name,
+        city: customer.city || "",
+        country: customer.country || "United Arab Emirates",
+        phone: customer.phone || "",
+        fax: customer.fax || "",
+        generalEmail: customer.email || "",
+        ntnVatTaxNo: customer.taxNo || "",
+        taxPercentage: customer.taxPercentage?.toString() || "",
+        address: customer.address || "",
+        status: customer.status || "Active",
+        carrierCode: customer.carrierCode || "",
+        currencyId: customer.currencyId?.toString() || "",
+      });
 
-        // Load currency types
-        const currencyResponse = await settingsApi.getAllCurrencyTypes();
-        if (currencyResponse.data) {
-          setCurrencyTypes(currencyResponse.data);
+      if (customer.currencyId && currencyTypes.length > 0) {
+        const currency = currencyTypes.find(c => c.id === customer.currencyId);
+        if (currency) {
+          setAccountDetails(prev => ({ ...prev, currency: currency.code }));
         }
-
-        // Load customer data if editing
-        if (id) {
-          const customerResponse = await customerApi.getById(parseInt(id));
-          if (customerResponse.data) {
-            const customer = customerResponse.data;
-            setProfileData({
-              code: customer.code,
-              masterType: "Neutral",
-              categoryIds: customer.categories?.map(c => c.id.toString()) || [],
-              name: customer.name,
-              city: customer.city || "",
-              country: customer.country || "United Arab Emirates",
-              phone: customer.phone || "",
-              fax: customer.fax || "",
-              generalEmail: customer.email || "",
-              ntnVatTaxNo: customer.taxNo || "",
-              taxPercentage: customer.taxPercentage?.toString() || "",
-              address: customer.address || "",
-              status: customer.status || "Active",
-              carrierCode: customer.carrierCode || "",
-              currencyId: customer.currencyId?.toString() || "",
-            });
-            if (customer.currencyId && currencyResponse.data) {
-              const currency = currencyResponse.data.find(c => c.id === customer.currencyId);
-              if (currency) {
-                setAccountDetails(prev => ({ ...prev, currency: currency.code }));
-              }
-            }
-            // Load contacts
-            if (customer.contacts) {
-              setContacts(customer.contacts.map(c => ({
-                id: c.id,
-                name: c.name,
-                email: c.email || "",
-                mobile: c.mobile || "",
-                position: c.position || "",
-                phone: c.phone || "",
-                designation: c.designation || "",
-                department: c.department || "",
-                directTel: c.directTel || "",
-                whatsapp: c.whatsapp || "",
-                skype: c.skype || "",
-                enableRateRequest: c.enableRateRequest,
-              })));
-            }
-            if (customer.accountDetail) {
-              const accountDetail = customer.accountDetail;
-              const accountCurrency = accountDetail.currencyId && currencyResponse.data
-                ? currencyResponse.data.find(c => c.id === accountDetail.currencyId)
-                : null;
-
-              setAccountDetails({
-                acName: accountDetail.acName || "",
-                bankAcNo: accountDetail.bankAcNo || "",
-                currency: accountCurrency?.code || customer.currencyCode || baseCurrencyCode,
-                type: accountDetail.type || "Credit",
-                notes: accountDetail.notes || "",
-                swiftCode: accountDetail.swiftCode || "",
-                acType: accountDetail.acType || "",
-                approvedCreditDays: accountDetail.approvedCreditDays?.toString() || "0",
-                alertCreditDays: accountDetail.alertCreditDays?.toString() || "0",
-                cc: accountDetail.cc || "",
-                approvedCreditAmount: accountDetail.approvedCreditAmount?.toString() || "0.00",
-                alertCreditAmount: accountDetail.alertCreditAmount?.toString() || "0.00",
-                bcc: accountDetail.bcc || "",
-              });
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Error loading data:", error);
-        toast.error("Failed to load data");
-      } finally {
-        setLoading(false);
       }
-    };
 
-    loadData();
-  }, [id]);
+      if (customer.contacts) {
+        setContacts(customer.contacts.map(c => ({
+          id: c.id,
+          name: c.name,
+          email: c.email || "",
+          mobile: c.mobile || "",
+          position: c.position || "",
+          phone: c.phone || "",
+          designation: c.designation || "",
+          department: c.department || "",
+          directTel: c.directTel || "",
+          whatsapp: c.whatsapp || "",
+          skype: c.skype || "",
+          enableRateRequest: c.enableRateRequest,
+        })));
+      }
+
+      if (customer.accountDetail) {
+        const accountDetail = customer.accountDetail;
+        const accountCurrency = accountDetail.currencyId && currencyTypes.length > 0
+          ? currencyTypes.find(c => c.id === accountDetail.currencyId)
+          : null;
+
+        setAccountDetails({
+          acName: accountDetail.acName || "",
+          bankAcNo: accountDetail.bankAcNo || "",
+          currency: accountCurrency?.code || customer.currencyCode || baseCurrencyCode,
+          type: accountDetail.type || "Credit",
+          notes: accountDetail.notes || "",
+          swiftCode: accountDetail.swiftCode || "",
+          acType: accountDetail.acType || "",
+          approvedCreditDays: accountDetail.approvedCreditDays?.toString() || "0",
+          alertCreditDays: accountDetail.alertCreditDays?.toString() || "0",
+          cc: accountDetail.cc || "",
+          approvedCreditAmount: accountDetail.approvedCreditAmount?.toString() || "0.00",
+          alertCreditAmount: accountDetail.alertCreditAmount?.toString() || "0.00",
+          bcc: accountDetail.bcc || "",
+        });
+      }
+    }
+  }, [customerData, id, currencyTypes, baseCurrencyCode]);
 
   // Save handler
   const handleSave = async () => {
@@ -196,80 +174,63 @@ const NeutralDetail = () => {
       return;
     }
 
-    setSaving(true);
-    try {
-      const selectedCurrency = currencyTypes.find(c => c.code === accountDetails.currency);
-      const currencyId = selectedCurrency?.id;
+    const selectedCurrency = currencyTypes.find(c => c.code === accountDetails.currency);
+    const currencyId = selectedCurrency?.id;
 
-      if (isEditMode && id) {
-        // Update existing customer
-        const updateData = {
+    if (isEditMode && id) {
+      try {
+        await updateCustomerMutation.mutateAsync({
           id: parseInt(id),
-          name: profileData.name,
-          masterType: profileData.masterType,
-          categoryIds: profileData.categoryIds.map(id => parseInt(id)),
-          phone: profileData.phone || undefined,
-          fax: profileData.fax || undefined,
-          email: profileData.generalEmail || undefined,
-          country: profileData.country || undefined,
-          city: profileData.city || undefined,
-          address: profileData.address || undefined,
-          currencyId: currencyId || undefined,
-          taxNo: profileData.ntnVatTaxNo || undefined,
-          taxPercentage: profileData.taxPercentage ? parseFloat(profileData.taxPercentage) : undefined,
-          carrierCode: profileData.carrierCode || undefined,
-          status: profileData.status,
-        };
-
-        const response = await customerApi.update(parseInt(id), updateData);
-        if (response.error) {
-          throw new Error(response.error);
-        }
-
-        toast.success("Customer updated successfully");
-      } else {
-        // Create new customer
-        const createData = {
-          name: profileData.name,
-          masterType: profileData.masterType,
-          categoryIds: profileData.categoryIds.map(id => parseInt(id)),
-          phone: profileData.phone || undefined,
-          fax: profileData.fax || undefined,
-          email: profileData.generalEmail || undefined,
-          country: profileData.country || undefined,
-          city: profileData.city || undefined,
-          address: profileData.address || undefined,
-          currencyId: currencyId || undefined,
-          taxNo: profileData.ntnVatTaxNo || undefined,
-          taxPercentage: profileData.taxPercentage ? parseFloat(profileData.taxPercentage) : undefined,
-          carrierCode: profileData.carrierCode || undefined,
-        };
-
-        const response = await customerApi.create(createData);
-        if (response.error) {
-          throw new Error(response.error);
-        }
-
-        toast.success("Customer created and sent for approval");
-        navigate("/master-customers");
+          data: {
+            name: profileData.name,
+            masterType: profileData.masterType,
+            categoryIds: profileData.categoryIds.map(cid => parseInt(cid)),
+            phone: profileData.phone || undefined,
+            fax: profileData.fax || undefined,
+            email: profileData.generalEmail || undefined,
+            country: profileData.country || undefined,
+            city: profileData.city || undefined,
+            address: profileData.address || undefined,
+            currencyId: currencyId || undefined,
+            taxNo: profileData.ntnVatTaxNo || undefined,
+            taxPercentage: profileData.taxPercentage ? parseFloat(profileData.taxPercentage) : undefined,
+            carrierCode: profileData.carrierCode || undefined,
+            status: profileData.status,
+          },
+        });
+      } catch {
+        // toast handled by mutation onError
       }
-    } catch (error) {
-      console.error("Error saving customer:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to save customer");
-    } finally {
-      setSaving(false);
+    } else {
+      try {
+        await createCustomerMutation.mutateAsync({
+          name: profileData.name,
+          masterType: profileData.masterType,
+          categoryIds: profileData.categoryIds.map(cid => parseInt(cid)),
+          phone: profileData.phone || undefined,
+          fax: profileData.fax || undefined,
+          email: profileData.generalEmail || undefined,
+          country: profileData.country || undefined,
+          city: profileData.city || undefined,
+          address: profileData.address || undefined,
+          currencyId: currencyId || undefined,
+          taxNo: profileData.ntnVatTaxNo || undefined,
+          taxPercentage: profileData.taxPercentage ? parseFloat(profileData.taxPercentage) : undefined,
+          carrierCode: profileData.carrierCode || undefined,
+        });
+        navigate("/master-customers");
+      } catch {
+        // toast handled by mutation onError
+      }
     }
   };
 
-  const handleSaveAccountDetails = async () => {
-    if (!id) {
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const selectedCurrency = currencyTypes.find(c => c.code === accountDetails.currency);
-      const response = await customerApi.updateAccountDetail(parseInt(id), {
+  const handleSaveAccountDetails = () => {
+    if (!id) return;
+    const selectedCurrency = currencyTypes.find(c => c.code === accountDetails.currency);
+    updateAccountDetailMutation.mutate({
+      customerId: parseInt(id),
+      data: {
         acName: accountDetails.acName || undefined,
         bankAcNo: accountDetails.bankAcNo || undefined,
         currencyId: selectedCurrency?.id || undefined,
@@ -283,19 +244,8 @@ const NeutralDetail = () => {
         alertCreditAmount: accountDetails.alertCreditAmount ? parseFloat(accountDetails.alertCreditAmount) : undefined,
         cc: accountDetails.cc || undefined,
         bcc: accountDetails.bcc || undefined,
-      });
-
-      if (response.error) {
-        throw new Error(response.error);
-      }
-
-      toast.success("Account details saved successfully");
-    } catch (error) {
-      console.error("Error saving account details:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to save account details");
-    } finally {
-      setSaving(false);
-    }
+      },
+    });
   };
 
   const handleSaveContact = () => {
@@ -566,8 +516,8 @@ const NeutralDetail = () => {
 
       {!isViewMode && isEditMode && (
         <div className="flex justify-end pt-4">
-          <Button className="btn-success" onClick={handleSaveAccountDetails} disabled={saving}>
-            {saving ? "Saving..." : "Save Account Details"}
+          <Button className="btn-success" onClick={handleSaveAccountDetails} disabled={updateAccountDetailMutation.isPending}>
+            {updateAccountDetailMutation.isPending ? "Saving..." : "Save Account Details"}
           </Button>
         </div>
       )}
@@ -594,8 +544,8 @@ const NeutralDetail = () => {
               <ArrowLeft size={16} /> Back
             </Button>
             {!isViewMode && (
-              <Button className="btn-success" onClick={handleSave} disabled={saving}>
-                {saving ? "Saving..." : "Save"}
+              <Button className="btn-success" onClick={handleSave} disabled={createCustomerMutation.isPending || updateCustomerMutation.isPending}>
+                {(createCustomerMutation.isPending || updateCustomerMutation.isPending) ? "Saving..." : "Save"}
               </Button>
             )}
           </div>

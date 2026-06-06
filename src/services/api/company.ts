@@ -21,6 +21,10 @@ export interface Company {
   sealPath?: string;
   bankId?: number;
   bankName?: string;
+  defaultLocalBankId?: number;
+  defaultLocalBankName?: string;
+  defaultInternationalBankId?: number;
+  defaultInternationalBankName?: string;
   baseCurrencyId?: number;
   baseCurrencyCode?: string;
   baseCurrencyName?: string;
@@ -45,6 +49,8 @@ export interface CreateCompanyRequest {
   logoPath?: string;
   sealPath?: string;
   bankId?: number;
+  defaultLocalBankId?: number;
+  defaultInternationalBankId?: number;
   baseCurrencyId?: number;
 }
 

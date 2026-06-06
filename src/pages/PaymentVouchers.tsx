@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { Plus, Eye, Trash2, Edit, Download, Printer } from "lucide-react";
@@ -61,9 +62,13 @@ export default function PaymentVouchers() {
 
   const handleDelete = async () => {
     if (selectedPayment) {
-      await deletePaymentMutation.mutateAsync(selectedPayment.id);
-      setDeleteDialogOpen(false);
-      setSelectedPayment(null);
+      try {
+        await deletePaymentMutation.mutateAsync(selectedPayment.id);
+        setDeleteDialogOpen(false);
+        setSelectedPayment(null);
+      } catch {
+        // toast already shown by mutation onError
+      }
     }
   };
 
@@ -89,9 +94,12 @@ export default function PaymentVouchers() {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
+      } else {
+        toast.error("Failed to download PDF");
       }
     } catch (error) {
       console.error("Error downloading PDF:", error);
+      toast.error("Failed to download PDF");
     }
   };
 
@@ -372,8 +380,9 @@ export default function PaymentVouchers() {
             <AlertDialogAction
               className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
               onClick={handleDelete}
+              disabled={deletePaymentMutation.isPending}
             >
-              Delete
+              {deletePaymentMutation.isPending ? "Deleting..." : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

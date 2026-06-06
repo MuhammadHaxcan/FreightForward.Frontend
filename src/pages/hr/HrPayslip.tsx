@@ -1,10 +1,10 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer, Loader2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
-import { hrPayrollApi, Payslip } from "@/services/api/hr";
+import { type Payslip } from "@/services/api/hr";
+import { useHrPayslip } from "@/hooks/useHrPayroll";
 
 const months = [
   "January", "February", "March", "April", "May", "June",
@@ -16,15 +16,7 @@ const HrPayslip = () => {
   const navigate = useNavigate();
   const payrollId = parseInt(id || "0");
 
-  const { data: payslip, isLoading } = useQuery({
-    queryKey: ["hr-payslip", payrollId],
-    queryFn: async () => {
-      const result = await hrPayrollApi.getPayslip(payrollId);
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    enabled: payrollId > 0,
-  });
+  const { data: payslip, isLoading } = useHrPayslip(payrollId > 0 ? payrollId : null);
 
   const formatAmount = (amount: number) =>
     amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });

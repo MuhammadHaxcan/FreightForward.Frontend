@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 interface StatusTimelineProps {
   statusLogs: ShipmentStatusLog[];
   onDelete?: (statusLogId: number) => void;
+  isReadOnly?: boolean;
 }
 
 const getEventIcon = (eventType: StatusEventType) => {
@@ -48,13 +49,15 @@ const getEventIcon = (eventType: StatusEventType) => {
   }
 };
 
-export function StatusTimeline({ statusLogs, onDelete }: StatusTimelineProps) {
+export function StatusTimeline({ statusLogs, onDelete, isReadOnly = false }: StatusTimelineProps) {
   if (!statusLogs || statusLogs.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
         <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
         <p>No tracking events recorded yet.</p>
-        <p className="text-sm mt-1">Click "Add Event" to record the first status update.</p>
+        {!isReadOnly && (
+          <p className="text-sm mt-1">Click "Add Event" to record the first status update.</p>
+        )}
       </div>
     );
   }
@@ -151,7 +154,7 @@ export function StatusTimeline({ statusLogs, onDelete }: StatusTimelineProps) {
                   <div className="text-sm font-medium text-foreground">
                     {formatEventDateOnly(log.eventDateTime)}
                   </div>
-                  {onDelete && (
+                  {onDelete && !isReadOnly && (
                     <Button
                       variant="ghost"
                       size="icon"

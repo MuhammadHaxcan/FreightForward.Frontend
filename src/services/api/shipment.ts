@@ -95,6 +95,7 @@ export interface ShipmentParty {
   id: number;
   masterType: MasterType;
   customerCategoryId?: number;
+  customerCategoryCode?: string;
   customerCategoryName?: string;
   customerId?: number;
   customerName: string;
@@ -172,6 +173,13 @@ export interface ShipmentCargo {
   totalCBM?: number;
   totalWeight?: number;
   description?: string;
+  marksNumbers?: string;
+  hsCode?: string;
+  countryOfOriginId?: number;
+  countryOfOriginName?: string;
+  isDangerousGoods?: boolean;
+  imcoClass?: string;
+  unNo?: string;
 }
 
 export interface AddShipmentCargoRequest {
@@ -189,6 +197,12 @@ export interface AddShipmentCargoRequest {
   totalCBM?: number | null;
   totalWeight?: number | null;
   description?: string;
+  marksNumbers?: string;
+  hsCode?: string;
+  countryOfOriginId?: number | null;
+  isDangerousGoods?: boolean | null;
+  imcoClass?: string;
+  unNo?: string;
 }
 
 export interface UpdateShipmentCargoRequest extends AddShipmentCargoRequest {
@@ -415,6 +429,15 @@ export interface ShipmentCustomsDto {
   claimNo?: string;
   deliveryOrderNo?: string;
   deliveryOrderIssueDate?: string;
+  igmEgmNo?: string;
+  igmEgmDate?: string;
+  indexNo?: string;
+  actualArrivalDate?: string;
+  manifestFilingDate?: string;
+  vesselColour?: string;
+  berth?: string;
+  lastStop?: string;
+  tallyContractorPartyId?: number;
 }
 
 export interface UpsertShipmentCustomsRequest {
@@ -426,6 +449,15 @@ export interface UpsertShipmentCustomsRequest {
   claimNo?: string;
   deliveryOrderNo?: string;
   deliveryOrderIssueDate?: string;
+  igmEgmNo?: string;
+  igmEgmDate?: string;
+  indexNo?: string;
+  actualArrivalDate?: string;
+  manifestFilingDate?: string;
+  vesselColour?: string;
+  berth?: string;
+  lastStop?: string;
+  tallyContractorPartyId?: number;
 }
 
 // Shipment Invoice Types

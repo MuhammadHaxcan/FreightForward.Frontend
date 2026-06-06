@@ -50,10 +50,19 @@ export default function CreditNotes() {
     setPageNumber(1);
   };
 
+  const handleCustomerChange = (value: string) => {
+    setSelectedCustomer(value);
+    setPageNumber(1);
+  };
+
   const handleDelete = async () => {
     if (!deleteId) return;
-    await deleteMutation.mutateAsync(deleteId);
-    setDeleteId(null);
+    try {
+      await deleteMutation.mutateAsync(deleteId);
+      setDeleteId(null);
+    } catch {
+      // error toast handled by useDeleteCreditNote onError
+    }
   };
 
   const startEntry = (pageNumber - 1) * pageSize + 1;
@@ -89,7 +98,7 @@ export default function CreditNotes() {
                 })),
               ]}
               value={selectedCustomer}
-              onValueChange={setSelectedCustomer}
+              onValueChange={handleCustomerChange}
               placeholder="Select All"
               searchPlaceholder="Search customers..."
             />

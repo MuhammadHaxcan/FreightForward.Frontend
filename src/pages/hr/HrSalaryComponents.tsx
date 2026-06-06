@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -26,15 +25,16 @@ import {
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import { formatDate } from "@/lib/utils";
-import {
-  hrSalaryApi,
-  SalaryComponent,
-  CreateSalaryComponentRequest,
-} from "@/services/api/hr";
+import { type SalaryComponent, type CreateSalaryComponentRequest } from "@/services/api/hr";
 import { MutationBlockingOverlay } from "@/components/ui/mutation-blocking-overlay";
+import {
+  useHrSalaryComponents,
+  useCreateHrSalaryComponent,
+  useUpdateHrSalaryComponent,
+  useDeleteHrSalaryComponent,
+} from "@/hooks/useHrSalary";
 
 const HrSalaryComponents = () => {
-  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -50,76 +50,10 @@ const HrSalaryComponents = () => {
   const [componentType, setComponentType] = useState("Earning");
   const [isActive, setIsActive] = useState(true);
 
-  // Fetch salary components
-  const { data: compData, isLoading } = useQuery({
-    queryKey: ["hr-salary-components", pageNumber, pageSize, searchTerm],
-    queryFn: async () => {
-      const result = await hrSalaryApi.getComponents({
-        pageNumber,
-        pageSize,
-        searchTerm: searchTerm || undefined,
-      });
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-  });
-
-  // Create mutation
-  const createMutation = useMutation({
-    mutationFn: async (data: CreateSalaryComponentRequest) => {
-      const result = await hrSalaryApi.createComponent(data);
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    onSuccess: () => {
-      toast.success("Salary component created successfully");
-      queryClient.invalidateQueries({ queryKey: ["hr-salary-components"] });
-      queryClient.invalidateQueries({ queryKey: ["hr-salary-components-active"] });
-      setModalOpen(false);
-      resetForm();
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to create salary component");
-    },
-  });
-
-  // Update mutation
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: CreateSalaryComponentRequest }) => {
-      const result = await hrSalaryApi.updateComponent(id, data);
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    onSuccess: () => {
-      toast.success("Salary component updated successfully");
-      queryClient.invalidateQueries({ queryKey: ["hr-salary-components"] });
-      queryClient.invalidateQueries({ queryKey: ["hr-salary-components-active"] });
-      setModalOpen(false);
-      resetForm();
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to update salary component");
-    },
-  });
-
-  // Delete mutation
-  const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const result = await hrSalaryApi.deleteComponent(id);
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    onSuccess: () => {
-      toast.success("Salary component deleted successfully");
-      queryClient.invalidateQueries({ queryKey: ["hr-salary-components"] });
-      queryClient.invalidateQueries({ queryKey: ["hr-salary-components-active"] });
-      setDeleteDialogOpen(false);
-      setItemToDelete(null);
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to delete salary component");
-    },
-  });
+  const { data: compData, isLoading } = useHrSalaryComponents({ pageNumber, pageSize, searchTerm: searchTerm || undefined });
+  const createMutation = useCreateHrSalaryComponent();
+  const updateMutation = useUpdateHrSalaryComponent();
+  const deleteMutation = useDeleteHrSalaryComponent();
 
   const items = compData?.items || [];
   const totalCount = compData?.totalCount || 0;
@@ -156,7 +90,12 @@ const HrSalaryComponents = () => {
 
   const confirmDelete = () => {
     if (itemToDelete) {
-      deleteMutation.mutate(itemToDelete.id);
+      deleteMutation.mutate(itemToDelete.id, {
+        onSuccess: () => {
+          setDeleteDialogOpen(false);
+          setItemToDelete(null);
+        },
+      });
     }
   };
 
@@ -171,10 +110,11 @@ const HrSalaryComponents = () => {
       componentType,
       isActive,
     };
+    const onSuccess = () => { setModalOpen(false); resetForm(); };
     if (modalMode === "add") {
-      createMutation.mutate(data);
+      createMutation.mutate(data, { onSuccess });
     } else if (editingId) {
-      updateMutation.mutate({ id: editingId, data });
+      updateMutation.mutate({ id: editingId, data }, { onSuccess });
     }
   };
 

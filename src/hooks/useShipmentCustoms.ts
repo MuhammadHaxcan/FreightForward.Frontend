@@ -30,6 +30,8 @@ export function useUpsertShipmentCustoms(shipmentId: number) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shipment-customs', shipmentId] });
+      queryClient.invalidateQueries({ queryKey: ['shipments', shipmentId] });
+      queryClient.invalidateQueries({ queryKey: ['shipments'] });
       toast.success('Customs details saved successfully');
     },
     onError: (error: Error) => {

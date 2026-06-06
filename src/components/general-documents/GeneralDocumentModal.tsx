@@ -11,6 +11,7 @@ import {
 import { useCreateGeneralDocument } from "@/hooks/useGeneralDocuments";
 import { fileApi } from "@/services/api";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 interface GeneralDocumentModalProps {
   open: boolean;
@@ -40,6 +41,8 @@ export function GeneralDocumentModal({ open, onOpenChange }: GeneralDocumentModa
     } catch {
       setUploadedFilePath(null);
       setOriginalFileName(null);
+      toast.error("Failed to upload file. Please try again.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
     } finally {
       setIsUploading(false);
     }

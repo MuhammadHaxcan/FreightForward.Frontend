@@ -45,7 +45,7 @@ export function useExpenseById(id: number | null) {
       }
       return response.data!;
     },
-    enabled: id !== null,
+    enabled: id !== null && id > 0,
   });
 }
 

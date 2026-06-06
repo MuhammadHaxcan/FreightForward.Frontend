@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -27,16 +27,13 @@ import {
 import { Plus, Eye, Trash2 } from "lucide-react";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import { formatDate, getTodayDateOnly } from "@/lib/utils";
-import {
-  hrAdvanceApi,
-  hrEmployeeApi,
-  Advance,
-  CreateAdvanceRequest,
-} from "@/services/api/hr";
+import { type Advance, type CreateAdvanceRequest } from "@/services/api/hr";
 import { MutationBlockingOverlay } from "@/components/ui/mutation-blocking-overlay";
+import { useHrAdvances, useCreateHrAdvance, useDeleteHrAdvance } from "@/hooks/useHrAdvances";
+import { useHrEmployeeDropdown } from "@/hooks/useHrEmployees";
 
 const HrAdvances = () => {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient(); // needed for manual invalidation of hr-advances-emp
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [filterEmployeeId, setFilterEmployeeId] = useState("");
@@ -57,68 +54,42 @@ const HrAdvances = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingAdvance, setDeletingAdvance] = useState<Advance | null>(null);
 
-  // Fetch advances
-  const { data: advData, isLoading } = useQuery({
-    queryKey: ["hr-advances", pageNumber, pageSize, filterEmployeeId],
-    queryFn: async () => {
-      const result = await hrAdvanceApi.getAll({
-        pageNumber,
-        pageSize,
-        employeeId: filterEmployeeId ? parseInt(filterEmployeeId) : undefined,
+  const { data: advData, isLoading } = useHrAdvances({
+    pageNumber,
+    pageSize,
+    employeeId: filterEmployeeId ? parseInt(filterEmployeeId) : undefined,
+  });
+  const { data: empDropdown } = useHrEmployeeDropdown();
+  const createMutationBase = useCreateHrAdvance();
+  const deleteMutationBase = useDeleteHrAdvance();
+
+  // Wrappers that also invalidate employee-specific caches
+  const createMutation = {
+    ...createMutationBase,
+    mutate: (data: CreateAdvanceRequest, opts?: { onSuccess?: () => void }) => {
+      createMutationBase.mutate(data, {
+        ...opts,
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["hr-advances-emp", data.employeeId] });
+          opts?.onSuccess?.();
+        },
       });
-      if (result.error) throw new Error(result.error);
-      return result.data;
     },
-  });
-
-  // Fetch employees dropdown
-  const { data: empDropdown } = useQuery({
-    queryKey: ["hr-employees-dropdown"],
-    queryFn: async () => {
-      const result = await hrEmployeeApi.getDropdown();
-      if (result.error) throw new Error(result.error);
-      return result.data;
+    isPending: createMutationBase.isPending,
+  };
+  const deleteMutation = {
+    ...deleteMutationBase,
+    mutate: ({ id, empId }: { id: number; empId: number }, opts?: { onSuccess?: () => void }) => {
+      deleteMutationBase.mutate(id, {
+        ...opts,
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ["hr-advances-emp", empId] });
+          opts?.onSuccess?.();
+        },
+      });
     },
-  });
-
-  // Create mutation
-  const createMutation = useMutation({
-    mutationFn: async (data: CreateAdvanceRequest) => {
-      const result = await hrAdvanceApi.create(data);
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-    onSuccess: (_data, vars) => {
-      toast.success("Advance created successfully");
-      queryClient.invalidateQueries({ queryKey: ["hr-advances"] });
-      // C1: Invalidate employee-specific advances cache used by HrEmployeeDetail
-      queryClient.invalidateQueries({ queryKey: ["hr-advances-emp", vars.employeeId] });
-      setAddModalOpen(false);
-      resetForm();
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to create advance");
-    },
-  });
-
-  // Delete mutation
-  const deleteMutation = useMutation({
-    mutationFn: async ({ id, empId }: { id: number; empId: number }) => {
-      const result = await hrAdvanceApi.delete(id);
-      if (result.error) throw new Error(result.error);
-      return { id, empId };
-    },
-    onSuccess: (vars) => {
-      toast.success("Advance deleted successfully");
-      queryClient.invalidateQueries({ queryKey: ["hr-advances"] });
-      queryClient.invalidateQueries({ queryKey: ["hr-advances-emp", vars.empId] });
-      setDeleteDialogOpen(false);
-      setDeletingAdvance(null);
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to delete advance");
-    },
-  });
+    isPending: deleteMutationBase.isPending,
+  };
 
   const items = advData?.items || [];
   const totalCount = advData?.totalCount || 0;
@@ -151,7 +122,12 @@ const HrAdvances = () => {
   const handleDeleteConfirm = () => {
     if (deletingAdvance) {
       const empId = deletingAdvance.employeeId;
-      deleteMutation.mutate({ id: deletingAdvance.id, empId });
+      deleteMutation.mutate({ id: deletingAdvance.id, empId }, {
+        onSuccess: () => {
+          setDeleteDialogOpen(false);
+          setDeletingAdvance(null);
+        },
+      });
     }
   };
 
@@ -175,7 +151,12 @@ const HrAdvances = () => {
       issueDate,
       reason: reason || undefined,
     };
-    createMutation.mutate(data);
+    createMutation.mutate(data, {
+      onSuccess: () => {
+        setAddModalOpen(false);
+        resetForm();
+      },
+    });
   };
 
   const formatAmount = (amt: number) =>

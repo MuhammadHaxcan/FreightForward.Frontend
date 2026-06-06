@@ -232,6 +232,12 @@ const createInitialCargoEntry = (): CargoFormEntry => ({
   totalCBM: "",
   totalWeight: "",
   description: "",
+  marksNumbers: "",
+  hsCode: "",
+  countryOfOriginId: "",
+  isDangerousGoods: false,
+  imcoClass: "",
+  unNo: "",
 });
 
 const AddShipment = () => {
@@ -294,6 +300,7 @@ const AddShipment = () => {
   const [newCargoEntry, setNewCargoEntry] = useState<CargoFormEntry>(createInitialCargoEntry);
   const [cargoCalculationMode, setCargoCalculationMode] = useState("units");
   const [isSavingCargo, setIsSavingCargo] = useState(false);
+  const [editingCargoId, setEditingCargoId] = useState<number | null>(null);
   const [statusLogs, setStatusLogs] = useState<ShipmentStatusLog[]>([]);
   const [statusLogModalOpen, setStatusLogModalOpen] = useState(false);
 
@@ -985,6 +992,37 @@ const AddShipment = () => {
   };
 
   // Cargo handlers
+  const resetCargoForm = () => {
+    setNewCargoEntry(createInitialCargoEntry());
+    setCargoCalculationMode("units");
+    setEditingCargoId(null);
+  };
+
+  const handleEditCargo = (cargo: ShipmentCargo) => {
+    setEditingCargoId(cargo.id);
+    setCargoCalculationMode(cargo.calculationMode || "units");
+    setNewCargoEntry({
+      quantity: cargo.quantity?.toString() || "",
+      packageTypeId: cargo.packageTypeId?.toString() || "",
+      loadType: cargo.loadType || "",
+      length: cargo.length?.toString() || "",
+      width: cargo.width?.toString() || "",
+      height: cargo.height?.toString() || "",
+      volumeUnit: cargo.volumeUnit || "cm",
+      weight: cargo.weight?.toString() || "",
+      weightUnit: cargo.weightUnit || "kg",
+      totalCBM: cargo.totalCBM?.toString() || "",
+      totalWeight: cargo.totalWeight?.toString() || "",
+      description: cargo.description || "",
+      marksNumbers: cargo.marksNumbers || "",
+      hsCode: cargo.hsCode || "",
+      countryOfOriginId: cargo.countryOfOriginId?.toString() || "",
+      isDangerousGoods: cargo.isDangerousGoods === true,
+      imcoClass: cargo.imcoClass || "",
+      unNo: cargo.unNo || "",
+    });
+  };
+
   const handleAddCargo = async () => {
     if (!savedShipmentId) {
       toast.error("Please save the shipment first");
@@ -1022,37 +1060,80 @@ const AddShipment = () => {
           : (cbm != null ? cbm * qty : null),
         totalWeight: parseFloat(newCargoEntry.totalWeight) || null,
         description: newCargoEntry.description || undefined,
+        marksNumbers: newCargoEntry.marksNumbers || undefined,
+        hsCode: newCargoEntry.hsCode || undefined,
+        countryOfOriginId: newCargoEntry.countryOfOriginId ? parseInt(newCargoEntry.countryOfOriginId) : null,
+        isDangerousGoods: newCargoEntry.isDangerousGoods,
+        imcoClass: newCargoEntry.imcoClass || undefined,
+        unNo: newCargoEntry.unNo || undefined,
       };
 
-      const response = await shipmentApi.addCargo(savedShipmentId, request);
-      if (response.data) {
-        const newCargo: ShipmentCargo = {
-          id: response.data,
-          calculationMode: request.calculationMode,
-          quantity: request.quantity,
-          packageTypeId: request.packageTypeId || undefined,
-          packageTypeName: selectedPackageType?.name,
-          loadType: request.loadType,
-          length: request.length || undefined,
-          width: request.width || undefined,
-          height: request.height || undefined,
-          volumeUnit: request.volumeUnit,
-          cbm: request.cbm || undefined,
-          weight: request.weight || undefined,
-          weightUnit: request.weightUnit,
-          totalCBM: request.totalCBM || undefined,
-          totalWeight: request.totalWeight || undefined,
-          description: request.description,
-        };
-        setCargoDetails(prev => [...prev, newCargo]);
-        setNewCargoEntry({
-          quantity: "", packageTypeId: "", loadType: "", length: "", width: "", height: "",
-          volumeUnit: "cm", weight: "", weightUnit: "kg", totalCBM: "", totalWeight: "", description: "",
-        });
-        toast.success("Cargo added successfully");
+      if (editingCargoId) {
+        const response = await shipmentApi.updateCargo(editingCargoId, request);
+        if (response.error) throw new Error(response.error);
+
+        setCargoDetails(prev => prev.map(cargo => cargo.id === editingCargoId
+          ? {
+              ...cargo,
+              calculationMode: request.calculationMode,
+              quantity: request.quantity,
+              packageTypeId: request.packageTypeId || undefined,
+              packageTypeName: selectedPackageType?.name,
+              loadType: request.loadType,
+              length: request.length || undefined,
+              width: request.width || undefined,
+              height: request.height || undefined,
+              volumeUnit: request.volumeUnit,
+              cbm: request.cbm || undefined,
+              weight: request.weight || undefined,
+              weightUnit: request.weightUnit,
+              totalCBM: request.totalCBM || undefined,
+              totalWeight: request.totalWeight || undefined,
+              description: request.description,
+              marksNumbers: request.marksNumbers,
+              hsCode: request.hsCode,
+              countryOfOriginId: request.countryOfOriginId || undefined,
+              isDangerousGoods: request.isDangerousGoods || false,
+              imcoClass: request.imcoClass,
+              unNo: request.unNo,
+            }
+          : cargo));
+        resetCargoForm();
+        toast.success("Cargo updated successfully");
+      } else {
+        const response = await shipmentApi.addCargo(savedShipmentId, request);
+        if (response.data) {
+          const newCargo: ShipmentCargo = {
+            id: response.data,
+            calculationMode: request.calculationMode,
+            quantity: request.quantity,
+            packageTypeId: request.packageTypeId || undefined,
+            packageTypeName: selectedPackageType?.name,
+            loadType: request.loadType,
+            length: request.length || undefined,
+            width: request.width || undefined,
+            height: request.height || undefined,
+            volumeUnit: request.volumeUnit,
+            cbm: request.cbm || undefined,
+            weight: request.weight || undefined,
+            weightUnit: request.weightUnit,
+            totalCBM: request.totalCBM || undefined,
+            totalWeight: request.totalWeight || undefined,
+            description: request.description,
+            marksNumbers: request.marksNumbers,
+            hsCode: request.hsCode,
+            countryOfOriginId: request.countryOfOriginId || undefined,
+            isDangerousGoods: request.isDangerousGoods || false,
+            imcoClass: request.imcoClass,
+            unNo: request.unNo,
+          };
+          setCargoDetails(prev => [...prev, newCargo]);
+          resetCargoForm();
+          toast.success("Cargo added successfully");
+        }
       }
     } catch (error) {
-      toast.error("Failed to add cargo");
+      toast.error(error instanceof Error ? error.message : editingCargoId ? "Failed to update cargo" : "Failed to add cargo");
     } finally {
       setIsSavingCargo(false);
     }
@@ -1221,7 +1302,11 @@ const AddShipment = () => {
       setDeleteModalOpen(false);
       setDeleteModalConfig(null);
     } catch (error) {
-      // Error handled by mutation
+      // Invoice/purchase invoice mutations handle their own error toasts via onError;
+      // only toast here for non-mutation failures (e.g. status log direct API call).
+      if (deleteModalConfig?.type !== 'invoice' && deleteModalConfig?.type !== 'purchaseInvoice') {
+        toast.error(error instanceof Error ? error.message : "Failed to delete item");
+      }
     } finally {
       setIsDeleting(false);
     }
@@ -2011,10 +2096,13 @@ const AddShipment = () => {
               cargoCalculationMode={cargoCalculationMode}
               onCargoCalculationModeChange={setCargoCalculationMode}
               onAddCargo={handleAddCargo}
+              onEditCargo={handleEditCargo}
+              onCancelCargoEdit={resetCargoForm}
               onDeleteCargo={handleDeleteCargo}
               isSavingCargo={isSavingCargo}
               isShipmentSaved={!!savedShipmentId}
               packageTypesByCategory={packageTypesByCategory}
+              editingCargoId={editingCargoId}
             />
           </TabsContent>
 

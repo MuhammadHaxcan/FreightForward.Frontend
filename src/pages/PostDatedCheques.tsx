@@ -12,8 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useQuery } from "@tanstack/react-query";
-import { getPostDatedCheques, type PostDatedCheque } from "@/services/api/postDatedCheque";
+import { type PostDatedCheque } from "@/services/api/postDatedCheque";
+import { usePostDatedCheques } from "@/hooks/usePostDatedCheques";
 import { formatDate } from "@/lib/utils";
 
 interface TabPanelProps {
@@ -29,18 +29,12 @@ function PDCTable({ source, filterOptions, showTypeColumn = false, partyColumnLa
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["post-dated-cheques", source, pageNumber, pageSize, searchTerm, typeFilter],
-    queryFn: async () => {
-      const res = await getPostDatedCheques({
-        pageNumber,
-        pageSize,
-        searchTerm: searchTerm || undefined,
-        type: typeFilter !== "all" ? typeFilter : undefined,
-        source,
-      });
-      return res.data;
-    },
+  const { data, isLoading, isError } = usePostDatedCheques({
+    pageNumber,
+    pageSize,
+    searchTerm: searchTerm || undefined,
+    type: typeFilter !== "all" ? typeFilter : undefined,
+    source,
   });
 
   const handleSearch = (value: string) => {
@@ -120,6 +114,12 @@ function PDCTable({ source, filterOptions, showTypeColumn = false, partyColumnLa
               <TableRow>
                 <TableCell colSpan={showTypeColumn ? 11 : 10} className="text-center py-8 text-muted-foreground">
                   Loading...
+                </TableCell>
+              </TableRow>
+            ) : isError ? (
+              <TableRow>
+                <TableCell colSpan={showTypeColumn ? 11 : 10} className="text-center py-8 text-destructive">
+                  Failed to load post-dated cheques
                 </TableCell>
               </TableRow>
             ) : data?.items && data.items.length > 0 ? (

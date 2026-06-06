@@ -33,7 +33,6 @@ export default function CreditNoteEdit() {
   const navigate = useNavigate();
   const numericId = id ? parseInt(id, 10) : NaN;
   const updateMutation = useUpdateCreditNote();
-  const [saving, setSaving] = useState(false);
 
   // Redirect on invalid id
   useEffect(() => {
@@ -160,7 +159,6 @@ export default function CreditNoteEdit() {
       return;
     }
 
-    setSaving(true);
     try {
       await updateMutation.mutateAsync({
         id: parseInt(id),
@@ -192,8 +190,6 @@ export default function CreditNoteEdit() {
       navigate(`/accounts/credit-notes/${id}`);
     } catch {
       // Error handled by mutation
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -233,8 +229,8 @@ export default function CreditNoteEdit() {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Cancel
             </Button>
-            <Button className="btn-success" onClick={handleSave} disabled={saving}>
-              {saving ? "Saving..." : "Save"}
+            <Button className="btn-success" onClick={handleSave} disabled={updateMutation.isPending}>
+              {updateMutation.isPending ? "Saving..." : "Save"}
             </Button>
           </div>
         </div>

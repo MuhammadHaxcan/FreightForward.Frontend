@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { formatDate } from "@/lib/utils";
-import { ArrowLeft, Mail, Pencil, FileText, Download, File } from "lucide-react";
+import { ArrowLeft, Mail, Pencil, FileText, Download, File, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { invoiceApi } from "@/services/api";
 import { useInvoiceByIdentifier } from "@/hooks/useInvoices";
+import { useShipment } from "@/hooks/useShipments";
 import { SendEmailModal } from "@/components/common/SendEmailModal";
 import {
   Table,
@@ -19,14 +20,23 @@ import {
 import { MainLayout } from "@/components/layout/MainLayout";
 import { API_BASE_URL, fetchBlob } from "@/services/api/base";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function InvoiceView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { officeName, user } = useAuth();
+  const { officeName, hasPermission, user } = useAuth();
   const [emailModalOpen, setEmailModalOpen] = useState(false);
 
   const { data: invoice, isLoading: loading } = useInvoiceByIdentifier(id);
+  const { data: shipment, isLoading: shipmentLoading, isError: shipmentError } = useShipment(invoice?.shipmentId ?? 0);
 
   const sendEmailMutation = useMutation({
     mutationFn: async (req: { recipientEmail: string; sendToCustomer: boolean; subject: string }) => {
@@ -67,9 +77,12 @@ export default function InvoiceView() {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
+      } else {
+        toast.error("Failed to download PDF");
       }
     } catch (error) {
       console.error("Error downloading PDF:", error);
+      toast.error("Failed to download PDF");
     }
   };
 
@@ -114,12 +127,21 @@ export default function InvoiceView() {
   const subTotal = invoice.subTotal || uniqueItems.reduce((sum, item) => sum + (item.amount || 0), 0);
   const totalTax = invoice.totalTax || uniqueItems.reduce((sum, item) => sum + (item.taxAmount || 0), 0);
   const total = invoice.total || subTotal + totalTax;
+  const actionMenuItemClass =
+    "gap-3 rounded-md px-3 py-2 text-sm font-medium focus:text-white data-[highlighted]:text-white";
+  const canEditClosedShipment = hasPermission("ship_edit_closed");
+  const isClosedLinkedShipment = shipment?.jobStatus === "Closed";
+  const hasLinkedDocuments = (invoice.linkedReceiptCount ?? 0) > 0 || (invoice.linkedCreditNoteCount ?? 0) > 0;
+  const canEditInvoice =
+    hasPermission("invoice_edit") &&
+    !hasLinkedDocuments &&
+    (!invoice.shipmentId || (!shipmentLoading && !shipmentError && (!isClosedLinkedShipment || canEditClosedShipment)));
 
   return (
     <MainLayout>
       <div className="p-6 space-y-6">
         {/* Action Buttons */}
-        <div className="flex justify-end gap-2 print:hidden">
+        <div className="flex items-center justify-between print:hidden">
           <Button
             variant="default"
             className="bg-gray-800 hover:bg-gray-900 text-white"
@@ -128,26 +150,63 @@ export default function InvoiceView() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          <Button className="bg-teal-500 hover:bg-teal-600 text-white" onClick={handleSendEmail}>
-            <Mail className="h-4 w-4 mr-2" />
-            Send Email
-          </Button>
-          <Button className="btn-success" onClick={() => navigate(`/accounts/invoices/${encodeURIComponent(invoice.invoiceNo)}/edit`)}>
-            <Pencil className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
-          <Button className="bg-lime-500 hover:bg-lime-600 text-white" onClick={handleTaxInvoice}>
-            <FileText className="h-4 w-4 mr-2" />
-            Tax Invoice
-          </Button>
-          <Button className="bg-orange-500 hover:bg-orange-600 text-white" onClick={handleDownload}>
-            <Download className="h-4 w-4 mr-2" />
-            Download
-          </Button>
-          <Button className="bg-orange-500 hover:bg-orange-600 text-white" onClick={handleNonTaxInvoice}>
-            <File className="h-4 w-4 mr-2" />
-            Non-Tax Invoice
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                className="h-11 w-11 border-slate-300 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
+                aria-label="Invoice actions"
+              >
+                <MoreHorizontal className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-xl"
+            >
+              <DropdownMenuLabel className="px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Invoice Actions
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={handleSendEmail}
+                className={`${actionMenuItemClass} text-teal-700 data-[highlighted]:bg-teal-500`}
+              >
+                <Mail className="h-4 w-4" />
+                Send Email
+              </DropdownMenuItem>
+              {canEditInvoice && (
+                <DropdownMenuItem
+                  onClick={() => navigate(`/accounts/invoices/${encodeURIComponent(invoice.invoiceNo)}/edit`)}
+                  className={`${actionMenuItemClass} text-emerald-700 data-[highlighted]:bg-emerald-500`}
+                >
+                  <Pencil className="h-4 w-4" />
+                  Edit
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem
+                onClick={handleTaxInvoice}
+                className={`${actionMenuItemClass} text-lime-700 data-[highlighted]:bg-lime-500`}
+              >
+                <FileText className="h-4 w-4" />
+                Tax Invoice
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={handleDownload}
+                className={`${actionMenuItemClass} text-orange-700 data-[highlighted]:bg-orange-500`}
+              >
+                <Download className="h-4 w-4" />
+                Download
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={handleNonTaxInvoice}
+                className={`${actionMenuItemClass} text-amber-700 data-[highlighted]:bg-amber-500`}
+              >
+                <File className="h-4 w-4" />
+                Non-Tax Invoice
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Invoice Content */}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { formatDate } from "@/lib/utils";
 import { Eye, Plus, Trash2, Download, Printer, Edit } from "lucide-react";
@@ -94,9 +95,12 @@ export default function ReceiptVouchers() {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
+      } else {
+        toast.error("Failed to download PDF");
       }
     } catch (error) {
       console.error("Error downloading PDF:", error);
+      toast.error("Failed to download PDF");
     }
   };
 

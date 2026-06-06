@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -29,15 +29,16 @@ import { Plus, Pencil, Trash2, Eye, Check } from "lucide-react";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import {
   hrPayrollApi,
-  hrEmployeeApi,
-  PayrollListItem,
-  Payslip,
-  PayrollDetailEditItem,
-  UpdatePayrollWithComponentsRequest,
-  MarkPaidRequest,
+  type PayrollListItem,
+  type Payslip,
+  type PayrollDetailEditItem,
+  type UpdatePayrollWithComponentsRequest,
+  type MarkPaidRequest,
 } from "@/services/api/hr";
 import { useBanks } from "@/hooks/useBanks";
 import { MutationBlockingOverlay } from "@/components/ui/mutation-blocking-overlay";
+import { useHrPayrolls } from "@/hooks/useHrPayroll";
+import { useHrEmployeeDropdown } from "@/hooks/useHrEmployees";
 
 const monthNames = [
   "",
@@ -140,30 +141,16 @@ const HrPayroll = () => {
 
   // ==================== Queries ====================
 
-  const { data: payrollData, isLoading } = useQuery({
-    queryKey: ["hr-payroll", pageNumber, pageSize, filterYear, filterMonthFrom, filterMonthTo, filterEmployeeId],
-    queryFn: async () => {
-      const result = await hrPayrollApi.getAll({
-        pageNumber,
-        pageSize,
-        year: parseInt(filterYear),
-        monthFrom: parseInt(filterMonthFrom),
-        monthTo: parseInt(filterMonthTo),
-        employeeId: filterEmployeeId ? parseInt(filterEmployeeId) : undefined,
-      });
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
+  const { data: payrollData, isLoading } = useHrPayrolls({
+    pageNumber,
+    pageSize,
+    year: parseInt(filterYear),
+    monthFrom: parseInt(filterMonthFrom),
+    monthTo: parseInt(filterMonthTo),
+    employeeId: filterEmployeeId ? parseInt(filterEmployeeId) : undefined,
   });
 
-  const { data: empDropdown } = useQuery({
-    queryKey: ["hr-employees-dropdown"],
-    queryFn: async () => {
-      const result = await hrEmployeeApi.getDropdown();
-      if (result.error) throw new Error(result.error);
-      return result.data;
-    },
-  });
+  const { data: empDropdown } = useHrEmployeeDropdown();
 
   const { data: banksData } = useBanks({ pageSize: 100 });
 
@@ -187,13 +174,11 @@ const HrPayroll = () => {
     },
     onSuccess: (vars) => {
       toast.success("Payroll updated successfully");
-      queryClient.invalidateQueries({ queryKey: ["hr-payroll"] });
-      queryClient.invalidateQueries({ queryKey: ["hr-payroll-pregenerate"] });
-      queryClient.invalidateQueries({ queryKey: ["hr-payroll-exists"] });
-      queryClient.invalidateQueries({ queryKey: ["hr-payroll-emp", vars.empId] });
+      queryClient.invalidateQueries({ queryKey: ["hr-payrolls"] });
+      queryClient.invalidateQueries({ queryKey: ["hr-pre-generate-info"] });
       queryClient.invalidateQueries({ queryKey: ["hr-payslip", vars.payrollId] });
       queryClient.invalidateQueries({ queryKey: ["hr-advances"] });
-      queryClient.invalidateQueries({ queryKey: ["hr-advances-emp", vars.empId] });
+      queryClient.invalidateQueries({ queryKey: ["hr-advances-employee"] });
       setEditModalOpen(false);
       setEditingItem(null);
     },
@@ -210,13 +195,11 @@ const HrPayroll = () => {
     },
     onSuccess: (vars) => {
       toast.success("Payroll deleted successfully");
-      queryClient.invalidateQueries({ queryKey: ["hr-payroll"] });
-      queryClient.invalidateQueries({ queryKey: ["hr-payroll-pregenerate"] });
-      queryClient.invalidateQueries({ queryKey: ["hr-payroll-exists"] });
-      queryClient.invalidateQueries({ queryKey: ["hr-payroll-emp", vars.empId] });
+      queryClient.invalidateQueries({ queryKey: ["hr-payrolls"] });
+      queryClient.invalidateQueries({ queryKey: ["hr-pre-generate-info"] });
       queryClient.invalidateQueries({ queryKey: ["hr-payslip", vars.payrollId] });
       queryClient.invalidateQueries({ queryKey: ["hr-advances"] });
-      queryClient.invalidateQueries({ queryKey: ["hr-advances-emp", vars.empId] });
+      queryClient.invalidateQueries({ queryKey: ["hr-advances-employee"] });
       setDeleteDialogOpen(false);
       setDeletingId(null);
       setDeletingEmployeeId(null);
@@ -235,10 +218,8 @@ const HrPayroll = () => {
     },
     onSuccess: (_data, variables) => {
       toast.success("Payroll marked as paid");
-      queryClient.invalidateQueries({ queryKey: ["hr-payroll"] });
-      queryClient.invalidateQueries({ queryKey: ["hr-payroll-pregenerate"] });
-      queryClient.invalidateQueries({ queryKey: ["hr-payroll-exists"] });
-      queryClient.invalidateQueries({ queryKey: ["hr-payroll-emp", variables.empId] });
+      queryClient.invalidateQueries({ queryKey: ["hr-payrolls"] });
+      queryClient.invalidateQueries({ queryKey: ["hr-pre-generate-info"] });
       queryClient.invalidateQueries({ queryKey: ["hr-payslip", variables.id] });
       setMarkPaidModalOpen(false);
       setMarkPaidPayroll(null);
@@ -271,7 +252,7 @@ const HrPayroll = () => {
     setIsAdvanceManualOverride(false);
 
     // Fetch payslip to get per-component detail
-    const result = await hrPayrollApi.getPayslip(item.id);
+    const result = await hrPayrollApi.getPayslip(item.id); // direct call acceptable inside event handler (one-off fetch)
     if (result.error) {
       toast.error("Failed to load payroll details");
       return;

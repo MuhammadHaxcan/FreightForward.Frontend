@@ -11,15 +11,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import {
-  creditNoteApi,
-  customerApi,
-  settingsApi,
-  type Customer,
-  type CurrencyType,
-  type ChargeItem,
   type UnpaidInvoice,
 } from "@/services/api";
-import { useCreateCreditNote } from "@/hooks/useCreditNotes";
+import { useCreateCreditNote, useCustomerCreditNoteUnpaidInvoices } from "@/hooks/useCreditNotes";
+import { useAllDebtors } from "@/hooks/useCustomers";
+import { useAllCurrencyTypes, useAllChargeItems } from "@/hooks/useSettings";
 
 interface ChargeDetail {
   id: number;
@@ -61,10 +57,6 @@ const emptyCharge: Partial<ChargeDetail> = {
 };
 
 export function AddCreditNoteModal({ open, onOpenChange, onSuccess }: AddCreditNoteModalProps) {
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [currencyTypes, setCurrencyTypes] = useState<CurrencyType[]>([]);
-  const [chargeItemsList, setChargeItemsList] = useState<ChargeItem[]>([]);
-
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
   const [creditNoteForm, setCreditNoteForm] = useState({
     jobNumber: "",
@@ -77,39 +69,23 @@ export function AddCreditNoteModal({ open, onOpenChange, onSuccess }: AddCreditN
   const [chargeDetails, setChargeDetails] = useState<ChargeDetail[]>([]);
   const [newCharge, setNewCharge] = useState<Partial<ChargeDetail>>({ ...emptyCharge });
   const [additionalContents, setAdditionalContents] = useState("");
-  const [saving, setSaving] = useState(false);
 
-  const [unpaidInvoices, setUnpaidInvoices] = useState<UnpaidInvoice[]>([]);
   const [selectedInvoices, setSelectedInvoices] = useState<SelectedInvoice[]>([]);
 
   const createCreditNoteMutation = useCreateCreditNote();
 
-  // Fetch customers, currencies, charge items on open
-  useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
-    customerApi.getAll({ pageSize: 1000, masterType: "Debtors" }).then((res) => {
-      if (!cancelled && res.data) setCustomers(res.data.items);
-    });
-    settingsApi.getAllCurrencyTypes().then((res) => {
-      if (!cancelled && res.data) setCurrencyTypes(res.data);
-    });
-    settingsApi.getAllChargeItems().then((res) => {
-      if (!cancelled && res.data) setChargeItemsList(res.data);
-    });
-    return () => { cancelled = true; };
-  }, [open]);
+  // Data hooks
+  const { data: customers = [] } = useAllDebtors();
+  const { data: currencyTypes = [] } = useAllCurrencyTypes();
+  const { data: chargeItemsList = [] } = useAllChargeItems();
+  const { data: unpaidInvoices = [] } = useCustomerCreditNoteUnpaidInvoices(
+    selectedCustomerId ? parseInt(selectedCustomerId) : 0,
+    undefined,
+    { enabled: !!selectedCustomerId }
+  );
 
-  // Fetch unpaid invoices when customer changes
+  // Reset selected invoices when customer changes
   useEffect(() => {
-    if (!selectedCustomerId) {
-      setUnpaidInvoices([]);
-      setSelectedInvoices([]);
-      return;
-    }
-    creditNoteApi.getUnpaidInvoices(parseInt(selectedCustomerId)).then((res) => {
-      if (res.data) setUnpaidInvoices(res.data);
-    });
     setSelectedInvoices([]);
   }, [selectedCustomerId]);
 
@@ -121,7 +97,6 @@ export function AddCreditNoteModal({ open, onOpenChange, onSuccess }: AddCreditN
       setChargeDetails([]);
       setNewCharge({ ...emptyCharge });
       setAdditionalContents("");
-      setUnpaidInvoices([]);
       setSelectedInvoices([]);
     }
   }, [open]);
@@ -143,30 +118,27 @@ export function AddCreditNoteModal({ open, onOpenChange, onSuccess }: AddCreditN
       return;
     }
 
-    setSaving(true);
+    // Auto-add pending charge if filled but not explicitly added
+    const allCharges = [...chargeDetails];
+    if (newCharge.chargeDetails && newCharge.amount) {
+      allCharges.push({ ...newCharge, id: Date.now() } as ChargeDetail);
+    }
+
+    // Validate: must have at least one charge
+    const totalCharges = allCharges.reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0);
+    if (allCharges.length === 0 || totalCharges <= 0) {
+      toast.error("Please add at least one charge line");
+      return;
+    }
+
+    // Validate: total allocated cannot exceed total charges
+    const totalAllocated = selectedInvoices.reduce((sum, inv) => sum + inv.allocatedAmount, 0);
+    if (totalAllocated > totalCharges) {
+      toast.error("Allocated amount cannot exceed credit note total");
+      return;
+    }
+
     try {
-      // Auto-add pending charge if filled but not explicitly added
-      let allCharges = [...chargeDetails];
-      if (newCharge.chargeDetails && newCharge.amount) {
-        allCharges.push({ ...newCharge, id: Date.now() } as ChargeDetail);
-      }
-
-      // Validate: must have at least one charge
-      const totalCharges = allCharges.reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0);
-      if (allCharges.length === 0 || totalCharges <= 0) {
-        toast.error("Please add at least one charge line");
-        setSaving(false);
-        return;
-      }
-
-      // Validate: total allocated cannot exceed total charges
-      const totalAllocated = selectedInvoices.reduce((sum, inv) => sum + inv.allocatedAmount, 0);
-      if (totalAllocated > totalCharges) {
-        toast.error("Allocated amount cannot exceed credit note total");
-        setSaving(false);
-        return;
-      }
-
       await createCreditNoteMutation.mutateAsync({
         customerId: parseInt(selectedCustomerId),
         creditNoteDate: format(creditNoteForm.creditNoteDate, "yyyy-MM-dd"),
@@ -193,8 +165,6 @@ export function AddCreditNoteModal({ open, onOpenChange, onSuccess }: AddCreditN
       onSuccess();
     } catch {
       // toast already shown by mutation's onError
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -549,8 +519,8 @@ export function AddCreditNoteModal({ open, onOpenChange, onSuccess }: AddCreditN
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button className="btn-success" onClick={handleSave} disabled={saving}>
-              {saving ? "Saving..." : "Save"}
+            <Button className="btn-success" onClick={handleSave} disabled={createCreditNoteMutation.isPending}>
+              {createCreditNoteMutation.isPending ? "Saving..." : "Save"}
             </Button>
           </div>
         </div>

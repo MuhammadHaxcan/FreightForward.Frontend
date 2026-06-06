@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { authApi } from '@/services/api/auth';
@@ -70,7 +70,6 @@ export default function Profile() {
   const [lastName, setLastName] = useState(user?.lastName || '');
   const [contactNumber, setContactNumber] = useState(user?.contactNumber || '');
   const [profilePictureUrl, setProfilePictureUrl] = useState(user?.profilePictureUrl || '');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const currentDate = new Date();
@@ -140,6 +139,21 @@ export default function Profile() {
     }
   };
 
+  const updateProfileMutation = useMutation({
+    mutationFn: async (data: { firstName: string; lastName: string; contactNumber?: string; profilePictureUrl?: string }) => {
+      const result = await authApi.updateProfile(data);
+      if (result.error) throw new Error(result.error);
+      return result.data;
+    },
+    onSuccess: async () => {
+      await refreshUser();
+      toast.success('Profile updated successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update profile');
+    },
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -148,24 +162,12 @@ export default function Profile() {
       return;
     }
 
-    setIsSubmitting(true);
-
-    const result = await authApi.updateProfile({
+    updateProfileMutation.mutate({
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       contactNumber: contactNumber.trim() || undefined,
       profilePictureUrl: profilePictureUrl || undefined,
     });
-
-    if (result.error) {
-      toast.error(result.error);
-      setIsSubmitting(false);
-      return;
-    }
-
-    await refreshUser();
-    toast.success('Profile updated successfully');
-    setIsSubmitting(false);
   };
 
   const initials = `${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`.toUpperCase();
@@ -366,8 +368,8 @@ export default function Profile() {
 
                   {/* Action Buttons */}
                   <div className="flex flex-col gap-3 pt-4">
-                    <Button type="submit" disabled={isSubmitting || isProcessing} className="w-full">
-                      {isSubmitting ? (
+                    <Button type="submit" disabled={updateProfileMutation.isPending || isProcessing} className="w-full">
+                      {updateProfileMutation.isPending ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           Saving...

@@ -12,14 +12,15 @@ import {
 } from "@/components/ui/dialog";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
-  getPaymentVoucherById,
-  getPaymentVoucherPaymentTypes,
-  type PaymentVoucherDetail,
-  type PaymentType,
+  type PaymentMode,
   type UpdatePaymentVoucherRequest,
 } from "@/services/api/payment";
-import { bankApi, type Bank, type PaymentMode } from "@/services/api";
-import { useUpdatePaymentVoucher } from "@/hooks/usePaymentVouchers";
+import {
+  useUpdatePaymentVoucher,
+  usePaymentVoucher,
+  usePaymentVoucherPaymentTypes,
+} from "@/hooks/usePaymentVouchers";
+import { useAllBanks } from "@/hooks/useBanks";
 import { toast } from "sonner";
 
 interface UpdatePaymentModalProps {
@@ -35,20 +36,22 @@ export function UpdatePaymentModal({
   paymentId,
   onSuccess,
 }: UpdatePaymentModalProps) {
-  const [loading, setLoading] = useState(false);
-  const [fetchingData, setFetchingData] = useState(false);
-  const [banks, setBanks] = useState<Bank[]>([]);
-  const [paymentTypes, setPaymentTypes] = useState<PaymentType[]>([]);
-  const [payment, setPayment] = useState<PaymentVoucherDetail | null>(null);
+  // Data hooks
+  const { data: payment, isLoading: fetchingData } = usePaymentVoucher(open ? paymentId : null);
+  const { data: paymentTypes = [] } = usePaymentVoucherPaymentTypes();
+  const { data: banksData } = useAllBanks();
+  const banks = banksData ?? [];
+
+  const updatePaymentMutation = useUpdatePaymentVoucher();
 
   // Form state
-  const [vendorId, setVendorId] = useState<number | null>(null);
   const [vendorName, setVendorName] = useState("");
   const [paymentMode, setPaymentMode] = useState<PaymentMode>("Cash");
   const [paymentNo, setPaymentNo] = useState("");
   const [paymentDate, setPaymentDate] = useState("");
   const [narration, setNarration] = useState("");
   const [remarks, setRemarks] = useState("");
+  const [vendorId, setVendorId] = useState<number | null>(null);
   const [currencyId, setCurrencyId] = useState<number | null>(null);
   const [currencyCode, setCurrencyCode] = useState("");
   const [bankId, setBankId] = useState<number | null>(null);
@@ -59,77 +62,61 @@ export function UpdatePaymentModal({
   const [amount, setAmount] = useState<number>(0);
   const [purchaseInvoiceNumbers, setPurchaseInvoiceNumbers] = useState<string[]>([]);
 
-  const updatePaymentMutation = useUpdatePaymentVoucher();
-
   // Get current payment type config
   const currentPaymentType = paymentTypes.find(pt => pt.code === paymentMode);
   const requiresBank = currentPaymentType?.requiresBank ?? false;
   const requiresChequeDetails = currentPaymentType?.requiresChequeDetails ?? false;
 
-  // Fetch initial data
+  // Populate form when payment data loads
   useEffect(() => {
-    if (open && paymentId) {
-      setFetchingData(true);
-      fetchInitialData();
-      fetchPaymentDetails();
-    }
-  }, [open, paymentId]);
+    if (payment) {
+      setVendorId(payment.vendorId);
+      setVendorName(payment.vendorName || "");
+      setPaymentMode(payment.paymentMode);
+      setPaymentNo(payment.paymentNo);
+      setPaymentDate(format(new Date(payment.paymentDate), "yyyy-MM-dd"));
+      setNarration(payment.narration || "");
+      setRemarks(payment.remarks || "");
+      setCurrencyId(payment.currencyId || null);
+      setCurrencyCode(payment.currencyCode || "");
+      setBankId(payment.bankId || null);
+      setChequeNo(payment.chequeNo || "");
+      setChequeDate(payment.chequeDate ? format(new Date(payment.chequeDate), "yyyy-MM-dd") : "");
+      setChequeBank(payment.chequeBank || "");
+      setPostDatedValidDate(payment.postDatedValidDate ? format(new Date(payment.postDatedValidDate), "yyyy-MM-dd") : "");
+      setAmount(payment.amount);
 
-  const fetchInitialData = async () => {
-    try {
-      const [banksRes, paymentTypesRes] = await Promise.all([
-        bankApi.getAll(),
-        getPaymentVoucherPaymentTypes(),
-      ]);
-
-      if (banksRes.data) setBanks(banksRes.data.items);
-      if (paymentTypesRes.data) setPaymentTypes(paymentTypesRes.data);
-    } catch (error) {
-      console.error("Error fetching initial data:", error);
-      toast.error("Failed to load payment data");
-    }
-  };
-
-  const fetchPaymentDetails = async () => {
-    if (!paymentId) return;
-    setFetchingData(true);
-    try {
-      const response = await getPaymentVoucherById(paymentId);
-      if (response.data) {
-        const data = response.data;
-        setPayment(data);
-        setVendorId(data.vendorId);
-        setVendorName(data.vendorName || "");
-        setPaymentMode(data.paymentMode);
-        setPaymentNo(data.paymentNo);
-        setPaymentDate(format(new Date(data.paymentDate), "yyyy-MM-dd"));
-        setNarration(data.narration || "");
-        setRemarks(data.remarks || "");
-        setCurrencyId(data.currencyId || null);
-        setCurrencyCode(data.currencyCode || "");
-        setBankId(data.bankId || null);
-        setChequeNo(data.chequeNo || "");
-        setChequeDate(data.chequeDate ? format(new Date(data.chequeDate), "yyyy-MM-dd") : "");
-        setChequeBank(data.chequeBank || "");
-        setPostDatedValidDate(data.postDatedValidDate ? format(new Date(data.postDatedValidDate), "yyyy-MM-dd") : "");
-        setAmount(data.amount);
-
-        // Set purchase invoice numbers
-        if (data.purchaseInvoices && data.purchaseInvoices.length > 0) {
-          setPurchaseInvoiceNumbers(
-            data.purchaseInvoices
-              .map(pi => pi.purchaseNo)
-              .filter((no): no is string => !!no)
-          );
-        }
+      if (payment.purchaseInvoices && payment.purchaseInvoices.length > 0) {
+        setPurchaseInvoiceNumbers(
+          payment.purchaseInvoices
+            .map(pi => pi.purchaseNo)
+            .filter((no): no is string => !!no)
+        );
       }
-    } catch (error) {
-      console.error("Error fetching payment details:", error);
-      toast.error("Failed to load payment details");
-    } finally {
-      setFetchingData(false);
     }
-  };
+  }, [payment]);
+
+  // Reset form state when modal closes
+  useEffect(() => {
+    if (!open) {
+      setVendorName("");
+      setPaymentMode("Cash");
+      setPaymentNo("");
+      setPaymentDate("");
+      setNarration("");
+      setRemarks("");
+      setVendorId(null);
+      setCurrencyId(null);
+      setCurrencyCode("");
+      setBankId(null);
+      setChequeNo("");
+      setChequeDate("");
+      setChequeBank("");
+      setPostDatedValidDate("");
+      setAmount(0);
+      setPurchaseInvoiceNumbers([]);
+    }
+  }, [open]);
 
   const handleSubmit = async () => {
     if (!paymentId || !vendorId) {
@@ -147,30 +134,26 @@ export function UpdatePaymentModal({
       return;
     }
 
-    setLoading(true);
-    try {
-      const request: UpdatePaymentVoucherRequest = {
-        vendorId: vendorId,
-        paymentMode: paymentMode,
-        paymentDate: paymentDate,
-        narration: narration || undefined,
-        remarks: remarks || undefined,
-        currencyId: currencyId || undefined,
-        bankId: requiresBank ? (bankId || undefined) : undefined,
-        chequeNo: requiresChequeDetails ? (chequeNo || undefined) : undefined,
-        chequeDate: requiresChequeDetails ? (chequeDate || undefined) : undefined,
-        chequeBank: requiresChequeDetails ? (chequeBank || undefined) : undefined,
-        postDatedValidDate: paymentMode === "PostDatedCheque" ? (postDatedValidDate || undefined) : undefined,
-        amount: amount,
-      };
+    const request: UpdatePaymentVoucherRequest = {
+      vendorId: vendorId,
+      paymentMode: paymentMode,
+      paymentDate: paymentDate,
+      narration: narration || undefined,
+      remarks: remarks || undefined,
+      currencyId: currencyId || undefined,
+      bankId: requiresBank ? (bankId || undefined) : undefined,
+      chequeNo: requiresChequeDetails ? (chequeNo || undefined) : undefined,
+      chequeDate: requiresChequeDetails ? (chequeDate || undefined) : undefined,
+      chequeBank: requiresChequeDetails ? (chequeBank || undefined) : undefined,
+      postDatedValidDate: paymentMode === "PostDatedCheque" ? (postDatedValidDate || undefined) : undefined,
+      amount: amount,
+    };
 
+    try {
       await updatePaymentMutation.mutateAsync({ id: paymentId, request });
       onSuccess();
-    } catch (error) {
-      console.error("Error updating payment:", error);
-      toast.error("Failed to update payment");
-    } finally {
-      setLoading(false);
+    } catch {
+      // error toast handled by useUpdatePaymentVoucher onError
     }
   };
 
@@ -233,11 +216,9 @@ export function UpdatePaymentModal({
               value={paymentMode}
               onValueChange={(v) => {
                 setPaymentMode(v as PaymentMode);
-                // Reset bank-related fields when changing payment type
                 if (!paymentTypes.find(pt => pt.code === v)?.requiresBank) {
                   setBankId(null);
                 }
-                // Reset cheque fields when changing away from Cheque
                 if (!paymentTypes.find(pt => pt.code === v)?.requiresChequeDetails) {
                   setChequeNo("");
                   setChequeDate("");
@@ -378,9 +359,9 @@ export function UpdatePaymentModal({
           <Button
             className="btn-success"
             onClick={handleSubmit}
-            disabled={loading}
+            disabled={updatePaymentMutation.isPending}
           >
-            {loading ? "Updating..." : "Update"}
+            {updatePaymentMutation.isPending ? "Updating..." : "Update"}
           </Button>
         </div>
       </DialogContent>

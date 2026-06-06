@@ -168,6 +168,8 @@ export interface AccountInvoiceDetail {
   total: number;
   remarks?: string;
   paymentStatus: PaymentStatus;
+  linkedReceiptCount: number;
+  linkedCreditNoteCount: number;
   items: AccountInvoiceItem[];
 }
 
@@ -191,6 +193,7 @@ export interface AccountPurchaseInvoice {
   id: number;
   purchaseNo: string;
   purchaseDate: string;
+  shipmentId?: number;
   jobNo?: string;
   vendorInvoiceNo?: string;
   vendorInvoiceDate?: string;
@@ -209,6 +212,7 @@ export interface AccountPurchaseInvoice {
 }
 
 export interface AccountPurchaseInvoiceDetail extends AccountPurchaseInvoice {
+  linkedPaymentVoucherCount: number;
   items: AccountPurchaseInvoiceItem[];
 }
 

@@ -22,10 +22,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Loader2, Plus } from "lucide-react";
-import { ShipmentParty, ShipmentCosting, CreateInvoiceItemRequest, UpdateInvoiceItemRequest, invoiceApi, customerApi, AccountInvoiceDetail, shipmentApi, AddShipmentCostingRequest, UpdateShipmentCostingRequest } from "@/services/api";
+import { ShipmentParty, ShipmentCosting, CreateInvoiceItemRequest, UpdateInvoiceItemRequest, AccountInvoiceDetail, shipmentApi, AddShipmentCostingRequest, UpdateShipmentCostingRequest } from "@/services/api";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 import { useAllCurrencyTypes } from "@/hooks/useSettings";
-import { useCreateInvoice, useUpdateInvoice } from "@/hooks/useInvoices";
+import { useCreateInvoice, useUpdateInvoice, useInvoice, useNextInvoiceNumber } from "@/hooks/useInvoices";
+import { useCustomer } from "@/hooks/useCustomers";
 import { useAddShipmentCosting, useUpdateShipmentCosting } from "@/hooks/useShipments";
 import { CostingModal, type CostingModalData } from "@/components/shipments/CostingModal";
 
@@ -71,6 +72,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
   const addCostingMutation = useAddShipmentCosting();
   const updateCostingMutation = useUpdateShipmentCosting();
   const isEditMode = !!editInvoiceId;
+  const isActive = asPage ? true : open;
 
   // Filter parties to only show Debtors and deduplicate by customerId
   const debtorParties = useMemo(() =>
@@ -79,10 +81,24 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
   );
 
   const { data: currencies = [] } = useAllCurrencyTypes();
-  const [editInvoiceData, setEditInvoiceData] = useState<AccountInvoiceDetail | null>(null);
-  const [isLoadingEdit, setIsLoadingEdit] = useState(false);
-  // Map of costing id -> existing invoice item id (for updates)
-  const [existingItemIds, setExistingItemIds] = useState<Map<number, number>>(new Map());
+
+  // Fetch invoice data via hook (edit mode) or next invoice number (create mode)
+  const { data: fetchedInvoice, isLoading: isLoadingEdit } = useInvoice(isActive && isEditMode ? editInvoiceId ?? undefined : undefined);
+  const { data: nextInvoiceNumber } = useNextInvoiceNumber(isActive && !isEditMode);
+
+  // editInvoiceData derived from query
+  const editInvoiceData: AccountInvoiceDetail | null = fetchedInvoice ?? null;
+
+  // Map of costing id -> existing invoice item id (for updates), derived from fetched data
+  const existingItemIds = useMemo(() => {
+    const map = new Map<number, number>();
+    if (fetchedInvoice) {
+      fetchedInvoice.items.forEach(item => {
+        if (item.shipmentCostingId) map.set(item.shipmentCostingId, item.id);
+      });
+    }
+    return map;
+  }, [fetchedInvoice]);
 
   // Costing integration state (edit mode)
   const [localCostings, setLocalCostings] = useState<ShipmentCosting[]>([]);
@@ -101,12 +117,9 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
     selectedCharges: [] as number[],
   });
 
-  // Reset form and fetch data when modal opens
-  const isActive = asPage ? true : open;
-
+  // Reset form and fetch data when modal opens/closes
   useEffect(() => {
-    if (isActive) {
-      // Reset form data first
+    if (!isActive) {
       setFormData({
         invoiceId: "",
         companyName: "",
@@ -117,68 +130,50 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
         remarks: "",
         selectedCharges: [],
       });
-      setEditInvoiceData(null);
-      setExistingItemIds(new Map());
-      setLocalCostings(chargesDetails);
+      setLocalCostings([]);
       setCostingModalOpen(false);
       setEditingCostingForModal(undefined);
       setPendingAutoSelect(null);
-
-      if (isEditMode && editInvoiceId) {
-        // Edit mode: fetch existing invoice data
-        setIsLoadingEdit(true);
-        invoiceApi.getById(editInvoiceId).then(response => {
-          if (response.data) {
-            const inv = response.data;
-            setEditInvoiceData(inv);
-
-            // Build map of costingId -> invoiceItemId
-            const itemIdMap = new Map<number, number>();
-            inv.items.forEach(item => {
-              if (item.shipmentCostingId) {
-                itemIdMap.set(item.shipmentCostingId, item.id);
-              }
-            });
-            setExistingItemIds(itemIdMap);
-
-            // Find the party matching the invoice customer
-            const matchingParty = debtorParties.find(p => p.customerId === inv.customerId);
-            const costingIds = inv.items
-              .filter(item => item.shipmentCostingId)
-              .map(item => item.shipmentCostingId!);
-
-            setFormData({
-              invoiceId: inv.invoiceNo,
-              companyName: inv.customerName,
-              customerId: matchingParty ? matchingParty.id.toString() : "",
-              invoiceDate: inv.invoiceDate,
-              currencyId: inv.currencyId || 1,
-              currencyCode: baseCurrencyCode,
-              remarks: inv.remarks || "",
-              selectedCharges: costingIds,
-            });
-          }
-          setIsLoadingEdit(false);
-        });
-      } else {
-        // Create mode: fetch next invoice number
-        invoiceApi.getNextInvoiceNumber().then(response => {
-          if (response.data) {
-            setFormData(prev => ({ ...prev, invoiceId: response.data as string }));
-          }
-        });
-      }
+    } else {
+      setLocalCostings(chargesDetails);
     }
-  }, [isActive, editInvoiceId]);
+  }, [isActive]);
 
-  // Resolve currencyCode once editInvoiceData and currencies are both available
+  // Populate form from fetched invoice data (edit mode)
   useEffect(() => {
-    if (!editInvoiceData || currencies.length === 0) return;
-    const currency = currencies.find(c => c.id === editInvoiceData.currencyId);
-    if (currency) {
-      setFormData(prev => ({ ...prev, currencyCode: currency.code }));
+    if (fetchedInvoice && isEditMode) {
+      const inv = fetchedInvoice;
+      const matchingParty = debtorParties.find(p => p.customerId === inv.customerId);
+      const costingIds = inv.items
+        .filter(item => item.shipmentCostingId)
+        .map(item => item.shipmentCostingId!);
+      const currency = currencies.find(c => c.id === inv.currencyId);
+      setFormData({
+        invoiceId: inv.invoiceNo,
+        companyName: inv.customerName,
+        customerId: matchingParty ? matchingParty.id.toString() : "",
+        invoiceDate: inv.invoiceDate,
+        currencyId: inv.currencyId || 1,
+        currencyCode: currency?.code || baseCurrencyCode,
+        remarks: inv.remarks || "",
+        selectedCharges: costingIds,
+      });
     }
-  }, [editInvoiceData, currencies]);
+  }, [fetchedInvoice, isEditMode]);
+
+  // Populate next invoice number (create mode)
+  useEffect(() => {
+    if (nextInvoiceNumber && !isEditMode) {
+      setFormData(prev => ({ ...prev, invoiceId: nextInvoiceNumber }));
+    }
+  }, [nextInvoiceNumber, isEditMode]);
+
+  // Keep available costings list in sync when parent refreshes while modal is open
+  useEffect(() => {
+    if (isActive) {
+      setLocalCostings(chargesDetails);
+    }
+  }, [chargesDetails]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Filter charges: show uninvoiced charges + charges from this invoice
   const filteredCharges = useMemo(() => {
@@ -207,26 +202,35 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
     });
   }, [localCostings, formData.customerId, debtorParties, editInvoiceData]);
 
+  // Derive the selected party's customerId for currency lookup (create mode only)
+  const selectedPartyCustomerId = useMemo(() => {
+    if (!formData.customerId || isEditMode) return undefined;
+    const selectedParty = debtorParties.find(p => p.id.toString() === formData.customerId);
+    return selectedParty?.customerId;
+  }, [formData.customerId, debtorParties, isEditMode]);
+
+  const { data: selectedCustomerData } = useCustomer(selectedPartyCustomerId ?? 0);
+
   // Update currency when company selection changes (only in create mode)
   useEffect(() => {
-    if (formData.customerId && !isEditMode) {
-      const selectedParty = debtorParties.find(p => p.id.toString() === formData.customerId);
-      if (selectedParty?.customerId) {
-        setFormData(prev => ({ ...prev, companyName: selectedParty.customerName }));
-        customerApi.getById(selectedParty.customerId).then(customerResponse => {
-          if (customerResponse.data) {
-            const custCurrencyId = customerResponse.data.currencyId || 1;
-            const currency = currencies.find(c => c.id === custCurrencyId);
-            setFormData(prev => ({
-              ...prev,
-              currencyId: custCurrencyId,
-              currencyCode: currency?.code || baseCurrencyCode,
-            }));
-          }
-        });
-      }
+    if (!formData.customerId || isEditMode) return;
+    const selectedParty = debtorParties.find(p => p.id.toString() === formData.customerId);
+    if (selectedParty) {
+      setFormData(prev => ({ ...prev, companyName: selectedParty.customerName }));
     }
-  }, [formData.customerId, debtorParties, currencies, isEditMode]);
+  }, [formData.customerId, debtorParties, isEditMode]);
+
+  useEffect(() => {
+    if (selectedCustomerData && !isEditMode) {
+      const custCurrencyId = selectedCustomerData.currencyId || 1;
+      const currency = currencies.find(c => c.id === custCurrencyId);
+      setFormData(prev => ({
+        ...prev,
+        currencyId: custCurrencyId,
+        currencyCode: currency?.code || baseCurrencyCode,
+      }));
+    }
+  }, [selectedCustomerData, currencies, isEditMode, baseCurrencyCode]);
 
   // Cost-only charges: costings that have cost data but no sale data (edit mode only)
   const costOnlyCharges = useMemo(() => {

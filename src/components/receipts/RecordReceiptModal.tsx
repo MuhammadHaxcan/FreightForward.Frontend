@@ -21,21 +21,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  receiptApi,
-  customerApi,
-  bankApi,
-  settingsApi,
-  type Customer,
-  type Bank,
   type UnpaidInvoice,
-  type PaymentType,
-  type PaymentMode,
   type Currency,
-  type CurrencyType,
+  type PaymentMode,
   type CreateReceiptRequest,
 } from "@/services/api";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
-import { useCreateReceipt } from "@/hooks/useReceipts";
+import {
+  useCreateReceipt,
+  useReceiptPaymentTypes,
+  useNextReceiptNumber,
+  useUnpaidInvoicesForCustomer,
+} from "@/hooks/useReceipts";
+import { useAllDebtors } from "@/hooks/useCustomers";
+import { useAllBanks } from "@/hooks/useBanks";
+import { useAllCurrencyTypes } from "@/hooks/useSettings";
 import { toast } from "sonner";
 
 interface RecordReceiptModalProps {
@@ -61,13 +61,14 @@ export function RecordReceiptModal({
 }: RecordReceiptModalProps) {
   const baseCurrencyCode = useBaseCurrency();
   const createReceiptMutation = useCreateReceipt();
-  const [loading, setLoading] = useState(false);
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [banks, setBanks] = useState<Bank[]>([]);
-  const [paymentTypes, setPaymentTypes] = useState<PaymentType[]>([]);
-  const [currencies, setCurrencies] = useState<CurrencyType[]>([]);
-  const [unpaidInvoices, setUnpaidInvoices] = useState<UnpaidInvoice[]>([]);
-  const [nextReceiptNo, setNextReceiptNo] = useState("");
+
+  // Data hooks
+  const { data: customers = [] } = useAllDebtors();
+  const { data: banksData } = useAllBanks();
+  const banks = banksData ?? [];
+  const { data: paymentTypes = [] } = useReceiptPaymentTypes();
+  const { data: currencies = [] } = useAllCurrencyTypes();
+  const { data: nextReceiptNo = "" } = useNextReceiptNumber();
 
   // Form state
   const [customerId, setCustomerId] = useState<number | null>(null);
@@ -82,124 +83,43 @@ export function RecordReceiptModal({
   const [postDatedValidDate, setPostDatedValidDate] = useState("");
   const [remarks, setRemarks] = useState("");
 
+  // Unpaid invoices — only fetch when customerId is set
+  const { data: unpaidInvoices = [] } = useUnpaidInvoicesForCustomer(customerId);
+
   // Get current payment type config
   const currentPaymentType = paymentTypes.find(pt => pt.code === paymentMode);
   const requiresBank = currentPaymentType?.requiresBank ?? false;
   const requiresChequeDetails = currentPaymentType?.requiresChequeDetails ?? false;
 
-  // Fetch initial data
+  // Reset form when modal closes
   useEffect(() => {
-    if (open) {
-      fetchCustomers();
-      fetchBanks();
-      fetchPaymentTypes();
-      fetchCurrencies();
-      fetchNextReceiptNumber();
-      resetForm();
+    if (!open) {
+      setCustomerId(null);
+      setSelectedInvoices([]);
+      setPaymentMode("Cash");
+      setReceiptDate(format(new Date(), "yyyy-MM-dd"));
+      setCurrency(baseCurrencyCode as Currency);
+      setBankId(null);
+      setChequeNo("");
+      setChequeDate("");
+      setChequeBank("");
+      setPostDatedValidDate("");
+      setRemarks("");
     }
-  }, [open]);
+  }, [open, baseCurrencyCode]);
 
-  // Fetch unpaid invoices and set customer's currency when customer changes
+  // Set currency when customer changes
   useEffect(() => {
     if (customerId) {
-      fetchUnpaidInvoices(customerId);
-      // Set currency to customer's base currency
       const selectedCustomer = customers.find(c => c.id === customerId);
       if (selectedCustomer?.baseCurrency) {
         setCurrency(selectedCustomer.baseCurrency);
       }
+      setSelectedInvoices([]);
     } else {
-      setUnpaidInvoices([]);
       setSelectedInvoices([]);
     }
   }, [customerId, customers]);
-
-  const fetchCustomers = async () => {
-    try {
-      const response = await customerApi.getAll({ pageSize: 1000, masterType: 'Debtors' });
-      if (response.data) {
-        setCustomers(response.data.items);
-      }
-    } catch (error) {
-      toast.error("Failed to load customers");
-    }
-  };
-
-  const fetchBanks = async () => {
-    try {
-      const response = await bankApi.getAll();
-      if (response.data) {
-        setBanks(response.data.items);
-      }
-    } catch (error) {
-      toast.error("Failed to load banks");
-    }
-  };
-
-  const fetchPaymentTypes = async () => {
-    try {
-      const response = await receiptApi.getPaymentTypes();
-      if (response.data) {
-        setPaymentTypes(response.data);
-      }
-    } catch (error) {
-      // Fallback to default payment types
-      setPaymentTypes([
-        { id: 1, code: "Cash", name: "Cash", requiresBank: false, requiresChequeDetails: false, sortOrder: 1 },
-        { id: 2, code: "Card", name: "Card", requiresBank: true, requiresChequeDetails: false, sortOrder: 2 },
-        { id: 3, code: "Cheque", name: "Cheque", requiresBank: true, requiresChequeDetails: true, sortOrder: 3 },
-        { id: 4, code: "BankWire", name: "Bank Wire", requiresBank: true, requiresChequeDetails: false, sortOrder: 4 },
-        { id: 6, code: "PostDatedCheque", name: "Post Dated Cheque", requiresBank: true, requiresChequeDetails: true, sortOrder: 6 },
-      ]);
-    }
-  };
-
-  const fetchCurrencies = async () => {
-    try {
-      const response = await settingsApi.getAllCurrencyTypes();
-      if (response.data) {
-        setCurrencies(response.data);
-      }
-    } catch (error) {
-      toast.error("Failed to load currencies");
-    }
-  };
-
-  const fetchNextReceiptNumber = async () => {
-    try {
-      const response = await receiptApi.getNextNumber();
-      if (response.data) {
-        setNextReceiptNo(response.data);
-      }
-    } catch (error) {
-      toast.error("Failed to get receipt number");
-    }
-  };
-
-  const fetchUnpaidInvoices = async (custId: number) => {
-    try {
-      const response = await receiptApi.getUnpaidInvoices(custId);
-      if (response.data) {
-        setUnpaidInvoices(response.data);
-      }
-    } catch (error) {
-      toast.error("Failed to load unpaid invoices");
-    }
-  };
-
-  const resetForm = () => {
-    setCustomerId(null);
-    setSelectedInvoices([]);
-    setPaymentMode("Cash");
-    setReceiptDate(format(new Date(), "yyyy-MM-dd"));
-    setCurrency(baseCurrencyCode as Currency);
-    setBankId(null);
-    setChequeNo("");
-    setChequeDate("");
-    setChequeBank("");
-    setPostDatedValidDate("");
-    setRemarks("");
-  };
 
   const handleInvoiceSelect = (invoice: UnpaidInvoice, isSelected: boolean) => {
     if (isSelected) {
@@ -266,43 +186,39 @@ export function RecordReceiptModal({
       return;
     }
 
-    setLoading(true);
+    // Look up the currencyId from the currency code
+    const currencyType = currencies.find(c => c.code === currency);
+    const currencyId = currencyType?.id;
+
+    if (!currencyId) {
+      toast.error("Invalid currency selected");
+      return;
+    }
+
+    const request: CreateReceiptRequest = {
+      receiptDate: receiptDate,
+      customerId: customerId,
+      paymentMode: paymentMode,
+      currencyId: currencyId,
+      amount: totalAmount,
+      narration: remarks || undefined,
+      bankId: requiresBank ? (bankId || undefined) : undefined,
+      chequeNo: requiresChequeDetails ? (chequeNo || undefined) : undefined,
+      chequeDate: requiresChequeDetails ? (chequeDate || undefined) : undefined,
+      chequeBank: requiresChequeDetails ? (chequeBank || undefined) : undefined,
+      postDatedValidDate: paymentMode === "PostDatedCheque" ? (postDatedValidDate || undefined) : undefined,
+      invoices: selectedInvoices.map(inv => ({
+        invoiceId: inv.invoiceId,
+        amount: inv.payingAmount,
+        currencyId: inv.currencyId || currencyId,
+      })),
+    };
+
     try {
-      // Look up the currencyId from the currency code
-      const currencyType = currencies.find(c => c.code === currency);
-      const currencyId = currencyType?.id;
-
-      if (!currencyId) {
-        toast.error("Invalid currency selected");
-        setLoading(false);
-        return;
-      }
-
-      const request: CreateReceiptRequest = {
-        receiptDate: receiptDate,
-        customerId: customerId,
-        paymentMode: paymentMode,
-        currencyId: currencyId,
-        amount: totalAmount,
-        narration: remarks || undefined,
-        bankId: requiresBank ? (bankId || undefined) : undefined,
-        chequeNo: requiresChequeDetails ? (chequeNo || undefined) : undefined,
-        chequeDate: requiresChequeDetails ? (chequeDate || undefined) : undefined,
-        chequeBank: requiresChequeDetails ? (chequeBank || undefined) : undefined,
-        postDatedValidDate: paymentMode === "PostDatedCheque" ? (postDatedValidDate || undefined) : undefined,
-        invoices: selectedInvoices.map(inv => ({
-          invoiceId: inv.invoiceId,
-          amount: inv.payingAmount,
-          currencyId: inv.currencyId || currencyId,
-        })),
-      };
-
       await createReceiptMutation.mutateAsync(request);
       onSuccess();
     } catch {
       // toast already shown by mutation's onError
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -574,9 +490,9 @@ export function RecordReceiptModal({
           <Button
             className="btn-success"
             onClick={handleSubmit}
-            disabled={loading}
+            disabled={createReceiptMutation.isPending}
           >
-            {loading ? "Submitting..." : "Submit"}
+            {createReceiptMutation.isPending ? "Submitting..." : "Submit"}
           </Button>
         </div>
       </DialogContent>

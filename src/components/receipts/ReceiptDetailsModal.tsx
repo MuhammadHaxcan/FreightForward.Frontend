@@ -1,4 +1,3 @@
-import { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -14,11 +13,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { receiptApi, ReceiptDetail, ReceiptInvoice } from "@/services/api";
+import { type ReceiptInvoice } from "@/services/api";
+import { useReceipt } from "@/hooks/useReceipts";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 import { formatDate } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
 
 interface ReceiptDetailsModalProps {
   open: boolean;
@@ -28,30 +27,7 @@ interface ReceiptDetailsModalProps {
 
 export function ReceiptDetailsModal({ open, onOpenChange, receiptId }: ReceiptDetailsModalProps) {
   const baseCurrencyCode = useBaseCurrency();
-  const [loading, setLoading] = useState(false);
-  const [receipt, setReceipt] = useState<ReceiptDetail | null>(null);
-
-  const fetchReceiptDetails = useCallback(async () => {
-    if (!receiptId) return;
-    setLoading(true);
-    try {
-      const response = await receiptApi.getById(receiptId);
-      if (response.data) {
-        setReceipt(response.data);
-      }
-    } catch (error) {
-      console.error("Error fetching receipt details:", error);
-      toast.error("Failed to load receipt details");
-    } finally {
-      setLoading(false);
-    }
-  }, [receiptId]);
-
-  useEffect(() => {
-    if (open && receiptId) {
-      fetchReceiptDetails();
-    }
-  }, [open, receiptId, fetchReceiptDetails]);
+  const { data: receipt, isLoading: loading } = useReceipt(open ? receiptId : null);
 
   const formatCurrency = (amount: number, currency: string) => {
     return `${currency} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;

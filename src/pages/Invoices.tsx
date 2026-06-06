@@ -45,6 +45,16 @@ export default function Invoices() {
     setPageNumber(1);
   };
 
+  const handleCustomerChange = (value: string) => {
+    setSelectedCustomer(value);
+    setPageNumber(1);
+  };
+
+  const handleDateRangeChange = (value: DateRangeValue | undefined) => {
+    setDateRange(value);
+    setPageNumber(1);
+  };
+
   const handleViewInvoice = (invoiceNo: string) => {
     navigate(`/accounts/invoices/${encodeURIComponent(invoiceNo)}`);
   };
@@ -92,7 +102,7 @@ export default function Invoices() {
                 })),
               ]}
               value={selectedCustomer}
-              onValueChange={setSelectedCustomer}
+              onValueChange={handleCustomerChange}
               placeholder="Select All"
               searchPlaceholder="Search customers..."
             />
@@ -102,7 +112,7 @@ export default function Invoices() {
             <label className="text-sm font-medium text-green-600">Date</label>
             <DateRangePicker
               value={dateRange}
-              onApply={setDateRange}
+              onApply={handleDateRangeChange}
               className="w-full"
             />
           </div>

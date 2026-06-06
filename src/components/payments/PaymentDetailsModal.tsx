@@ -30,6 +30,10 @@ export function PaymentDetailsModal({
 }: PaymentDetailsModalProps) {
   const baseCurrencyCode = useBaseCurrency();
   const { data: payment, isLoading } = usePaymentVoucher(paymentId);
+  const detailCurrencyCode =
+    payment?.purchaseInvoices?.[0]?.currencyCode ||
+    payment?.currencyCode ||
+    baseCurrencyCode;
 
   if (!open) return null;
 
@@ -85,16 +89,16 @@ export function PaymentDetailsModal({
                   <TableRow className="bg-orange-50 font-semibold">
                     <TableCell></TableCell>
                     <TableCell className="text-orange-500">
-                      {payment.currencyCode || baseCurrencyCode} {(payment.purchaseInvoices?.reduce((sum, inv) => sum + inv.invoiceAmount, 0) ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {detailCurrencyCode} {(payment.purchaseInvoices?.reduce((sum, inv) => sum + inv.invoiceAmount, 0) ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell className="text-green-600">
-                      {payment.currencyCode || baseCurrencyCode} {(payment.amount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {detailCurrencyCode} {(payment.amount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell className="text-orange-500">
-                      {payment.currencyCode || baseCurrencyCode} {(payment.purchaseInvoices?.reduce((sum, inv) => sum + inv.totalPaid, 0) ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {detailCurrencyCode} {(payment.purchaseInvoices?.reduce((sum, inv) => sum + inv.totalPaid, 0) ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell className="text-orange-500">
-                      {payment.currencyCode || baseCurrencyCode} {(payment.purchaseInvoices?.reduce((sum, inv) => sum + inv.balance, 0) ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      {detailCurrencyCode} {(payment.purchaseInvoices?.reduce((sum, inv) => sum + inv.balance, 0) ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell></TableCell>
                   </TableRow>
