@@ -33,6 +33,11 @@ export interface TopCustomer {
   revenue: number;
 }
 
+export interface SalespersonStat {
+  salesperson: string;
+  shipmentCount: number;
+}
+
 export interface DashboardStats {
   inProcess: number;
   completed: number;
@@ -58,6 +63,7 @@ export interface DashboardStats {
   bestLane: BestLane | null;
   topCustomer: TopCustomer | null;
   expenseTrendPercent: number;
+  salespersonStats: SalespersonStat[];
 }
 
 export const dashboardApi = {

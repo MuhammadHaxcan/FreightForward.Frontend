@@ -214,30 +214,22 @@ export function Sidebar() {
     >
       {/* Header */}
       <div className={cn(
-        "flex items-center border-b border-sidebar-border transition-all duration-300",
+        "flex items-center border-b border-sidebar-border transition-all duration-300 overflow-hidden",
         collapsed ? "justify-center p-3" : "justify-between p-4"
       )}>
         <div
           className={cn(
-            "flex items-center gap-2 cursor-pointer",
-            collapsed && "justify-center"
+            "flex items-center cursor-pointer",
+            collapsed ? "justify-center" : "flex-1"
           )}
           onClick={() => collapsed && setCollapsed(false)}
         >
           <img
-            src="/icon.png"
-            alt="TFS"
-            className={cn(
-              "object-contain transition-all duration-300",
-              collapsed ? "h-8 w-8" : "h-9 w-9"
-            )}
-          />
-          <img
-            src="/logo-black.png"
+            src="/tfs-logo-new.svg"
             alt="Transparent Freight Services"
             className={cn(
-              "h-8 object-contain transition-all duration-300",
-              collapsed ? "w-0 opacity-0" : "w-auto opacity-100"
+              "transition-all duration-300",
+              collapsed ? "h-7 w-auto" : "w-full h-auto"
             )}
           />
         </div>

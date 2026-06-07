@@ -123,6 +123,7 @@ const Dashboard = () => {
 
   const expenseTrend = stats?.expenseTrendPercent ?? 0;
   const expenseTrendUp = expenseTrend >= 0;
+  const salespersonStats = stats?.salespersonStats ?? [];
 
   return (
     <MainLayout>
@@ -325,6 +326,40 @@ const Dashboard = () => {
                   isLoading={isLoading}
                 />
               </div>
+            </div>
+
+            {/* Salesperson Leaderboard */}
+            <div className="bg-card rounded-lg border border-border shadow-sm p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                Sales Leaderboard
+              </p>
+              {isLoading ? (
+                <div className="space-y-2">
+                  {[0, 1, 2].map(i => (
+                    <div key={i} className="flex items-center gap-2 h-8 animate-pulse">
+                      <div className="w-5 h-5 rounded-full bg-muted shrink-0" />
+                      <div className="flex-1 h-3 bg-muted rounded" />
+                      <div className="w-8 h-5 bg-muted rounded" />
+                    </div>
+                  ))}
+                </div>
+              ) : salespersonStats.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-3">No assigned shipments</p>
+              ) : (
+                <div className="max-h-[96px] overflow-y-auto space-y-0.5 pr-1">
+                  {salespersonStats.map((sp, index) => (
+                    <div key={sp.salesperson} className="flex items-center gap-2 py-1.5">
+                      <span className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground shrink-0">
+                        {index + 1}
+                      </span>
+                      <span className="flex-1 text-xs font-medium truncate">{sp.salesperson}</span>
+                      <span className="text-[11px] font-semibold bg-muted px-1.5 py-0.5 rounded">
+                        {sp.shipmentCount}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
