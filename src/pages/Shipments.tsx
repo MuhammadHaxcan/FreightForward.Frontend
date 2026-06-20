@@ -23,6 +23,8 @@ import { PermissionGate } from "@/components/auth/PermissionGate";
 import { useAuth } from "@/contexts/AuthContext";
 import { DateRangePicker, DateRangeValue } from "@/components/ui/date-range-picker";
 
+const CONTAINER_NUMBER_REPORTS = new Set(["c-list", "customs-declaration"]);
+
 const Shipments = () => {
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
@@ -34,6 +36,8 @@ const Shipments = () => {
   const [dateRange, setDateRange] = useState<DateRangeValue | undefined>(undefined);
   const [appliedDateRange, setAppliedDateRange] = useState<DateRangeValue | undefined>(undefined);
   const [reportsShipmentId, setReportsShipmentId] = useState<number | null>(null);
+  const [containerPromptReport, setContainerPromptReport] = useState<{ slug: string; name: string } | null>(null);
+  const [containerNumberValue, setContainerNumberValue] = useState("");
 
   // Build search params based on search type
   const searchParams = useMemo(() => {
@@ -459,7 +463,14 @@ const Shipments = () => {
                     <td className="py-2 px-2">
                       <button
                         className="text-emerald-600 hover:text-emerald-700 hover:underline font-medium text-sm"
-                        onClick={() => window.open(`/shipments/${reportsShipmentId}/reports/${report.slug}`, '_blank')}
+                        onClick={() => {
+                          if (CONTAINER_NUMBER_REPORTS.has(report.slug)) {
+                            setContainerNumberValue("");
+                            setContainerPromptReport({ slug: report.slug, name: report.name });
+                          } else {
+                            window.open(`/shipments/${reportsShipmentId}/reports/${report.slug}`, '_blank');
+                          }
+                        }}
                       >
                         {report.name}
                       </button>
@@ -472,6 +483,58 @@ const Shipments = () => {
           <DialogFooter className="p-4 pt-0">
             <Button variant="outline" onClick={() => setReportsShipmentId(null)} className="mx-auto">
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Container Number Prompt (for C List / Customs Manifest) */}
+      <Dialog open={containerPromptReport !== null} onOpenChange={(open) => { if (!open) setContainerPromptReport(null); }}>
+        <DialogContent className="max-w-modal-md p-0 bg-card">
+          <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
+            <DialogTitle className="text-white text-lg">
+              Print {containerPromptReport?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-4 space-y-2">
+            <label className="text-sm font-medium" htmlFor="container-number-input">
+              Container Number
+            </label>
+            <Input
+              id="container-number-input"
+              autoFocus
+              placeholder="e.g. STXU4531168"
+              value={containerNumberValue}
+              onChange={(e) => setContainerNumberValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && containerNumberValue.trim()) {
+                  window.open(
+                    `/shipments/reports/by-container/${containerPromptReport?.slug}/${encodeURIComponent(containerNumberValue.trim())}`,
+                    '_blank'
+                  );
+                  setContainerPromptReport(null);
+                }
+              }}
+            />
+            <p className="text-xs text-muted-foreground">
+              All shipments sharing this container will be included on the printed document.
+            </p>
+          </div>
+          <DialogFooter className="p-4 pt-0">
+            <Button variant="outline" onClick={() => setContainerPromptReport(null)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={!containerNumberValue.trim()}
+              onClick={() => {
+                window.open(
+                  `/shipments/reports/by-container/${containerPromptReport?.slug}/${encodeURIComponent(containerNumberValue.trim())}`,
+                  '_blank'
+                );
+                setContainerPromptReport(null);
+              }}
+            >
+              Print
             </Button>
           </DialogFooter>
         </DialogContent>
