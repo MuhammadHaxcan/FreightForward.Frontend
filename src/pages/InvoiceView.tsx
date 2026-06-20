@@ -265,7 +265,7 @@ export default function InvoiceView() {
                     <TableCell className="text-center">{item.basis || '-'}</TableCell>
                     <TableCell className="text-center">{item.currencyCode || ''}</TableCell>
                     <TableCell className="text-right">{(item.rate ?? 0).toFixed(2)}</TableCell>
-                    <TableCell className="text-right">{(item.quantity ?? 0).toFixed(2)}</TableCell>
+                    <TableCell className="text-right">{(item.quantity ?? 0).toLocaleString(undefined, { maximumFractionDigits: 3 })}</TableCell>
                     <TableCell className="text-right">{(item.roe ?? 1).toFixed(4)}</TableCell>
                     <TableCell className="text-right">{(item.taxPercentage ?? 0).toFixed(2)}</TableCell>
                     <TableCell className="text-right">{(item.taxAmount ?? 0).toFixed(2)}</TableCell>

@@ -205,7 +205,7 @@ export default function PurchaseInvoiceView() {
                 {(invoice.items || []).map((item, index) => (
                   <TableRow key={item.id || index}>
                     <TableCell className="text-blue-600">{item.chargeDetails}</TableCell>
-                    <TableCell className="text-center">{(item.noOfUnit ?? 0).toFixed(0)}</TableCell>
+                    <TableCell className="text-center">{(item.noOfUnit ?? 0).toLocaleString(undefined, { maximumFractionDigits: 3 })}</TableCell>
                     <TableCell className="text-center">{item.currencyCode || baseCurrencyCode}</TableCell>
                     <TableCell className="text-right">{(item.costPerUnit ?? 0).toFixed(2)}</TableCell>
                     <TableCell className="text-right">{(item.exRate ?? 1).toFixed(2)}</TableCell>

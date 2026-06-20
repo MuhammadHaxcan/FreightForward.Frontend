@@ -130,6 +130,7 @@ export enum InvoiceNoteType {
   SaleInvoice = "SaleInvoice",
   PurchaseInvoice = "PurchaseInvoice",
   Both = "Both",
+  Quotation = "Quotation",
 }
 
 export interface InvoiceNote {

@@ -87,7 +87,7 @@ import {
   FreightType,
   PaymentStatus,
 } from "@/services/api";
-import { hrEmployeeApi } from "@/services/api/hr";
+import { hrEmployeeApi, type EmployeeDropdown } from "@/services/api/hr";
 import { interactionAuditApi } from "@/services/api/interactionAudit";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { OfficeInteractionAuditEventRequest } from "@/types/auth";
@@ -166,6 +166,18 @@ const getPortLabel = (port: { seaPortName?: string; seaPortCode?: string; airPor
   }
   return `${port.seaPortName || ''}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} - ${port.city}, ${port.country}`;
 };
+
+const TFS_SALESPERSON = "TFS";
+
+const getShipmentSalespersonOptions = (employees: EmployeeDropdown[]) => [
+  { value: TFS_SALESPERSON, label: TFS_SALESPERSON },
+  ...employees
+    .filter(emp => emp.fullName.trim().toLowerCase() !== TFS_SALESPERSON.toLowerCase())
+    .map(emp => ({
+      value: emp.fullName,
+      label: `${emp.employeeCode} - ${emp.fullName}`,
+    })),
+];
 
 const createAuditCorrelationId = (): string => {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -1626,10 +1638,7 @@ const ShipmentDetail = () => {
                   <div>
                     <Label className="text-sm">Salesperson</Label>
                     <SearchableSelect
-                      options={employees.map(emp => ({
-                        value: emp.fullName,
-                        label: `${emp.employeeCode} - ${emp.fullName}`,
-                      }))}
+                      options={getShipmentSalespersonOptions(employees)}
                       value={formData.salesperson}
                       onValueChange={(v) => handleInputChange("salesperson", v)}
                       placeholder="Select"

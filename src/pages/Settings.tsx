@@ -1714,7 +1714,7 @@ const Settings = () => {
           <TabsContent value="notes">
             <div className="bg-card rounded-lg border border-border">
               <div className="flex items-center justify-between p-4 border-b border-border">
-                <h2 className="text-lg font-semibold text-primary">Invoice Notes</h2>
+                <h2 className="text-lg font-semibold text-primary">Invoice / Quotation Notes</h2>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Show</span>
@@ -1804,12 +1804,16 @@ const Settings = () => {
                                 ? "bg-blue-100 text-blue-800"
                                 : note.noteType === InvoiceNoteType.PurchaseInvoice
                                 ? "bg-orange-100 text-orange-800"
+                                : note.noteType === InvoiceNoteType.Quotation
+                                ? "bg-purple-100 text-purple-800"
                                 : "bg-green-100 text-green-800"
                             }`}>
                               {note.noteType === InvoiceNoteType.SaleInvoice
                                 ? "Sale Invoice"
                                 : note.noteType === InvoiceNoteType.PurchaseInvoice
                                 ? "Purchase Invoice"
+                                : note.noteType === InvoiceNoteType.Quotation
+                                ? "Quotation"
                                 : "Both"}
                             </span>
                           </td>
@@ -1819,7 +1823,7 @@ const Settings = () => {
                       {noteData?.items.length === 0 && (
                         <tr>
                           <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
-                            No invoice notes found
+                            No invoice / quotation notes found
                           </td>
                         </tr>
                       )}
@@ -2464,7 +2468,7 @@ const Settings = () => {
       <Dialog open={addNoteModalOpen} onOpenChange={(open) => { setAddNoteModalOpen(open); if (!open) resetNoteForm(); }}>
         <DialogContent className="sm:max-w-modal-md bg-card p-0">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
-            <DialogTitle className="text-white text-lg font-semibold"><span className="font-bold">Add New</span> Invoice Note</DialogTitle>
+            <DialogTitle className="text-white text-lg font-semibold"><span className="font-bold">Add New</span> Invoice / Quotation Note</DialogTitle>
           </DialogHeader>
           <div className="p-6 space-y-4">
             <div>
@@ -2491,6 +2495,7 @@ const Settings = () => {
                 options={[
                   { value: String(InvoiceNoteType.SaleInvoice), label: "Sale Invoice" },
                   { value: String(InvoiceNoteType.PurchaseInvoice), label: "Purchase Invoice" },
+                  { value: String(InvoiceNoteType.Quotation), label: "Quotation" },
                   { value: String(InvoiceNoteType.Both), label: "Both" },
                 ]}
                 value={String(noteForm.noteType)}
@@ -2531,7 +2536,7 @@ const Settings = () => {
       <Dialog open={editNoteModalOpen} onOpenChange={setEditNoteModalOpen}>
         <DialogContent className="sm:max-w-modal-md bg-card p-0">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
-            <DialogTitle className="text-white text-lg font-semibold">Edit Invoice Note</DialogTitle>
+            <DialogTitle className="text-white text-lg font-semibold">Edit Invoice / Quotation Note</DialogTitle>
           </DialogHeader>
           {editNote && (
             <div className="p-6 space-y-4">
@@ -2557,6 +2562,7 @@ const Settings = () => {
                   options={[
                     { value: String(InvoiceNoteType.SaleInvoice), label: "Sale Invoice" },
                     { value: String(InvoiceNoteType.PurchaseInvoice), label: "Purchase Invoice" },
+                    { value: String(InvoiceNoteType.Quotation), label: "Quotation" },
                     { value: String(InvoiceNoteType.Both), label: "Both" },
                   ]}
                   value={String(editNote.noteType)}
