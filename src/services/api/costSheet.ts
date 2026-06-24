@@ -22,12 +22,26 @@ export interface CostSheetDetailDto {
   jobStatus?: string;
   direction?: string;
   mode?: string;
+  baseCurrencyCode: string;
   costings: CostSheetCostingDto[];
   billToItems: CostSheetBillToDto[];
   vendorItems: CostSheetVendorDto[];
+  unlinkedSaleItems: CostSheetUnlinkedItemDto[];
+  unlinkedCostItems: CostSheetUnlinkedItemDto[];
   totalSaleLCY: number;
   totalCostLCY: number;
   profit: number;
+  marginPercent: number;
+  totalBilledSaleLCY: number;
+  totalUnbilledSaleLCY: number;
+  totalBilledCostLCY: number;
+  totalUnbilledCostLCY: number;
+  totalCustomerInvoiceLCY: number;
+  totalCustomerPaidLCY: number;
+  totalCustomerUnpaidLCY: number;
+  totalVendorInvoiceLCY: number;
+  totalVendorPaidLCY: number;
+  totalVendorUnpaidLCY: number;
 }
 
 // Costing line item
@@ -51,6 +65,10 @@ export interface CostSheetCostingDto {
   costLCY: number;
   unitName?: string;
   gp: number;
+  billedSaleLCY: number;
+  unbilledSaleLCY: number;
+  billedCostLCY: number;
+  unbilledCostLCY: number;
 }
 
 // Bill To section
@@ -58,6 +76,9 @@ export interface CostSheetBillToDto {
   customerId?: number;
   customerName?: string;
   pSale: number;
+  invoiceTotalLCY: number;
+  paidLCY: number;
+  unpaidLCY: number;
   invoices: CostSheetInvoiceDto[];
 }
 
@@ -66,6 +87,9 @@ export interface CostSheetVendorDto {
   vendorId?: number;
   vendorName?: string;
   pCost: number;
+  invoiceTotalLCY: number;
+  paidLCY: number;
+  unpaidLCY: number;
   purchaseInvoices: CostSheetPurchaseInvoiceDto[];
 }
 
@@ -73,14 +97,42 @@ export interface CostSheetVendorDto {
 export interface CostSheetInvoiceDto {
   invoiceId: number;
   invoiceNo?: string;
+  invoiceDate: string;
+  customerName?: string;
+  currencyCode?: string;
+  totalLCY: number;
+  paidLCY: number;
+  unpaidLCY: number;
   status?: string;
+  linkedCostingIds: number[];
 }
 
 // Purchase Invoice info
 export interface CostSheetPurchaseInvoiceDto {
   purchaseInvoiceId: number;
   purchaseNo?: string;
+  purchaseDate: string;
+  vendorName?: string;
+  currencyCode?: string;
+  totalLCY: number;
+  paidLCY: number;
+  unpaidLCY: number;
   status?: string;
+  linkedCostingIds: number[];
+}
+
+export interface CostSheetUnlinkedItemDto {
+  itemId: number;
+  documentId: number;
+  documentNo?: string;
+  documentDate: string;
+  partyName?: string;
+  chargeDetails?: string;
+  currencyCode?: string;
+  fcyAmount: number;
+  exRate: number;
+  localAmount: number;
+  taxAmount: number;
 }
 
 export const costSheetApi = {
