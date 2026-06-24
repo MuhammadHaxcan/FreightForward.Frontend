@@ -4,13 +4,12 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { LeadDetailItem, MeasurementType, PackageType } from "@/services/api";
+import { LeadDetailItem, MeasurementType, PackageType, WeightType } from "@/services/api";
 
 interface BoxPalletRowModalProps {
   open: boolean;
@@ -38,6 +37,7 @@ export function BoxPalletRowModal({
     measurementType: "Total",
     volume: 0,
     weight: 0,
+    weightType: "PerUnit",
   });
   const [dimensionUnit, setDimensionUnit] = useState<"CM" | "M" | "IN">("CM");
 
@@ -56,6 +56,7 @@ export function BoxPalletRowModal({
         measurementType: "Total",
         volume: 0,
         weight: 0,
+        weightType: "PerUnit",
       });
       setDimensionUnit("CM");
     }
@@ -233,33 +234,69 @@ export function BoxPalletRowModal({
             </div>
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="weight">Weight *</Label>
-            <Input
-              id="weight"
-              type="number"
-              min={0}
-              step="0.01"
-              value={formData.weight}
-              onChange={(e) =>
-                updateField("weight", parseFloat(e.target.value) || 0)
-              }
-            />
+          <div className="grid grid-cols-3 gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="weight">
+                {formData.weightType === "Total" ? "Total Weight *" : "Weight (per unit) *"}
+              </Label>
+              <Input
+                id="weight"
+                type="number"
+                min={0}
+                step="0.01"
+                value={formData.weight}
+                onChange={(e) =>
+                  updateField("weight", parseFloat(e.target.value) || 0)
+                }
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="weightType">Weight Type</Label>
+              <SearchableSelect
+                options={[
+                  { value: "PerUnit", label: "Per Unit" },
+                  { value: "Total", label: "Total" },
+                ]}
+                value={formData.weightType || "PerUnit"}
+                onValueChange={(value) =>
+                  updateField("weightType", value as WeightType)
+                }
+                placeholder="Select weight type"
+                searchPlaceholder="Search..."
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="totalWeight">Total Weight (calculated)</Label>
+              <Input
+                id="totalWeight"
+                type="number"
+                value={
+                  formData.weightType === "Total"
+                    ? formData.weight
+                    : formData.weight * formData.quantity
+                }
+                disabled
+                className="bg-muted"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-6">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSave}
+              disabled={!formData.packageTypeId}
+              className="btn-success px-8"
+            >
+              {boxPallet ? "Update" : "Add"}
+            </Button>
           </div>
         </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={!formData.packageTypeId}
-            className="btn-success"
-          >
-            {boxPallet ? "Update" : "Add"}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

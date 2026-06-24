@@ -2,11 +2,17 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import { Plus, Eye, Trash2, Edit, Download, Printer } from "lucide-react";
+import { Plus, Eye, Trash2, Edit, Download, Printer, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Input } from "@/components/ui/input";
 import { PermissionGate } from "@/components/auth/PermissionGate";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -106,6 +112,9 @@ export default function PaymentVouchers() {
   const handleViewDetails = (paymentId: number) => {
     setDetailsModalPaymentId(paymentId);
   };
+
+  const actionMenuItemClass =
+    "gap-3 rounded-md px-3 py-2 text-sm font-medium focus:text-white data-[highlighted]:text-white";
 
   return (
     <MainLayout>
@@ -210,55 +219,65 @@ export default function PaymentVouchers() {
                     {payment.currencyCode} {payment.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        size="sm"
-                        className="bg-blue-500 hover:bg-blue-600 text-white h-8 w-8 p-0"
-                        onClick={() => navigate(`/accounts/payment-vouchers/${encodeURIComponent(payment.paymentNo)}`)}
-                        title="View"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <PermissionGate permission="paymentvoucher_edit">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
                         <Button
-                          size="sm"
-                          className="bg-primary hover:bg-primary/90 text-primary-foreground h-8 w-8 p-0"
-                          onClick={() => handleEdit(payment.id)}
-                          title="Edit"
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8 border-slate-300 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
+                          aria-label="Payment actions"
                         >
-                          <Edit className="h-4 w-4" />
+                          <MoreHorizontal className="h-4 w-4" />
                         </Button>
-                      </PermissionGate>
-                      <PermissionGate permission="paymentvoucher_delete">
-                        <Button
-                          size="sm"
-                          className="bg-destructive hover:bg-destructive/90 text-destructive-foreground h-8 w-8 p-0"
-                          onClick={() => {
-                            setSelectedPayment(payment);
-                            setDeleteDialogOpen(true);
-                          }}
-                          title="Delete"
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        align="end"
+                        className="w-48 rounded-xl border border-slate-200 bg-white p-2 shadow-xl"
+                      >
+                        <DropdownMenuItem
+                          onClick={() => navigate(`/accounts/payment-vouchers/${encodeURIComponent(payment.paymentNo)}`)}
+                          className={`${actionMenuItemClass} text-blue-700 data-[highlighted]:bg-blue-500`}
                         >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </PermissionGate>
-                      <Button
-                        size="sm"
-                        className="bg-orange-500 hover:bg-orange-600 text-white h-8 w-8 p-0"
-                        onClick={() => handleDownload(payment.paymentNo)}
-                        title="Download"
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="btn-success h-8 w-8 p-0"
-                        onClick={() => handlePrintPdf(payment.paymentNo)}
-                        title="Print"
-                      >
-                        <Printer className="h-4 w-4" />
-                      </Button>
-                    </div>
+                          <Eye className="h-4 w-4" />
+                          View
+                        </DropdownMenuItem>
+                        <PermissionGate permission="paymentvoucher_edit">
+                          <DropdownMenuItem
+                            onClick={() => handleEdit(payment.id)}
+                            className={`${actionMenuItemClass} text-emerald-700 data-[highlighted]:bg-emerald-500`}
+                          >
+                            <Edit className="h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                        </PermissionGate>
+                        <PermissionGate permission="paymentvoucher_delete">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedPayment(payment);
+                              setDeleteDialogOpen(true);
+                            }}
+                            className={`${actionMenuItemClass} text-red-700 data-[highlighted]:bg-red-500`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </PermissionGate>
+                        <DropdownMenuItem
+                          onClick={() => handleDownload(payment.paymentNo)}
+                          className={`${actionMenuItemClass} text-orange-700 data-[highlighted]:bg-orange-500`}
+                        >
+                          <Download className="h-4 w-4" />
+                          Download
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handlePrintPdf(payment.paymentNo)}
+                          className={`${actionMenuItemClass} text-green-700 data-[highlighted]:bg-green-500`}
+                        >
+                          <Printer className="h-4 w-4" />
+                          Print
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))

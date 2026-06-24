@@ -9,6 +9,7 @@ export type FreightMode = 'SeaFreight' | 'AirFreight' | 'LandFreight';
 export type UnitOfMeasurement = 'KG' | 'LB';
 export type ShippingType = 'FTL' | 'LTL';
 export type MeasurementType = 'Total' | 'PerUnit';
+export type WeightType = 'PerUnit' | 'Total';
 export type LeadType = 'ManualLead' | 'PortalLead';
 
 // LeadDetail item (for Equipment and BoxPallet)
@@ -27,6 +28,7 @@ export interface LeadDetailItem {
   measurementType?: MeasurementType;
   volume?: number;
   weight: number;
+  weightType?: WeightType; // "PerUnit" (weight x quantity = total) or "Total" (weight is already the total)
 }
 
 // Portal Lead types (from master schema)
@@ -140,6 +142,7 @@ export interface CreateLeadDetailRequest {
   measurementType?: string;
   volume?: number;
   weight: number;
+  weightType?: WeightType;
 }
 
 export interface CreateLeadRequest {

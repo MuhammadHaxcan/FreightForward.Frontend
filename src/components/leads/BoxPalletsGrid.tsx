@@ -50,7 +50,9 @@ export function BoxPalletsGrid({ boxPallets, onChange, packageTypes }: BoxPallet
   };
 
   const totalVolume = boxPallets.reduce((sum, bp) => sum + (bp.volume || 0), 0);
-  const totalWeight = boxPallets.reduce((sum, bp) => sum + bp.weight * bp.quantity, 0);
+  const rowTotalWeight = (bp: LeadDetailItem) =>
+    bp.weightType === "Total" ? bp.weight : bp.weight * bp.quantity;
+  const totalWeight = boxPallets.reduce((sum, bp) => sum + rowTotalWeight(bp), 0);
 
   return (
     <div className="space-y-4">
@@ -80,13 +82,15 @@ export function BoxPalletsGrid({ boxPallets, onChange, packageTypes }: BoxPallet
               <TableHead className="text-white">Measurement</TableHead>
               <TableHead className="text-white">CBM</TableHead>
               <TableHead className="text-white">Weight</TableHead>
+              <TableHead className="text-white">Weight Type</TableHead>
+              <TableHead className="text-white">Total Weight</TableHead>
               <TableHead className="text-white w-24">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {boxPallets.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                   No items added. Click "Add Row" to add box/pallets.
                 </TableCell>
               </TableRow>
@@ -101,6 +105,8 @@ export function BoxPalletsGrid({ boxPallets, onChange, packageTypes }: BoxPallet
                   <TableCell>{item.measurementType || "-"}</TableCell>
                   <TableCell>{item.volume?.toFixed(4) || "0.0000"}</TableCell>
                   <TableCell>{item.weight}</TableCell>
+                  <TableCell>{item.weightType === "Total" ? "Total" : "Per Unit"}</TableCell>
+                  <TableCell>{rowTotalWeight(item).toFixed(2)}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
                       <Button

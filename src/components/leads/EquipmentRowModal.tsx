@@ -4,7 +4,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -129,20 +128,21 @@ export function EquipmentRowModal({
               }
             />
           </div>
-        </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={!formData.containerTypeId}
-            className="btn-success"
-          >
-            {equipment ? "Update" : "Add"}
-          </Button>
-        </DialogFooter>
+          <div className="flex justify-end gap-3 pt-6">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSave}
+              disabled={!formData.containerTypeId}
+              className="btn-success px-8"
+            >
+              {equipment ? "Update" : "Add"}
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -25,8 +25,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Edit, Plus, Eye, Download, Trash2, Loader2, CheckCircle, Ship } from "lucide-react";
+import { Edit, Plus, Eye, Download, Trash2, Loader2, CheckCircle, Ship, MoreHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   useQuotations,
   useDeleteQuotation,
@@ -74,6 +80,9 @@ export default function Quotations() {
   const quotations = data?.items || [];
   const totalCount = data?.totalCount || 0;
   const totalPages = data?.totalPages || 1;
+
+  const actionMenuItemClass =
+    "gap-3 rounded-md px-3 py-2 text-sm font-medium focus:text-white data-[highlighted]:text-white";
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -199,78 +208,86 @@ export default function Quotations() {
                           <TableCell>{getStatusBadge(quotation.quotationStatus)}</TableCell>
                           <TableCell className="text-purple-600 font-medium">{quotation.quotationBookingNo || "-"}</TableCell>
                           <TableCell>
-                            <div className="flex gap-1">
-                              <PermissionGate permission="quot_edit">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
                                 <Button
-                                  variant="ghost"
+                                  variant="outline"
                                   size="icon"
-                                  className="h-8 w-8 btn-success rounded"
-                                  onClick={() => navigate(`/sales/quotations/${quotation.id}/edit`)}
+                                  className="h-8 w-8 border-slate-300 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
+                                  aria-label="Quotation actions"
                                 >
-                                  <Edit className="h-4 w-4" />
+                                  <MoreHorizontal className="h-4 w-4" />
                                 </Button>
-                              </PermissionGate>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 bg-blue-500 hover:bg-blue-600 text-white rounded"
-                                onClick={() => navigate(`/sales/quotations/${quotation.id}/view-details`)}
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent
+                                align="end"
+                                className="w-48 rounded-xl border border-slate-200 bg-white p-2 shadow-xl"
                               >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 bg-orange-500 hover:bg-orange-600 text-white rounded"
-                                onClick={() => window.open(`/sales/quotations/${quotation.id}/view`, "_blank")}
-                              >
-                                <Download className="h-4 w-4" />
-                              </Button>
-                              {quotation.quotationStatus === "Pending" && (
-                                <PermissionGate permission="quot_approve">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 bg-purple-500 hover:bg-purple-600 text-white rounded"
-                                    onClick={() => {
-                                      setQuotationToApprove(quotation);
-                                      setApproveModalOpen(true);
-                                    }}
+                                <PermissionGate permission="quot_edit">
+                                  <DropdownMenuItem
+                                    onClick={() => navigate(`/sales/quotations/${quotation.id}/edit`)}
+                                    className={`${actionMenuItemClass} text-emerald-700 data-[highlighted]:bg-emerald-500`}
                                   >
-                                    <CheckCircle className="h-4 w-4" />
-                                  </Button>
+                                    <Edit className="h-4 w-4" />
+                                    Edit
+                                  </DropdownMenuItem>
                                 </PermissionGate>
-                              )}
-                              {quotation.quotationStatus === "Approved" && activeTab === "approved" && (
-                                <PermissionGate permission="quot_convert">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 bg-teal-500 hover:bg-teal-600 text-white rounded"
-                                    onClick={() => {
-                                      setQuotationToConvert(quotation);
-                                      setConvertModalOpen(true);
-                                    }}
-                                    title="Convert to Shipment"
-                                  >
-                                    <Ship className="h-4 w-4" />
-                                  </Button>
-                                </PermissionGate>
-                              )}
-                              <PermissionGate permission="quot_delete">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded"
-                                  onClick={() => {
-                                    setQuotationToDelete(quotation);
-                                    setDeleteModalOpen(true);
-                                  }}
+                                <DropdownMenuItem
+                                  onClick={() => navigate(`/sales/quotations/${quotation.id}/view-details`)}
+                                  className={`${actionMenuItemClass} text-blue-700 data-[highlighted]:bg-blue-500`}
                                 >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </PermissionGate>
-                            </div>
+                                  <Eye className="h-4 w-4" />
+                                  View
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => window.open(`/sales/quotations/${quotation.id}/view`, "_blank")}
+                                  className={`${actionMenuItemClass} text-orange-700 data-[highlighted]:bg-orange-500`}
+                                >
+                                  <Download className="h-4 w-4" />
+                                  Download
+                                </DropdownMenuItem>
+                                {quotation.quotationStatus === "Pending" && (
+                                  <PermissionGate permission="quot_approve">
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setQuotationToApprove(quotation);
+                                        setApproveModalOpen(true);
+                                      }}
+                                      className={`${actionMenuItemClass} text-purple-700 data-[highlighted]:bg-purple-500`}
+                                    >
+                                      <CheckCircle className="h-4 w-4" />
+                                      Approve
+                                    </DropdownMenuItem>
+                                  </PermissionGate>
+                                )}
+                                {quotation.quotationStatus === "Approved" && activeTab === "approved" && (
+                                  <PermissionGate permission="quot_convert">
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setQuotationToConvert(quotation);
+                                        setConvertModalOpen(true);
+                                      }}
+                                      className={`${actionMenuItemClass} text-teal-700 data-[highlighted]:bg-teal-500`}
+                                    >
+                                      <Ship className="h-4 w-4" />
+                                      Convert to Shipment
+                                    </DropdownMenuItem>
+                                  </PermissionGate>
+                                )}
+                                <PermissionGate permission="quot_delete">
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setQuotationToDelete(quotation);
+                                      setDeleteModalOpen(true);
+                                    }}
+                                    className={`${actionMenuItemClass} text-red-700 data-[highlighted]:bg-red-500`}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </PermissionGate>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </TableCell>
                         </TableRow>
                       ))

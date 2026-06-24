@@ -247,6 +247,7 @@ export default function LeadForm() {
           measurementType: bp.measurementType,
           volume: bp.volume,
           weight: bp.weight,
+          weightType: bp.weightType,
         });
       });
     }

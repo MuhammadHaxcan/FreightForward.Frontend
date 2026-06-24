@@ -14,7 +14,9 @@ interface BoxPalletsGridReadOnlyProps {
 
 export function BoxPalletsGridReadOnly({ boxPallets }: BoxPalletsGridReadOnlyProps) {
   const totalVolume = boxPallets.reduce((sum, bp) => sum + (bp.volume || 0), 0);
-  const totalWeight = boxPallets.reduce((sum, bp) => sum + bp.weight * bp.quantity, 0);
+  const rowTotalWeight = (bp: LeadDetailItem) =>
+    bp.weightType === "Total" ? bp.weight : bp.weight * bp.quantity;
+  const totalWeight = boxPallets.reduce((sum, bp) => sum + rowTotalWeight(bp), 0);
 
   return (
     <div className="space-y-4">
@@ -32,12 +34,14 @@ export function BoxPalletsGridReadOnly({ boxPallets }: BoxPalletsGridReadOnlyPro
               <TableHead className="text-white">Measurement</TableHead>
               <TableHead className="text-white">Volume</TableHead>
               <TableHead className="text-white">Weight</TableHead>
+              <TableHead className="text-white">Weight Type</TableHead>
+              <TableHead className="text-white">Total Weight</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {boxPallets.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                   No box/pallet items.
                 </TableCell>
               </TableRow>
@@ -52,6 +56,8 @@ export function BoxPalletsGridReadOnly({ boxPallets }: BoxPalletsGridReadOnlyPro
                   <TableCell>{item.measurementType || "-"}</TableCell>
                   <TableCell>{item.volume?.toFixed(2) || "0.00"}</TableCell>
                   <TableCell>{item.weight}</TableCell>
+                  <TableCell>{item.weightType === "Total" ? "Total" : "Per Unit"}</TableCell>
+                  <TableCell>{rowTotalWeight(item).toFixed(2)}</TableCell>
                 </TableRow>
               ))
             )}
