@@ -86,7 +86,7 @@ import {
 } from "@/hooks/useShipments";
 import { useDeleteInvoice, useDeletePurchaseInvoice } from "@/hooks/useInvoices";
 import { useAllCustomerCategoryTypes, useAllIncoTerms, useAllContainerTypes, useAllPackageTypes, useAllPorts } from "@/hooks/useSettings";
-import { useQuotationForShipment, useConvertQuotationToShipment } from "@/hooks/useSales";
+import { useQuotationForShipment } from "@/hooks/useSales";
 import { CargoContainerTab, CargoFormEntry } from "@/components/shipments/CargoContainerTab";
 import { calculateCbm } from "@/lib/cargoCalculations";
 
@@ -272,7 +272,6 @@ const AddShipment = () => {
 
   // Fetch quotation data for conversion
   const { data: quotationForShipment } = useQuotationForShipment(conversionQuotationId || 0);
-  const convertQuotationToShipment = useConvertQuotationToShipment();
 
   // API hooks for mutations
   const createShipmentMutation = useCreateShipment();
@@ -551,8 +550,6 @@ const AddShipment = () => {
       if (!savedShipmentId || !conversionQuotationId || !quotationForShipment) return;
 
       try {
-        await convertQuotationToShipment.mutateAsync(conversionQuotationId);
-
         // Add customer as Shipper party
         if (quotationForShipment.customerId) {
           const partyData: AddShipmentPartyRequest = {
@@ -706,7 +703,7 @@ const AddShipment = () => {
         toast.success('Quotation data has been pre-filled to the shipment');
       } catch (error) {
         console.error('Error adding conversion data:', error);
-        toast.error(error instanceof Error ? error.message : 'Failed to mark quotation as converted');
+        toast.error(error instanceof Error ? error.message : 'Failed to copy quotation data to shipment');
       }
     };
 
@@ -1380,7 +1377,10 @@ const AddShipment = () => {
         });
       } else {
         // Create new shipment
-        const newShipmentId = await createShipmentMutation.mutateAsync(shipmentData);
+        const newShipmentId = await createShipmentMutation.mutateAsync({
+          ...shipmentData,
+          quotationId: conversionQuotationId || undefined,
+        });
         setSavedShipmentId(newShipmentId);
       }
 

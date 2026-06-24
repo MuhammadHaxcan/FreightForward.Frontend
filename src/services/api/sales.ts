@@ -225,8 +225,11 @@ export interface RateRequest {
 export interface CreateRateRequestRequest {
   leadId?: number;
   mode?: ShipmentMode;
+  shipmentMode?: ShipmentMode;
   vendorName: string;
   vendorId?: number;
+  polId?: number;
+  podId?: number;
   polCountry?: string;
   podCountry?: string;
   // NEW vendor fields
@@ -345,6 +348,7 @@ export interface CreateQuotationRequest {
   customerId?: number;
   customerName: string;
   mode?: ShipmentMode;
+  shipmentMode?: ShipmentMode;
   pol?: string;
   pod?: string;
   quoteExpiryDate?: string;
@@ -386,6 +390,14 @@ export interface CreateQuotationRequest {
 }
 
 export type UpdateQuotationRequest = CreateQuotationRequest;
+
+export interface CreateCompleteQuotationRequest {
+  createLead: boolean;
+  createRateRequest: boolean;
+  lead?: CreateLeadRequest;
+  rateRequest?: CreateRateRequestRequest;
+  quotation: CreateQuotationRequest;
+}
 
 // RateRequest for conversion to Quotation
 export interface RateRequestForConversion {
@@ -568,6 +580,8 @@ export const quotationApi = {
   getForShipment: (id: number) => fetchApi<QuotationForShipment>(`/sales/quotations/${id}/for-shipment`),
   create: (data: CreateQuotationRequest) =>
     fetchApi<number>('/sales/quotations', { method: 'POST', body: JSON.stringify(data) }),
+  createComplete: (data: CreateCompleteQuotationRequest) =>
+    fetchApi<number>('/sales/quotations/complete', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: number, data: UpdateQuotationRequest) =>
     fetchApi<void>(`/sales/quotations/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: number) =>

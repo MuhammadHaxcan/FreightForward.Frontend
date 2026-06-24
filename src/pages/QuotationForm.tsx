@@ -7,10 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { Loader2, ArrowLeft, Trash2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Loader2, ArrowLeft, Trash2, Ship, Plane, Truck, Package, Container } from "lucide-react";
 import {
   useQuotation,
   useCreateQuotation,
+  useCreateCompleteQuotation,
   useUpdateQuotation,
   useRateRequestForConversion,
   useRateRequest,
@@ -18,8 +21,11 @@ import {
 } from "@/hooks/useSales";
 import { LockedLeadSections } from "@/components/leads/LockedLeadSections";
 import { LockedRateRequestSection } from "@/components/leads/LockedRateRequestSection";
-import { useAllDebtors, useCustomer } from "@/hooks/useCustomers";
+import { EquipmentGrid } from "@/components/leads/EquipmentGrid";
+import { BoxPalletsGrid } from "@/components/leads/BoxPalletsGrid";
+import { useAllCreditors, useAllDebtors, useCustomer } from "@/hooks/useCustomers";
 import {
+  useAllCountries,
   useAllIncoTerms,
   useAllPorts,
   useAllPackageTypes,
@@ -27,8 +33,42 @@ import {
   useAllChargeItems,
   useAllContainerTypes,
   useAllCostingUnits,
+  useAllCustomerCategoryTypes,
 } from "@/hooks/useSettings";
-import { CreateQuotationRequest } from "@/services/api";
+import {
+  CreateCompleteQuotationRequest,
+  CreateLeadDetailRequest,
+  CreateLeadRequest,
+  CreateQuotationRequest,
+  FreightMode,
+  LeadDetailItem,
+  ShippingType,
+  UnitOfMeasurement,
+} from "@/services/api";
+import { toast } from "sonner";
+
+const PRODUCT_TYPES = [
+  "AGRICULTURE & FOOD",
+  "APPAREL, TEXTILES & ACCESSORIES",
+  "AUTO & TRANSPORTATION",
+  "AUTOMOTIVE",
+  "BAGS, SHOES & ACCESSORIES",
+  "CHEMICALS",
+  "ELECTRICAL EQUIPMENT, COMPONENTS & TELECOMS",
+  "ELECTRONICS",
+  "FAK",
+  "GIFTS, SPORTS & TOYS",
+  "HEALTH & BEAUTY",
+  "HOME, LIGHTS & CONSTRUCTION",
+  "MACHINERY",
+  "MACHINERY, INDUSTRIAL PARTS & TOOLS",
+  "METALLURGY, CHEMICALS, RUBBER & PLASTICS",
+  "OTHER",
+  "PACKAGING, ADVERTISING & OFFICE",
+  "PHARMACEUTICALS",
+  "SCRAP ITEM",
+  "TEXTILES",
+];
 
 interface CargoRow {
   id: number;
@@ -91,6 +131,64 @@ interface FormData {
   cargoCalculationMode: string;
 }
 
+interface LeadWorkflowData {
+  customerId?: number;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  freightMode: FreightMode;
+  unitOfMeasurement: UnitOfMeasurement;
+  shippingType: ShippingType;
+  equipments: LeadDetailItem[];
+  boxPallets: LeadDetailItem[];
+  pickupCountryId?: number;
+  loadingPortId?: number;
+  pickupAddress: string;
+  deliveryCountryId?: number;
+  destinationPortId?: number;
+  deliveryAddress: string;
+  goodsReadyDate: string;
+  customerReferenceNo: string;
+  hsCode: string;
+  productType: string;
+  productDescription: string;
+  incoTermId?: number;
+  internalNotes: string;
+}
+
+interface RateRequestWorkflowData {
+  vendorTypeId: string;
+  vendorId: string;
+  vendorEmail: string;
+  internalNotes: string;
+}
+
+const initialLeadWorkflowData: LeadWorkflowData = {
+  fullName: "",
+  email: "",
+  phoneNumber: "",
+  freightMode: "SeaFreight",
+  unitOfMeasurement: "KG",
+  shippingType: "FTL",
+  equipments: [],
+  boxPallets: [],
+  pickupAddress: "",
+  deliveryAddress: "",
+  goodsReadyDate: "",
+  customerReferenceNo: "",
+  hsCode: "",
+  productType: "",
+  productDescription: "",
+  internalNotes: "",
+};
+
+const initialRateRequestWorkflowData: RateRequestWorkflowData = {
+  vendorTypeId: "",
+  vendorId: "",
+  vendorEmail: "",
+  internalNotes: "",
+};
+
 export default function QuotationForm() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -106,6 +204,7 @@ export default function QuotationForm() {
   const rateRequestIdFromState = (location.state as { rateRequestId?: number })?.rateRequestId;
   const [conversionRateRequestId] = useState<number | null>(rateRequestIdFromState || null);
   const conversionAppliedRef = useRef(false);
+  const isNewQuotationMode = !isEditing && !isViewMode && !conversionRateRequestId;
 
   // Form state
   const [formData, setFormData] = useState<FormData>({
@@ -122,6 +221,11 @@ export default function QuotationForm() {
   const [chargeRows, setChargeRows] = useState<ChargeRow[]>([
     { id: 1, chargeType: "", currency: "", rate: "", roe: "", quantity: "", amount: "", costCurrency: "", costRate: "", costRoe: "", costQuantity: "", costAmount: "" },
   ]);
+
+  const [createLead, setCreateLead] = useState(false);
+  const [createRateRequest, setCreateRateRequest] = useState(false);
+  const [leadData, setLeadData] = useState<LeadWorkflowData>(initialLeadWorkflowData);
+  const [rateRequestData, setRateRequestData] = useState<RateRequestWorkflowData>(initialRateRequestWorkflowData);
 
   // Queries
   const { data: conversionData } = useRateRequestForConversion(conversionRateRequestId || 0);
@@ -140,7 +244,9 @@ export default function QuotationForm() {
 
   // Dropdown data queries
   const { data: debtorsData } = useAllDebtors();
+  const { data: creditorsData } = useAllCreditors();
   const { data: selectedCustomer } = useCustomer(formData.customerId || 0);
+  const { data: countriesData } = useAllCountries();
   const { data: incoTermsData } = useAllIncoTerms();
   const { data: portsData } = useAllPorts();
   const { data: packageTypesData } = useAllPackageTypes();
@@ -148,8 +254,11 @@ export default function QuotationForm() {
   const { data: chargeItemsData } = useAllChargeItems();
   const { data: containerTypesData } = useAllContainerTypes();
   const { data: costingUnitsData } = useAllCostingUnits();
+  const { data: categoryTypesData } = useAllCustomerCategoryTypes();
 
   const debtors = useMemo(() => Array.isArray(debtorsData) ? debtorsData : [], [debtorsData]);
+  const creditors = useMemo(() => Array.isArray(creditorsData) ? creditorsData : [], [creditorsData]);
+  const countries = useMemo(() => Array.isArray(countriesData) ? countriesData : [], [countriesData]);
   const incoTerms = useMemo(() => Array.isArray(incoTermsData) ? incoTermsData : [], [incoTermsData]);
   const ports = useMemo(() => Array.isArray(portsData) ? portsData : [], [portsData]);
   const packageTypes = useMemo(() => Array.isArray(packageTypesData) ? packageTypesData : [], [packageTypesData]);
@@ -157,9 +266,34 @@ export default function QuotationForm() {
   const chargeItems = useMemo(() => Array.isArray(chargeItemsData) ? chargeItemsData : [], [chargeItemsData]);
   const containerTypes = useMemo(() => Array.isArray(containerTypesData) ? containerTypesData : [], [containerTypesData]);
   const costingUnits = useMemo(() => Array.isArray(costingUnitsData) ? costingUnitsData : [], [costingUnitsData]);
+  const categoryTypes = useMemo(() => Array.isArray(categoryTypesData) ? categoryTypesData : [], [categoryTypesData]);
+
+  const norm = (value: string | null | undefined) => (value ?? "").trim().toLowerCase();
+  const filterPortsByCountry = (countryId: number | undefined) => {
+    if (!countryId) return ports;
+    const target = norm(countries.find((country) => country.id === countryId)?.name);
+    if (!target) return ports;
+    const matched = ports.filter((port) => norm(port.country) === target);
+    return matched.length > 0 ? matched : ports;
+  };
+
+  const pickupPorts = filterPortsByCountry(leadData.pickupCountryId);
+  const deliveryPorts = filterPortsByCountry(leadData.deliveryCountryId);
+
+  const filteredVendors = useMemo(() => {
+    if (!rateRequestData.vendorTypeId) return creditors;
+    const targetId = parseInt(rateRequestData.vendorTypeId);
+    return creditors.filter((vendor) => vendor.categories?.some((category) => category.id === targetId));
+  }, [creditors, rateRequestData.vendorTypeId]);
+
+  const vendorTypeName = useMemo(
+    () => categoryTypes.find((category) => category.id.toString() === rateRequestData.vendorTypeId)?.name ?? "",
+    [categoryTypes, rateRequestData.vendorTypeId],
+  );
 
   // Mutations
   const createMutation = useCreateQuotation();
+  const createCompleteMutation = useCreateCompleteQuotation();
   const updateMutation = useUpdateQuotation();
 
   // Handle conversion pre-fill from Rate Request
@@ -348,6 +482,39 @@ export default function QuotationForm() {
     }
   };
 
+  const addCargoRow = () => {
+    setCargoRows([
+      ...cargoRows,
+      {
+        id: Date.now(),
+        calculationMode: formData.cargoCalculationMode || "units",
+        quantity: 1,
+        volumeUnit: "cm",
+        weightUnit: "kg",
+      },
+    ]);
+  };
+
+  const deleteCargoRow = (rowId: number) => {
+    if (cargoRows.length > 1) {
+      setCargoRows(cargoRows.filter((row) => row.id !== rowId));
+    }
+  };
+
+  const updateCargoRow = (rowId: number, field: keyof CargoRow, value: string | number | undefined) => {
+    setCargoRows(cargoRows.map((row) => (row.id === rowId ? { ...row, [field]: value } : row)));
+  };
+
+  const handleCargoModeChange = (value: string) => {
+    setFormData({ ...formData, cargoCalculationMode: value });
+    setCargoRows(
+      cargoRows.map((row) => ({
+        ...row,
+        calculationMode: value,
+      })),
+    );
+  };
+
   const updateChargeRow = (rowId: number, field: keyof ChargeRow, value: string | number | undefined) => {
     setChargeRows(
       chargeRows.map((row) => {
@@ -390,7 +557,110 @@ export default function QuotationForm() {
     );
   };
 
+  const updateLeadField = <K extends keyof LeadWorkflowData>(field: K, value: LeadWorkflowData[K]) => {
+    setLeadData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleLeadCustomerChange = (value: string) => {
+    const customer = debtors.find((debtor) => debtor.id === parseInt(value));
+    if (!customer) return;
+
+    setLeadData((prev) => ({
+      ...prev,
+      customerId: customer.id,
+      fullName: customer.name,
+      email: customer.email || "",
+      phoneNumber: customer.phone || "",
+    }));
+    setFormData((prev) => ({
+      ...prev,
+      customerId: customer.id,
+      customerName: customer.name,
+      contactPersonId: undefined,
+    }));
+  };
+
+  const handleWorkflowVendorChange = (value: string) => {
+    const selectedVendor = creditors.find((vendor) => vendor.id === parseInt(value));
+    setRateRequestData((prev) => ({
+      ...prev,
+      vendorId: value,
+      vendorEmail: selectedVendor?.email || "",
+    }));
+  };
+
+  const buildLeadRequest = (): CreateLeadRequest => {
+    const details: CreateLeadDetailRequest[] = [];
+
+    if (leadData.shippingType === "FTL") {
+      leadData.equipments.forEach((equipment) => {
+        details.push({
+          detailType: "Equipment",
+          quantity: equipment.quantity,
+          containerTypeId: equipment.containerTypeId,
+          subCategory: equipment.subCategory,
+          weight: equipment.weight,
+        });
+      });
+    } else {
+      leadData.boxPallets.forEach((item) => {
+        details.push({
+          detailType: "BoxPallet",
+          quantity: item.quantity,
+          packageTypeId: item.packageTypeId,
+          length: item.length,
+          width: item.width,
+          height: item.height,
+          measurementType: item.measurementType,
+          volume: item.volume,
+          weight: item.weight,
+          weightType: item.weightType,
+        });
+      });
+    }
+
+    return {
+      leadType: "ManualLead",
+      customerId: leadData.customerId,
+      fullName: leadData.fullName,
+      email: leadData.email,
+      phoneNumber: leadData.phoneNumber,
+      freightMode: leadData.freightMode,
+      unitOfMeasurement: leadData.unitOfMeasurement,
+      shippingType: leadData.shippingType,
+      details: details.length > 0 ? details : undefined,
+      pickupCountryId: leadData.pickupCountryId,
+      loadingPortId: leadData.loadingPortId,
+      pickupAddress: leadData.pickupAddress || undefined,
+      deliveryCountryId: leadData.deliveryCountryId,
+      destinationPortId: leadData.destinationPortId,
+      deliveryAddress: leadData.deliveryAddress || undefined,
+      goodsReadyDate: leadData.goodsReadyDate || undefined,
+      customerReferenceNo: leadData.customerReferenceNo || undefined,
+      hsCode: leadData.hsCode || undefined,
+      productType: leadData.productType || undefined,
+      productDescription: leadData.productDescription || undefined,
+      incoTermId: leadData.incoTermId,
+      internalNotes: leadData.internalNotes || undefined,
+    };
+  };
+
   const handleSave = async () => {
+    if (!formData.customerId && !formData.customerName) {
+      toast.error("Please select a quotation customer");
+      return;
+    }
+
+    if (isNewQuotationMode && createLead && (!leadData.fullName || !leadData.email || !leadData.phoneNumber)) {
+      toast.error("Please complete lead customer name, email, and phone number");
+      return;
+    }
+
+    if (isNewQuotationMode && createRateRequest && (!rateRequestData.vendorTypeId || !rateRequestData.vendorId)) {
+      toast.error("Please select vendor type and vendor for the rate request");
+      return;
+    }
+
     const request: CreateQuotationRequest = {
       quotationDate: formData.quotationDate,
       rateRequestId: conversionRateRequestId || undefined,
@@ -398,6 +668,8 @@ export default function QuotationForm() {
       customerName: formData.customerName || "",
       contactPersonId: formData.contactPersonId,
       customerRefCode: formData.customerRefCode || undefined,
+      mode: formData.mode as CreateQuotationRequest["mode"],
+      shipmentMode: formData.mode as CreateQuotationRequest["shipmentMode"],
       loadingPortId: formData.loadingPortId,
       destinationPortId: formData.destinationPortId,
       pickupAddress: formData.pickupAddress || undefined,
@@ -450,6 +722,32 @@ export default function QuotationForm() {
     try {
       if (isEditing && quotationId) {
         await updateMutation.mutateAsync({ id: quotationId, data: request });
+      } else if (isNewQuotationMode) {
+        const selectedVendor = creditors.find((vendor) => vendor.id === parseInt(rateRequestData.vendorId));
+        const completeRequest: CreateCompleteQuotationRequest = {
+          createLead,
+          createRateRequest,
+          lead: createLead ? buildLeadRequest() : undefined,
+          rateRequest: createRateRequest
+            ? {
+                vendorId: selectedVendor?.id,
+                vendorName: selectedVendor?.name || "",
+                vendorType: vendorTypeName,
+                vendorEmail: rateRequestData.vendorEmail || undefined,
+                internalNotes: rateRequestData.internalNotes || undefined,
+                mode: formData.mode as CreateQuotationRequest["mode"],
+                shipmentMode: formData.mode as CreateQuotationRequest["shipmentMode"],
+                polId: formData.loadingPortId,
+                podId: formData.destinationPortId,
+              }
+            : undefined,
+          quotation: {
+            ...request,
+            rateRequestId: undefined,
+            status: "Pending",
+          },
+        };
+        await createCompleteMutation.mutateAsync(completeRequest);
       } else {
         await createMutation.mutateAsync(request);
       }
@@ -459,7 +757,7 @@ export default function QuotationForm() {
     }
   };
 
-  const isSaving = createMutation.isPending || updateMutation.isPending;
+  const isSaving = createMutation.isPending || createCompleteMutation.isPending || updateMutation.isPending;
 
   const getTitle = () => {
     if (isViewMode) return "View Quotation";
@@ -513,6 +811,383 @@ export default function QuotationForm() {
                   )}
                 </>
               )
+            )}
+
+            {isNewQuotationMode && (
+              <Card>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg text-primary">Workflow</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-6">
+                    <label className="flex items-center gap-2 text-sm font-medium">
+                      <Checkbox
+                        checked={createLead}
+                        onCheckedChange={(checked) => setCreateLead(checked === true)}
+                      />
+                      Create Lead
+                    </label>
+                    <label className="flex items-center gap-2 text-sm font-medium">
+                      <Checkbox
+                        checked={createRateRequest}
+                        onCheckedChange={(checked) => setCreateRateRequest(checked === true)}
+                      />
+                      Create Rate Request
+                    </label>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {isNewQuotationMode && createLead && (
+              <Card>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg text-primary">Lead Details</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label>Customer Name *</Label>
+                      <SearchableSelect
+                        options={debtors.map((customer) => ({
+                          value: customer.id.toString(),
+                          label: customer.name,
+                        }))}
+                        value={leadData.customerId?.toString() || ""}
+                        onValueChange={handleLeadCustomerChange}
+                        placeholder="Select customer"
+                        searchPlaceholder="Search customers..."
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Email Address *</Label>
+                      <Input
+                        type="email"
+                        value={leadData.email}
+                        onChange={(e) => updateLeadField("email", e.target.value)}
+                        placeholder="Enter email address"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Phone Number *</Label>
+                      <Input
+                        value={leadData.phoneNumber}
+                        onChange={(e) => updateLeadField("phoneNumber", e.target.value)}
+                        placeholder="Enter phone number"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Mode of Freight *</Label>
+                    <ToggleGroup
+                      type="single"
+                      value={leadData.freightMode}
+                      onValueChange={(value) => {
+                        if (value) updateLeadField("freightMode", value as FreightMode);
+                      }}
+                      className="justify-start"
+                    >
+                      <ToggleGroupItem value="SeaFreight" className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground px-6">
+                        <Ship className="h-4 w-4 mr-2" />
+                        Sea Freight
+                      </ToggleGroupItem>
+                      <ToggleGroupItem value="AirFreight" className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground px-6">
+                        <Plane className="h-4 w-4 mr-2" />
+                        Air Freight
+                      </ToggleGroupItem>
+                      <ToggleGroupItem value="LandFreight" className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground px-6">
+                        <Truck className="h-4 w-4 mr-2" />
+                        Land Freight
+                      </ToggleGroupItem>
+                    </ToggleGroup>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Unit of Measurement</Label>
+                      <SearchableSelect
+                        options={[
+                          { value: "KG", label: "KG" },
+                          { value: "LB", label: "LB" },
+                        ]}
+                        value={leadData.unitOfMeasurement}
+                        onValueChange={(value) => updateLeadField("unitOfMeasurement", value as UnitOfMeasurement)}
+                        placeholder="Select unit"
+                        searchPlaceholder="Search..."
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Shipping Type</Label>
+                      <ToggleGroup
+                        type="single"
+                        value={leadData.shippingType}
+                        onValueChange={(value) => {
+                          if (value) updateLeadField("shippingType", value as ShippingType);
+                        }}
+                        className="justify-start"
+                      >
+                        <ToggleGroupItem value="FTL" className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground px-6">
+                          <Container className="h-4 w-4 mr-2" />
+                          Equipment (FTL)
+                        </ToggleGroupItem>
+                        <ToggleGroupItem value="LTL" className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground px-6">
+                          <Package className="h-4 w-4 mr-2" />
+                          Box/Pallets (LTL)
+                        </ToggleGroupItem>
+                      </ToggleGroup>
+                    </div>
+                  </div>
+
+                  {leadData.shippingType === "FTL" ? (
+                    <EquipmentGrid
+                      equipments={leadData.equipments}
+                      onChange={(equipments) => updateLeadField("equipments", equipments)}
+                      containerTypes={containerTypes}
+                    />
+                  ) : (
+                    <BoxPalletsGrid
+                      boxPallets={leadData.boxPallets}
+                      onChange={(boxPallets) => updateLeadField("boxPallets", boxPallets)}
+                      packageTypes={packageTypes}
+                    />
+                  )}
+
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <h4 className="font-medium text-sm text-muted-foreground">Pickup goods from:</h4>
+                      <div className="space-y-2">
+                        <Label>Country *</Label>
+                        <SearchableSelect
+                          options={countries.map((country) => ({
+                            value: country.id.toString(),
+                            label: `${country.name} (${country.code})`,
+                          }))}
+                          value={leadData.pickupCountryId?.toString() || ""}
+                          onValueChange={(value) => {
+                            updateLeadField("pickupCountryId", parseInt(value));
+                            updateLeadField("loadingPortId", undefined);
+                          }}
+                          placeholder="Select country"
+                          searchPlaceholder="Search countries..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Loading Port *</Label>
+                        <SearchableSelect
+                          options={pickupPorts.map((port) => ({
+                            value: port.id.toString(),
+                            label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ""} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ""} - ${port.city}, ${port.country}`,
+                          }))}
+                          value={leadData.loadingPortId?.toString() || ""}
+                          onValueChange={(value) => updateLeadField("loadingPortId", parseInt(value))}
+                          placeholder="Select loading port"
+                          searchPlaceholder="Search ports..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Pickup Address</Label>
+                        <Textarea
+                          value={leadData.pickupAddress}
+                          onChange={(e) => updateLeadField("pickupAddress", e.target.value)}
+                          placeholder="Enter pickup address"
+                          rows={3}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <h4 className="font-medium text-sm text-muted-foreground">Deliver goods to:</h4>
+                      <div className="space-y-2">
+                        <Label>Country *</Label>
+                        <SearchableSelect
+                          options={countries.map((country) => ({
+                            value: country.id.toString(),
+                            label: `${country.name} (${country.code})`,
+                          }))}
+                          value={leadData.deliveryCountryId?.toString() || ""}
+                          onValueChange={(value) => {
+                            updateLeadField("deliveryCountryId", parseInt(value));
+                            updateLeadField("destinationPortId", undefined);
+                          }}
+                          placeholder="Select country"
+                          searchPlaceholder="Search countries..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Destination Port *</Label>
+                        <SearchableSelect
+                          options={deliveryPorts.map((port) => ({
+                            value: port.id.toString(),
+                            label: `${port.seaPortName}${port.seaPortCode ? ` (${port.seaPortCode})` : ""} / ${port.airPortName}${port.airPortCode ? ` (${port.airPortCode})` : ""} - ${port.city}, ${port.country}`,
+                          }))}
+                          value={leadData.destinationPortId?.toString() || ""}
+                          onValueChange={(value) => updateLeadField("destinationPortId", parseInt(value))}
+                          placeholder="Select destination port"
+                          searchPlaceholder="Search ports..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Delivery Address</Label>
+                        <Textarea
+                          value={leadData.deliveryAddress}
+                          onChange={(e) => updateLeadField("deliveryAddress", e.target.value)}
+                          placeholder="Enter delivery address"
+                          rows={3}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label>Goods ready date</Label>
+                      <Input
+                        type="date"
+                        value={leadData.goodsReadyDate}
+                        onChange={(e) => updateLeadField("goodsReadyDate", e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Customer reference No</Label>
+                      <Input
+                        value={leadData.customerReferenceNo}
+                        onChange={(e) => updateLeadField("customerReferenceNo", e.target.value)}
+                        placeholder="Optional"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>HS Code</Label>
+                      <Input
+                        value={leadData.hsCode}
+                        onChange={(e) => updateLeadField("hsCode", e.target.value)}
+                        placeholder="Enter HS code"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label>Product Type</Label>
+                      <SearchableSelect
+                        options={PRODUCT_TYPES.map((type) => ({ value: type, label: type }))}
+                        value={leadData.productType}
+                        onValueChange={(value) => updateLeadField("productType", value)}
+                        placeholder="Select product type"
+                        searchPlaceholder="Search product types..."
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Product description</Label>
+                      <Input
+                        value={leadData.productDescription}
+                        onChange={(e) => updateLeadField("productDescription", e.target.value)}
+                        placeholder="Enter product description"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Inco Terms</Label>
+                      <SearchableSelect
+                        options={incoTerms.map((term) => ({
+                          value: term.id.toString(),
+                          label: `${term.code} - ${term.name}`,
+                        }))}
+                        value={leadData.incoTermId?.toString() || ""}
+                        onValueChange={(value) => updateLeadField("incoTermId", parseInt(value))}
+                        placeholder="Select Inco Term"
+                        searchPlaceholder="Search inco terms..."
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Internal Sales Notes</Label>
+                    <Textarea
+                      value={leadData.internalNotes}
+                      onChange={(e) => updateLeadField("internalNotes", e.target.value)}
+                      placeholder="Private notes for the internal sales team"
+                      rows={4}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {isNewQuotationMode && createRateRequest && (
+              <Card>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg text-primary">Rate Request Details</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label>Rate Code</Label>
+                      <Input value="Auto-generated" readOnly className="bg-muted" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Vendor Type *</Label>
+                      <SearchableSelect
+                        options={categoryTypes.map((type) => ({
+                          value: type.id.toString(),
+                          label: type.name,
+                        }))}
+                        value={rateRequestData.vendorTypeId}
+                        onValueChange={(value) =>
+                          setRateRequestData((prev) => ({
+                            ...prev,
+                            vendorTypeId: value,
+                            vendorId: "",
+                            vendorEmail: "",
+                          }))
+                        }
+                        placeholder="Select vendor type"
+                        searchPlaceholder="Search..."
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Vendor Name *</Label>
+                      <SearchableSelect
+                        options={filteredVendors.map((vendor) => ({
+                          value: vendor.id.toString(),
+                          label: vendor.name,
+                        }))}
+                        value={rateRequestData.vendorId}
+                        onValueChange={handleWorkflowVendorChange}
+                        placeholder="Select vendor"
+                        searchPlaceholder="Search..."
+                        emptyMessage={
+                          rateRequestData.vendorTypeId
+                            ? "No creditors tagged with this vendor type - clear Vendor Type to see all"
+                            : "No creditors found"
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Vendor Email</Label>
+                      <Input
+                        value={rateRequestData.vendorEmail}
+                        onChange={(e) =>
+                          setRateRequestData((prev) => ({ ...prev, vendorEmail: e.target.value }))
+                        }
+                        placeholder="vendor@email.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Internal Sales Notes</Label>
+                      <Textarea
+                        value={rateRequestData.internalNotes}
+                        onChange={(e) =>
+                          setRateRequestData((prev) => ({ ...prev, internalNotes: e.target.value }))
+                        }
+                        placeholder="Private notes for the internal sales team"
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             )}
 
             {/* Quotation Details */}
@@ -647,7 +1322,7 @@ export default function QuotationForm() {
                   <div className="space-y-2">
                     <Label>Status</Label>
                     <SearchableSelect
-                      disabled={isReadOnly}
+                      disabled={isReadOnly || isNewQuotationMode}
                       options={[
                         { value: "Pending", label: "Pending" },
                         { value: "Approved", label: "Approved" },
@@ -783,6 +1458,180 @@ export default function QuotationForm() {
                   disabled={isReadOnly}
                   rows={4}
                 />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg text-primary">Cargo Details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="w-64 space-y-2">
+                  <Label>Calculation Mode</Label>
+                  <SearchableSelect
+                    disabled={isReadOnly}
+                    options={[
+                      { value: "units", label: "By Units" },
+                      { value: "shipment", label: "Shipment Total" },
+                    ]}
+                    value={formData.cargoCalculationMode || "units"}
+                    onValueChange={handleCargoModeChange}
+                    placeholder="Select mode"
+                    searchPlaceholder="Search..."
+                  />
+                </div>
+
+                {formData.cargoCalculationMode === "shipment" ? (
+                  <>
+                    <div className="grid gap-2 text-sm font-medium" style={{ gridTemplateColumns: "1fr 2fr 1fr 1fr 3fr 0.5fr" }}>
+                      <div>Qty</div>
+                      <div>Load Type</div>
+                      <div>Total CBM</div>
+                      <div>Total Weight</div>
+                      <div>Description</div>
+                      <div></div>
+                    </div>
+                    {cargoRows.map((row, index) => (
+                      <div key={row.id} className="grid gap-2" style={{ gridTemplateColumns: "1fr 2fr 1fr 1fr 3fr 0.5fr" }}>
+                        <Input
+                          type="number"
+                          value={row.quantity}
+                          onChange={(e) => updateCargoRow(row.id, "quantity", parseInt(e.target.value) || 1)}
+                          disabled={isReadOnly}
+                        />
+                        <Input
+                          value={row.loadType || ""}
+                          onChange={(e) => updateCargoRow(row.id, "loadType", e.target.value)}
+                          placeholder="Load type"
+                          disabled={isReadOnly}
+                        />
+                        <Input
+                          type="number"
+                          value={row.totalCbm || ""}
+                          onChange={(e) => updateCargoRow(row.id, "totalCbm", parseFloat(e.target.value) || undefined)}
+                          disabled={isReadOnly}
+                        />
+                        <Input
+                          type="number"
+                          value={row.totalWeight || ""}
+                          onChange={(e) => updateCargoRow(row.id, "totalWeight", parseFloat(e.target.value) || undefined)}
+                          disabled={isReadOnly}
+                        />
+                        <Input
+                          value={row.cargoDescription || ""}
+                          onChange={(e) => updateCargoRow(row.id, "cargoDescription", e.target.value)}
+                          placeholder="Cargo description"
+                          disabled={isReadOnly}
+                        />
+                        <div>
+                          {!isReadOnly &&
+                            (index === cargoRows.length - 1 ? (
+                              <Button onClick={addCargoRow} className="btn-success w-full">
+                                +
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="destructive"
+                                size="icon"
+                                className="h-10 w-full"
+                                onClick={() => deleteCargoRow(row.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            ))}
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                ) : (
+                  <>
+                    <div className="grid gap-2 text-sm font-medium" style={{ gridTemplateColumns: "1fr 1.5fr 1fr 1fr 1fr 1fr 1fr 2fr 0.5fr" }}>
+                      <div>Qty</div>
+                      <div>Package</div>
+                      <div>Length</div>
+                      <div>Width</div>
+                      <div>Height</div>
+                      <div>CBM</div>
+                      <div>Weight</div>
+                      <div>Description</div>
+                      <div></div>
+                    </div>
+                    {cargoRows.map((row, index) => (
+                      <div key={row.id} className="grid gap-2" style={{ gridTemplateColumns: "1fr 1.5fr 1fr 1fr 1fr 1fr 1fr 2fr 0.5fr" }}>
+                        <Input
+                          type="number"
+                          value={row.quantity}
+                          onChange={(e) => updateCargoRow(row.id, "quantity", parseInt(e.target.value) || 1)}
+                          disabled={isReadOnly}
+                        />
+                        <SearchableSelect
+                          disabled={isReadOnly}
+                          options={packageTypes.map((type) => ({
+                            value: type.id.toString(),
+                            label: type.name,
+                          }))}
+                          value={row.packageTypeId?.toString() || ""}
+                          onValueChange={(value) => updateCargoRow(row.id, "packageTypeId", parseInt(value))}
+                          placeholder="Package"
+                          searchPlaceholder="Search..."
+                        />
+                        <Input
+                          type="number"
+                          value={row.length || ""}
+                          onChange={(e) => updateCargoRow(row.id, "length", parseFloat(e.target.value) || undefined)}
+                          disabled={isReadOnly}
+                        />
+                        <Input
+                          type="number"
+                          value={row.width || ""}
+                          onChange={(e) => updateCargoRow(row.id, "width", parseFloat(e.target.value) || undefined)}
+                          disabled={isReadOnly}
+                        />
+                        <Input
+                          type="number"
+                          value={row.height || ""}
+                          onChange={(e) => updateCargoRow(row.id, "height", parseFloat(e.target.value) || undefined)}
+                          disabled={isReadOnly}
+                        />
+                        <Input
+                          type="number"
+                          value={row.cbm || ""}
+                          onChange={(e) => updateCargoRow(row.id, "cbm", parseFloat(e.target.value) || undefined)}
+                          disabled={isReadOnly}
+                        />
+                        <Input
+                          type="number"
+                          value={row.weight || ""}
+                          onChange={(e) => updateCargoRow(row.id, "weight", parseFloat(e.target.value) || undefined)}
+                          disabled={isReadOnly}
+                        />
+                        <Input
+                          value={row.cargoDescription || ""}
+                          onChange={(e) => updateCargoRow(row.id, "cargoDescription", e.target.value)}
+                          placeholder="Cargo description"
+                          disabled={isReadOnly}
+                        />
+                        <div>
+                          {!isReadOnly &&
+                            (index === cargoRows.length - 1 ? (
+                              <Button onClick={addCargoRow} className="btn-success w-full">
+                                +
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="destructive"
+                                size="icon"
+                                className="h-10 w-full"
+                                onClick={() => deleteCargoRow(row.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            ))}
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
               </CardContent>
             </Card>
 

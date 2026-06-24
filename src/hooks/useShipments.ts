@@ -76,6 +76,8 @@ export function useCreateShipment() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shipments'] });
+      queryClient.invalidateQueries({ queryKey: ['quotations'] });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
       queryClient.invalidateQueries({ queryKey: ['nextJobNumber'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Shipment created successfully');

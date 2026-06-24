@@ -267,6 +267,7 @@ export interface AddShipmentStatusLogRequest {
 }
 
 export interface CreateShipmentRequest {
+  quotationId?: number;
   jobDate: string;
   direction: ShipmentDirection;
   mode: ShipmentMode;

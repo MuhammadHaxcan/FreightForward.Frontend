@@ -103,7 +103,8 @@ export function CBMCalculatorWidget() {
         <TooltipTrigger asChild>
           <Button
             onClick={() => setOpen(true)}
-            className="fixed bottom-6 right-6 z-40 rounded-full w-12 h-12 shadow-lg hover:shadow-xl p-0"
+            aria-label="Open CBM calculator"
+            className="fixed right-5 top-1/2 z-40 h-12 w-12 -translate-y-1/2 rounded-full p-0 shadow-lg hover:shadow-xl"
           >
             <Package size={22} />
           </Button>

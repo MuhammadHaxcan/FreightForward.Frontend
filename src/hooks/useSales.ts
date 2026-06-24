@@ -10,6 +10,7 @@ import {
   UpdateRateRequestRequest,
   RateRequestSendEmailRequest,
   CreateQuotationRequest,
+  CreateCompleteQuotationRequest,
   UpdateQuotationRequest,
   LeadStatus,
   RateRequestStatus,
@@ -299,6 +300,30 @@ export function useCreateQuotation() {
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to create quotation');
+    },
+  });
+}
+
+export function useCreateCompleteQuotation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: CreateCompleteQuotationRequest) => {
+      const response = await quotationApi.createComplete(data);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      return response.data!;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quotations'] });
+      queryClient.invalidateQueries({ queryKey: ['rateRequests'] });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      toast.success('Quotation workflow created successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to create quotation workflow');
     },
   });
 }
