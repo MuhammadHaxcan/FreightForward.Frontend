@@ -59,6 +59,8 @@ export default function RateRequests() {
         return <Badge className="bg-blue-500 text-white">Sent</Badge>;
       case "Received":
         return <Badge className="bg-green-500 text-white">Received</Badge>;
+      case "Quoted":
+        return <Badge className="bg-purple-500 text-white">Quoted</Badge>;
       default:
         return <Badge className="bg-gray-500 text-white">{status}</Badge>;
     }
@@ -216,7 +218,7 @@ export default function RateRequests() {
                               <Edit className="h-4 w-4" />
                             </Button>
                           </PermissionGate>
-                          {request.requestStatus !== "Received" && (
+                          {(request.requestStatus === "Pending" || request.requestStatus === "Sent") && (
                             <PermissionGate permission="ratereq_edit">
                               <Button
                                 variant="ghost"

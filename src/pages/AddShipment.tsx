@@ -551,6 +551,8 @@ const AddShipment = () => {
       if (!savedShipmentId || !conversionQuotationId || !quotationForShipment) return;
 
       try {
+        await convertQuotationToShipment.mutateAsync(conversionQuotationId);
+
         // Add customer as Shipper party
         if (quotationForShipment.customerId) {
           const partyData: AddShipmentPartyRequest = {
@@ -696,13 +698,6 @@ const AddShipment = () => {
           }
         }
 
-        // Update lead status to Converted
-        try {
-          await convertQuotationToShipment.mutateAsync(conversionQuotationId);
-        } catch {
-          // Non-critical: don't block conversion if lead status update fails
-        }
-
         // Refetch shipment to get updated data
         refetchShipment();
 
@@ -711,6 +706,7 @@ const AddShipment = () => {
         toast.success('Quotation data has been pre-filled to the shipment');
       } catch (error) {
         console.error('Error adding conversion data:', error);
+        toast.error(error instanceof Error ? error.message : 'Failed to mark quotation as converted');
       }
     };
 

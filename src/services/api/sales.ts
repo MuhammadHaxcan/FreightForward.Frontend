@@ -1,8 +1,8 @@
 import { fetchApi, PaginatedList } from './base';
 import type { ShipmentMode } from './shipment';
-export type LeadStatus = 'New' | 'Pending' | 'Converted';
-export type RateRequestStatus = 'Pending' | 'Sent' | 'Received';
-export type QuotationStatus = 'Pending' | 'Approved' | 'Rejected';
+export type LeadStatus = 'New' | 'RateRequested' | 'Quoted' | 'Converted';
+export type RateRequestStatus = 'Pending' | 'Sent' | 'Received' | 'Quoted';
+export type QuotationStatus = 'Pending' | 'Approved' | 'Rejected' | 'Converted';
 
 // New Lead form types
 export type FreightMode = 'SeaFreight' | 'AirFreight' | 'LandFreight';
@@ -125,6 +125,7 @@ export interface Lead {
   leadStatus: LeadStatus;
   leadType: LeadType;
   portalLeadId?: number;
+  internalNotes?: string;
   status?: string;
   createdAt: string;
 }
@@ -167,10 +168,11 @@ export interface CreateLeadRequest {
   productType?: string;
   productDescription?: string;
   incoTermId?: number;
+  internalNotes?: string;
 }
 
 export interface UpdateLeadRequest extends CreateLeadRequest {
-  leadStatus: LeadStatus;
+  leadStatus?: LeadStatus;
 }
 
 export interface RateRequest {
@@ -192,6 +194,7 @@ export interface RateRequest {
   // NEW vendor fields
   vendorType?: string;
   vendorEmail?: string;
+  internalNotes?: string;
 
   // Lead-like fields
   fullName: string;
@@ -229,14 +232,12 @@ export interface CreateRateRequestRequest {
   // NEW vendor fields
   vendorType?: string;
   vendorEmail?: string;
+  internalNotes?: string;
 }
 
-// Mirrors the backend's `UpdateRateRequestRequest : CreateRateRequestRequest`.
-// SalesService.UpdateAsync currently persists: vendorId, vendorName, vendorType,
-// vendorEmail, polCountry, podCountry, status. All fields are partial — only
-// non-empty values are written.
+// Mirrors the backend's partial rate-request update behavior.
 export interface UpdateRateRequestRequest extends CreateRateRequestRequest {
-  status?: string;
+  status?: RateRequestStatus;
 }
 
 export interface Quotation {
@@ -272,6 +273,7 @@ export interface Quotation {
   documentRequired?: string;
   notes?: string;
   notesForBooking?: string;
+  internalNotes?: string;
 }
 
 export interface QuotationDetail extends Quotation {
@@ -363,6 +365,7 @@ export interface CreateQuotationRequest {
   documentRequired?: string;
   notes?: string;
   notesForBooking?: string;
+  internalNotes?: string;
 
   charges?: {
     chargeType?: string;

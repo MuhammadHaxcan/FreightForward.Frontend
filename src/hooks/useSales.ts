@@ -224,6 +224,7 @@ export function useUpdateRateRequest() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rateRequests'] });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
       toast.success('Rate request updated successfully');
     },
     onError: (error: Error) => {
@@ -293,6 +294,7 @@ export function useCreateQuotation() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quotations'] });
       queryClient.invalidateQueries({ queryKey: ['rateRequests'] });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
       toast.success('Quotation created successfully');
     },
     onError: (error: Error) => {
@@ -314,6 +316,8 @@ export function useUpdateQuotation() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['quotations'] });
+      queryClient.invalidateQueries({ queryKey: ['rateRequests'] });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
       toast.success('Quotation updated successfully');
     },
     onError: (error: Error) => {
@@ -372,6 +376,7 @@ export function useApproveQuotation() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['quotations'] });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
       toast.success(`Quotation approved! Booking No: ${data.bookingNo}`);
     },
     onError: (error: Error) => {
@@ -417,6 +422,7 @@ export function useSendRateRequestEmail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rateRequests'] });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
       toast.success('Email sent successfully');
     },
     onError: (error: Error) => {

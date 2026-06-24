@@ -70,14 +70,14 @@ export function SendEmailModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-modal-md p-0">
+      <DialogContent className="max-w-modal-md max-h-[90vh] overflow-hidden p-0 flex flex-col gap-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-lg font-semibold">
             {title ?? `Send by Email`}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 p-6">
+        <div className="space-y-4 p-6 flex-1 overflow-y-auto min-h-0">
           {/* Your email (read-only) */}
           <div className="space-y-2">
             <Label>Your Email</Label>
@@ -139,7 +139,7 @@ export function SendEmailModal({
           </div>
         </div>
 
-        <DialogFooter className="gap-2 px-6 pb-6">
+        <DialogFooter className="shrink-0 gap-2 border-t border-border bg-card px-6 py-4">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSending}>
             Cancel
           </Button>

@@ -92,6 +92,8 @@ export default function Quotations() {
         return <Badge className="bg-yellow-500 text-white">Pending</Badge>;
       case "Rejected":
         return <Badge className="bg-red-500 text-white">Rejected</Badge>;
+      case "Converted":
+        return <Badge className="bg-purple-500 text-white">Converted</Badge>;
       default:
         return <Badge className="bg-gray-500 text-white">{status}</Badge>;
     }

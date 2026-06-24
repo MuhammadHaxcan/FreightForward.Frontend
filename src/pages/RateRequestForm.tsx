@@ -5,6 +5,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Loader2, ArrowLeft } from "lucide-react";
@@ -56,6 +57,7 @@ export default function RateRequestForm() {
   const [vendorTypeId, setVendorTypeId] = useState<string>("");
   const [vendorId, setVendorId] = useState<string>("");
   const [vendorEmail, setVendorEmail] = useState<string>("");
+  const [internalNotes, setInternalNotes] = useState<string>("");
 
   // Edit mode: hydrate state once both rateRequest and the categoryTypes
   // lookup are loaded (rateRequest stores vendorType as its display name; the
@@ -66,6 +68,7 @@ export default function RateRequestForm() {
       setVendorTypeId(matchedCategory?.id.toString() ?? "");
       setVendorId(rateRequest.vendorId?.toString() ?? "");
       setVendorEmail(rateRequest.vendorEmail ?? "");
+      setInternalNotes(rateRequest.internalNotes ?? "");
     }
   }, [rateRequest, categoryTypes]);
 
@@ -124,6 +127,7 @@ export default function RateRequestForm() {
             vendorName: selectedVendor?.name || "",
             vendorType: vendorTypeName,
             vendorEmail,
+            internalNotes,
           },
         });
       } else {
@@ -137,6 +141,7 @@ export default function RateRequestForm() {
           vendorName: selectedVendor?.name || "",
           vendorType: vendorTypeName,
           vendorEmail,
+          internalNotes: internalNotes || undefined,
         });
       }
       navigate("/sales/rate-requests");
@@ -279,6 +284,20 @@ export default function RateRequestForm() {
               </CardContent>
             </Card>
 
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg text-primary">Internal Sales Notes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  value={internalNotes}
+                  onChange={(e) => setInternalNotes(e.target.value)}
+                  placeholder="Private notes for the internal sales team"
+                  rows={4}
+                />
+              </CardContent>
+            </Card>
+
             {/* Footer Buttons */}
             <div className="flex justify-end gap-2 pb-6">
               <Button variant="outline" onClick={() => navigate("/sales/rate-requests")}>
@@ -304,4 +323,3 @@ export default function RateRequestForm() {
     </MainLayout>
   );
 }
-

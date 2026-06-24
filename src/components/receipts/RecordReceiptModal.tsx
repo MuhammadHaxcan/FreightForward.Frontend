@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -224,97 +225,98 @@ export function RecordReceiptModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-modal-4xl max-h-[90vh] overflow-y-auto p-0">
+      <DialogContent className="max-w-modal-4xl max-h-[90vh] overflow-hidden p-0 flex flex-col gap-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-lg font-semibold">Record Receipt</DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-3 gap-4 p-6">
-          {/* Customer Selection */}
-          <div className="space-y-2">
-            <Label>Customers</Label>
-            <SearchableSelect
-              options={customers.map((customer) => ({
-                value: customer.id.toString(),
-                label: customer.name,
-              }))}
-              value={customerId?.toString() || ""}
-              onValueChange={(v) => setCustomerId(parseInt(v))}
-              placeholder="Select Customer"
-              searchPlaceholder="Search customers..."
-            />
-          </div>
-
-          {/* Invoice Selection (multi-select chips) */}
-          <div className="space-y-2">
-            <Label>Invoice</Label>
-            <div className="border rounded-md p-2 min-h-[38px] bg-background">
-              <div className="flex flex-wrap gap-1 mb-2">
-                {selectedInvoices.map((inv) => (
-                  <span
-                    key={inv.invoiceId}
-                    className="inline-flex items-center bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded"
-                  >
-                    {inv.invoiceNo}
-                    <X
-                      className="h-3 w-3 ml-1 cursor-pointer"
-                      onClick={() => {
-                        const found = unpaidInvoices.find(ui => ui.id === inv.invoiceId);
-                        if (found) handleInvoiceSelect(found, false);
-                        else setSelectedInvoices(prev => prev.filter(si => si.invoiceId !== inv.invoiceId));
-                      }}
-                    />
-                  </span>
-                ))}
-              </div>
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="grid grid-cols-3 gap-4 p-6">
+            {/* Customer Selection */}
+            <div className="space-y-2">
+              <Label>Customers</Label>
               <SearchableSelect
-                options={unpaidInvoices
-                  .filter(inv => !selectedInvoices.some(si => si.invoiceId === inv.id))
-                  .map((invoice) => ({
-                    value: invoice.id.toString(),
-                    label: `${invoice.invoiceNo} - Pending: ${invoice.currencyCode || baseCurrencyCode} ${(invoice.pendingAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
-                  }))}
-                value=""
-                onValueChange={(v) => {
-                  const invoice = unpaidInvoices.find(i => i.id === parseInt(v));
-                  if (invoice) handleInvoiceSelect(invoice, true);
-                }}
-                placeholder="Select Invoice"
-                searchPlaceholder="Search invoices..."
-                disabled={!customerId}
-                triggerClassName="h-8"
+                options={customers.map((customer) => ({
+                  value: customer.id.toString(),
+                  label: customer.name,
+                }))}
+                value={customerId?.toString() || ""}
+                onValueChange={(v) => setCustomerId(parseInt(v))}
+                placeholder="Select Customer"
+                searchPlaceholder="Search customers..."
               />
             </div>
-          </div>
 
-          {/* Payment Type */}
-          <div className="space-y-2">
-            <Label>Payment Type</Label>
-            <SearchableSelect
-              options={paymentTypes.map((pt) => ({
-                value: pt.code,
-                label: pt.name.toUpperCase(),
-              }))}
-              value={paymentMode}
-              onValueChange={(v) => {
-                setPaymentMode(v as PaymentMode);
-                // Reset bank-related fields when changing payment type
-                if (!paymentTypes.find(pt => pt.code === v)?.requiresBank) {
-                  setBankId(null);
-                }
-                if (!paymentTypes.find(pt => pt.code === v)?.requiresChequeDetails) {
-                  setChequeNo("");
-                  setChequeDate("");
-                  setChequeBank("");
-                }
-                if (v !== "PostDatedCheque") {
-                  setPostDatedValidDate("");
-                }
-              }}
-              placeholder="Select Payment Type"
-              searchPlaceholder="Search payment types..."
-            />
-          </div>
+            {/* Invoice Selection (multi-select chips) */}
+            <div className="space-y-2">
+              <Label>Invoice</Label>
+              <div className="border rounded-md p-2 min-h-[38px] bg-background">
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {selectedInvoices.map((inv) => (
+                    <span
+                      key={inv.invoiceId}
+                      className="inline-flex items-center bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded"
+                    >
+                      {inv.invoiceNo}
+                      <X
+                        className="h-3 w-3 ml-1 cursor-pointer"
+                        onClick={() => {
+                          const found = unpaidInvoices.find(ui => ui.id === inv.invoiceId);
+                          if (found) handleInvoiceSelect(found, false);
+                          else setSelectedInvoices(prev => prev.filter(si => si.invoiceId !== inv.invoiceId));
+                        }}
+                      />
+                    </span>
+                  ))}
+                </div>
+                <SearchableSelect
+                  options={unpaidInvoices
+                    .filter(inv => !selectedInvoices.some(si => si.invoiceId === inv.id))
+                    .map((invoice) => ({
+                      value: invoice.id.toString(),
+                      label: `${invoice.invoiceNo} - Pending: ${invoice.currencyCode || baseCurrencyCode} ${(invoice.pendingAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+                    }))}
+                  value=""
+                  onValueChange={(v) => {
+                    const invoice = unpaidInvoices.find(i => i.id === parseInt(v));
+                    if (invoice) handleInvoiceSelect(invoice, true);
+                  }}
+                  placeholder="Select Invoice"
+                  searchPlaceholder="Search invoices..."
+                  disabled={!customerId}
+                  triggerClassName="h-8"
+                />
+              </div>
+            </div>
+
+            {/* Payment Type */}
+            <div className="space-y-2">
+              <Label>Payment Type</Label>
+              <SearchableSelect
+                options={paymentTypes.map((pt) => ({
+                  value: pt.code,
+                  label: pt.name.toUpperCase(),
+                }))}
+                value={paymentMode}
+                onValueChange={(v) => {
+                  setPaymentMode(v as PaymentMode);
+                  // Reset bank-related fields when changing payment type
+                  if (!paymentTypes.find(pt => pt.code === v)?.requiresBank) {
+                    setBankId(null);
+                  }
+                  if (!paymentTypes.find(pt => pt.code === v)?.requiresChequeDetails) {
+                    setChequeNo("");
+                    setChequeDate("");
+                    setChequeBank("");
+                  }
+                  if (v !== "PostDatedCheque") {
+                    setPostDatedValidDate("");
+                  }
+                }}
+                placeholder="Select Payment Type"
+                searchPlaceholder="Search payment types..."
+              />
+            </div>
 
           {/* Cheque Details Row - Only show for Cheque payment type */}
           {requiresChequeDetails && (
@@ -385,6 +387,7 @@ export function RecordReceiptModal({
               value={remarks}
               onChange={(e) => setRemarks(e.target.value)}
               placeholder="Narration"
+              title={remarks || undefined}
               rows={1}
             />
           </div>
@@ -432,58 +435,59 @@ export function RecordReceiptModal({
               className="bg-muted font-semibold"
             />
           </div>
-        </div>
+          </div>
 
-        {/* Invoice Details Table */}
-        {selectedInvoices.length > 0 && (
-          <div className="border rounded-lg overflow-hidden mx-6 mb-4">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-table-header">
-                  <TableHead className="text-table-header-foreground font-semibold">Invoice No</TableHead>
-                  <TableHead className="text-table-header-foreground font-semibold">Total Amount</TableHead>
-                  <TableHead className="text-table-header-foreground font-semibold">Pending Amount</TableHead>
-                  <TableHead className="text-table-header-foreground font-semibold">Paying Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {selectedInvoices.map((inv) => (
-                  <TableRow key={inv.invoiceId}>
-                    <TableCell>{inv.invoiceNo}</TableCell>
-                    <TableCell>
-                      {inv.currency || baseCurrencyCode} {(inv.totalAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+          {/* Invoice Details Table */}
+          {selectedInvoices.length > 0 && (
+            <div className="border rounded-lg overflow-hidden mx-6 mb-4">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-table-header">
+                    <TableHead className="text-table-header-foreground font-semibold">Invoice No</TableHead>
+                    <TableHead className="text-table-header-foreground font-semibold">Total Amount</TableHead>
+                    <TableHead className="text-table-header-foreground font-semibold">Pending Amount</TableHead>
+                    <TableHead className="text-table-header-foreground font-semibold">Paying Amount</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {selectedInvoices.map((inv) => (
+                    <TableRow key={inv.invoiceId}>
+                      <TableCell>{inv.invoiceNo}</TableCell>
+                      <TableCell>
+                        {inv.currency || baseCurrencyCode} {(inv.totalAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell>
+                        {inv.currency || baseCurrencyCode} {(inv.pendingAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          value={inv.payingAmount}
+                          onChange={(e) => handlePayingAmountChange(inv.invoiceId, parseFloat(e.target.value) || 0)}
+                          className="w-32"
+                          min="0"
+                          max={inv.pendingAmount}
+                          step="0.01"
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow className="bg-muted/50">
+                    <TableCell colSpan={3} className="text-right font-semibold">
+                      Total:
                     </TableCell>
-                    <TableCell>
-                      {inv.currency || baseCurrencyCode} {(inv.pendingAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        value={inv.payingAmount}
-                        onChange={(e) => handlePayingAmountChange(inv.invoiceId, parseFloat(e.target.value) || 0)}
-                        className="w-32"
-                        min="0"
-                        max={inv.pendingAmount}
-                        step="0.01"
-                      />
+                    <TableCell className="font-semibold">
+                      {currency} {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </TableCell>
                   </TableRow>
-                ))}
-                <TableRow className="bg-muted/50">
-                  <TableCell colSpan={3} className="text-right font-semibold">
-                    Total:
-                  </TableCell>
-                  <TableCell className="font-semibold">
-                    {currency} {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </div>
-        )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-2 px-6 pb-6">
+        <DialogFooter className="shrink-0 gap-2 border-t border-border bg-card px-6 py-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
@@ -494,7 +498,7 @@ export function RecordReceiptModal({
           >
             {createReceiptMutation.isPending ? "Submitting..." : "Submit"}
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

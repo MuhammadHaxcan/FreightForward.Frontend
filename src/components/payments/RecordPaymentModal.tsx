@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -216,12 +217,13 @@ export function RecordPaymentModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-modal-4xl max-h-[90vh] overflow-y-auto p-0">
+      <DialogContent className="max-w-modal-4xl max-h-[90vh] overflow-hidden p-0 flex flex-col gap-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-lg font-semibold">Record Purchase Payment</DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-3 gap-4 p-6">
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="grid grid-cols-3 gap-4 p-6">
           {/* Vendor Selection */}
           <div className="space-y-2">
             <Label>Vendors</Label>
@@ -376,6 +378,7 @@ export function RecordPaymentModal({
               value={narration}
               onChange={(e) => setNarration(e.target.value)}
               placeholder="Narration"
+              title={narration || undefined}
             />
           </div>
 
@@ -422,58 +425,59 @@ export function RecordPaymentModal({
               className="bg-muted font-semibold"
             />
           </div>
-        </div>
+          </div>
 
-        {/* Invoice Details Table */}
-        {selectedInvoices.length > 0 && (
-          <div className="border rounded-lg overflow-hidden mx-6 mb-4">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-table-header">
-                  <TableHead className="text-table-header-foreground font-semibold">Purchase No</TableHead>
-                  <TableHead className="text-table-header-foreground font-semibold">Total Amount</TableHead>
-                  <TableHead className="text-table-header-foreground font-semibold">Pending Amount</TableHead>
-                  <TableHead className="text-table-header-foreground font-semibold">Paying Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {selectedInvoices.map((inv) => (
-                  <TableRow key={inv.purchaseInvoiceId}>
-                    <TableCell>{inv.purchaseNo}</TableCell>
-                    <TableCell>
-                      {inv.currencyCode} {(inv.totalAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+          {/* Invoice Details Table */}
+          {selectedInvoices.length > 0 && (
+            <div className="border rounded-lg overflow-hidden mx-6 mb-4">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-table-header">
+                    <TableHead className="text-table-header-foreground font-semibold">Purchase No</TableHead>
+                    <TableHead className="text-table-header-foreground font-semibold">Total Amount</TableHead>
+                    <TableHead className="text-table-header-foreground font-semibold">Pending Amount</TableHead>
+                    <TableHead className="text-table-header-foreground font-semibold">Paying Amount</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {selectedInvoices.map((inv) => (
+                    <TableRow key={inv.purchaseInvoiceId}>
+                      <TableCell>{inv.purchaseNo}</TableCell>
+                      <TableCell>
+                        {inv.currencyCode} {(inv.totalAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell>
+                        {inv.currencyCode} {(inv.pendingAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          value={inv.payingAmount}
+                          onChange={(e) => handlePayingAmountChange(inv.purchaseInvoiceId, parseFloat(e.target.value) || 0)}
+                          className="w-32"
+                          min="0"
+                          max={inv.pendingAmount}
+                          step="0.01"
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow className="bg-muted/50">
+                    <TableCell colSpan={3} className="text-right font-semibold">
+                      Total:
                     </TableCell>
-                    <TableCell>
-                      {inv.currencyCode} {(inv.pendingAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        value={inv.payingAmount}
-                        onChange={(e) => handlePayingAmountChange(inv.purchaseInvoiceId, parseFloat(e.target.value) || 0)}
-                        className="w-32"
-                        min="0"
-                        max={inv.pendingAmount}
-                        step="0.01"
-                      />
+                    <TableCell className="font-semibold">
+                      {currencies.find(c => c.id === currencyId)?.code || ""} {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </TableCell>
                   </TableRow>
-                ))}
-                <TableRow className="bg-muted/50">
-                  <TableCell colSpan={3} className="text-right font-semibold">
-                    Total:
-                  </TableCell>
-                  <TableCell className="font-semibold">
-                    {currencies.find(c => c.id === currencyId)?.code || ""} {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </div>
-        )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-2 px-6 pb-6">
+        <DialogFooter className="shrink-0 gap-2 border-t border-border bg-card px-6 py-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
@@ -484,7 +488,7 @@ export function RecordPaymentModal({
           >
             {createMutation.isPending ? "Submitting..." : "Submit"}
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

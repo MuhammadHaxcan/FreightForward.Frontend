@@ -76,6 +76,7 @@ interface FormData {
   productType: string;
   productDescription: string;
   incoTermId?: number;
+  internalNotes: string;
 }
 
 const initialFormData: FormData = {
@@ -99,6 +100,7 @@ const initialFormData: FormData = {
   productType: "",
   productDescription: "",
   incoTermId: undefined,
+  internalNotes: "",
 };
 
 export default function LeadForm() {
@@ -196,6 +198,7 @@ export default function LeadForm() {
         productType: lead.productType || "",
         productDescription: lead.productDescription || "",
         incoTermId: lead.incoTermId,
+        internalNotes: lead.internalNotes || "",
       });
     } else if (!leadId) {
       // Creating new lead
@@ -274,6 +277,7 @@ export default function LeadForm() {
       productType: formData.productType || undefined,
       productDescription: formData.productDescription || undefined,
       incoTermId: formData.incoTermId,
+      internalNotes: formData.internalNotes || undefined,
     };
 
     try {
@@ -664,6 +668,22 @@ export default function LeadForm() {
                     />
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg text-primary">
+                  Internal Sales Notes
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  value={formData.internalNotes}
+                  onChange={(e) => updateField("internalNotes", e.target.value)}
+                  placeholder="Private notes for the internal sales team"
+                  rows={4}
+                />
               </CardContent>
             </Card>
 

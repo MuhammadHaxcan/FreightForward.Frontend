@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
+  AlertTriangle,
   Truck,
   Users,
   TrendingUp,
@@ -37,6 +38,7 @@ interface SidebarItem {
 
 const allSidebarItems: SidebarItem[] = [
   { title: "Dashboard", icon: LayoutDashboard, path: "/", permission: "dash_view" },
+  { title: "Exception Dashboard", icon: AlertTriangle, path: "/exceptions", permission: "dash_view" },
   {
     title: "Shipments",
     icon: Truck,

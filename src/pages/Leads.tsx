@@ -175,8 +175,10 @@ export default function Leads() {
     switch (status) {
       case "New":
         return <Badge className="bg-blue-500 text-white">New</Badge>;
-      case "Pending":
-        return <Badge className="bg-yellow-500 text-white">Pending</Badge>;
+      case "RateRequested":
+        return <Badge className="bg-amber-500 text-white">Rate Requested</Badge>;
+      case "Quoted":
+        return <Badge className="bg-purple-500 text-white">Quoted</Badge>;
       case "Converted":
         return <Badge className="bg-green-500 text-white">Converted</Badge>;
       default:

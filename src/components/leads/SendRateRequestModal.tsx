@@ -9,11 +9,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Loader2 } from "lucide-react";
 import { useCustomers } from "@/hooks/useCustomers";
 import { useAllCustomerCategoryTypes } from "@/hooks/useSettings";
-import { useCreateRateRequest, useSendRateRequestEmail } from "@/hooks/useSales";
+import {
+  useCreateRateRequest,
+  useSendRateRequestEmail,
+} from "@/hooks/useSales";
 import { toast } from "sonner";
 import { SendEmailModal } from "@/components/common/SendEmailModal";
 import { useAuth } from "@/contexts/AuthContext";
@@ -36,6 +40,7 @@ export function SendRateRequestModal({
   const [vendorTypeId, setVendorTypeId] = useState<string>("");
   const [vendorId, setVendorId] = useState<string>("");
   const [vendorEmail, setVendorEmail] = useState<string>("");
+  const [internalNotes, setInternalNotes] = useState<string>("");
   const [step, setStep] = useState<"form" | "email">("form");
   const [newRateRequestId, setNewRateRequestId] = useState<number | null>(null);
 
@@ -60,7 +65,7 @@ export function SendRateRequestModal({
   const vendorTypeName = useMemo(
     () =>
       categoryTypes?.find((c) => c.id.toString() === vendorTypeId)?.name ?? "",
-    [categoryTypes, vendorTypeId]
+    [categoryTypes, vendorTypeId],
   );
 
   // Client-side narrowing by category ID. Loaded list = all creditors;
@@ -78,7 +83,7 @@ export function SendRateRequestModal({
   useEffect(() => {
     if (vendorId && customersData?.items) {
       const selectedVendor = customersData.items.find(
-        (c) => c.id === parseInt(vendorId)
+        (c) => c.id === parseInt(vendorId),
       );
       if (selectedVendor) {
         setVendorEmail(selectedVendor.email || "");
@@ -92,6 +97,7 @@ export function SendRateRequestModal({
       setVendorTypeId("");
       setVendorId("");
       setVendorEmail("");
+      setInternalNotes("");
       setStep("form");
       setNewRateRequestId(null);
     }
@@ -108,7 +114,7 @@ export function SendRateRequestModal({
     }
 
     const selectedVendor = customersData?.items?.find(
-      (c) => c.id === parseInt(vendorId)
+      (c) => c.id === parseInt(vendorId),
     );
 
     try {
@@ -118,6 +124,7 @@ export function SendRateRequestModal({
         vendorName: selectedVendor?.name || "",
         vendorType: vendorTypeName,
         vendorEmail,
+        internalNotes: internalNotes || undefined,
       });
 
       setNewRateRequestId(result);
@@ -158,74 +165,86 @@ export function SendRateRequestModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-modal-md p-0">
+      <DialogContent className="max-w-modal-md max-h-[90vh] overflow-hidden p-0 flex flex-col gap-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-lg font-semibold">
             Send Rate Request
           </DialogTitle>
         </DialogHeader>
 
-        {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : (
-          <div className="space-y-4 p-6">
-            <div className="space-y-2">
-              <Label>
-                Vendor Type <span className="text-red-500">*</span>
-              </Label>
-              <SearchableSelect
-                options={(categoryTypes || []).map((cat) => ({
-                  value: cat.id.toString(),
-                  label: cat.name,
-                }))}
-                value={vendorTypeId}
-                onValueChange={(value) => {
-                  setVendorTypeId(value);
-                  setVendorId("");
-                  setVendorEmail("");
-                }}
-                placeholder="Select vendor type"
-                searchPlaceholder="Search vendor types..."
-              />
+        <div className="flex-1 overflow-y-auto min-h-0">
+          {isLoading ? (
+            <div className="flex min-h-64 items-center justify-center p-6">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
+          ) : (
+            <div className="space-y-4 p-6">
+              <div className="space-y-2">
+                <Label>
+                  Vendor Type <span className="text-red-500">*</span>
+                </Label>
+                <SearchableSelect
+                  options={(categoryTypes || []).map((cat) => ({
+                    value: cat.id.toString(),
+                    label: cat.name,
+                  }))}
+                  value={vendorTypeId}
+                  onValueChange={(value) => {
+                    setVendorTypeId(value);
+                    setVendorId("");
+                    setVendorEmail("");
+                  }}
+                  placeholder="Select vendor type"
+                  searchPlaceholder="Search vendor types..."
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label>
-                Vendor Name <span className="text-red-500">*</span>
-              </Label>
-              <SearchableSelect
-                options={filteredVendors.map((vendor) => ({
-                  value: vendor.id.toString(),
-                  label: vendor.name,
-                }))}
-                value={vendorId}
-                onValueChange={setVendorId}
-                placeholder="Select vendor"
-                searchPlaceholder="Search vendors..."
-                emptyMessage={
-                  loadingCustomers
-                    ? "Loading..."
-                    : vendorTypeId
-                      ? "No creditors tagged with this vendor type — clear Vendor Type to see all"
-                      : "No creditors found"
-                }
-              />
+              <div className="space-y-2">
+                <Label>
+                  Vendor Name <span className="text-red-500">*</span>
+                </Label>
+                <SearchableSelect
+                  options={filteredVendors.map((vendor) => ({
+                    value: vendor.id.toString(),
+                    label: vendor.name,
+                  }))}
+                  value={vendorId}
+                  onValueChange={setVendorId}
+                  placeholder="Select vendor"
+                  searchPlaceholder="Search vendors..."
+                  emptyMessage={
+                    loadingCustomers
+                      ? "Loading..."
+                      : vendorTypeId
+                        ? "No creditors tagged with this vendor type - clear Vendor Type to see all"
+                        : "No creditors found"
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Vendor Email</Label>
+                <Input
+                  value={vendorEmail}
+                  onChange={(e) => setVendorEmail(e.target.value)}
+                  placeholder="vendor@email.com"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Internal Sales Notes</Label>
+                <Textarea
+                  value={internalNotes}
+                  onChange={(e) => setInternalNotes(e.target.value)}
+                  placeholder="Private notes for the internal sales team"
+                  rows={4}
+                />
+              </div>
             </div>
+          )}
+        </div>
 
-            <div className="space-y-2">
-              <Label>Vendor Email</Label>
-              <Input
-                value={vendorEmail}
-                onChange={(e) => setVendorEmail(e.target.value)}
-                placeholder="vendor@email.com"
-              />
-            </div>
-          </div>
-        )}
-
-        <DialogFooter className="gap-2">
+        <DialogFooter className="shrink-0 gap-2 border-t border-border bg-card px-6 py-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>

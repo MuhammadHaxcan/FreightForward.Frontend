@@ -87,6 +87,7 @@ interface FormData {
   documentRequired?: string;
   notes?: string;
   notesForBooking?: string;
+  internalNotes?: string;
   cargoCalculationMode: string;
 }
 
@@ -196,6 +197,7 @@ export default function QuotationForm() {
         mode,
         status: "Pending",
         customerRefCode: conversionData.customerReferenceNo || "",
+        internalNotes: "",
       });
 
       if (conversionData.leadDetails && conversionData.leadDetails.length > 0) {
@@ -271,7 +273,7 @@ export default function QuotationForm() {
         quotationDate: quotationDetail.quotationDate,
         quoteExpiryDate: quotationDetail.quoteExpiryDate || "",
         incoTermId: quotationDetail.incoTermId,
-        status: quotationDetail.status || "Pending",
+        status: quotationDetail.quotationStatus || "Pending",
         loadingPortId: quotationDetail.loadingPortId,
         destinationPortId: quotationDetail.destinationPortId,
         pickupAddress: quotationDetail.pickupAddress || "",
@@ -281,6 +283,7 @@ export default function QuotationForm() {
         documentRequired: quotationDetail.documentRequired || "",
         notes: quotationDetail.notes || "",
         notesForBooking: quotationDetail.notesForBooking || "",
+        internalNotes: quotationDetail.internalNotes || "",
         cargoCalculationMode: quotationDetail.cargoCalculationMode || "units",
       });
 
@@ -408,6 +411,7 @@ export default function QuotationForm() {
       documentRequired: formData.documentRequired || undefined,
       notes: formData.notes || undefined,
       notesForBooking: formData.notesForBooking || undefined,
+      internalNotes: formData.internalNotes || undefined,
       charges: chargeRows
         .filter((row) => row.chargeType || row.rate)
         .map((row) => ({
@@ -648,6 +652,7 @@ export default function QuotationForm() {
                         { value: "Pending", label: "Pending" },
                         { value: "Approved", label: "Approved" },
                         { value: "Rejected", label: "Rejected" },
+                        { value: "Converted", label: "Converted" },
                       ]}
                       value={formData.status || "Pending"}
                       onValueChange={(value) => setFormData({ ...formData, status: value })}
@@ -763,6 +768,21 @@ export default function QuotationForm() {
                     />
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg text-primary">Internal Sales Notes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  placeholder="Private notes for the internal sales team"
+                  value={formData.internalNotes || ""}
+                  onChange={(e) => setFormData({ ...formData, internalNotes: e.target.value })}
+                  disabled={isReadOnly}
+                  rows={4}
+                />
               </CardContent>
             </Card>
 

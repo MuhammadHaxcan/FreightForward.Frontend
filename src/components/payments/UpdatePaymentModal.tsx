@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -174,12 +175,12 @@ export function UpdatePaymentModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-modal-3xl p-0">
+      <DialogContent className="max-w-modal-3xl max-h-[90vh] overflow-hidden p-0 flex flex-col gap-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-lg font-semibold">Update Payment Voucher</DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-3 gap-4 p-6">
+        <div className="grid grid-cols-3 gap-4 p-6 flex-1 overflow-y-auto min-h-0">
           {/* Vendor - Read Only */}
           <div className="space-y-2">
             <Label>Vendor</Label>
@@ -302,6 +303,7 @@ export function UpdatePaymentModal({
               value={narration}
               onChange={(e) => setNarration(e.target.value)}
               placeholder="Narration"
+              title={narration || undefined}
             />
           </div>
 
@@ -352,7 +354,7 @@ export function UpdatePaymentModal({
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-2 px-6 pb-6">
+        <DialogFooter className="shrink-0 gap-2 border-t border-border bg-card px-6 py-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
@@ -363,7 +365,7 @@ export function UpdatePaymentModal({
           >
             {updatePaymentMutation.isPending ? "Updating..." : "Update"}
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
