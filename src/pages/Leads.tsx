@@ -13,7 +13,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -308,11 +307,14 @@ export default function Leads() {
                       </TableRow>
                     ) : (
                       leads.map((lead, index) => (
-                        <TableRow key={lead.id} className={`border-b border-border hover:bg-table-row-hover transition-colors ${index % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
+                        <TableRow key={lead.id} className={`border-b border-border hover:bg-table-row-hover transition-colors ${selectedLeadId === lead.id ? 'bg-primary/10' : index % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
                           <TableCell>
-                            <Checkbox
+                            <input
+                              type="radio"
+                              name="leadSelection"
                               checked={selectedLeadId === lead.id}
-                              onCheckedChange={() => handleSelectLead(lead.id)}
+                              onChange={() => handleSelectLead(lead.id)}
+                              className="h-4 w-4 text-green-600 cursor-pointer"
                             />
                           </TableCell>
                           <TableCell>
@@ -377,29 +379,29 @@ export default function Leads() {
                   >
                     Previous
                   </Button>
-                  {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
-                    let pageNum: number;
-                    if (totalPages <= 7) {
-                      pageNum = i + 1;
-                    } else if (currentPage <= 4) {
-                      pageNum = i + 1;
-                    } else if (currentPage >= totalPages - 3) {
-                      pageNum = totalPages - 6 + i;
-                    } else {
-                      pageNum = currentPage - 3 + i;
-                    }
-                    return pageNum;
-                  }).map((page) => (
-                    <Button
-                      key={page}
-                      variant={page === currentPage ? "default" : "outline"}
-                      size="sm"
-                      className={page === currentPage ? "btn-success" : ""}
-                      onClick={() => setCurrentPage(page)}
-                    >
-                      {page}
-                    </Button>
-                  ))}
+                  {(() => {
+                    const getPageNumbers = (cp: number, tp: number): (number | '...')[] => {
+                      if (tp <= 7) return Array.from({ length: tp }, (_, i) => i + 1);
+                      if (cp <= 4) return [1, 2, 3, 4, 5, '...', tp];
+                      if (cp >= tp - 3) return [1, '...', tp-4, tp-3, tp-2, tp-1, tp];
+                      return [1, '...', cp-1, cp, cp+1, '...', tp];
+                    };
+                    return getPageNumbers(currentPage, totalPages).map((page, idx) =>
+                      page === '...'
+                        ? <span key={`ellipsis-${idx}`} className="px-2 flex items-center text-muted-foreground">...</span>
+                        : (
+                          <Button
+                            key={page}
+                            variant={page === currentPage ? "default" : "outline"}
+                            size="sm"
+                            className={page === currentPage ? "btn-success" : ""}
+                            onClick={() => setCurrentPage(page as number)}
+                          >
+                            {page}
+                          </Button>
+                        )
+                    );
+                  })()}
                   <Button
                     variant="outline"
                     size="sm"
@@ -538,29 +540,29 @@ export default function Leads() {
                   >
                     Previous
                   </Button>
-                  {Array.from({ length: Math.min(7, portalTotalPages) }, (_, i) => {
-                    let pageNum: number;
-                    if (portalTotalPages <= 7) {
-                      pageNum = i + 1;
-                    } else if (portalCurrentPage <= 4) {
-                      pageNum = i + 1;
-                    } else if (portalCurrentPage >= portalTotalPages - 3) {
-                      pageNum = portalTotalPages - 6 + i;
-                    } else {
-                      pageNum = portalCurrentPage - 3 + i;
-                    }
-                    return pageNum;
-                  }).map((page) => (
-                    <Button
-                      key={page}
-                      variant={page === portalCurrentPage ? "default" : "outline"}
-                      size="sm"
-                      className={page === portalCurrentPage ? "btn-success" : ""}
-                      onClick={() => setPortalCurrentPage(page)}
-                    >
-                      {page}
-                    </Button>
-                  ))}
+                  {(() => {
+                    const getPageNumbers = (cp: number, tp: number): (number | '...')[] => {
+                      if (tp <= 7) return Array.from({ length: tp }, (_, i) => i + 1);
+                      if (cp <= 4) return [1, 2, 3, 4, 5, '...', tp];
+                      if (cp >= tp - 3) return [1, '...', tp-4, tp-3, tp-2, tp-1, tp];
+                      return [1, '...', cp-1, cp, cp+1, '...', tp];
+                    };
+                    return getPageNumbers(portalCurrentPage, portalTotalPages).map((page, idx) =>
+                      page === '...'
+                        ? <span key={`ellipsis-${idx}`} className="px-2 flex items-center text-muted-foreground">...</span>
+                        : (
+                          <Button
+                            key={page}
+                            variant={page === portalCurrentPage ? "default" : "outline"}
+                            size="sm"
+                            className={page === portalCurrentPage ? "btn-success" : ""}
+                            onClick={() => setPortalCurrentPage(page as number)}
+                          >
+                            {page}
+                          </Button>
+                        )
+                    );
+                  })()}
                   <Button
                     variant="outline"
                     size="sm"
@@ -624,7 +626,7 @@ export default function Leads() {
                 Cancel
               </Button>
               <Button
-                className="btn-success"
+                className="btn-success px-8"
                 onClick={confirmAcceptPortalLead}
                 disabled={customerChoice === "existing" && !selectedCustomerId}
               >

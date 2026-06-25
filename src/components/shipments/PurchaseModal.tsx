@@ -826,7 +826,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-4 border-t">
+          <div className="flex justify-end gap-2 pt-4 border-t border-border">
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
@@ -867,7 +867,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
         </div>
       ) : (
         <Dialog open={open} onOpenChange={onOpenChange}>
-          <DialogContent className="max-w-modal-6xl max-h-[90vh] overflow-y-auto bg-card border border-border p-0">
+          <DialogContent className="max-w-modal-6xl max-h-[90vh] overflow-y-auto bg-card border border-border p-0 flex flex-col gap-0">
             <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
               <DialogTitle className="text-white text-lg font-semibold">
                 {isEditMode ? "Edit Purchase Invoice" : "New Purchase Invoice"}

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -170,11 +170,12 @@ export function AddCreditNoteModal({ open, onOpenChange, onSuccess }: AddCreditN
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-modal-4xl max-h-[90vh] overflow-y-auto p-0 bg-card">
+      <DialogContent className="max-w-modal-4xl max-h-[90vh] overflow-hidden p-0 bg-card flex flex-col gap-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
-          <DialogTitle className="text-white text-xl">Add New Credit Note</DialogTitle>
+          <DialogTitle className="text-white text-lg font-semibold">Add New Credit Note</DialogTitle>
         </DialogHeader>
 
+        <div className="flex-1 overflow-y-auto min-h-0">
         {/* Credit Note Section */}
         <div className="p-6 space-y-4">
           <div className="flex items-center justify-between">
@@ -515,15 +516,17 @@ export function AddCreditNoteModal({ open, onOpenChange, onSuccess }: AddCreditN
             />
           </div>
 
-          <div className="flex justify-end gap-2">
+        </div>
+        </div>
+
+        <DialogFooter className="shrink-0 gap-2 border-t border-border bg-card px-6 py-4">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button className="btn-success" onClick={handleSave} disabled={createCreditNoteMutation.isPending}>
               {createCreditNoteMutation.isPending ? "Saving..." : "Save"}
             </Button>
-          </div>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

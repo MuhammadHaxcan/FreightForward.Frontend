@@ -11,7 +11,6 @@ import { Loader2 } from "lucide-react";
 const Login = lazy(() => import("./pages/Login"));
 const Unauthorized = lazy(() => import("./pages/Unauthorized"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
-const ExceptionDashboard = lazy(() => import("./pages/ExceptionDashboard"));
 
 // System Admin pages
 const SystemLogin = lazy(() => import("./pages/system/SystemLogin"));
@@ -155,11 +154,7 @@ const AppRoutes = () => (
           <Dashboard />
         </ProtectedRoute>
       } />
-      <Route path="/exceptions" element={
-        <ProtectedRoute permission="dash_view">
-          <ExceptionDashboard />
-        </ProtectedRoute>
-      } />
+      {/* /exceptions route removed — client not billed for Exception Dashboard. Restore to re-enable. */}
       <Route path="/companies" element={
         <ProtectedRoute permission="company_view">
           <Companies />

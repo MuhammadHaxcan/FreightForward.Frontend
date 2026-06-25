@@ -4,6 +4,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -581,14 +582,14 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-modal-5xl overflow-x-hidden overflow-y-auto bg-card border border-border p-0">
+      <DialogContent className="max-h-[90vh] max-w-modal-5xl overflow-hidden bg-card border border-border p-0 flex flex-col gap-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-lg font-semibold">
             {isFullyLocked ? "View Costing" : costing ? "Edit Costing" : "Add Costing"}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 p-6 pt-4">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 space-y-4 p-6 pt-4">
           {/* Invoice Lock Banner */}
           {(isSaleLocked || isCostLocked) && (
             <div className="flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 px-3 py-2 text-sm text-amber-800 dark:text-amber-300">
@@ -1065,8 +1066,9 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
             </TabsContent>
           </Tabs>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-3 pt-2">
+        </div>
+
+        <DialogFooter className="shrink-0 gap-2 border-t border-border bg-card px-6 py-4">
             <Button
               variant="outline"
               size="sm"
@@ -1087,8 +1089,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
                 {costing ? "Update" : "Add"}
               </Button>
             )}
-          </div>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

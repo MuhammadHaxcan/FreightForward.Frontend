@@ -4,6 +4,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -109,14 +110,14 @@ export function BoxPalletRowModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-modal-lg p-0">
+      <DialogContent className="max-w-modal-lg p-0 max-h-[90vh] overflow-hidden flex flex-col gap-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-lg font-semibold">
             {boxPallet ? "Edit Box/Pallet" : "Add Box/Pallet"}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="grid gap-4 p-6">
+        <div className="flex-1 overflow-y-auto min-h-0 grid gap-4 p-6">
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="packageTypeId">Packaging Type *</Label>
@@ -283,7 +284,9 @@ export function BoxPalletRowModal({
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-6">
+        </div>
+
+        <DialogFooter className="shrink-0 gap-2 border-t border-border bg-card px-6 py-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
@@ -295,8 +298,7 @@ export function BoxPalletRowModal({
             >
               {boxPallet ? "Update" : "Add"}
             </Button>
-          </div>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

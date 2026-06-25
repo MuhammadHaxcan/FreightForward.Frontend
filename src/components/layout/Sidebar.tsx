@@ -1,20 +1,20 @@
 import { useState, useEffect, useMemo } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard,
-  AlertTriangle,
-  Truck,
-  Users,
-  TrendingUp,
-  Wallet,
-  UserCircle,
+  Radar,
+  Container,
+  Globe,
+  Handshake,
+  ReceiptText,
+  UserCog,
+  IdCard,
   FileText,
   Settings,
   LogOut,
   ChevronLeft,
   ChevronDown,
   Menu,
-  Building2,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -37,11 +37,12 @@ interface SidebarItem {
 }
 
 const allSidebarItems: SidebarItem[] = [
-  { title: "Dashboard", icon: LayoutDashboard, path: "/", permission: "dash_view" },
-  { title: "Exception Dashboard", icon: AlertTriangle, path: "/exceptions", permission: "dash_view" },
+  { title: "Dashboard", icon: Radar, path: "/", permission: "dash_view" },
+  // Exception Dashboard hidden — client not billed for this feature. Restore to re-enable.
+  // { title: "Exception Dashboard", icon: TriangleAlert, path: "/exceptions", permission: "dash_view" },
   {
     title: "Shipments",
-    icon: Truck,
+    icon: Container,
     path: "/shipments",
     permission: "ship_view",
     hasSubmenu: true,
@@ -51,10 +52,10 @@ const allSidebarItems: SidebarItem[] = [
       { title: "Bill of Lading", path: "/shipments/bill-of-lading", permission: "bl_view" },
     ]
   },
-  { title: "Master Customers", icon: Users, path: "/master-customers", permission: "cust_view" },
+  { title: "Master Customers", icon: Globe, path: "/master-customers", permission: "cust_view" },
   {
     title: "Sales",
-    icon: TrendingUp,
+    icon: Handshake,
     path: "/sales",
     hasSubmenu: true,
     subMenuItems: [
@@ -65,7 +66,7 @@ const allSidebarItems: SidebarItem[] = [
   },
   {
     title: "Accounts",
-    icon: Wallet,
+    icon: ReceiptText,
     path: "/accounts",
     hasSubmenu: true,
     subMenuItems: [
@@ -84,7 +85,7 @@ const allSidebarItems: SidebarItem[] = [
   },
   {
     title: "Users",
-    icon: UserCircle,
+    icon: UserCog,
     path: "/users",
     hasSubmenu: true,
     subMenuItems: [
@@ -94,7 +95,7 @@ const allSidebarItems: SidebarItem[] = [
   },
   {
     title: "HR",
-    icon: Building2,
+    icon: IdCard,
     path: "/hr",
     hasSubmenu: true,
     subMenuItems: [
@@ -112,6 +113,7 @@ const allSidebarItems: SidebarItem[] = [
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const location = useLocation();
   const navigate = useNavigate();
@@ -156,6 +158,28 @@ export function Sidebar() {
       setExpandedMenus(prev => [...prev, parentToExpand.title]);
     }
   }, [location.pathname, sidebarItems]);
+
+  // Close the mobile drawer whenever the route changes
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
+
+  // Lock body scroll while the mobile drawer is open
+  useEffect(() => {
+    document.body.style.overflow = mobileOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileOpen]);
+
+  // Close the mobile drawer on Escape
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const toggleSubmenu = (title: string) => {
     // If sidebar is collapsed, expand it and open the dropdown
@@ -208,12 +232,44 @@ export function Sidebar() {
   const primaryRole = user?.roles?.[0] || 'User';
 
   return (
-    <aside
-      className={cn(
-        "h-screen bg-sidebar flex flex-col transition-all duration-300 sticky top-0",
-        collapsed ? "w-16" : "w-56"
-      )}
-    >
+    <>
+      {/* Mobile top app bar (hidden on desktop) */}
+      <header className="lg:hidden fixed top-0 inset-x-0 z-30 h-14 flex items-center gap-3 px-4 bg-sidebar border-b border-sidebar-border">
+        <button
+          onClick={() => setMobileOpen(true)}
+          aria-label="Open navigation menu"
+          className="p-2 -ml-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent active:bg-sidebar-accent transition-colors"
+        >
+          <Menu size={22} strokeWidth={1.5} />
+        </button>
+        <img
+          src="/tfs-logo-new.svg"
+          alt="Transparent Freight Services"
+          className="h-7 w-auto"
+        />
+      </header>
+
+      {/* Backdrop behind the mobile drawer */}
+      <div
+        onClick={() => setMobileOpen(false)}
+        aria-hidden="true"
+        className={cn(
+          "lg:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity duration-300",
+          mobileOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        )}
+      />
+
+      <aside
+        className={cn(
+          "h-screen bg-sidebar flex flex-col",
+          // Mobile: off-canvas drawer that slides in over the content
+          "fixed inset-y-0 left-0 z-50 w-72 transition-transform duration-300 ease-in-out",
+          mobileOpen ? "translate-x-0" : "-translate-x-full",
+          // Desktop: in-flow, sticky, collapsible sidebar
+          "lg:sticky lg:top-0 lg:z-auto lg:translate-x-0 lg:transition-[width]",
+          collapsed ? "lg:w-16" : "lg:w-56"
+        )}
+      >
       {/* Header */}
       <div className={cn(
         "flex items-center border-b border-sidebar-border transition-all duration-300 overflow-hidden",
@@ -235,12 +291,21 @@ export function Sidebar() {
             )}
           />
         </div>
+        {/* Close drawer (mobile only) */}
+        <button
+          onClick={() => setMobileOpen(false)}
+          aria-label="Close navigation menu"
+          className="lg:hidden p-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+        >
+          <X size={20} strokeWidth={1.5} />
+        </button>
+        {/* Collapse sidebar (desktop only) */}
         {!collapsed && (
           <button
             onClick={() => setCollapsed(true)}
-            className="p-2 rounded-md hover:bg-sidebar-accent text-sidebar-foreground transition-colors"
+            className="hidden lg:flex p-2 rounded-md hover:bg-sidebar-accent text-sidebar-foreground transition-colors"
           >
-            <ChevronLeft size={20} />
+            <ChevronLeft size={20} strokeWidth={1.5} />
           </button>
         )}
       </div>
@@ -308,7 +373,7 @@ export function Sidebar() {
                           : "hover:bg-sidebar-accent"
                       )}
                     >
-                      <item.icon size={20} className="flex-shrink-0" />
+                      <item.icon size={20} strokeWidth={1.5} className="flex-shrink-0" />
                       {!collapsed && (
                         <>
                           <span className="flex-1 text-sm font-medium animate-fade-in text-left">
@@ -316,6 +381,7 @@ export function Sidebar() {
                           </span>
                           <ChevronDown
                             size={16}
+                            strokeWidth={1.5}
                             className={cn(
                               "text-sidebar-muted transition-transform",
                               isExpanded && "rotate-180"
@@ -330,6 +396,7 @@ export function Sidebar() {
                             <li key={subItem.path}>
                               <NavLink
                                 to={subItem.path}
+                                onClick={() => setMobileOpen(false)}
                                 className={cn(
                                   "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-all duration-200",
                                   isSubItemActive(subItem.path, item.subMenuItems!)
@@ -347,6 +414,7 @@ export function Sidebar() {
                 ) : (
                   <NavLink
                     to={item.path}
+                    onClick={() => setMobileOpen(false)}
                     className={cn(
                       "flex items-center gap-3 px-3 py-2.5 rounded-md text-sidebar-foreground transition-all duration-200",
                       location.pathname === item.path
@@ -354,7 +422,7 @@ export function Sidebar() {
                         : "hover:bg-sidebar-accent"
                     )}
                   >
-                    <item.icon size={20} className="flex-shrink-0" />
+                    <item.icon size={20} strokeWidth={1.5} className="flex-shrink-0" />
                     {!collapsed && (
                       <span className="flex-1 text-sm font-medium animate-fade-in">
                         {item.title}
@@ -376,12 +444,13 @@ export function Sidebar() {
             "flex items-center gap-3 px-3 py-2.5 rounded-md text-sidebar-foreground hover:bg-sidebar-accent transition-all duration-200 w-full"
           )}
         >
-          <LogOut size={20} className="flex-shrink-0" />
+          <LogOut size={20} strokeWidth={1.5} className="flex-shrink-0" />
           {!collapsed && (
             <span className="text-sm font-medium animate-fade-in">Logout</span>
           )}
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }

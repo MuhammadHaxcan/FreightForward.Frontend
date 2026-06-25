@@ -12,7 +12,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
 import { useCustomerAccountPayables } from "@/hooks/useCustomers";
 
@@ -49,13 +48,14 @@ export function VendorPayableDetailsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-modal-4xl p-0">
+      <DialogContent className="max-w-modal-4xl p-0 max-h-[90vh] overflow-hidden flex flex-col gap-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-lg font-semibold">
             Payment Details [{vendorName}]
           </DialogTitle>
         </DialogHeader>
 
+        <div className="flex-1 overflow-y-auto min-h-0">
         {loading ? (
           <div className="py-8 text-center">Loading...</div>
         ) : items.length === 0 ? (
@@ -129,15 +129,6 @@ export function VendorPayableDetailsModal({
             </div>
           </div>
         )}
-
-        <div className="flex justify-end p-4 pt-0">
-          <Button
-            variant="link"
-            className="text-blue-600"
-            onClick={() => onOpenChange(false)}
-          >
-            Close
-          </Button>
         </div>
       </DialogContent>
     </Dialog>

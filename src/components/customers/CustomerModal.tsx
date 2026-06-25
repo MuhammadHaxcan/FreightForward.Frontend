@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -171,14 +171,14 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-modal-xl bg-card border-border p-0">
+      <DialogContent className="sm:max-w-modal-xl bg-card border-border p-0 max-h-[90vh] overflow-hidden flex flex-col gap-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-lg font-semibold">
             {mode === "add" ? "Add New Customer" : "Edit Customer"}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-2 gap-4 p-6">
+        <div className="flex-1 overflow-y-auto min-h-0 grid grid-cols-2 gap-4 p-6">
           {/* Left Column */}
           <div className="space-y-4">
             <div className="space-y-2">
@@ -354,7 +354,7 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 px-6 pb-6 pt-4 border-t border-border">
+        <DialogFooter className="shrink-0 gap-2 border-t border-border bg-card px-6 py-4">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
             Cancel
           </Button>
@@ -362,7 +362,7 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {mode === "add" ? "Save" : "Update"}
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

@@ -104,7 +104,7 @@ export default function RateRequests() {
             <Button
               onClick={handleConvertSelectedToQuotation}
               disabled={!selectedRateRequestId || selectedRateRequest?.requestStatus !== "Received"}
-              className="bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-50"
+              className="bg-teal-500 hover:bg-teal-600 text-white disabled:opacity-50"
             >
               <FileText className="h-4 w-4 mr-2" />
               Convert to Quotation
@@ -223,7 +223,7 @@ export default function RateRequests() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 bg-blue-500 hover:bg-blue-600 text-white rounded"
+                                className="h-8 w-8 bg-purple-500 hover:bg-purple-600 text-white rounded"
                                 onClick={() => {
                                   setRateRequestToMarkReceived(request);
                                   setShowReceivedConfirm(true);
@@ -238,7 +238,7 @@ export default function RateRequests() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 bg-orange-500 hover:bg-orange-600 text-white rounded"
+                              className="h-8 w-8 bg-teal-500 hover:bg-teal-600 text-white rounded"
                               onClick={() => handleConvertToQuotation(request)}
                               title="Convert to Quotation"
                             >
@@ -329,7 +329,7 @@ export default function RateRequests() {
             <AlertDialogAction
               onClick={handleMarkAsReceived}
               disabled={updateMutation.isPending}
-              className="btn-success"
+              className="bg-purple-500 hover:bg-purple-600 text-white"
             >
               {updateMutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
               Yes, Mark as Received

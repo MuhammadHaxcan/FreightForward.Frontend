@@ -3,6 +3,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Table,
@@ -39,13 +40,14 @@ export function PaymentDetailsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-modal-3xl p-0">
+      <DialogContent className="max-w-modal-3xl p-0 max-h-[90vh] overflow-hidden flex flex-col gap-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-lg font-semibold">
             Payment Details
           </DialogTitle>
         </DialogHeader>
 
+        <div className="flex-1 overflow-y-auto min-h-0">
         {isLoading ? (
           <div className="py-8 text-center">Loading...</div>
         ) : payment ? (
@@ -111,16 +113,16 @@ export function PaymentDetailsModal({
             Payment voucher not found
           </div>
         )}
+        </div>
 
-        <div className="flex justify-end">
+        <DialogFooter className="shrink-0 gap-2 border-t border-border bg-card px-6 py-4">
           <Button
-            variant="link"
-            className="text-blue-600"
+            variant="outline"
             onClick={() => onOpenChange(false)}
           >
             Close
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

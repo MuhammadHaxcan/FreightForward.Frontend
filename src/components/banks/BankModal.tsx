@@ -7,6 +7,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { useCreateBank, useUpdateBank } from "@/hooks/useBanks";
 import { Bank } from "@/services/api";
@@ -92,13 +93,14 @@ export function BankModal({ open, onOpenChange, bank, mode }: BankModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-modal-2xl bg-card p-0">
+      <DialogContent className="sm:max-w-modal-2xl bg-card p-0 max-h-[90vh] overflow-hidden flex flex-col gap-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-lg font-semibold">
             {mode === "add" ? "Add New" : "Edit"} Bank
           </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="p-6">
+        <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
+          <div className="flex-1 overflow-y-auto min-h-0 p-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Left Column */}
             <div className="space-y-4">
@@ -181,7 +183,8 @@ export function BankModal({ open, onOpenChange, bank, mode }: BankModalProps) {
               </div>
             </div>
           </div>
-          <div className="flex justify-end gap-3 pt-6">
+          </div>
+          <DialogFooter className="shrink-0 gap-2 border-t border-border bg-card px-6 py-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
               Cancel
             </Button>
@@ -189,7 +192,7 @@ export function BankModal({ open, onOpenChange, bank, mode }: BankModalProps) {
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {mode === "add" ? "Save" : "Update"}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

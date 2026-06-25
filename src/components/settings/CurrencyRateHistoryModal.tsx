@@ -4,7 +4,9 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { useCurrencyRateHistory } from "@/hooks/useSettings";
 import { format } from "date-fns";
 
@@ -39,13 +41,13 @@ export function CurrencyRateHistoryModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-modal-lg bg-card p-0">
+      <DialogContent className="sm:max-w-modal-lg bg-card p-0 max-h-[90vh] overflow-hidden flex flex-col gap-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-lg font-semibold">
             Rate History - {currencyName} ({currencyCode})
           </DialogTitle>
         </DialogHeader>
-        <div className="p-6">
+        <div className="flex-1 overflow-y-auto min-h-0 p-6">
           {isLoading ? (
             <div className="flex justify-center items-center p-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -130,6 +132,12 @@ export function CurrencyRateHistoryModal({
             </div>
           )}
         </div>
+
+        <DialogFooter className="shrink-0 gap-2 border-t border-border bg-card px-6 py-4">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

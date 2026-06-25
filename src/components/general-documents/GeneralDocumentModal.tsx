@@ -7,6 +7,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { useCreateGeneralDocument } from "@/hooks/useGeneralDocuments";
 import { fileApi } from "@/services/api";
@@ -89,13 +90,14 @@ export function GeneralDocumentModal({ open, onOpenChange }: GeneralDocumentModa
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-modal-lg bg-card p-0">
+      <DialogContent className="sm:max-w-modal-lg bg-card p-0 max-h-[90vh] overflow-hidden flex flex-col gap-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-lg font-semibold">
             Add New General Document
           </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
+          <div className="flex-1 overflow-y-auto min-h-0 p-6 space-y-4">
           <div>
             <Label className="form-label">Document Name *</Label>
             <Input
@@ -131,7 +133,8 @@ export function GeneralDocumentModal({ open, onOpenChange }: GeneralDocumentModa
               className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             />
           </div>
-          <div className="flex justify-end gap-3 pt-2">
+          </div>
+          <DialogFooter className="shrink-0 gap-2 border-t border-border bg-card px-6 py-4">
             <Button type="button" variant="outline" onClick={() => handleClose(false)} disabled={isLoading}>
               Cancel
             </Button>
@@ -139,7 +142,7 @@ export function GeneralDocumentModal({ open, onOpenChange }: GeneralDocumentModa
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

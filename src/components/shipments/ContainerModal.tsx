@@ -4,6 +4,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -116,12 +117,12 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-modal-4xl bg-card border border-border p-0">
+      <DialogContent className="max-w-modal-4xl bg-card border border-border p-0 max-h-[90vh] overflow-hidden flex flex-col gap-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-lg font-semibold">{isEditing ? "Edit Container" : "Add Container"}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 p-6">
+        <div className="flex-1 overflow-y-auto min-h-0 space-y-4 p-6">
           {/* Row 1 */}
           <div className="grid grid-cols-5 gap-4">
             <div>
@@ -223,8 +224,9 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-3 pt-4">
+        </div>
+
+        <DialogFooter className="shrink-0 gap-2 border-t border-border bg-card px-6 py-4">
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
@@ -238,8 +240,7 @@ export function ContainerModal({ open, onOpenChange, container, onSave, nextSNo 
             >
               {isEditing ? "Update" : "Add"}
             </Button>
-          </div>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

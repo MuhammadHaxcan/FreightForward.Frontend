@@ -17,8 +17,24 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Edit, Trash2, Plus, Loader2, AlertTriangle, Eye, FileText } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Edit,
+  Trash2,
+  Plus,
+  Loader2,
+  AlertTriangle,
+  Eye,
+  FileText,
+  PackageCheck,
+  Ship,
+  FileBadge,
+  FileSignature,
+  ClipboardList,
+  BookOpen,
+  ListChecks,
+  ChevronRight,
+} from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -2591,49 +2607,38 @@ const ShipmentDetail = () => {
 
       {/* Reports Dialog */}
       <Dialog open={showReportsDialog} onOpenChange={setShowReportsDialog}>
-        <DialogContent className="max-w-modal-md p-0 bg-card">
+        <DialogContent className="max-w-modal-md p-0 bg-card overflow-hidden">
           <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
             <DialogTitle className="text-white text-lg">Shipment Reports</DialogTitle>
           </DialogHeader>
-          <div className="p-4">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2 px-2 text-sm font-semibold w-12">No.</th>
-                  <th className="text-left py-2 px-2 text-sm font-semibold">Report Name</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { no: 1, name: "CARGO MANIFEST", slug: "cargo-manifest" },
-                  { no: 2, name: "PROOF OF DELIVERY", slug: "proof-of-delivery" },
-                  { no: 3, name: "CARGO ARRIVAL", slug: "cargo-arrival-notice" },
-                  { no: 4, name: "FREIGHT CERTIFICATE", slug: "freight-certificate" },
-                  { no: 5, name: "MBL SHIPPING", slug: "mbl-shipping-instruction" },
-                  { no: 6, name: "CUSTOMS MANIFEST", slug: "customs-declaration" },
-                  { no: 7, name: "C BOOK", slug: "cbook" },
-                  { no: 8, name: "C LIST", slug: "c-list" },
-                ].map((report) => (
-                  <tr key={report.slug} className="border-b hover:bg-muted/50">
-                    <td className="py-2 px-2 text-sm">{report.no}</td>
-                    <td className="py-2 px-2">
-                      <button
-                        className="text-emerald-600 hover:text-emerald-700 hover:underline font-medium text-sm"
-                        onClick={() => window.open(`/shipments/${shipmentId}/reports/${report.slug}`, '_blank')}
-                      >
-                        {report.name}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="p-3 max-h-[60vh] overflow-y-auto">
+            <div className="space-y-1">
+              {[
+                { name: "CARGO MANIFEST", slug: "cargo-manifest", icon: FileText, color: "text-blue-600 bg-blue-100" },
+                { name: "PROOF OF DELIVERY", slug: "proof-of-delivery", icon: PackageCheck, color: "text-emerald-600 bg-emerald-100" },
+                { name: "CARGO ARRIVAL", slug: "cargo-arrival-notice", icon: Ship, color: "text-cyan-600 bg-cyan-100" },
+                { name: "FREIGHT CERTIFICATE", slug: "freight-certificate", icon: FileBadge, color: "text-amber-600 bg-amber-100" },
+                { name: "MBL SHIPPING", slug: "mbl-shipping-instruction", icon: FileSignature, color: "text-indigo-600 bg-indigo-100" },
+                { name: "CUSTOMS MANIFEST", slug: "customs-declaration", icon: ClipboardList, color: "text-orange-600 bg-orange-100" },
+                { name: "C BOOK", slug: "cbook", icon: BookOpen, color: "text-purple-600 bg-purple-100" },
+                { name: "C LIST", slug: "c-list", icon: ListChecks, color: "text-rose-600 bg-rose-100" },
+              ].map((report) => (
+                <button
+                  key={report.slug}
+                  className="group flex w-full items-center gap-3 rounded-lg border border-transparent px-3 py-2.5 text-left transition-colors hover:border-slate-200 hover:bg-slate-50"
+                  onClick={() => window.open(`/shipments/${shipmentId}/reports/${report.slug}`, '_blank')}
+                >
+                  <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${report.color}`}>
+                    <report.icon className="h-4 w-4" />
+                  </span>
+                  <span className="flex-1 text-sm font-semibold text-slate-700 group-hover:text-slate-900">
+                    {report.name}
+                  </span>
+                  <ChevronRight className="h-4 w-4 text-slate-300 transition-colors group-hover:text-slate-500" />
+                </button>
+              ))}
+            </div>
           </div>
-          <DialogFooter className="p-4 pt-0">
-            <Button variant="outline" onClick={() => setShowReportsDialog(false)} className="mx-auto">
-              Close
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </MainLayout>
