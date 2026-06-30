@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { formatDate } from "@/lib/utils";
 import { Eye, Plus, Trash2, Download, Printer, Edit, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -38,9 +38,11 @@ import { ReceiptDetailsModal } from "@/components/receipts/ReceiptDetailsModal";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 import { useReceipts, useDeleteReceipt } from "@/hooks/useReceipts";
+import type { AssistantRouteState, ReceiptAssistantDraft } from "@/services/api/assistant";
 
 export default function ReceiptVouchers() {
   const navigate = useNavigate();
+  const location = useLocation();
   const baseCurrencyCode = useBaseCurrency();
   const [searchTerm, setSearchTerm] = useState("");
   const [pageNumber, setPageNumber] = useState(1);
@@ -53,6 +55,8 @@ export default function ReceiptVouchers() {
   const [editReceiptId, setEditReceiptId] = useState<number | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [receiptToDelete, setReceiptToDelete] = useState<number | null>(null);
+  const [assistantDraft, setAssistantDraft] = useState<ReceiptAssistantDraft | null>(null);
+  const [assistantDraftNonce, setAssistantDraftNonce] = useState<string | null>(null);
 
   const { data: receiptsPage, isLoading: loading } = useReceipts({
     pageNumber,
@@ -64,6 +68,17 @@ export default function ReceiptVouchers() {
   const totalPages = receiptsPage?.totalPages ?? 0;
 
   const deleteReceiptMutation = useDeleteReceipt();
+
+  useEffect(() => {
+    const state = location.state as AssistantRouteState<ReceiptAssistantDraft> | null;
+    const action = state?.assistantAction;
+    if (!action || action.source !== "assistant" || action.kind !== "receipt") return;
+
+    setAssistantDraft(action.draft);
+    setAssistantDraftNonce(action.nonce);
+    setIsModalOpen(true);
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.pathname, location.state, navigate]);
 
   const handleSearch = () => {
     setAppliedSearch(searchTerm);
@@ -382,13 +397,23 @@ export default function ReceiptVouchers() {
       </div>
 
       {/* Record Receipt Modal */}
-      <RecordReceiptModal
-        open={isModalOpen}
-        onOpenChange={setIsModalOpen}
-        onSuccess={() => {
-          setIsModalOpen(false);
-        }}
-      />
+        <RecordReceiptModal
+          open={isModalOpen}
+          onOpenChange={(open) => {
+            setIsModalOpen(open);
+            if (!open) {
+              setAssistantDraft(null);
+              setAssistantDraftNonce(null);
+            }
+          }}
+          initialDraft={assistantDraft}
+          initialDraftNonce={assistantDraftNonce}
+          onSuccess={() => {
+            setIsModalOpen(false);
+            setAssistantDraft(null);
+            setAssistantDraftNonce(null);
+          }}
+        />
 
       {/* Receipt Invoice Details Modal */}
       <ReceiptDetailsModal

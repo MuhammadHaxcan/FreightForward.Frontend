@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +29,7 @@ import { useCreateInvoice, useUpdateInvoice, useInvoice, useNextInvoiceNumber } 
 import { useCustomer } from "@/hooks/useCustomers";
 import { useAddShipmentCosting, useUpdateShipmentCosting } from "@/hooks/useShipments";
 import { CostingModal, type CostingModalData } from "@/components/shipments/CostingModal";
+import type { SalesInvoiceAssistantDraft } from "@/services/api/assistant";
 
 
 // Result type for the onSave callback
@@ -50,6 +51,8 @@ interface InvoiceModalProps {
   onSave: (invoice: InvoiceSaveResult) => void | Promise<void>;
   editInvoiceId?: number | null;
   asPage?: boolean;
+  initialDraft?: SalesInvoiceAssistantDraft | null;
+  initialDraftNonce?: string | null;
 }
 
 // Helper function to deduplicate parties by customerId
@@ -63,7 +66,18 @@ const deduplicateByCustomerId = (partyList: ShipmentParty[]): ShipmentParty[] =>
   });
 };
 
-export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, parties, onSave, editInvoiceId, asPage = false }: InvoiceModalProps) {
+export function InvoiceModal({
+  open,
+  onOpenChange,
+  shipmentId,
+  chargesDetails,
+  parties,
+  onSave,
+  editInvoiceId,
+  asPage = false,
+  initialDraft,
+  initialDraftNonce,
+}: InvoiceModalProps) {
   const baseCurrencyCode = useBaseCurrency();
   const isBaseCurrency = (currencyCode?: string): boolean =>
     (currencyCode || "").trim().toUpperCase() === (baseCurrencyCode || "").trim().toUpperCase();
@@ -105,6 +119,8 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
   const [costingModalOpen, setCostingModalOpen] = useState(false);
   const [editingCostingForModal, setEditingCostingForModal] = useState<CostingModalData | undefined>(undefined);
   const [pendingAutoSelect, setPendingAutoSelect] = useState<number | null>(null);
+  const appliedDraftNonceRef = useRef<string | null>(null);
+  const lockDraftCurrencyRef = useRef(false);
 
   const [formData, setFormData] = useState({
     invoiceId: "",
@@ -120,6 +136,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
   // Reset form and fetch data when modal opens/closes
   useEffect(() => {
     if (!isActive) {
+      lockDraftCurrencyRef.current = false;
       setFormData({
         invoiceId: "",
         companyName: "",
@@ -222,6 +239,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
 
   useEffect(() => {
     if (selectedCustomerData && !isEditMode) {
+      if (lockDraftCurrencyRef.current) return;
       const custCurrencyId = selectedCustomerData.currencyId || 1;
       const currency = currencies.find(c => c.id === custCurrencyId);
       setFormData(prev => ({
@@ -231,6 +249,28 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
       }));
     }
   }, [selectedCustomerData, currencies, isEditMode, baseCurrencyCode]);
+
+  useEffect(() => {
+    if (!isActive || isEditMode || !initialDraft || !initialDraftNonce) return;
+    if (appliedDraftNonceRef.current === initialDraftNonce) return;
+
+    const draftCurrency = initialDraft.currencyCode?.trim().toUpperCase();
+    const matchedCurrency = draftCurrency
+      ? currencies.find(c => c.code.trim().toUpperCase() === draftCurrency)
+      : undefined;
+    lockDraftCurrencyRef.current = !!draftCurrency;
+    appliedDraftNonceRef.current = initialDraftNonce;
+    setFormData(prev => ({
+      ...prev,
+      companyName: initialDraft.customerName || prev.companyName,
+      customerId: initialDraft.shipmentPartyId.toString(),
+      invoiceDate: initialDraft.invoiceDate || prev.invoiceDate,
+      currencyId: matchedCurrency?.id || prev.currencyId,
+      currencyCode: matchedCurrency?.code || draftCurrency || prev.currencyCode,
+      remarks: initialDraft.remarks || "",
+      selectedCharges: initialDraft.selectedChargeIds || [],
+    }));
+  }, [isActive, isEditMode, initialDraft, initialDraftNonce, currencies]);
 
   // Cost-only charges: costings that have cost data but no sale data (edit mode only)
   const costOnlyCharges = useMemo(() => {

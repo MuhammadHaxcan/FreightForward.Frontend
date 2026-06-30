@@ -19,6 +19,7 @@ import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 import { X, Lock, Info } from "lucide-react";
 import { toast } from "sonner";
 import { FieldError, fieldErrorClass } from "@/components/ui/field-error";
+import type { ShipmentCostingAssistantDraft } from "@/services/api/assistant";
 
 // Extend ShipmentCosting with UI-specific fields for the modal
 // The modal transforms between API format (currencyId) and display format (currency code)
@@ -34,6 +35,8 @@ interface CostingModalProps {
   onOpenChange: (open: boolean) => void;
   parties: ShipmentParty[];
   costing?: CostingModalData;
+  initialDraft?: ShipmentCostingAssistantDraft | null;
+  initialDraftNonce?: string | null;
   onSave: (costing: CostingModalData) => void;
   defaultBillToCustomerId?: number;
   defaultVendorCustomerId?: number;
@@ -43,8 +46,82 @@ interface CostingModalProps {
 const ppccOptions = ["Prepaid", "Postpaid"];
 const taxOptions = ["0%", "5%", "10%", "15%", "Custom"];
 const standardTaxValues = [0, 5, 10, 15];
+const normalizeLookup = (value?: string | null) =>
+  (value ?? "").replace(/[^a-z0-9]/gi, "").toUpperCase();
 
-export function CostingModal({ open, onOpenChange, parties, costing, onSave, defaultBillToCustomerId, defaultVendorCustomerId, defaultActiveTab }: CostingModalProps) {
+const namesReferToSameParty = (left?: string | null, right?: string | null) => {
+  const normalizedLeft = normalizeLookup(left);
+  const normalizedRight = normalizeLookup(right);
+  if (!normalizedLeft || !normalizedRight) return false;
+
+  return (
+    normalizedLeft === normalizedRight ||
+    normalizedLeft.includes(normalizedRight) ||
+    normalizedRight.includes(normalizedLeft)
+  );
+};
+
+const resolveAssistantUnit = (
+  draft: ShipmentCostingAssistantDraft,
+  costingUnits: Array<{ id: number; code: string; name: string; description?: string | null }>
+) => {
+  if (!costingUnits.length) return undefined;
+
+  if (draft.unitId) {
+    const byId = costingUnits.find(unit => unit.id === draft.unitId);
+    if (byId) return byId;
+  }
+
+  const rawLookup = draft.unitCode?.trim();
+  if (!rawLookup) return undefined;
+
+  const normalizedLookup = normalizeLookup(rawLookup);
+  return costingUnits.find(unit => {
+    const name = normalizeLookup(unit.name);
+    const code = normalizeLookup(unit.code);
+    const description = normalizeLookup(unit.description);
+
+    return (
+      name === normalizedLookup ||
+      code === normalizedLookup ||
+      description === normalizedLookup ||
+      name.includes(normalizedLookup) ||
+      normalizedLookup.includes(name) ||
+      code.includes(normalizedLookup) ||
+      normalizedLookup.includes(code) ||
+      description.includes(normalizedLookup) ||
+      normalizedLookup.includes(description)
+    );
+  });
+};
+
+const determineAssistantActiveTab = (
+  draft?: ShipmentCostingAssistantDraft | null,
+  fallback?: "cost" | "sale"
+): "cost" | "sale" => {
+  if (draft?.preferredTab === "sale" || draft?.preferredTab === "cost") {
+    return draft.preferredTab;
+  }
+
+  const hasSale = (draft?.saleAmount ?? 0) > 0;
+  const hasCost = (draft?.costAmount ?? 0) > 0;
+  if (hasSale && !hasCost) return "sale";
+  if (hasCost && !hasSale) return "cost";
+  return fallback || "cost";
+};
+
+export function CostingModal({
+  open,
+  onOpenChange,
+  parties,
+  costing,
+  initialDraft,
+  initialDraftNonce,
+  onSave,
+  defaultBillToCustomerId,
+  defaultVendorCustomerId,
+  defaultActiveTab,
+}: CostingModalProps) {
   const baseCurrencyCode = useBaseCurrency();
   const LOCAL_CURRENCY = baseCurrencyCode;
   const isBaseCurrency = (currencyCode?: string): boolean =>
@@ -56,7 +133,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
   const isCostLocked = !!costing?.purchaseInvoiced;
   const isFullyLocked = isSaleLocked && isCostLocked;
 
-  const [activeTab, setActiveTab] = useState(defaultActiveTab || "cost");
+  const [activeTab, setActiveTab] = useState(determineAssistantActiveTab(initialDraft, defaultActiveTab));
 
   // Fetch currency types from settings
   const { data: currencyTypesData } = useCurrencyTypes({ pageSize: 100 });
@@ -133,17 +210,19 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
   const [errors, setErrors] = useState<Record<string, string>>({});
   const formInitializedRef = useRef(false);
   const isSavingRef = useRef(false);
+  const appliedAssistantDraftNonceRef = useRef<string | null>(null);
 
   // Reset refs when modal closes, set active tab when opening
   useEffect(() => {
     if (!open) {
       formInitializedRef.current = false;
       isSavingRef.current = false;
+      appliedAssistantDraftNonceRef.current = null;
     } else {
       setErrors({});
-      setActiveTab(defaultActiveTab || "cost");
+      setActiveTab(determineAssistantActiveTab(initialDraft, defaultActiveTab));
     }
-  }, [open, defaultActiveTab]);
+  }, [open, defaultActiveTab, initialDraft]);
 
   // Set default currency IDs when currencyTypes load for new entries
   useEffect(() => {
@@ -285,6 +364,75 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
       setFormData(defaultFormData);
     }
   }, [open, costing, creditorParties, debtorParties, currencyTypes, costingUnits]);
+
+  useEffect(() => {
+    if (!open || costing || !initialDraft || !initialDraftNonce) return;
+    if (appliedAssistantDraftNonceRef.current === initialDraftNonce) return;
+
+    const vendorParty = creditorParties.find(p =>
+      p.customerId === initialDraft.vendorCustomerId ||
+      namesReferToSameParty(p.customerName, initialDraft.vendorName)
+    );
+    const billToParty = debtorParties.find(p =>
+      p.customerId === initialDraft.billToCustomerId ||
+      namesReferToSameParty(p.customerName, initialDraft.billToName)
+    );
+    const costCurrency = initialDraft.costCurrencyCode?.trim().toUpperCase();
+    const saleCurrency = initialDraft.saleCurrencyCode?.trim().toUpperCase();
+    const costCurrencyId = costCurrency ? currencyTypes.find(c => c.code.trim().toUpperCase() === costCurrency)?.id : undefined;
+    const saleCurrencyId = saleCurrency ? currencyTypes.find(c => c.code.trim().toUpperCase() === saleCurrency)?.id : undefined;
+    const unit = resolveAssistantUnit(initialDraft, costingUnits);
+
+    // Apply the exchange rate from the currency master so a foreign-currency line converts to LCY
+    // (e.g. cost 200 USD at ROE 3.685 -> 737 AED), instead of dumping the FCY amount into LCY.
+    const costRoe = costCurrency ? getROE(costCurrency) : 1;
+    const saleRoe = saleCurrency ? getROE(saleCurrency) : 1;
+    const costIsBase = !costCurrency || isBaseCurrency(costCurrency);
+    const saleIsBase = !saleCurrency || isBaseCurrency(saleCurrency);
+    const costLcy = initialDraft.costAmount ? initialDraft.costAmount * costRoe : undefined;
+    const saleLcy = initialDraft.saleAmount ? initialDraft.saleAmount * saleRoe : undefined;
+
+    appliedAssistantDraftNonceRef.current = initialDraftNonce;
+    setActiveTab(determineAssistantActiveTab(initialDraft, defaultActiveTab));
+    setFormData(prev => ({
+      ...prev,
+      charge: initialDraft.chargeName || prev.charge,
+      description: initialDraft.chargeName || prev.description,
+      ppcc: initialDraft.ppcc || prev.ppcc,
+      unitId: unit?.id || initialDraft.unitId || prev.unitId,
+      unit: unit?.code || initialDraft.unitCode || prev.unit,
+      remarks: initialDraft.remarks || "",
+      costCurrency: costCurrency || prev.costCurrency,
+      costCurrencyId: costCurrencyId || prev.costCurrencyId,
+      costExRate: costCurrency ? costRoe.toFixed(3) : prev.costExRate,
+      costNoOfUnit: initialDraft.costQty ? initialDraft.costQty.toString() : (initialDraft.costAmount ? "1" : prev.costNoOfUnit),
+      costPerUnit: initialDraft.costAmount
+        ? (initialDraft.costAmount / (initialDraft.costQty || 1)).toFixed(2)
+        : prev.costPerUnit,
+      costFCYAmount: (!costIsBase && initialDraft.costAmount) ? initialDraft.costAmount.toFixed(2) : "0.00",
+      costLCYAmount: costLcy !== undefined ? costLcy.toFixed(2) : prev.costLCYAmount,
+      costVendor: vendorParty?.id?.toString() || prev.costVendor,
+      costVendorName: initialDraft.vendorName || prev.costVendorName,
+      costVendorCustomerId: vendorParty?.customerId?.toString() || initialDraft.vendorCustomerId?.toString() || prev.costVendorCustomerId,
+      costReferenceNo: initialDraft.costReferenceNo || prev.costReferenceNo,
+      costDate: initialDraft.costDate || prev.costDate,
+      costTax: `${initialDraft.costTaxPercentage || 0}%`,
+      saleCurrency: saleCurrency || prev.saleCurrency,
+      saleCurrencyId: saleCurrencyId || prev.saleCurrencyId,
+      saleExRate: saleCurrency ? saleRoe.toFixed(3) : prev.saleExRate,
+      saleNoOfUnit: initialDraft.saleQty ? initialDraft.saleQty.toString() : (initialDraft.saleAmount ? "1" : prev.saleNoOfUnit),
+      salePerUnit: initialDraft.saleAmount
+        ? (initialDraft.saleAmount / (initialDraft.saleQty || 1)).toFixed(2)
+        : prev.salePerUnit,
+      saleFCYAmount: (!saleIsBase && initialDraft.saleAmount) ? initialDraft.saleAmount.toFixed(2) : "0.00",
+      saleLCYAmount: saleLcy !== undefined ? saleLcy.toFixed(2) : prev.saleLCYAmount,
+      saleBillTo: billToParty?.id?.toString() || prev.saleBillTo,
+      saleBillToName: initialDraft.billToName || prev.saleBillToName,
+      saleBillToCustomerId: billToParty?.customerId?.toString() || initialDraft.billToCustomerId?.toString() || prev.saleBillToCustomerId,
+      saleTax: `${initialDraft.saleTaxPercentage || 0}%`,
+      saleGP: ((saleLcy ?? 0) - (costLcy ?? 0)).toFixed(2),
+    }));
+  }, [open, costing, initialDraft, initialDraftNonce, creditorParties, debtorParties, currencyTypes, costingUnits, defaultActiveTab]);
 
   // Resolve missing currency IDs when editing existing records
   useEffect(() => {

@@ -10,6 +10,7 @@ const REPORT_TITLES: Record<string, string> = {
   "freight-certificate": "Freight Certificate",
   "mbl-shipping-instruction": "MBL Shipping Instruction",
   "bill-of-lading": "Bill of Lading",
+  "air-waybill": "Air Waybill",
   "customs-declaration": "Customs Manifest",
   "cbook": "C Book",
   "c-list": "C List",

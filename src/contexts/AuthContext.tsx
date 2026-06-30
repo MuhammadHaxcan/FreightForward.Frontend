@@ -5,6 +5,7 @@ import { authApi } from '../services/api/auth';
 import { setAuthFailureCallback, clearTokens, getAccessToken, getRefreshToken } from '../services/api/base';
 import type { CurrentUser, LoginRequest, AuthResponse } from '../types/auth';
 import OfficeInteractionTracker from '../components/audit/OfficeInteractionTracker';
+import AssistantWidget from '../components/assistant/AssistantWidget';
 
 interface AuthContextType {
   user: CurrentUser | null;
@@ -209,6 +210,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         officeSlug={officeSlug}
       />
       {children}
+      <AssistantWidget />
     </AuthContext.Provider>
   );
 }

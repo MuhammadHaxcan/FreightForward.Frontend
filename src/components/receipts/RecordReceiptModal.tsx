@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -38,10 +38,13 @@ import { useAllDebtors } from "@/hooks/useCustomers";
 import { useAllBanks } from "@/hooks/useBanks";
 import { useAllCurrencyTypes } from "@/hooks/useSettings";
 import { toast } from "sonner";
+import type { ReceiptAssistantDraft } from "@/services/api/assistant";
 
 interface RecordReceiptModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialDraft?: ReceiptAssistantDraft | null;
+  initialDraftNonce?: string | null;
   onSuccess: () => void;
 }
 
@@ -58,6 +61,8 @@ interface SelectedInvoice {
 export function RecordReceiptModal({
   open,
   onOpenChange,
+  initialDraft,
+  initialDraftNonce,
   onSuccess,
 }: RecordReceiptModalProps) {
   const baseCurrencyCode = useBaseCurrency();
@@ -83,6 +88,8 @@ export function RecordReceiptModal({
   const [chequeBank, setChequeBank] = useState("");
   const [postDatedValidDate, setPostDatedValidDate] = useState("");
   const [remarks, setRemarks] = useState("");
+  const appliedDraftNonceRef = useRef<string | null>(null);
+  const applyingDraftRef = useRef(false);
 
   // Unpaid invoices — only fetch when customerId is set
   const { data: unpaidInvoices = [] } = useUnpaidInvoicesForCustomer(customerId);
@@ -95,6 +102,7 @@ export function RecordReceiptModal({
   // Reset form when modal closes
   useEffect(() => {
     if (!open) {
+      applyingDraftRef.current = false;
       setCustomerId(null);
       setSelectedInvoices([]);
       setPaymentMode("Cash");
@@ -111,6 +119,11 @@ export function RecordReceiptModal({
 
   // Set currency when customer changes
   useEffect(() => {
+    if (applyingDraftRef.current) {
+      applyingDraftRef.current = false;
+      return;
+    }
+
     if (customerId) {
       const selectedCustomer = customers.find(c => c.id === customerId);
       if (selectedCustomer?.baseCurrency) {
@@ -121,6 +134,33 @@ export function RecordReceiptModal({
       setSelectedInvoices([]);
     }
   }, [customerId, customers]);
+
+  useEffect(() => {
+    if (!open || !initialDraft || !initialDraftNonce) return;
+    if (appliedDraftNonceRef.current === initialDraftNonce) return;
+
+    applyingDraftRef.current = true;
+    appliedDraftNonceRef.current = initialDraftNonce;
+    setCustomerId(initialDraft.customerId);
+    setSelectedInvoices(initialDraft.selectedInvoices.map((invoice) => ({
+      invoiceId: invoice.invoiceId,
+      invoiceNo: invoice.invoiceNo,
+      totalAmount: invoice.outstanding,
+      pendingAmount: invoice.outstanding,
+      payingAmount: invoice.payingAmount,
+      currency: (invoice.currencyCode || initialDraft.currencyCode || baseCurrencyCode) as Currency,
+      currencyId: invoice.currencyId ?? undefined,
+    })));
+    setPaymentMode(initialDraft.paymentMode as PaymentMode);
+    setReceiptDate(initialDraft.receiptDate || format(new Date(), "yyyy-MM-dd"));
+    setCurrency((initialDraft.currencyCode || baseCurrencyCode) as Currency);
+    setBankId(initialDraft.bankId ?? null);
+    setChequeNo(initialDraft.chequeNo || "");
+    setChequeDate(initialDraft.chequeDate || "");
+    setChequeBank(initialDraft.chequeBank || "");
+    setPostDatedValidDate(initialDraft.postDatedValidDate || "");
+    setRemarks(initialDraft.narration || "");
+  }, [open, initialDraft, initialDraftNonce, baseCurrencyCode]);
 
   const handleInvoiceSelect = (invoice: UnpaidInvoice, isSelected: boolean) => {
     if (isSelected) {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ import {
   FileText,
   PackageCheck,
   Ship,
+  Plane,
   FileBadge,
   FileSignature,
   ClipboardList,
@@ -107,6 +108,13 @@ import { hrEmployeeApi, type EmployeeDropdown } from "@/services/api/hr";
 import { interactionAuditApi } from "@/services/api/interactionAudit";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { OfficeInteractionAuditEventRequest } from "@/types/auth";
+import type {
+  AssistantRouteState,
+  ShipmentPartyAssistantDraft,
+  ShipmentCostingAssistantDraft,
+  SalesInvoiceAssistantDraft,
+  PurchaseInvoiceAssistantDraft,
+} from "@/services/api/assistant";
 
 // Helper function to get payment status display and styling
 const getPaymentStatusDisplay = (status: PaymentStatus) => {
@@ -292,6 +300,7 @@ const emptyCargoEntry: CargoFormEntry = {
 const ShipmentDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { hasPermission } = useAuth();
 
   const queryClient = useQueryClient();
@@ -348,6 +357,16 @@ const ShipmentDetail = () => {
   const [editingCosting, setEditingCosting] = useState<ShipmentCosting | null>(null);
   const [editInvoiceId, setEditInvoiceId] = useState<number | null>(null);
   const [editPurchaseInvoiceId, setEditPurchaseInvoiceId] = useState<number | null>(null);
+  const [assistantCostingDraft, setAssistantCostingDraft] = useState<ShipmentCostingAssistantDraft | null>(null);
+  const [assistantPartyDraft, setAssistantPartyDraft] = useState<ShipmentPartyAssistantDraft | null>(null);
+  const [assistantInvoiceDraft, setAssistantInvoiceDraft] = useState<SalesInvoiceAssistantDraft | null>(null);
+  const [assistantPurchaseDraft, setAssistantPurchaseDraft] = useState<PurchaseInvoiceAssistantDraft | null>(null);
+  const [assistantDraftNonce, setAssistantDraftNonce] = useState<string | null>(null);
+  const [assistantCostingTab, setAssistantCostingTab] = useState<"cost" | "sale" | undefined>(undefined);
+  // Multi-line assistant costing queue: post each line, then auto-advance to the next.
+  const [assistantCostingQueue, setAssistantCostingQueue] = useState<ShipmentCostingAssistantDraft[]>([]);
+  const [assistantCostingIndex, setAssistantCostingIndex] = useState(0);
+  const [assistantCostingBaseNonce, setAssistantCostingBaseNonce] = useState<string | null>(null);
 
   // Invoice delete hooks
   const deleteInvoiceMutation = useDeleteInvoice();
@@ -386,6 +405,15 @@ const ShipmentDetail = () => {
     setEditingCosting(null);
     setEditInvoiceId(null);
     setEditPurchaseInvoiceId(null);
+    setAssistantCostingDraft(null);
+    setAssistantPartyDraft(null);
+    setAssistantInvoiceDraft(null);
+    setAssistantPurchaseDraft(null);
+    setAssistantDraftNonce(null);
+    setAssistantCostingTab(undefined);
+    setAssistantCostingQueue([]);
+    setAssistantCostingIndex(0);
+    setAssistantCostingBaseNonce(null);
     setDeleteModalOpen(false);
     setDeleteModalConfig(null);
     setWarningModalOpen(false);
@@ -399,6 +427,64 @@ const ShipmentDetail = () => {
     setIsSavingCargo(false);
     setIsDeleting(false);
   }, [id]);
+
+  useEffect(() => {
+    const state = location.state as AssistantRouteState<
+      ShipmentPartyAssistantDraft | ShipmentCostingAssistantDraft | SalesInvoiceAssistantDraft | PurchaseInvoiceAssistantDraft
+    > | null;
+    const action = state?.assistantAction;
+    if (!action || action.source !== "assistant") return;
+
+    if (action.kind === "shipmentParty") {
+      const draft = action.draft as ShipmentPartyAssistantDraft;
+      setActiveTab("parties");
+      setAssistantPartyDraft(draft);
+      setSelectedCategoryId(draft.categoryId.toString());
+      setSelectedCustomerId("");
+      setAssistantCostingDraft(null);
+      setAssistantInvoiceDraft(null);
+      setAssistantPurchaseDraft(null);
+      setAssistantDraftNonce(action.nonce);
+      setAssistantCostingTab(undefined);
+    } else if (action.kind === "shipmentCosting") {
+      const draft = action.draft as ShipmentCostingAssistantDraft;
+      const queue = draft.costings && draft.costings.length > 0 ? draft.costings : [draft];
+      const first = queue[0];
+      setEditingCosting(null);
+      setAssistantCostingQueue(queue);
+      setAssistantCostingIndex(0);
+      setAssistantCostingBaseNonce(action.nonce);
+      setAssistantCostingDraft(first);
+      setAssistantPartyDraft(null);
+      setAssistantInvoiceDraft(null);
+      setAssistantPurchaseDraft(null);
+      setAssistantDraftNonce(`${action.nonce}-0`);
+      setAssistantCostingTab(first.preferredTab === "sale" || first.preferredTab === "cost" ? first.preferredTab : undefined);
+      setCostingModalOpen(true);
+    } else if (action.kind === "salesInvoice") {
+      setEditInvoiceId(null);
+      setAssistantInvoiceDraft(action.draft as SalesInvoiceAssistantDraft);
+      setAssistantPartyDraft(null);
+      setAssistantCostingDraft(null);
+      setAssistantPurchaseDraft(null);
+      setAssistantDraftNonce(action.nonce);
+      setAssistantCostingTab(undefined);
+      setInvoiceModalOpen(true);
+    } else if (action.kind === "purchaseInvoice") {
+      setEditPurchaseInvoiceId(null);
+      setAssistantPurchaseDraft(action.draft as PurchaseInvoiceAssistantDraft);
+      setAssistantPartyDraft(null);
+      setAssistantCostingDraft(null);
+      setAssistantInvoiceDraft(null);
+      setAssistantDraftNonce(action.nonce);
+      setAssistantCostingTab(undefined);
+      setPurchaseModalOpen(true);
+    } else {
+      return;
+    }
+
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.pathname, location.state, navigate]);
 
   // Fetch shipment invoices
   const { data: shipmentInvoicesResponse } = useQuery({
@@ -568,6 +654,15 @@ const ShipmentDetail = () => {
     setSelectedCustomerId("");
   }, [selectedCategoryId]);
 
+  useEffect(() => {
+    if (!assistantPartyDraft) return;
+    if (selectedCategoryId !== assistantPartyDraft.categoryId.toString()) return;
+    const customerExists = customers.some(c => c.id === assistantPartyDraft.customerId);
+    if (customerExists) {
+      setSelectedCustomerId(assistantPartyDraft.customerId.toString());
+    }
+  }, [assistantPartyDraft, selectedCategoryId, customers]);
+
   const handleInputChange = (field: string, value: string | boolean) => {
     if (isReadOnly) return;
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -627,6 +722,24 @@ const ShipmentDetail = () => {
         outcomeMessage: `Party added (${selectedCustomer.masterType})`,
       });
 
+      if (assistantPartyDraft?.pendingCostings?.length) {
+        await refetchShipment();
+        const queue = assistantPartyDraft.pendingCostings;
+        const first = queue[0];
+        setAssistantCostingQueue(queue);
+        setAssistantCostingIndex(0);
+        setAssistantCostingBaseNonce(assistantDraftNonce);
+        setAssistantCostingDraft(first);
+        setAssistantDraftNonce(`${assistantDraftNonce ?? "assistant"}-0`);
+        setAssistantCostingTab(
+          first.preferredTab === "sale" || first.preferredTab === "cost" ? first.preferredTab : undefined
+        );
+        setAssistantPartyDraft(null);
+        setCostingModalOpen(true);
+        toast.success(`Party added. Opening ${first.chargeName || "costing"} draft…`);
+      }
+
+      setAssistantPartyDraft(null);
       setSelectedCustomerId("");
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to add party";
@@ -813,6 +926,33 @@ const ShipmentDetail = () => {
           outcomeMessage: "Costing added",
         });
       }
+
+      // Assistant multi-line queue: if more lines remain, reopen the modal for the next one
+      // instead of closing. assistantCostingDraft (closure) is the line we just posted.
+      if (!editingCosting && assistantCostingDraft && assistantCostingQueue.length > 0 && assistantCostingBaseNonce) {
+        const nextIndex = assistantCostingIndex + 1;
+        if (nextIndex < assistantCostingQueue.length) {
+          const nextDraft = assistantCostingQueue[nextIndex];
+          await refetchShipment();
+          setAssistantCostingIndex(nextIndex);
+          setAssistantCostingDraft(nextDraft);
+          setAssistantDraftNonce(`${assistantCostingBaseNonce}-${nextIndex}`);
+          setAssistantCostingTab(
+            nextDraft.preferredTab === "sale" || nextDraft.preferredTab === "cost" ? nextDraft.preferredTab : undefined
+          );
+          setCostingModalOpen(true);
+          toast.success(
+            `Saved ${nextIndex} of ${assistantCostingQueue.length}. Opening ${nextDraft.chargeName ?? "next costing"}…`
+          );
+          return;
+        }
+        // Last line posted: clear the queue and fall through to close.
+        setAssistantCostingQueue([]);
+        setAssistantCostingIndex(0);
+        setAssistantCostingBaseNonce(null);
+        toast.success(`All ${assistantCostingQueue.length} costing lines added.`);
+      }
+
       setCostingModalOpen(false);
       setEditingCosting(null);
       refetchShipment();
@@ -2514,10 +2654,18 @@ const ShipmentDetail = () => {
         open={costingModalOpen}
         onOpenChange={(open) => {
           setCostingModalOpen(open);
-          if (!open) setEditingCosting(null);
+          if (!open) {
+            setEditingCosting(null);
+            setAssistantCostingDraft(null);
+            setAssistantDraftNonce(null);
+            setAssistantCostingTab(undefined);
+          }
         }}
         parties={parties}
         costing={editingCosting}
+        initialDraft={assistantCostingDraft}
+        initialDraftNonce={assistantDraftNonce}
+        defaultActiveTab={assistantCostingTab}
         onSave={handleSaveCosting}
       />
 
@@ -2525,12 +2673,18 @@ const ShipmentDetail = () => {
         open={invoiceModalOpen}
         onOpenChange={(open) => {
           setInvoiceModalOpen(open);
-          if (!open) setEditInvoiceId(null);
+          if (!open) {
+            setEditInvoiceId(null);
+            setAssistantInvoiceDraft(null);
+            setAssistantDraftNonce(null);
+          }
         }}
         shipmentId={shipmentId}
         chargesDetails={costings}
         parties={parties}
         editInvoiceId={editInvoiceId}
+        initialDraft={assistantInvoiceDraft}
+        initialDraftNonce={assistantDraftNonce}
         onSave={async () => {
           await refetchShipment();
         }}
@@ -2540,13 +2694,19 @@ const ShipmentDetail = () => {
         open={purchaseModalOpen}
         onOpenChange={(open) => {
           setPurchaseModalOpen(open);
-          if (!open) setEditPurchaseInvoiceId(null);
+          if (!open) {
+            setEditPurchaseInvoiceId(null);
+            setAssistantPurchaseDraft(null);
+            setAssistantDraftNonce(null);
+          }
         }}
         shipmentId={shipmentId}
         jobNumber={shipmentData?.jobNumber}
         chargesDetails={costings}
         parties={parties}
         editPurchaseInvoiceId={editPurchaseInvoiceId}
+        initialDraft={assistantPurchaseDraft}
+        initialDraftNonce={assistantDraftNonce}
         onSave={async () => {
           await refetchShipment();
         }}
@@ -2619,6 +2779,7 @@ const ShipmentDetail = () => {
                 { name: "CARGO ARRIVAL", slug: "cargo-arrival-notice", icon: Ship, color: "text-cyan-600 bg-cyan-100" },
                 { name: "FREIGHT CERTIFICATE", slug: "freight-certificate", icon: FileBadge, color: "text-amber-600 bg-amber-100" },
                 { name: "MBL SHIPPING", slug: "mbl-shipping-instruction", icon: FileSignature, color: "text-indigo-600 bg-indigo-100" },
+                { name: "AIR WAYBILL", slug: "air-waybill", icon: Plane, color: "text-sky-600 bg-sky-100" },
                 { name: "CUSTOMS MANIFEST", slug: "customs-declaration", icon: ClipboardList, color: "text-orange-600 bg-orange-100" },
                 { name: "C BOOK", slug: "cbook", icon: BookOpen, color: "text-purple-600 bg-purple-100" },
                 { name: "C LIST", slug: "c-list", icon: ListChecks, color: "text-rose-600 bg-rose-100" },
