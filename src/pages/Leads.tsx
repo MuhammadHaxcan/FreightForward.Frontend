@@ -34,13 +34,15 @@ import {
 } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Edit, Send, Loader2, Plus, RotateCcw, Check } from "lucide-react";
+import { Edit, Send, Loader2, Plus, RotateCcw, Check, History } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { useLeads, usePortalLeads, useAcceptPortalLead, useRevertPortalLead } from "@/hooks/useSales";
+import { useLeads, usePortalLeads, useAcceptPortalLead, useRevertPortalLead, useLead } from "@/hooks/useSales";
 import { useAllDebtors } from "@/hooks/useCustomers";
 import { SendRateRequestModal } from "@/components/leads/SendRateRequestModal";
 import { PermissionGate } from "@/components/auth/PermissionGate";
+import { leadApi } from "@/services/api/sales";
+import { SalesActivityLogModal } from "@/components/sales/SalesActivityLogModal";
 
 export default function Leads() {
   const navigate = useNavigate();
@@ -53,6 +55,20 @@ export default function Leads() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedLeadId, setSelectedLeadId] = useState<number | null>(null);
   const [sendRateRequestModalOpen, setSendRateRequestModalOpen] = useState(false);
+  const [historyLeadId, setHistoryLeadId] = useState<number | null>(null);
+  const { data: historyDetail, refetch: refetchHistory } = useLead(historyLeadId || 0);
+
+  const handleAddHistoryNote = async (note: string) => {
+    if (!historyLeadId) return;
+    try {
+      const response = await leadApi.addNote(historyLeadId, note);
+      if (response.error) throw new Error(response.error);
+      await refetchHistory();
+      toast.success("Note added");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to add note");
+    }
+  };
 
   // Portal Leads state
   const [portalSearchTerm, setPortalSearchTerm] = useState("");
@@ -284,7 +300,6 @@ export default function Leads() {
                   <TableHeader>
                     <TableRow className="bg-table-header">
                       <TableHead className="text-table-header-foreground w-12"></TableHead>
-                      <TableHead className="text-table-header-foreground">Action</TableHead>
                       <TableHead className="text-table-header-foreground">Lead No.</TableHead>
                       <TableHead className="text-table-header-foreground">Lead Type</TableHead>
                       <TableHead className="text-table-header-foreground">Date</TableHead>
@@ -296,6 +311,7 @@ export default function Leads() {
                       <TableHead className="text-table-header-foreground">Items</TableHead>
                       <TableHead className="text-table-header-foreground">Weight</TableHead>
                       <TableHead className="text-table-header-foreground">Status</TableHead>
+                      <TableHead className="text-table-header-foreground">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -317,6 +333,21 @@ export default function Leads() {
                               className="h-4 w-4 text-green-600 cursor-pointer"
                             />
                           </TableCell>
+                          <TableCell className="font-medium">{lead.leadNo}</TableCell>
+                          <TableCell>
+                            <Badge className={lead.leadType === "PortalLead" ? "bg-purple-500 text-white" : "bg-sky-500 text-white"}>
+                              {lead.leadType === "PortalLead" ? "Portal Lead" : "Manual Lead"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{formatDate(lead.leadDate, "dd-MM-yyyy")}</TableCell>
+                          <TableCell className="text-green-600">{lead.customerName || lead.fullName}</TableCell>
+                          <TableCell>{lead.freightMode || "-"}</TableCell>
+                          <TableCell>{lead.incoTermCode || "-"}</TableCell>
+                          <TableCell className="text-green-600">{lead.polCountry || lead.pickupCountryName || "-"}</TableCell>
+                          <TableCell>{lead.podCountry || lead.deliveryCountryName || "-"}</TableCell>
+                          <TableCell>{lead.quantity || "-"}</TableCell>
+                          <TableCell>{lead.weight || "-"}</TableCell>
+                          <TableCell>{getStatusBadge(lead.leadStatus)}</TableCell>
                           <TableCell>
                             <div className="flex gap-1">
                               <PermissionGate permission="leads_edit">
@@ -342,23 +373,17 @@ export default function Leads() {
                                   </Button>
                                 </PermissionGate>
                               )}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 bg-slate-500 hover:bg-slate-600 text-white rounded"
+                                onClick={() => setHistoryLeadId(lead.id)}
+                                title="History"
+                              >
+                                <History className="h-4 w-4" />
+                              </Button>
                             </div>
                           </TableCell>
-                          <TableCell className="font-medium">{lead.leadNo}</TableCell>
-                          <TableCell>
-                            <Badge className={lead.leadType === "PortalLead" ? "bg-purple-500 text-white" : "bg-sky-500 text-white"}>
-                              {lead.leadType === "PortalLead" ? "Portal Lead" : "Manual Lead"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{formatDate(lead.leadDate, "dd-MM-yyyy")}</TableCell>
-                          <TableCell className="text-green-600">{lead.customerName || lead.fullName}</TableCell>
-                          <TableCell>{lead.freightMode || "-"}</TableCell>
-                          <TableCell>{lead.incoTermCode || "-"}</TableCell>
-                          <TableCell className="text-green-600">{lead.polCountry || lead.pickupCountryName || "-"}</TableCell>
-                          <TableCell>{lead.podCountry || lead.deliveryCountryName || "-"}</TableCell>
-                          <TableCell>{lead.quantity || "-"}</TableCell>
-                          <TableCell>{lead.weight || "-"}</TableCell>
-                          <TableCell>{getStatusBadge(lead.leadStatus)}</TableCell>
                         </TableRow>
                       ))
                     )}
@@ -464,7 +489,6 @@ export default function Leads() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-table-header">
-                      <TableHead className="text-table-header-foreground">Action</TableHead>
                       <TableHead className="text-table-header-foreground">Lead No.</TableHead>
                       <TableHead className="text-table-header-foreground">Date</TableHead>
                       <TableHead className="text-table-header-foreground">Name</TableHead>
@@ -474,6 +498,7 @@ export default function Leads() {
                       <TableHead className="text-table-header-foreground">Pickup Country</TableHead>
                       <TableHead className="text-table-header-foreground">Delivery Country</TableHead>
                       <TableHead className="text-table-header-foreground">Status</TableHead>
+                      <TableHead className="text-table-header-foreground">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -493,6 +518,17 @@ export default function Leads() {
                               : "hover:bg-table-row-hover"
                           }
                         >
+                          <TableCell className="font-medium">{lead.leadNo}</TableCell>
+                          <TableCell>{formatDate(lead.leadDate, "dd-MM-yyyy")}</TableCell>
+                          <TableCell className="text-green-600">{lead.fullName}</TableCell>
+                          <TableCell>{lead.email}</TableCell>
+                          <TableCell>{lead.freightMode || "-"}</TableCell>
+                          <TableCell>{lead.shippingType || "-"}</TableCell>
+                          <TableCell className="text-green-600">{lead.pickupCountryName || "-"}</TableCell>
+                          <TableCell>{lead.deliveryCountryName || "-"}</TableCell>
+                          <TableCell>
+                            {getPortalStatusBadge(lead.portalLeadStatus, lead.acceptedByOfficeName)}
+                          </TableCell>
                           <TableCell>
                             {lead.portalLeadStatus === "Available" && (
                               <PermissionGate permission="leads_add">
@@ -508,17 +544,6 @@ export default function Leads() {
                                 </Button>
                               </PermissionGate>
                             )}
-                          </TableCell>
-                          <TableCell className="font-medium">{lead.leadNo}</TableCell>
-                          <TableCell>{formatDate(lead.leadDate, "dd-MM-yyyy")}</TableCell>
-                          <TableCell className="text-green-600">{lead.fullName}</TableCell>
-                          <TableCell>{lead.email}</TableCell>
-                          <TableCell>{lead.freightMode || "-"}</TableCell>
-                          <TableCell>{lead.shippingType || "-"}</TableCell>
-                          <TableCell className="text-green-600">{lead.pickupCountryName || "-"}</TableCell>
-                          <TableCell>{lead.deliveryCountryName || "-"}</TableCell>
-                          <TableCell>
-                            {getPortalStatusBadge(lead.portalLeadStatus, lead.acceptedByOfficeName)}
                           </TableCell>
                         </TableRow>
                       ))
@@ -667,6 +692,14 @@ export default function Leads() {
             onSuccess={handleRateRequestSuccess}
           />
         )}
+
+        <SalesActivityLogModal
+          open={!!historyLeadId}
+          onOpenChange={(open) => !open && setHistoryLeadId(null)}
+          title={`Lead History${historyDetail?.leadNo ? ` — ${historyDetail.leadNo}` : ""}`}
+          entries={historyDetail?.activityLog ?? []}
+          onAdd={handleAddHistoryNote}
+        />
       </div>
     </MainLayout>
   );

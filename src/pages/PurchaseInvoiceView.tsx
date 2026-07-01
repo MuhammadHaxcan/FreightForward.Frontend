@@ -31,6 +31,7 @@ export default function PurchaseInvoiceView() {
   const navigate = useNavigate();
   const { officeName, hasPermission } = useAuth();
   const baseCurrencyCode = useBaseCurrency();
+  const vatLabel = baseCurrencyCode === "PKR" ? "Tax" : "VAT";
 
   const { data: invoice, isLoading: loading } = usePurchaseInvoiceByIdentifier(id);
   const { data: shipment, isLoading: shipmentLoading, isError: shipmentError } = useShipment(invoice?.shipmentId ?? 0);
@@ -197,8 +198,8 @@ export default function PurchaseInvoiceView() {
                   <TableHead className="text-white font-semibold text-right">ROE</TableHead>
                   <TableHead className="text-white font-semibold text-right">Quantity</TableHead>
                   <TableHead className="text-white font-semibold text-right">Amount</TableHead>
-                  <TableHead className="text-white font-semibold text-right">Tax%</TableHead>
-                  <TableHead className="text-white font-semibold text-right">Tax Amt</TableHead>
+                  <TableHead className="text-white font-semibold text-right">{vatLabel}%</TableHead>
+                  <TableHead className="text-white font-semibold text-right">{vatLabel} Amt</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -237,7 +238,7 @@ export default function PurchaseInvoiceView() {
               </div>
               <div className="px-2 py-1">
                 <div className="flex justify-between">
-                  <span>Total Tax</span>
+                  <span>Total {vatLabel}</span>
                   <span>{formatCurrency(totalTax, invoice.currencyCode || baseCurrencyCode)}</span>
                 </div>
               </div>

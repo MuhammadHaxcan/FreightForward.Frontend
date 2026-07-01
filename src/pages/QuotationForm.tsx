@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Loader2, ArrowLeft, Trash2, Ship, Plane, Truck, Package, Container } from "lucide-react";
+import { Loader2, ArrowLeft, Trash2, Ship, Plane, Truck, Package, Container, History } from "lucide-react";
 import {
   useQuotation,
   useCreateQuotation,
@@ -45,6 +45,9 @@ import {
   ShippingType,
   UnitOfMeasurement,
 } from "@/services/api";
+import { quotationApi } from "@/services/api/sales";
+import { SalesActivityLog } from "@/components/sales/SalesActivityLog";
+import { SalesActivityLogModal } from "@/components/sales/SalesActivityLogModal";
 import { toast } from "sonner";
 
 const PRODUCT_TYPES = [
@@ -229,7 +232,20 @@ export default function QuotationForm() {
 
   // Queries
   const { data: conversionData } = useRateRequestForConversion(conversionRateRequestId || 0);
-  const { data: quotationDetail, isLoading: isQuotationLoading } = useQuotation(quotationId || 0);
+  const { data: quotationDetail, isLoading: isQuotationLoading, refetch: refetchQuotation } = useQuotation(quotationId || 0);
+  const [historyOpen, setHistoryOpen] = useState(false);
+
+  const handleAddNote = async (note: string) => {
+    if (!quotationId) return;
+    try {
+      const response = await quotationApi.addNote(quotationId, note);
+      if (response.error) throw new Error(response.error);
+      await refetchQuotation();
+      toast.success("Note added");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to add note");
+    }
+  };
 
   // ----- Source rate-request + lead for the locked context cards above the form -----
   // Convert mode: use the rateRequestId from location.state.
@@ -774,7 +790,13 @@ export default function QuotationForm() {
           <Button variant="outline" size="icon" onClick={() => navigate("/sales/quotations")}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-2xl font-semibold text-foreground">{getTitle()}</h1>
+          <h1 className="text-2xl font-semibold text-foreground flex-1">{getTitle()}</h1>
+          {quotationId && (
+            <Button variant="outline" onClick={() => setHistoryOpen(true)}>
+              <History className="h-4 w-4 mr-2" />
+              History
+            </Button>
+          )}
         </div>
 
         {(isEditing || isViewMode) && isQuotationLoading ? (
@@ -1451,13 +1473,21 @@ export default function QuotationForm() {
                 <CardTitle className="text-lg text-primary">Internal Sales Notes</CardTitle>
               </CardHeader>
               <CardContent>
-                <Textarea
-                  placeholder="Private notes for the internal sales team"
-                  value={formData.internalNotes || ""}
-                  onChange={(e) => setFormData({ ...formData, internalNotes: e.target.value })}
-                  disabled={isReadOnly}
-                  rows={4}
-                />
+                {quotationId ? (
+                  <SalesActivityLog
+                    entries={quotationDetail?.activityLog ?? []}
+                    isReadOnly={isReadOnly}
+                    onAdd={handleAddNote}
+                  />
+                ) : (
+                  <Textarea
+                    placeholder="Private notes for the internal sales team"
+                    value={formData.internalNotes || ""}
+                    onChange={(e) => setFormData({ ...formData, internalNotes: e.target.value })}
+                    disabled={isReadOnly}
+                    rows={4}
+                  />
+                )}
               </CardContent>
             </Card>
 
@@ -1828,6 +1858,16 @@ export default function QuotationForm() {
           </div>
         )}
       </div>
+      {quotationId && (
+        <SalesActivityLogModal
+          open={historyOpen}
+          onOpenChange={setHistoryOpen}
+          title={`Quotation History${quotationDetail?.quotationNo ? ` — ${quotationDetail.quotationNo}` : ""}`}
+          entries={quotationDetail?.activityLog ?? []}
+          isReadOnly={isReadOnly}
+          onAdd={handleAddNote}
+        />
+      )}
     </MainLayout>
   );
 }

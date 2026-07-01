@@ -23,11 +23,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Edit, Plus, FileText, Loader2, Check } from "lucide-react";
+import { Edit, Plus, FileText, Loader2, Check, History } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import { useRateRequests, useUpdateRateRequest } from "@/hooks/useSales";
+import { useRateRequests, useUpdateRateRequest, useRateRequest } from "@/hooks/useSales";
 import { RateRequest } from "@/services/api";
+import { rateRequestApi } from "@/services/api/sales";
+import { SalesActivityLogModal } from "@/components/sales/SalesActivityLogModal";
+import { toast } from "sonner";
 
 export default function RateRequests() {
   const navigate = useNavigate();
@@ -38,6 +41,21 @@ export default function RateRequests() {
   const [selectedRateRequestId, setSelectedRateRequestId] = useState<number | null>(null);
   const [showReceivedConfirm, setShowReceivedConfirm] = useState(false);
   const [rateRequestToMarkReceived, setRateRequestToMarkReceived] = useState<RateRequest | null>(null);
+  const [historyRequestId, setHistoryRequestId] = useState<number | null>(null);
+
+  const { data: historyDetail, refetch: refetchHistory } = useRateRequest(historyRequestId || 0);
+
+  const handleAddHistoryNote = async (note: string) => {
+    if (!historyRequestId) return;
+    try {
+      const response = await rateRequestApi.addNote(historyRequestId, note);
+      if (response.error) throw new Error(response.error);
+      await refetchHistory();
+      toast.success("Note added");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to add note");
+    }
+  };
 
   const { data, isLoading, error } = useRateRequests({
     pageNumber: currentPage,
@@ -170,7 +188,6 @@ export default function RateRequests() {
               <TableHeader>
                 <TableRow className="bg-table-header">
                   <TableHead className="text-table-header-foreground w-12">Select</TableHead>
-                  <TableHead className="text-table-header-foreground">Action</TableHead>
                   <TableHead className="text-table-header-foreground">Rate request No.</TableHead>
                   <TableHead className="text-table-header-foreground">Lead No.</TableHead>
                   <TableHead className="text-table-header-foreground">Date</TableHead>
@@ -182,6 +199,7 @@ export default function RateRequests() {
                   <TableHead className="text-table-header-foreground">Pickup Country</TableHead>
                   <TableHead className="text-table-header-foreground">Delivery Country</TableHead>
                   <TableHead className="text-table-header-foreground">Status</TableHead>
+                  <TableHead className="text-table-header-foreground">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -206,6 +224,17 @@ export default function RateRequests() {
                           className="h-4 w-4 text-green-600 cursor-pointer"
                         />
                       </TableCell>
+                      <TableCell className="font-medium">{request.rateRequestNo}</TableCell>
+                      <TableCell className="text-green-600">{request.leadNo || "-"}</TableCell>
+                      <TableCell>{formatDate(request.requestDate, "dd-MM-yyyy")}</TableCell>
+                      <TableCell className="text-green-600">{request.fullName || "-"}</TableCell>
+                      <TableCell>{request.freightMode || "-"}</TableCell>
+                      <TableCell>{request.vendorType || "-"}</TableCell>
+                      <TableCell className="text-green-600">{request.vendorName}</TableCell>
+                      <TableCell>{request.vendorEmail || "-"}</TableCell>
+                      <TableCell className="text-green-600">{request.pickupCountryName || request.polCountry || "-"}</TableCell>
+                      <TableCell>{request.deliveryCountryName || request.podCountry || "-"}</TableCell>
+                      <TableCell>{getStatusBadge(request.requestStatus)}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
                           <PermissionGate permission="ratereq_edit">
@@ -245,19 +274,17 @@ export default function RateRequests() {
                               <FileText className="h-4 w-4" />
                             </Button>
                           )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 bg-slate-500 hover:bg-slate-600 text-white rounded"
+                            onClick={() => setHistoryRequestId(request.id)}
+                            title="History"
+                          >
+                            <History className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
-                      <TableCell className="font-medium">{request.rateRequestNo}</TableCell>
-                      <TableCell className="text-green-600">{request.leadNo || "-"}</TableCell>
-                      <TableCell>{formatDate(request.requestDate, "dd-MM-yyyy")}</TableCell>
-                      <TableCell className="text-green-600">{request.fullName || "-"}</TableCell>
-                      <TableCell>{request.freightMode || "-"}</TableCell>
-                      <TableCell>{request.vendorType || "-"}</TableCell>
-                      <TableCell className="text-green-600">{request.vendorName}</TableCell>
-                      <TableCell>{request.vendorEmail || "-"}</TableCell>
-                      <TableCell className="text-green-600">{request.pickupCountryName || request.polCountry || "-"}</TableCell>
-                      <TableCell>{request.deliveryCountryName || request.podCountry || "-"}</TableCell>
-                      <TableCell>{getStatusBadge(request.requestStatus)}</TableCell>
                     </TableRow>
                   ))
                 )}
@@ -337,6 +364,14 @@ export default function RateRequests() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <SalesActivityLogModal
+        open={!!historyRequestId}
+        onOpenChange={(open) => !open && setHistoryRequestId(null)}
+        title={`Rate Request History${historyDetail?.rateRequestNo ? ` — ${historyDetail.rateRequestNo}` : ""}`}
+        entries={historyDetail?.activityLog ?? []}
+        onAdd={handleAddHistoryNote}
+      />
     </MainLayout>
   );
 }

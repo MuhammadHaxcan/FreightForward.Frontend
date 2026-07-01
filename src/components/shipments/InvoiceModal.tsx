@@ -802,7 +802,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
             <Button
               className="btn-success"
               onClick={handleSave}
-              disabled={!shipmentId || !formData.customerId || formData.selectedCharges.length === 0 || isSaving}
+              disabled={!shipmentId || !formData.customerId || (!isEditMode && formData.selectedCharges.length === 0) || isSaving}
             >
               {isSaving ? (
                 <>

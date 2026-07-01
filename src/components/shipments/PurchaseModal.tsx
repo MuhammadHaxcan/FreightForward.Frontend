@@ -837,7 +837,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
             <Button
               className="btn-success"
               onClick={handleSave}
-              disabled={!shipmentId || !formData.customerId || formData.selectedCharges.length === 0 || isSaving}
+              disabled={!shipmentId || !formData.customerId || (!isEditMode && formData.selectedCharges.length === 0) || isSaving}
             >
               {isSaving ? (
                 <>

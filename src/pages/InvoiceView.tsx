@@ -9,6 +9,7 @@ import { invoiceApi } from "@/services/api";
 import { useInvoiceByIdentifier } from "@/hooks/useInvoices";
 import { useShipment } from "@/hooks/useShipments";
 import { SendEmailModal } from "@/components/common/SendEmailModal";
+import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 import {
   Table,
   TableBody,
@@ -34,6 +35,8 @@ export default function InvoiceView() {
   const navigate = useNavigate();
   const { officeName, hasPermission, user } = useAuth();
   const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const baseCurrencyCode = useBaseCurrency();
+  const vatLabel = baseCurrencyCode === "PKR" ? "Tax" : "VAT";
 
   const { data: invoice, isLoading: loading } = useInvoiceByIdentifier(id);
   const { data: shipment, isLoading: shipmentLoading, isError: shipmentError } = useShipment(invoice?.shipmentId ?? 0);
@@ -253,8 +256,8 @@ export default function InvoiceView() {
                   <TableHead className="text-white font-semibold text-right">Rate</TableHead>
                   <TableHead className="text-white font-semibold text-right">Quantity</TableHead>
                   <TableHead className="text-white font-semibold text-right">ROE</TableHead>
-                  <TableHead className="text-white font-semibold text-right">Tax%</TableHead>
-                  <TableHead className="text-white font-semibold text-right">Tax Amt</TableHead>
+                  <TableHead className="text-white font-semibold text-right">{vatLabel}%</TableHead>
+                  <TableHead className="text-white font-semibold text-right">{vatLabel} Amt</TableHead>
                   <TableHead className="text-white font-semibold text-right">Amount</TableHead>
                 </TableRow>
               </TableHeader>
@@ -294,7 +297,7 @@ export default function InvoiceView() {
               </div>
               <div className="px-2 py-1">
                 <div className="flex justify-between">
-                  <span>VAT</span>
+                  <span>{vatLabel}</span>
                   <span>{formatCurrency(totalTax, invoice.currencyCode || '')}</span>
                 </div>
               </div>

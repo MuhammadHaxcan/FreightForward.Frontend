@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { DateInput } from "@/components/ui/date-input";
-import { Loader2, Ship, Plane, Truck, Package, Container, ArrowLeft } from "lucide-react";
+import { Loader2, Ship, Plane, Truck, Package, Container, ArrowLeft, History } from "lucide-react";
 import {
   CreateLeadRequest,
   UpdateLeadRequest,
@@ -20,6 +20,10 @@ import {
   LeadDetailItem,
 } from "@/services/api";
 import { useCreateLead, useUpdateLead, useLead } from "@/hooks/useSales";
+import { SalesActivityLog } from "@/components/sales/SalesActivityLog";
+import { SalesActivityLogModal } from "@/components/sales/SalesActivityLogModal";
+import { leadApi } from "@/services/api/sales";
+import { toast } from "sonner";
 import { useCustomers } from "@/hooks/useCustomers";
 import {
   useAllCountries,
@@ -113,7 +117,7 @@ export default function LeadForm() {
   const updateLead = useUpdateLead();
 
   // Fetch the full lead data when editing (includes details)
-  const { data: lead, isLoading: isLeadLoading } = useLead(leadId || 0);
+  const { data: lead, isLoading: isLeadLoading, refetch: refetchLead } = useLead(leadId || 0);
 
   // Load data from backend
   const { data: customers, isLoading: isLoadingCustomers } = useCustomers({ pageSize: 1000, masterType: 'Debtors' });
@@ -130,6 +134,19 @@ export default function LeadForm() {
 
   const isEditing = !!leadId;
   const isSaving = createLead.isPending || updateLead.isPending;
+  const [historyOpen, setHistoryOpen] = useState(false);
+
+  const handleAddNote = async (note: string) => {
+    if (!leadId) return;
+    try {
+      const response = await leadApi.addNote(leadId, note);
+      if (response.error) throw new Error(response.error);
+      await refetchLead();
+      toast.success("Note added");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to add note");
+    }
+  };
 
   // Filter ports by selected country.
   // Tolerant comparison: case-insensitive + trim so post-migration whitespace /
@@ -312,9 +329,15 @@ export default function LeadForm() {
           <Button variant="outline" size="icon" onClick={() => navigate("/sales/leads")}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-2xl font-semibold text-foreground">
+          <h1 className="text-2xl font-semibold text-foreground flex-1">
             {isEditing ? "Edit Lead" : "Generate Lead"}
           </h1>
+          {leadId && (
+            <Button variant="outline" onClick={() => setHistoryOpen(true)}>
+              <History className="h-4 w-4 mr-2" />
+              History
+            </Button>
+          )}
         </div>
 
         {isEditing && isLeadLoading ? (
@@ -678,12 +701,19 @@ export default function LeadForm() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <Textarea
-                  value={formData.internalNotes}
-                  onChange={(e) => updateField("internalNotes", e.target.value)}
-                  placeholder="Private notes for the internal sales team"
-                  rows={4}
-                />
+                {leadId ? (
+                  <SalesActivityLog
+                    entries={lead?.activityLog ?? []}
+                    onAdd={handleAddNote}
+                  />
+                ) : (
+                  <Textarea
+                    value={formData.internalNotes}
+                    onChange={(e) => updateField("internalNotes", e.target.value)}
+                    placeholder="Private notes for the internal sales team"
+                    rows={4}
+                  />
+                )}
               </CardContent>
             </Card>
 
@@ -704,6 +734,15 @@ export default function LeadForm() {
           </div>
         )}
       </div>
+      {leadId && (
+        <SalesActivityLogModal
+          open={historyOpen}
+          onOpenChange={setHistoryOpen}
+          title={`Lead History${lead?.leadNo ? ` — ${lead.leadNo}` : ""}`}
+          entries={lead?.activityLog ?? []}
+          onAdd={handleAddNote}
+        />
+      )}
     </MainLayout>
   );
 }

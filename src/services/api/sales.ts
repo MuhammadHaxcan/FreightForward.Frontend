@@ -75,6 +75,17 @@ export interface AcceptPortalLeadResponse {
   leadNo: string;
 }
 
+export interface SalesActivityLogEntry {
+  id: number;
+  actionType: string;
+  message: string;
+  createdBy?: string;
+  createdAt: string;
+  relatedLeadId?: number;
+  relatedRateRequestId?: number;
+  relatedQuotationId?: number;
+}
+
 export interface Lead {
   id: number;
   leadNo: string;
@@ -128,6 +139,7 @@ export interface Lead {
   internalNotes?: string;
   status?: string;
   createdAt: string;
+  activityLog?: SalesActivityLogEntry[];
 }
 
 // Request DTOs
@@ -220,6 +232,7 @@ export interface RateRequest {
   productDescription?: string;
   incoTermId?: number;
   incoTermCode?: string;
+  activityLog?: SalesActivityLogEntry[];
 }
 
 export interface CreateRateRequestRequest {
@@ -284,6 +297,7 @@ export interface QuotationDetail extends Quotation {
   cargoCalculationMode?: string;
   charges: QuotationCharge[];
   cargoDetails: QuotationCargoDetail[];
+  activityLog?: SalesActivityLogEntry[];
 }
 
 export interface QuotationCharge {
@@ -529,6 +543,8 @@ export const leadApi = {
     fetchApi<number>('/sales/leads', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: number, data: UpdateLeadRequest) =>
     fetchApi<void>(`/sales/leads/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  addNote: (id: number, note: string) =>
+    fetchApi<void>(`/sales/leads/${id}/notes`, { method: 'POST', body: JSON.stringify({ note }) }),
 };
 
 export const rateRequestApi = {
@@ -553,6 +569,8 @@ export const rateRequestApi = {
     fetchApi<void>(`/sales/rate-requests/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   sendEmail: (id: number, data: RateRequestSendEmailRequest) =>
     fetchApi<{ message: string }>(`/sales/rate-requests/${id}/send-email`, { method: 'POST', body: JSON.stringify(data) }),
+  addNote: (id: number, note: string) =>
+    fetchApi<void>(`/sales/rate-requests/${id}/notes`, { method: 'POST', body: JSON.stringify({ note }) }),
 };
 
 export interface RateRequestSendEmailRequest {
@@ -590,4 +608,6 @@ export const quotationApi = {
     fetchApi<{ bookingNo: string }>(`/sales/quotations/${id}/approve`, { method: 'POST' }),
   convertToShipment: (id: number) =>
     fetchApi<void>(`/sales/quotations/${id}/convert-to-shipment`, { method: 'POST' }),
+  addNote: (id: number, note: string) =>
+    fetchApi<void>(`/sales/quotations/${id}/notes`, { method: 'POST', body: JSON.stringify({ note }) }),
 };

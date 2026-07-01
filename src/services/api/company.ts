@@ -29,6 +29,14 @@ export interface Company {
   baseCurrencyCode?: string;
   baseCurrencyName?: string;
   createdAt: string;
+  contacts: CompanyContact[];
+}
+
+export interface CompanyContact {
+  id: number;
+  name: string;
+  telephone: string;
+  email: string;
 }
 
 export interface CreateCompanyRequest {
@@ -52,6 +60,14 @@ export interface CreateCompanyRequest {
   defaultLocalBankId?: number;
   defaultInternationalBankId?: number;
   baseCurrencyId?: number;
+  contacts?: CompanyContactRequest[];
+}
+
+export interface CompanyContactRequest {
+  id?: number;
+  name: string;
+  telephone: string;
+  email: string;
 }
 
 export interface UpdateCompanyRequest extends CreateCompanyRequest {

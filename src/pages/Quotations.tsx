@@ -25,7 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Edit, Plus, Eye, Download, Trash2, Loader2, CheckCircle, Ship, MoreHorizontal } from "lucide-react";
+import { Edit, Plus, Eye, Download, Trash2, Loader2, CheckCircle, Ship, MoreHorizontal, History } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -37,8 +37,12 @@ import {
   useQuotations,
   useDeleteQuotation,
   useApproveQuotation,
+  useQuotation,
 } from "@/hooks/useSales";
 import { Quotation } from "@/services/api";
+import { quotationApi } from "@/services/api/sales";
+import { SalesActivityLogModal } from "@/components/sales/SalesActivityLogModal";
+import { toast } from "sonner";
 
 export default function Quotations() {
   const navigate = useNavigate();
@@ -54,6 +58,20 @@ export default function Quotations() {
   const [quotationToConvert, setQuotationToConvert] = useState<Quotation | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [quotationToDelete, setQuotationToDelete] = useState<Quotation | null>(null);
+  const [historyQuotationId, setHistoryQuotationId] = useState<number | null>(null);
+  const { data: historyDetail, refetch: refetchHistory } = useQuotation(historyQuotationId || 0);
+
+  const handleAddHistoryNote = async (note: string) => {
+    if (!historyQuotationId) return;
+    try {
+      const response = await quotationApi.addNote(historyQuotationId, note);
+      if (response.error) throw new Error(response.error);
+      await refetchHistory();
+      toast.success("Note added");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to add note");
+    }
+  };
 
   // Handle rate request conversion redirect
   useEffect(() => {
@@ -247,6 +265,13 @@ export default function Quotations() {
                                 >
                                   <Download className="h-4 w-4" />
                                   Download
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => setHistoryQuotationId(quotation.id)}
+                                  className={`${actionMenuItemClass} text-slate-700 data-[highlighted]:bg-slate-500`}
+                                >
+                                  <History className="h-4 w-4" />
+                                  History
                                 </DropdownMenuItem>
                                 {quotation.quotationStatus === "Pending" && (
                                   <PermissionGate permission="quot_approve">
@@ -501,6 +526,14 @@ export default function Quotations() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <SalesActivityLogModal
+        open={!!historyQuotationId}
+        onOpenChange={(open) => !open && setHistoryQuotationId(null)}
+        title={`Quotation History${historyDetail?.quotationNo ? ` — ${historyDetail.quotationNo}` : ""}`}
+        entries={historyDetail?.activityLog ?? []}
+        onAdd={handleAddHistoryNote}
+      />
     </MainLayout>
   );
 }

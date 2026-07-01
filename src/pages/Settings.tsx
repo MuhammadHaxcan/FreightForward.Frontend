@@ -61,6 +61,9 @@ import {
   InvoiceNoteType,
   fileApi,
 } from "@/services/api";
+import { CompanyContactRequest } from "@/services/api/company";
+
+const MAX_COMPANY_CONTACTS = 5;
 import { toast } from "sonner";
 import { CurrencyRateHistoryModal } from "@/components/settings/CurrencyRateHistoryModal";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
@@ -227,6 +230,7 @@ const Settings = () => {
     defaultInternationalBankId: null as number | null,
     baseCurrencyId: null as number | null,
   });
+  const [companyContacts, setCompanyContacts] = useState<CompanyContactRequest[]>([]);
 
   // Form states
   const [currencyForm, setCurrencyForm] = useState({
@@ -679,8 +683,34 @@ const Settings = () => {
         defaultInternationalBankId: c.defaultInternationalBankId ?? null,
         baseCurrencyId: c.baseCurrencyId ?? null,
       });
+      setCompanyContacts(
+        (c.contacts ?? []).map((contact) => ({
+          id: contact.id,
+          name: contact.name,
+          telephone: contact.telephone,
+          email: contact.email,
+        }))
+      );
     }
   }, [companyData]);
+
+  const handleAddCompanyContact = () => {
+    setCompanyContacts((prev) => [...prev, { name: "", telephone: "", email: "" }]);
+  };
+
+  const handleRemoveCompanyContact = (index: number) => {
+    setCompanyContacts((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleCompanyContactChange = (
+    index: number,
+    field: keyof Omit<CompanyContactRequest, "id">,
+    value: string
+  ) => {
+    setCompanyContacts((prev) =>
+      prev.map((c, i) => (i === index ? { ...c, [field]: value } : c))
+    );
+  };
 
   const handleFileUpload = async (file: File, field: "logoPath" | "sealPath") => {
     try {
@@ -695,6 +725,10 @@ const Settings = () => {
   const handleSaveCompany = () => {
     if (!companyProfile.name.trim()) {
       toast.error("Company name is required");
+      return;
+    }
+    if (companyContacts.some((c) => !c.name.trim() || !c.telephone.trim() || !c.email.trim())) {
+      toast.error("Name, Telephone and Email are required for each contact.");
       return;
     }
     const payload = {
@@ -718,6 +752,7 @@ const Settings = () => {
       defaultLocalBankId: companyProfile.defaultLocalBankId ?? undefined,
       defaultInternationalBankId: companyProfile.defaultInternationalBankId ?? undefined,
       baseCurrencyId: companyProfile.baseCurrencyId ?? undefined,
+      contacts: companyContacts,
     };
     if (companyId) {
       updateCompanyMutation.mutate({ id: companyId, data: { ...payload, id: companyId } });
@@ -1404,6 +1439,62 @@ const Settings = () => {
                             </div>
                           </label>
                         </div>
+                      </div>
+                      <div className="border border-border rounded-md bg-muted/40 p-3 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <label className="block text-sm font-medium text-foreground">Company Contacts</label>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-7 px-2"
+                            onClick={handleAddCompanyContact}
+                            disabled={companyContacts.length >= MAX_COMPANY_CONTACTS}
+                          >
+                            <Plus size={14} className="mr-1" />
+                            Add
+                          </Button>
+                        </div>
+                        {companyContacts.length === 0 && (
+                          <p className="text-xs text-muted-foreground">No contacts added.</p>
+                        )}
+                        {companyContacts.map((contact, index) => (
+                          <div
+                            key={index}
+                            className="space-y-2 rounded-md border border-border bg-card p-2"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <Input
+                                placeholder="Name"
+                                value={contact.name}
+                                onChange={(e) => handleCompanyContactChange(index, "name", e.target.value)}
+                                className="h-8 text-sm"
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 shrink-0 text-destructive hover:text-destructive"
+                                onClick={() => handleRemoveCompanyContact(index)}
+                              >
+                                <Trash2 size={14} />
+                              </Button>
+                            </div>
+                            <Input
+                              placeholder="Telephone"
+                              value={contact.telephone}
+                              onChange={(e) => handleCompanyContactChange(index, "telephone", e.target.value)}
+                              className="h-8 text-sm"
+                            />
+                            <Input
+                              type="email"
+                              placeholder="Email"
+                              value={contact.email}
+                              onChange={(e) => handleCompanyContactChange(index, "email", e.target.value)}
+                              className="h-8 text-sm"
+                            />
+                          </div>
+                        ))}
                       </div>
                     </div>
 

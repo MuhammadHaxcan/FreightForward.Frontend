@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft, History } from "lucide-react";
 import {
   useRateRequest,
   useLead,
@@ -18,6 +18,9 @@ import {
 import { useAllCustomerCategoryTypes } from "@/hooks/useSettings";
 import { useAllCreditors } from "@/hooks/useCustomers";
 import { LockedLeadSections } from "@/components/leads/LockedLeadSections";
+import { SalesActivityLog } from "@/components/sales/SalesActivityLog";
+import { SalesActivityLogModal } from "@/components/sales/SalesActivityLogModal";
+import { rateRequestApi } from "@/services/api/sales";
 
 const READONLY_INPUT = "bg-muted cursor-not-allowed";
 
@@ -33,7 +36,7 @@ export default function RateRequestForm() {
   //   view/edit → rateRequest.leadId after the rate request loads
   const queryLeadId = searchParams.get("leadId");
 
-  const { data: rateRequest, isLoading: isRateRequestLoading } = useRateRequest(rateRequestId || 0);
+  const { data: rateRequest, isLoading: isRateRequestLoading, refetch: refetchRateRequest } = useRateRequest(rateRequestId || 0);
 
   const leadId = isEditing
     ? rateRequest?.leadId ?? 0
@@ -58,6 +61,19 @@ export default function RateRequestForm() {
   const [vendorId, setVendorId] = useState<string>("");
   const [vendorEmail, setVendorEmail] = useState<string>("");
   const [internalNotes, setInternalNotes] = useState<string>("");
+  const [historyOpen, setHistoryOpen] = useState(false);
+
+  const handleAddNote = async (note: string) => {
+    if (!rateRequestId) return;
+    try {
+      const response = await rateRequestApi.addNote(rateRequestId, note);
+      if (response.error) throw new Error(response.error);
+      await refetchRateRequest();
+      toast.success("Note added");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to add note");
+    }
+  };
 
   // Edit mode: hydrate state once both rateRequest and the categoryTypes
   // lookup are loaded (rateRequest stores vendorType as its display name; the
@@ -158,7 +174,7 @@ export default function RateRequestForm() {
           <Button variant="outline" size="icon" onClick={() => navigate("/sales/rate-requests")}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-1">
             <h1 className="text-2xl font-semibold text-foreground">
               {isEditing ? `Edit Rate Request${rateRequest?.rateRequestNo ? ` ${rateRequest.rateRequestNo}` : ""}` : "Add Rate Request"}
             </h1>
@@ -168,6 +184,12 @@ export default function RateRequestForm() {
               </span>
             )}
           </div>
+          {isEditing && rateRequestId && (
+            <Button variant="outline" onClick={() => setHistoryOpen(true)}>
+              <History className="h-4 w-4 mr-2" />
+              History
+            </Button>
+          )}
         </div>
 
         {isEditing && isRateRequestLoading ? (
@@ -289,12 +311,19 @@ export default function RateRequestForm() {
                 <CardTitle className="text-lg text-primary">Internal Sales Notes</CardTitle>
               </CardHeader>
               <CardContent>
-                <Textarea
-                  value={internalNotes}
-                  onChange={(e) => setInternalNotes(e.target.value)}
-                  placeholder="Private notes for the internal sales team"
-                  rows={4}
-                />
+                {isEditing && rateRequestId ? (
+                  <SalesActivityLog
+                    entries={rateRequest?.activityLog ?? []}
+                    onAdd={handleAddNote}
+                  />
+                ) : (
+                  <Textarea
+                    value={internalNotes}
+                    onChange={(e) => setInternalNotes(e.target.value)}
+                    placeholder="Private notes for the internal sales team"
+                    rows={4}
+                  />
+                )}
               </CardContent>
             </Card>
 
@@ -320,6 +349,15 @@ export default function RateRequestForm() {
           </div>
         )}
       </div>
+      {isEditing && rateRequestId && (
+        <SalesActivityLogModal
+          open={historyOpen}
+          onOpenChange={setHistoryOpen}
+          title={`Rate Request History${rateRequest?.rateRequestNo ? ` — ${rateRequest.rateRequestNo}` : ""}`}
+          entries={rateRequest?.activityLog ?? []}
+          onAdd={handleAddNote}
+        />
+      )}
     </MainLayout>
   );
 }
