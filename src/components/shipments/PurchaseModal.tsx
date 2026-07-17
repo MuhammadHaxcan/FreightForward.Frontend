@@ -92,14 +92,11 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
   // editInvoiceData derived from query
   const editInvoiceData: AccountPurchaseInvoiceDetail | null = fetchedInvoice ?? null;
 
-  // Map of costing id -> existing purchase invoice item id (for updates), derived from fetched data
-  const existingItemIds = useMemo(() => {
-    const map = new Map<number, number>();
-    if (fetchedInvoice) {
-      fetchedInvoice.items.forEach(item => {
-        if (item.shipmentCostingId) map.set(item.shipmentCostingId, item.id);
-      });
-    }
+  const existingItemsByCosting = useMemo(() => {
+    const map = new Map<number, AccountPurchaseInvoiceDetail["items"][number]>();
+    fetchedInvoice?.items.forEach(item => {
+      if (item.shipmentCostingId) map.set(item.shipmentCostingId, item);
+    });
     return map;
   }, [fetchedInvoice]);
 
@@ -425,9 +422,27 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
           index === self.findIndex(c => c.id === charge.id)
         )
         .map(charge => {
+          const existingItem = existingItemsByCosting.get(charge.id);
+          if (existingItem) {
+            return {
+              id: existingItem.id,
+              shipmentCostingId: existingItem.shipmentCostingId,
+              chargeDetails: existingItem.chargeDetails,
+              ppcc: existingItem.ppcc,
+              currencyId: existingItem.currencyId,
+              noOfUnit: existingItem.noOfUnit,
+              costPerUnit: existingItem.costPerUnit,
+              fcyAmount: existingItem.fcyAmount,
+              exRate: existingItem.exRate,
+              localAmount: existingItem.localAmount,
+              taxPercentage: existingItem.taxPercentage,
+              taxAmount: existingItem.taxAmount,
+            };
+          }
+
           const lineValues = getCostLineValues(charge);
           return {
-            id: existingItemIds.get(charge.id) || undefined,
+            id: undefined,
             shipmentCostingId: charge.id,
             chargeDetails: charge.description || '',
             ppcc: charge.ppcc || 'PP',
@@ -549,6 +564,17 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
   };
 
   const getCostLineValues = (charge: ShipmentCosting) => {
+    const existingItem = isEditMode ? existingItemsByCosting.get(charge.id) : undefined;
+    if (existingItem) {
+      return {
+        costFCY: existingItem.fcyAmount,
+        exRate: existingItem.exRate,
+        localAmount: existingItem.localAmount,
+        taxPercentage: existingItem.taxPercentage,
+        taxAmount: existingItem.taxAmount,
+      };
+    }
+
     const costFCY = parseFloat(String(charge.costFCY ?? 0)) || 0;
     const costLCY = parseFloat(String(charge.costLCY ?? 0)) || 0;
     const exRate = getChargeExRate(charge);
@@ -718,6 +744,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
                 ) : (
                   filteredCharges.map((charge, index) => {
                     const lineValues = getCostLineValues(charge);
+                    const existingItem = existingItemsByCosting.get(charge.id);
                     return (
                       <TableRow key={charge.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
                         <TableCell className="py-2">
@@ -727,11 +754,11 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
                           />
                         </TableCell>
                         <TableCell className="text-xs py-2">{(index + 1) * 10}</TableCell>
-                        <TableCell className="text-xs py-2">{charge.description}</TableCell>
-                        <TableCell className="text-xs py-2">{charge.costQty}</TableCell>
-                        <TableCell className="text-xs py-2">{charge.ppcc || "Postpaid"}</TableCell>
-                        <TableCell className="text-xs py-2">{charge.costUnit}</TableCell>
-                        <TableCell className="text-xs py-2">{currencies.find(c => c.id === charge.costCurrencyId)?.code || charge.costCurrencyCode || ""}</TableCell>
+                        <TableCell className="text-xs py-2">{existingItem?.chargeDetails || charge.description}</TableCell>
+                        <TableCell className="text-xs py-2">{existingItem?.noOfUnit ?? charge.costQty}</TableCell>
+                        <TableCell className="text-xs py-2">{existingItem?.ppcc || charge.ppcc || "Postpaid"}</TableCell>
+                        <TableCell className="text-xs py-2">{existingItem?.costPerUnit ?? charge.costUnit}</TableCell>
+                        <TableCell className="text-xs py-2">{existingItem?.currencyCode || currencies.find(c => c.id === charge.costCurrencyId)?.code || charge.costCurrencyCode || ""}</TableCell>
                         <TableCell className="text-xs py-2">{lineValues.costFCY.toFixed(2)}</TableCell>
                         <TableCell className="text-xs py-2">{lineValues.exRate.toFixed(3)}</TableCell>
                         <TableCell className="text-xs py-2">{lineValues.localAmount.toFixed(2)}</TableCell>

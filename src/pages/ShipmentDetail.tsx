@@ -1793,15 +1793,15 @@ const ShipmentDetail = () => {
 
                 {/* Vessel & Schedule */}
                 <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-muted-foreground">Vessel & Schedule</h4>
+                  <h4 className="text-sm font-medium text-muted-foreground">{formData.mode === 'Air Freight' ? 'Flight & Schedule' : 'Vessel & Schedule'}</h4>
                   <div className="grid grid-cols-5 gap-4">
                     <div>
-                      <Label className="text-sm">Vessel</Label>
-                      <Input value={formData.vessel} onChange={(e) => handleInputChange("vessel", e.target.value)} placeholder="Vessel Name" />
+                      <Label className="text-sm">{formData.mode === 'Air Freight' ? 'Airline' : 'Vessel'}</Label>
+                      <Input value={formData.vessel} onChange={(e) => handleInputChange("vessel", e.target.value)} placeholder={formData.mode === 'Air Freight' ? 'Airline Name' : 'Vessel Name'} />
                     </div>
                     <div>
-                      <Label className="text-sm">Voyage</Label>
-                      <Input value={formData.voyage} onChange={(e) => handleInputChange("voyage", e.target.value)} placeholder="Voyage No" />
+                      <Label className="text-sm">{formData.mode === 'Air Freight' ? 'Flight No' : 'Voyage'}</Label>
+                      <Input value={formData.voyage} onChange={(e) => handleInputChange("voyage", e.target.value)} placeholder={formData.mode === 'Air Freight' ? 'Flight No' : 'Voyage No'} />
                     </div>
                     <div>
                       <Label className="text-sm">ETD</Label>
@@ -1818,7 +1818,7 @@ const ShipmentDetail = () => {
                           checked={formData.secondLegVessel}
                           onCheckedChange={(checked) => handleInputChange("secondLegVessel", checked as boolean)}
                         />
-                        <Label htmlFor="2ndLeg" className="text-sm">2nd Leg Vessel</Label>
+                        <Label htmlFor="2ndLeg" className="text-sm">{formData.mode === 'Air Freight' ? '2nd Leg Flight' : '2nd Leg Vessel'}</Label>
                       </div>
                     </div>
                   </div>
@@ -1827,19 +1827,19 @@ const ShipmentDetail = () => {
                   {formData.secondLegVessel && (
                     <div className="grid grid-cols-4 gap-4 pt-2">
                       <div>
-                        <Label className="text-sm">2nd Leg Vessel</Label>
+                        <Label className="text-sm">{formData.mode === 'Air Freight' ? '2nd Leg Airline' : '2nd Leg Vessel'}</Label>
                         <Input
                           value={formData.secondLegVesselName}
                           onChange={(e) => handleInputChange("secondLegVesselName", e.target.value)}
-                          placeholder="Vessel Name"
+                          placeholder={formData.mode === 'Air Freight' ? 'Airline Name' : 'Vessel Name'}
                         />
                       </div>
                       <div>
-                        <Label className="text-sm">2nd Leg Voyage</Label>
+                        <Label className="text-sm">{formData.mode === 'Air Freight' ? '2nd Leg Flight' : '2nd Leg Voyage'}</Label>
                         <Input
                           value={formData.secondLegVoyage}
                           onChange={(e) => handleInputChange("secondLegVoyage", e.target.value)}
-                          placeholder="Voyage No"
+                          placeholder={formData.mode === 'Air Freight' ? 'Flight No' : 'Voyage No'}
                         />
                       </div>
                       <div>

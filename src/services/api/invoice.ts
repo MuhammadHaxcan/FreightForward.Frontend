@@ -181,6 +181,7 @@ export interface AccountInvoiceItem {
   currencyCode?: string;
   rate: number;
   quantity: number;
+  fcyAmount: number;
   roe: number;
   taxPercentage: number;
   taxAmount: number;
