@@ -53,7 +53,7 @@ export function LockedLeadSections({ lead }: LockedLeadSectionsProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label>Customer Name</Label>
               <Input value={renderText(lead.customerName || lead.fullName)} readOnly className={READONLY_INPUT} />
@@ -65,6 +65,10 @@ export function LockedLeadSections({ lead }: LockedLeadSectionsProps) {
             <div className="space-y-2">
               <Label>Phone Number</Label>
               <Input value={renderText(lead.phoneNumber)} readOnly className={READONLY_INPUT} />
+            </div>
+            <div className="space-y-2">
+              <Label>Salesperson</Label>
+              <Input value={renderText(lead.salesperson)} readOnly className={READONLY_INPUT} />
             </div>
           </div>
           <div className="space-y-2">

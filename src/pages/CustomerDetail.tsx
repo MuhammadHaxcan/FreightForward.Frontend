@@ -37,13 +37,13 @@ import {
   useAllCurrencyTypes,
   useAllChargeItems,
 } from "@/hooks/useSettings";
-import { hrEmployeeApi } from "@/services/api/hr";
 import { toast } from "sonner";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 import { useAllCountries } from "@/hooks/useSettings";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { DateRangePicker, DateRangeValue } from "@/components/ui/date-range-picker";
+import { useSalespersonLookup } from "@/hooks/useSalespersons";
 
 interface Contact {
   id: number;
@@ -176,12 +176,11 @@ const CustomerDetail = () => {
   // Reference data (shared cache across app)
   const { data: categoryTypes = [] } = useAllCustomerCategoryTypes();
   const { data: currencyTypes = [] } = useAllCurrencyTypes();
-  const { data: employeesResp } = useQuery({
-    queryKey: ['hr-employees-dropdown'],
-    queryFn: () => hrEmployeeApi.getDropdown(),
-    staleTime: 5 * 60 * 1000,
-  });
-  const employees = employeesResp?.data ?? [];
+  const {
+    data: salespersons = [],
+    isLoading: isLoadingSalespersons,
+    isError: isSalespersonsError,
+  } = useSalespersonLookup();
 
   // Customer detail
   const { data: customer } = useCustomer(customerId);
@@ -222,6 +221,7 @@ const CustomerDetail = () => {
     enabled: activeTab === 'account-receivable' && canViewAccountReceivable,
   });
   const accountReceivables = arPage?.items ?? [];
+  const accountReceivableBalanceTotals = arPage?.balanceTotals ?? [];
   const arTotalCount = arPage?.totalCount ?? 0;
   const arTotalPages = arPage?.totalPages ?? 0;
 
@@ -789,12 +789,16 @@ const CustomerDetail = () => {
         <div className="space-y-2">
           <Label className="text-sm">Salesperson</Label>
           <SearchableSelect
-            options={employees.map(emp => ({ value: emp.fullName, label: `${emp.fullName} (${emp.employeeCode})` }))}
+            options={salespersons.map(salesperson => ({
+              value: salesperson.fullName,
+              label: `${salesperson.fullName} (${salesperson.employeeCode})`,
+            }))}
             value={profileData.salesperson}
             onValueChange={v => setProfileData({...profileData, salesperson: v})}
             disabled={isViewMode}
             searchPlaceholder="Search employees..."
             placeholder="Select employee..."
+            emptyMessage={isLoadingSalespersons ? "Loading..." : isSalespersonsError ? "Unable to load salespersons" : "No salespersons found"}
           />
         </div>
       </div>
@@ -1323,7 +1327,10 @@ const CustomerDetail = () => {
           <div className="flex items-center gap-3">
             <DateRangePicker
               value={soaDateRange}
-              onApply={setSoaDateRange}
+              onApply={(range) => {
+                setSoaDateRange(range);
+                setArPageNumber(1);
+              }}
               placeholder="Filter by date range"
               className="min-w-[240px]"
             />
@@ -1419,6 +1426,24 @@ const CustomerDetail = () => {
                 })
               )}
             </tbody>
+            {accountReceivableBalanceTotals.length > 0 && (
+              <tfoot>
+                {accountReceivableBalanceTotals.map((total) => (
+                  <tr key={total.currencyCode} className="border-t border-border bg-muted/60 font-semibold">
+                    <td colSpan={5} className="px-4 py-3 text-right text-sm">
+                      Grand Total Balance ({total.currencyCode})
+                    </td>
+                    <td className="px-4 py-3 text-sm text-primary">
+                      {total.currencyCode} {total.balance.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </td>
+                    <td colSpan={3}></td>
+                  </tr>
+                ))}
+              </tfoot>
+            )}
           </table>
         </div>
         <div className="flex items-center justify-between">

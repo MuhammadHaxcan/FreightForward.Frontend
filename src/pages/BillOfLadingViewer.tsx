@@ -7,31 +7,59 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Loader2, Search, Printer, Minus, Plus, FileText, FileDown } from "lucide-react";
+import { Loader2, Search, Printer, Minus, Plus, FileText, FileDown, ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-// Find party by category keyword match
-function findParty(parties: ShipmentParty[], ...keywords: string[]) {
-  for (const kw of keywords) {
+// Prefer exact category codes, then retain a name match for legacy data.
+function findParty(parties: ShipmentParty[], ...categoryCodes: string[]) {
+  for (const code of categoryCodes) {
+    const found = parties.find(
+      (p) => p.customerCategoryCode?.toLowerCase() === code.toLowerCase()
+    );
+    if (found) return found;
+  }
+
+  for (const code of categoryCodes) {
     const found = parties.find((p) =>
       p.customerCategoryName
         ?.toLowerCase()
         .replace(/[^a-z]/g, "")
-        .includes(kw.toLowerCase().replace(/[^a-z]/g, ""))
+        .includes(code.toLowerCase().replace(/[^a-z]/g, ""))
     );
     if (found) return found;
   }
   return undefined;
 }
 
-// Format party: name + contact details
+// Format party using the customer master for address/location and the
+// shipment-party snapshot first for document-specific contact details.
 function formatParty(party?: ShipmentParty) {
   if (!party) return "";
   const lines = [party.customerName];
+  if (party.customerAddress?.trim()) {
+    lines.push(party.customerAddress.trim());
+  }
+
+  const location = [party.customerCity, party.customerCountry]
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value))
+    .join(", ");
+  if (location) {
+    lines.push(location);
+  }
+
   const contact: string[] = [];
-  if (party.phone) contact.push(`Tel: ${party.phone}`);
-  if (party.mobile) contact.push(`Mob: ${party.mobile}`);
+  const phone = party.phone?.trim() || party.customerPhone?.trim();
+  if (phone) contact.push(`Tel: ${phone}`);
+  if (party.mobile?.trim()) contact.push(`Mob: ${party.mobile.trim()}`);
   if (contact.length > 0) lines.push(contact.join("  "));
-  if (party.email) lines.push(party.email);
+  const email = party.email?.trim() || party.customerEmail?.trim();
+  if (email) lines.push(email);
   return lines.join("\n");
 }
 
@@ -147,13 +175,13 @@ export default function BillOfLadingViewer() {
   };
 
   // Parties
-  const shipper = ship ? findParty(ship.parties, "shipper") : undefined;
-  const consignee = ship ? findParty(ship.parties, "consignee") : undefined;
+  const shipper = ship ? findParty(ship.parties, "Shipper", "ShipperNeutral") : undefined;
+  const consignee = ship ? findParty(ship.parties, "Consignee", "ConsigneeNeutral") : undefined;
   const notify = ship
-    ? findParty(ship.parties, "notifyparty", "notify")
+    ? findParty(ship.parties, "NotifyParty", "NotifyPartyNeutral")
     : undefined;
   const deliveryAgent = ship
-    ? findParty(ship.parties, "deliveryagent", "delivery")
+    ? findParty(ship.parties, "DeliveryAgent")
     : undefined;
 
   // Cargo data — build aligned marks & description per container
@@ -410,15 +438,37 @@ export default function BillOfLadingViewer() {
             >
               <Printer className="h-4 w-4 mr-1" /> Print
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-9"
-              onClick={() => window.open(`/shipments/${ship!.id}/reports/bill-of-lading`, '_blank')}
-              disabled={!ship}
-            >
-              <FileDown className="h-4 w-4 mr-1" /> PDF
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-9"
+                  disabled={!ship}
+                  aria-label="Choose bill of lading PDF type"
+                >
+                  <FileDown className="h-4 w-4 mr-1" />
+                  PDF
+                  <ChevronDown className="h-3.5 w-3.5 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem
+                  onClick={() =>
+                    window.open(`/shipments/${ship!.id}/reports/bill-of-lading`, "_blank")
+                  }
+                >
+                  Non-Negotiable
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    window.open(`/shipments/${ship!.id}/reports/bill-of-lading?original=true`, "_blank")
+                  }
+                >
+                  Original BL
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>

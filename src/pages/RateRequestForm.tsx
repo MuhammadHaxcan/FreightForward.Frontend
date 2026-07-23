@@ -21,6 +21,7 @@ import { LockedLeadSections } from "@/components/leads/LockedLeadSections";
 import { SalesActivityLog } from "@/components/sales/SalesActivityLog";
 import { SalesActivityLogModal } from "@/components/sales/SalesActivityLogModal";
 import { rateRequestApi } from "@/services/api/sales";
+import { useSalespersonLookup } from "@/hooks/useSalespersons";
 
 const READONLY_INPUT = "bg-muted cursor-not-allowed";
 
@@ -51,6 +52,11 @@ export default function RateRequestForm() {
   const { data: vendorsData } = useAllCreditors();
   const categoryTypes = useMemo(() => Array.isArray(categoryTypesData) ? categoryTypesData : [], [categoryTypesData]);
   const vendors = useMemo(() => Array.isArray(vendorsData) ? vendorsData : [], [vendorsData]);
+  const {
+    data: salespersons = [],
+    isLoading: isLoadingSalespersons,
+    isError: isSalespersonsError,
+  } = useSalespersonLookup();
 
   const hasLeadContext = leadId > 0;
 
@@ -61,6 +67,7 @@ export default function RateRequestForm() {
   const [vendorId, setVendorId] = useState<string>("");
   const [vendorEmail, setVendorEmail] = useState<string>("");
   const [internalNotes, setInternalNotes] = useState<string>("");
+  const [salesperson, setSalesperson] = useState<string>("");
   const [historyOpen, setHistoryOpen] = useState(false);
 
   const handleAddNote = async (note: string) => {
@@ -87,6 +94,18 @@ export default function RateRequestForm() {
       setInternalNotes(rateRequest.internalNotes ?? "");
     }
   }, [rateRequest, categoryTypes]);
+
+  useEffect(() => {
+    if (isEditing && rateRequest) {
+      setSalesperson(rateRequest.salesperson ?? "");
+    }
+  }, [isEditing, rateRequest]);
+
+  useEffect(() => {
+    if (!isEditing && lead?.salesperson) {
+      setSalesperson((current) => current || lead.salesperson || "");
+    }
+  }, [isEditing, lead]);
 
   // Same client-side narrowing used by SendRateRequestModal: filter vendors
   // by the selected category id, fall back to all when no type is picked.
@@ -143,6 +162,7 @@ export default function RateRequestForm() {
             vendorName: selectedVendor?.name || "",
             vendorType: vendorTypeName,
             vendorEmail,
+            salesperson: salesperson || undefined,
             internalNotes,
           },
         });
@@ -157,6 +177,7 @@ export default function RateRequestForm() {
           vendorName: selectedVendor?.name || "",
           vendorType: vendorTypeName,
           vendorEmail,
+          salesperson: salesperson || undefined,
           internalNotes: internalNotes || undefined,
         });
       }
@@ -293,13 +314,27 @@ export default function RateRequestForm() {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-1 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Vendor Email</Label>
                     <Input
                       value={vendorEmail}
                       onChange={(e) => setVendorEmail(e.target.value)}
                       placeholder="vendor@email.com"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Salesperson</Label>
+                    <SearchableSelect
+                      options={salespersons.map((item) => ({
+                        value: item.fullName,
+                        label: `${item.fullName} (${item.employeeCode})`,
+                      }))}
+                      value={salesperson}
+                      onValueChange={setSalesperson}
+                      placeholder="Select salesperson"
+                      searchPlaceholder="Search salespersons..."
+                      emptyMessage={isLoadingSalespersons ? "Loading..." : isSalespersonsError ? "Unable to load salespersons" : "No salespersons found"}
                     />
                   </div>
                 </div>

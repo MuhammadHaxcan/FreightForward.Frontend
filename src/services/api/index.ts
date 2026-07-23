@@ -12,9 +12,13 @@ import { costSheetApi as _costSheetApi } from './costSheet';
 import { expenseApi as _expenseApi } from './expense';
 import { dashboardApi as _dashboardApi } from './dashboard';
 import { generalDocumentApi as _generalDocumentApi } from './generalDocument';
+import { lookupApi as _lookupApi } from './lookups';
 
 // Base types and utilities
 export { fetchApi, fetchBlob, API_BASE_URL, type PaginatedList, type ApiResponse, type MasterType, type PaymentStatus } from './base';
+
+// Lookups
+export { lookupApi, type SalespersonLookup } from './lookups';
 
 // Bank
 export { bankApi, type Bank, type CreateBankRequest, type UpdateBankRequest } from './bank';
@@ -36,6 +40,8 @@ export {
     type CreditNote,
     type CreditNoteDetail,
     type AccountReceivable,
+    type AccountReceivableBalanceTotal,
+    type AccountReceivablePage,
     type AccountPayable,
     type StatementEntry,
     type CustomerStatement,
@@ -261,6 +267,7 @@ export const api = {
   expenses: _expenseApi,
   dashboard: _dashboardApi,
   generalDocuments: _generalDocumentApi,
+  lookups: _lookupApi,
 };
 
 export default api;

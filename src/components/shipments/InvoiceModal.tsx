@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DateInput } from "@/components/ui/date-input";
-import { getTodayDateOnly } from "@/lib/utils";
+import { formatDateToISO, getTodayDateOnly, parseDateOnly } from "@/lib/utils";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Table,
@@ -37,9 +37,25 @@ interface InvoiceSaveResult {
   companyName: string;
   customerId: string;
   invoiceDate: string;
+  dueDate: string;
   currencyId: number;
   charges: number[];
 }
+
+const getDefaultDueDate = (invoiceDate: string): string => {
+  const parsedInvoiceDate = parseDateOnly(invoiceDate);
+  if (!parsedInvoiceDate) return invoiceDate;
+
+  parsedInvoiceDate.setDate(parsedInvoiceDate.getDate() + 30);
+  return formatDateToISO(parsedInvoiceDate);
+};
+
+const normalizePpcc = (value?: string): "Prepaid" | "Collect" => {
+  const normalized = value?.trim().toLowerCase();
+  return normalized === "collect" || normalized === "cc" || normalized === "postpaid"
+    ? "Collect"
+    : "Prepaid";
+};
 
 interface InvoiceModalProps {
   open: boolean;
@@ -102,26 +118,51 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
   const [costingModalOpen, setCostingModalOpen] = useState(false);
   const [editingCostingForModal, setEditingCostingForModal] = useState<CostingModalData | undefined>(undefined);
   const [pendingAutoSelect, setPendingAutoSelect] = useState<number | null>(null);
+  const [isDueDateInputValid, setIsDueDateInputValid] = useState(true);
 
-  const [formData, setFormData] = useState({
-    invoiceId: "",
-    companyName: "",
-    customerId: "",
-    invoiceDate: getTodayDateOnly(),
-    currencyId: 1,
-    currencyCode: baseCurrencyCode,
-    remarks: "",
-    selectedCharges: [] as number[],
+  const [formData, setFormData] = useState(() => {
+    const invoiceDate = getTodayDateOnly();
+    return {
+      invoiceId: "",
+      companyName: "",
+      customerId: "",
+      invoiceDate,
+      dueDate: getDefaultDueDate(invoiceDate),
+      currencyId: 1,
+      currencyCode: baseCurrencyCode,
+      remarks: "",
+      selectedCharges: [] as number[],
+    };
   });
+
+  const today = getTodayDateOnly();
+  const minimumDueDate = formData.invoiceDate > today ? formData.invoiceDate : today;
+  const dueDateError = useMemo(() => {
+    if (!formData.dueDate) return "Due date is required.";
+    if (!isDueDateInputValid) return "Enter a valid due date.";
+    if (formData.dueDate < formData.invoiceDate) {
+      return "Due date cannot be earlier than the invoice date.";
+    }
+
+    const isUnchangedHistoricalDate =
+      isEditMode && formData.dueDate === editInvoiceData?.dueDate;
+    if (formData.dueDate < today && !isUnchangedHistoricalDate) {
+      return "Due date cannot be earlier than today.";
+    }
+
+    return null;
+  }, [editInvoiceData?.dueDate, formData.dueDate, formData.invoiceDate, isDueDateInputValid, isEditMode, today]);
 
   // Reset form and fetch data when modal opens/closes
   useEffect(() => {
     if (!isActive) {
+      const invoiceDate = getTodayDateOnly();
       setFormData({
         invoiceId: "",
         companyName: "",
         customerId: "",
-        invoiceDate: getTodayDateOnly(),
+        invoiceDate,
+        dueDate: getDefaultDueDate(invoiceDate),
         currencyId: 1,
         currencyCode: baseCurrencyCode,
         remarks: "",
@@ -131,6 +172,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
       setCostingModalOpen(false);
       setEditingCostingForModal(undefined);
       setPendingAutoSelect(null);
+      setIsDueDateInputValid(true);
     } else {
       setLocalCostings(chargesDetails);
     }
@@ -150,11 +192,13 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
         companyName: inv.customerName,
         customerId: matchingParty ? matchingParty.id.toString() : "",
         invoiceDate: inv.invoiceDate,
+        dueDate: inv.dueDate,
         currencyId: inv.currencyId || 1,
         currencyCode: currency?.code || baseCurrencyCode,
         remarks: inv.remarks || "",
         selectedCharges: costingIds,
       });
+      setIsDueDateInputValid(true);
     }
   }, [fetchedInvoice, isEditMode]);
 
@@ -361,7 +405,22 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
   }, [localCostings, pendingAutoSelect]);
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => {
+      if (field !== "invoiceDate") {
+        return { ...prev, [field]: value };
+      }
+
+      // Keep the automatic 30-day term linked to the invoice date until the
+      // user overrides the due date with a custom value.
+      const dueDateUsesDefaultTerm =
+        !prev.dueDate || prev.dueDate === getDefaultDueDate(prev.invoiceDate);
+
+      return {
+        ...prev,
+        invoiceDate: value,
+        dueDate: dueDateUsesDefaultTerm ? getDefaultDueDate(value) : prev.dueDate,
+      };
+    });
   };
 
   const handleCompanySelect = (partyId: string) => {
@@ -400,6 +459,10 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
       return;
     }
 
+    if (dueDateError) {
+      return;
+    }
+
     const selectedParty = debtorParties.find(p => p.id.toString() === formData.customerId);
     if (!selectedParty?.customerId) {
       return;
@@ -422,7 +485,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
             id: existingItem.id,
             shipmentCostingId: existingItem.shipmentCostingId,
             chargeDetails: existingItem.chargeDetails,
-            ppcc: existingItem.basis,
+            ppcc: normalizePpcc(charge.ppcc || existingItem.basis),
             currencyId: existingItem.currencyId,
             quantity: existingItem.quantity,
             salePerUnit: existingItem.rate,
@@ -440,7 +503,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
           id: undefined,
           shipmentCostingId: charge.id,
           chargeDetails: charge.description || '',
-          ppcc: charge.ppcc || 'PP',
+          ppcc: normalizePpcc(charge.ppcc),
           currencyId: charge.saleCurrencyId || 1,
           quantity: parseFloat(charge.saleQty) || 1,
           salePerUnit: parseFloat(charge.saleUnit) || 0,
@@ -457,6 +520,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
           id: editInvoiceId,
           data: {
             invoiceDate: formData.invoiceDate,
+            dueDate: formData.dueDate,
             customerId: selectedParty.customerId,
             shipmentId,
             currencyId: formData.currencyId,
@@ -471,6 +535,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
           companyName: formData.companyName,
           customerId: formData.customerId,
           invoiceDate: formData.invoiceDate,
+          dueDate: formData.dueDate,
           currencyId: formData.currencyId,
           charges: formData.selectedCharges,
         });
@@ -487,7 +552,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
           shipmentCostingId: charge.id,
           chargeDetails: charge.description || '',
           quantity: parseFloat(charge.saleQty) || 1,
-          ppcc: charge.ppcc || 'PP',
+          ppcc: normalizePpcc(charge.ppcc),
           salePerUnit: parseFloat(charge.saleUnit) || 0,
           currencyId: charge.saleCurrencyId || 1,
           fcyAmount: lineValues.saleFCY,
@@ -503,6 +568,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
           shipmentId,
           customerId: selectedParty.customerId,
           invoiceDate: formData.invoiceDate,
+          dueDate: formData.dueDate,
           currencyId: formData.currencyId,
           baseCurrencyId,
           items,
@@ -513,6 +579,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
           companyName: formData.companyName,
           customerId: formData.customerId,
           invoiceDate: formData.invoiceDate,
+          dueDate: formData.dueDate,
           currencyId: formData.currencyId,
           charges: formData.selectedCharges,
         });
@@ -607,7 +674,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
           <h3 className="text-primary font-semibold">Invoice</h3>
 
           {/* Invoice Details */}
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
             <div>
               <Label className="text-xs font-medium">Invoice ID</Label>
               <Input
@@ -643,6 +710,19 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
                 onChange={(v) => handleInputChange("invoiceDate", v)}
                 className="h-9"
               />
+            </div>
+            <div>
+              <Label className="text-xs font-medium">* Due Date</Label>
+              <DateInput
+                value={formData.dueDate}
+                onChange={(v) => handleInputChange("dueDate", v)}
+                onValidityChange={setIsDueDateInputValid}
+                minDate={minimumDueDate}
+                className="h-9"
+              />
+              {dueDateError && (
+                <p className="mt-1 text-xs text-destructive">{dueDateError}</p>
+              )}
             </div>
             <div className="flex items-end gap-2">
               <div className="flex-1">
@@ -721,7 +801,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
                         <TableCell className="text-xs py-2">{(index + 1) * 10}</TableCell>
                         <TableCell className="text-xs py-2">{existingItem?.chargeDetails || charge.description}</TableCell>
                         <TableCell className="text-xs py-2">{existingItem?.quantity ?? charge.saleQty}</TableCell>
-                        <TableCell className="text-xs py-2">{existingItem?.basis || charge.ppcc || "Postpaid"}</TableCell>
+                        <TableCell className="text-xs py-2">{normalizePpcc(charge.ppcc || existingItem?.basis)}</TableCell>
                         <TableCell className="text-xs py-2">{existingItem?.rate ?? charge.saleUnit}</TableCell>
                         <TableCell className="text-xs py-2">{existingItem?.currencyCode || currencies.find(c => c.id === charge.saleCurrencyId)?.code || charge.saleCurrencyCode || ""}</TableCell>
                         <TableCell className="text-xs py-2">{lineValues.saleFCY.toFixed(2)}</TableCell>
@@ -829,7 +909,7 @@ export function InvoiceModal({ open, onOpenChange, shipmentId, chargesDetails, p
             <Button
               className="btn-success"
               onClick={handleSave}
-              disabled={!shipmentId || !formData.customerId || (!isEditMode && formData.selectedCharges.length === 0) || isSaving}
+              disabled={!shipmentId || !formData.customerId || Boolean(dueDateError) || (!isEditMode && formData.selectedCharges.length === 0) || isSaving}
             >
               {isSaving ? (
                 <>

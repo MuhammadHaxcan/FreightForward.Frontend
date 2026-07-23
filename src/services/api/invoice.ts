@@ -22,6 +22,7 @@ export interface CreateInvoiceRequest {
   shipmentId: number;
   customerId: number;
   invoiceDate: string;
+  dueDate: string;
   currencyId: number;
   baseCurrencyId?: number;
   remarks?: string;
@@ -60,6 +61,7 @@ export interface UpdateInvoiceItemRequest {
 
 export interface UpdateInvoiceRequest {
   invoiceDate: string;
+  dueDate: string;
   customerId: number;
   shipmentId?: number;
   currencyId?: number;
@@ -112,6 +114,7 @@ export interface AccountInvoice {
   id: number;
   invoiceNo: string;
   invoiceDate: string;
+  dueDate: string;
   jobNumber?: string;
   customerName: string;
   customerId: number;
@@ -153,6 +156,7 @@ export interface AccountInvoiceDetail {
   id: number;
   invoiceNo: string;
   invoiceDate: string;
+  dueDate: string;
   customerId?: number;
   shipmentId?: number;
   jobNumber?: string;

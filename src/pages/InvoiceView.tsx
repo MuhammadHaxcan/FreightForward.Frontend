@@ -233,6 +233,7 @@ export default function InvoiceView() {
                 )}
                 <p className="font-bold">{invoice.invoiceNo}</p>
                 <p>Date : {formatDate(invoice.invoiceDate)}</p>
+                <p>Due Date : {formatDate(invoice.dueDate)}</p>
               </div>
             </div>
           </div>

@@ -17,11 +17,22 @@ interface DateInputProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  minDate?: string;
+  onValidityChange?: (isValid: boolean) => void;
 }
 
-export function DateInput({ value, onChange, placeholder = "dd-mm-yyyy", className, disabled }: DateInputProps) {
+export function DateInput({
+  value,
+  onChange,
+  placeholder = "dd-mm-yyyy",
+  className,
+  disabled,
+  minDate,
+  onValidityChange,
+}: DateInputProps) {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
+  const minimumDate = parseDateOnly(minDate);
 
   // Convert ISO date to dd-MM-yyyy format for display
   const formatDisplayDate = (isoDate: string) => {
@@ -68,6 +79,9 @@ export function DateInput({ value, onChange, placeholder = "dd-mm-yyyy", classNa
     const isoDate = parseInputDate(newValue);
     if (isoDate) {
       onChange(isoDate);
+      onValidityChange?.(true);
+    } else {
+      onValidityChange?.(false);
     }
   };
 
@@ -76,6 +90,7 @@ export function DateInput({ value, onChange, placeholder = "dd-mm-yyyy", classNa
     const isoDate = parseInputDate(inputValue);
     if (!isoDate && value) {
       setInputValue(formatDisplayDate(value));
+      onValidityChange?.(true);
     }
   };
 
@@ -83,6 +98,7 @@ export function DateInput({ value, onChange, placeholder = "dd-mm-yyyy", classNa
     if (date) {
       const isoDate = formatDateToISO(date);
       onChange(isoDate);
+      onValidityChange?.(true);
       setInputValue(format(date, "dd-MM-yyyy"));
     }
     setOpen(false);
@@ -115,6 +131,7 @@ export function DateInput({ value, onChange, placeholder = "dd-mm-yyyy", classNa
             mode="single"
             selected={getDateFromValue()}
             onSelect={handleCalendarSelect}
+            disabled={minimumDate ? { before: minimumDate } : undefined}
             initialFocus
             className="p-3 pointer-events-auto"
           />

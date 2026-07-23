@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { API_BASE_URL } from "@/services/api/base";
 import { useAuthPdf } from "@/hooks/useAuthPdf";
 
@@ -14,10 +14,15 @@ const REPORT_ENDPOINTS: Record<string, string> = {
 
 export default function ContainerReportPrintView() {
   const { reportType, containerNumber } = useParams<{ reportType: string; containerNumber: string }>();
+  const [searchParams] = useSearchParams();
   const endpointSlug = reportType ? REPORT_ENDPOINTS[reportType] : undefined;
+  const shipmentId = searchParams.get("shipmentId");
+  const shipmentQuery = shipmentId && /^\d+$/.test(shipmentId)
+    ? `&shipmentId=${encodeURIComponent(shipmentId)}`
+    : "";
 
   const pdfUrl = endpointSlug && containerNumber
-    ? `${API_BASE_URL}/shipments/reports/${endpointSlug}?containerNumber=${encodeURIComponent(containerNumber)}&inline=true`
+    ? `${API_BASE_URL}/shipments/reports/${endpointSlug}?containerNumber=${encodeURIComponent(containerNumber)}${shipmentQuery}&inline=true`
     : null;
 
   const { blobUrl, isLoading, error } = useAuthPdf(pdfUrl);

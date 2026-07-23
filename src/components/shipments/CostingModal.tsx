@@ -40,7 +40,13 @@ interface CostingModalProps {
   defaultActiveTab?: "cost" | "sale";
 }
 
-const ppccOptions = ["Prepaid", "Postpaid"];
+const ppccOptions = ["Prepaid", "Collect"];
+const normalizePpcc = (value?: string): "Prepaid" | "Collect" => {
+  const normalized = value?.trim().toLowerCase();
+  return normalized === "collect" || normalized === "cc" || normalized === "postpaid"
+    ? "Collect"
+    : "Prepaid";
+};
 const taxOptions = ["0%", "5%", "10%", "15%", "Custom"];
 const standardTaxValues = [0, 5, 10, 15];
 
@@ -192,7 +198,7 @@ export function CostingModal({ open, onOpenChange, parties, costing, onSave, def
       setFormData({
         charge: costing.description || "",
         description: costing.chargeDescription || costing.description || "", // Use chargeDescription if available, fallback to description
-        ppcc: costing.ppcc || "Prepaid",
+        ppcc: normalizePpcc(costing.ppcc),
         unitId: costing.unitId || undefined,
         unit: costing.unitName || "",
         remarks: costing.remarks || "",

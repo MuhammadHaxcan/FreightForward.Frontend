@@ -162,6 +162,7 @@ export function useUpdateLead() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['rateRequests'] });
       queryClient.invalidateQueries({ queryKey: ['quotations'] });
       toast.success('Lead updated successfully');
     },

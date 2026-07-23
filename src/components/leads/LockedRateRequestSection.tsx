@@ -55,7 +55,7 @@ export function LockedRateRequestSection({ rateRequest }: LockedRateRequestSecti
             <Input value={renderText(rateRequest.requestStatus)} readOnly className={READONLY_INPUT} />
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-4 gap-4">
           <div className="space-y-2">
             <Label>Vendor Type</Label>
             <Input value={renderText(rateRequest.vendorType)} readOnly className={READONLY_INPUT} />
@@ -67,6 +67,10 @@ export function LockedRateRequestSection({ rateRequest }: LockedRateRequestSecti
           <div className="space-y-2">
             <Label>Vendor Email</Label>
             <Input value={renderText(rateRequest.vendorEmail)} readOnly className={READONLY_INPUT} />
+          </div>
+          <div className="space-y-2">
+            <Label>Salesperson</Label>
+            <Input value={renderText(rateRequest.salesperson)} readOnly className={READONLY_INPUT} />
           </div>
         </div>
       </CardContent>

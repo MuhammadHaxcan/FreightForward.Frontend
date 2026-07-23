@@ -192,6 +192,7 @@ export default function RateRequests() {
                   <TableHead className="text-table-header-foreground">Lead No.</TableHead>
                   <TableHead className="text-table-header-foreground">Date</TableHead>
                   <TableHead className="text-table-header-foreground">Customer Name</TableHead>
+                  <TableHead className="text-table-header-foreground">Salesperson</TableHead>
                   <TableHead className="text-table-header-foreground">Freight Mode</TableHead>
                   <TableHead className="text-table-header-foreground">Vendor Type</TableHead>
                   <TableHead className="text-table-header-foreground">Vendor Name</TableHead>
@@ -205,7 +206,7 @@ export default function RateRequests() {
               <TableBody>
                 {rateRequests.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
                       No rate requests found
                     </TableCell>
                   </TableRow>
@@ -228,6 +229,7 @@ export default function RateRequests() {
                       <TableCell className="text-green-600">{request.leadNo || "-"}</TableCell>
                       <TableCell>{formatDate(request.requestDate, "dd-MM-yyyy")}</TableCell>
                       <TableCell className="text-green-600">{request.fullName || "-"}</TableCell>
+                      <TableCell>{request.salesperson || "-"}</TableCell>
                       <TableCell>{request.freightMode || "-"}</TableCell>
                       <TableCell>{request.vendorType || "-"}</TableCell>
                       <TableCell className="text-green-600">{request.vendorName}</TableCell>

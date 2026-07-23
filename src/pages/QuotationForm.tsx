@@ -49,6 +49,8 @@ import { quotationApi } from "@/services/api/sales";
 import { SalesActivityLog } from "@/components/sales/SalesActivityLog";
 import { SalesActivityLogModal } from "@/components/sales/SalesActivityLogModal";
 import { toast } from "sonner";
+import { useSalespersonLookup } from "@/hooks/useSalespersons";
+import { useBaseCurrency } from "@/hooks/useBaseCurrency";
 
 const PRODUCT_TYPES = [
   "AGRICULTURE & FOOD",
@@ -111,6 +113,8 @@ interface ChargeRow {
 }
 
 interface FormData {
+  salesperson: string;
+  currencyId?: number;
   customerId?: number;
   customerName: string;
   contactPersonId?: number;
@@ -135,6 +139,7 @@ interface FormData {
 }
 
 interface LeadWorkflowData {
+  salesperson: string;
   customerId?: number;
   fullName: string;
   email: string;
@@ -160,6 +165,7 @@ interface LeadWorkflowData {
 }
 
 interface RateRequestWorkflowData {
+  salesperson: string;
   vendorTypeId: string;
   vendorId: string;
   vendorEmail: string;
@@ -167,6 +173,7 @@ interface RateRequestWorkflowData {
 }
 
 const initialLeadWorkflowData: LeadWorkflowData = {
+  salesperson: "",
   fullName: "",
   email: "",
   phoneNumber: "",
@@ -186,6 +193,7 @@ const initialLeadWorkflowData: LeadWorkflowData = {
 };
 
 const initialRateRequestWorkflowData: RateRequestWorkflowData = {
+  salesperson: "",
   vendorTypeId: "",
   vendorId: "",
   vendorEmail: "",
@@ -211,6 +219,7 @@ export default function QuotationForm() {
 
   // Form state
   const [formData, setFormData] = useState<FormData>({
+    salesperson: "",
     customerName: "",
     quotationDate: new Date().toISOString().split("T")[0],
     cargoCalculationMode: "units",
@@ -271,6 +280,12 @@ export default function QuotationForm() {
   const { data: containerTypesData } = useAllContainerTypes();
   const { data: costingUnitsData } = useAllCostingUnits();
   const { data: categoryTypesData } = useAllCustomerCategoryTypes();
+  const baseCurrencyCode = useBaseCurrency();
+  const {
+    data: salespersons = [],
+    isLoading: isLoadingSalespersons,
+    isError: isSalespersonsError,
+  } = useSalespersonLookup();
 
   const debtors = useMemo(() => Array.isArray(debtorsData) ? debtorsData : [], [debtorsData]);
   const creditors = useMemo(() => Array.isArray(creditorsData) ? creditorsData : [], [creditorsData]);
@@ -283,6 +298,34 @@ export default function QuotationForm() {
   const containerTypes = useMemo(() => Array.isArray(containerTypesData) ? containerTypesData : [], [containerTypesData]);
   const costingUnits = useMemo(() => Array.isArray(costingUnitsData) ? costingUnitsData : [], [costingUnitsData]);
   const categoryTypes = useMemo(() => Array.isArray(categoryTypesData) ? categoryTypesData : [], [categoryTypesData]);
+  const quotationCurrency = currencyTypes.find((currency) => currency.id === formData.currencyId);
+
+  useEffect(() => {
+    if ((quotationId && formData.currencyId) || currencyTypes.length === 0) return;
+
+    const fallbackCurrency = currencyTypes.find(
+      (currency) => currency.code.trim().toUpperCase() === baseCurrencyCode.trim().toUpperCase(),
+    );
+    const currencyId = selectedCustomer?.currencyId || fallbackCurrency?.id;
+    if (!currencyId) return;
+
+    setFormData((current) => current.currencyId === currencyId ? current : { ...current, currencyId });
+  }, [quotationId, formData.customerId, formData.currencyId, selectedCustomer, currencyTypes, baseCurrencyCode]);
+
+  useEffect(() => {
+    if (!formData.currencyId || currencyTypes.length === 0) return;
+
+    const documentCurrency = currencyTypes.find((currency) => currency.id === formData.currencyId);
+    if (!documentCurrency || !documentCurrency.roe) return;
+
+    setChargeRows((rows) => rows.map((row) => {
+      const rate = parseFloat(row.rate) || 0;
+      const quantity = parseFloat(row.quantity) || 0;
+      const lineRoe = parseFloat(row.roe) || 1;
+      const crossRate = row.currencyId === formData.currencyId ? 1 : lineRoe / documentCurrency.roe;
+      return { ...row, amount: (rate * quantity * crossRate).toFixed(2) };
+    }));
+  }, [formData.currencyId, currencyTypes]);
 
   const norm = (value: string | null | undefined) => (value ?? "").trim().toLowerCase();
   const filterPortsByCountry = (countryId: number | undefined) => {
@@ -335,6 +378,7 @@ export default function QuotationForm() {
       const cargoCalculationMode = shippingType === "FTL" ? "shipment" : "units";
 
       setFormData({
+        salesperson: conversionData.salesperson || "",
         customerId: conversionData.customerId,
         customerName: conversionData.customerName || conversionData.fullName || "",
         quotationDate: new Date().toISOString().split("T")[0],
@@ -414,6 +458,8 @@ export default function QuotationForm() {
   useEffect(() => {
     if (quotationId && quotationDetail) {
       setFormData({
+        salesperson: quotationDetail.salesperson || "",
+        currencyId: quotationDetail.currencyId,
         customerId: quotationDetail.customerId,
         customerName: quotationDetail.customerName || "",
         contactPersonId: quotationDetail.contactPersonId,
@@ -555,9 +601,13 @@ export default function QuotationForm() {
 
           if (field === "rate" || field === "roe" || field === "quantity" || field === "currency") {
             const rate = parseFloat(updated.rate) || 0;
-            const roe = parseFloat(updated.roe) || 1;
             const qty = parseFloat(updated.quantity) || 0;
-            updated.amount = (rate * roe * qty).toFixed(2);
+            const lineRoe = parseFloat(updated.roe) || 1;
+            const documentCurrency = currencyTypes.find((currency) => currency.id === formData.currencyId);
+            const crossRate = updated.currencyId === formData.currencyId
+              ? 1
+              : lineRoe / (documentCurrency?.roe || 1);
+            updated.amount = (rate * crossRate * qty).toFixed(2);
           }
 
           if (field === "costRate" || field === "costRoe" || field === "costQuantity" || field === "costCurrency") {
@@ -587,12 +637,18 @@ export default function QuotationForm() {
       fullName: customer.name,
       email: customer.email || "",
       phoneNumber: customer.phone || "",
+      salesperson: customer.salesperson || prev.salesperson,
     }));
     setFormData((prev) => ({
       ...prev,
       customerId: customer.id,
       customerName: customer.name,
       contactPersonId: undefined,
+      salesperson: customer.salesperson || prev.salesperson,
+    }));
+    setRateRequestData((prev) => ({
+      ...prev,
+      salesperson: customer.salesperson || leadData.salesperson || prev.salesperson,
     }));
   };
 
@@ -636,6 +692,7 @@ export default function QuotationForm() {
     }
 
     return {
+      salesperson: leadData.salesperson || undefined,
       leadType: "ManualLead",
       customerId: leadData.customerId,
       fullName: leadData.fullName,
@@ -667,6 +724,11 @@ export default function QuotationForm() {
       return;
     }
 
+    if (!formData.currencyId) {
+      toast.error("Quotation currency could not be resolved for the selected customer");
+      return;
+    }
+
     if (isNewQuotationMode && createLead && (!leadData.fullName || !leadData.email || !leadData.phoneNumber)) {
       toast.error("Please complete lead customer name, email, and phone number");
       return;
@@ -678,6 +740,8 @@ export default function QuotationForm() {
     }
 
     const request: CreateQuotationRequest = {
+      salesperson: formData.salesperson || undefined,
+      currencyId: formData.currencyId,
       quotationDate: formData.quotationDate,
       rateRequestId: conversionRateRequestId || undefined,
       customerId: formData.customerId,
@@ -750,6 +814,7 @@ export default function QuotationForm() {
                 vendorName: selectedVendor?.name || "",
                 vendorType: vendorTypeName,
                 vendorEmail: rateRequestData.vendorEmail || undefined,
+                salesperson: rateRequestData.salesperson || undefined,
                 internalNotes: rateRequestData.internalNotes || undefined,
                 mode: formData.mode as CreateQuotationRequest["mode"],
                 shipmentMode: formData.mode as CreateQuotationRequest["shipmentMode"],
@@ -867,7 +932,7 @@ export default function QuotationForm() {
                   <CardTitle className="text-lg text-primary">Lead Details</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-4 gap-4">
                     <div className="space-y-2">
                       <Label>Customer Name *</Label>
                       <SearchableSelect
@@ -896,6 +961,20 @@ export default function QuotationForm() {
                         value={leadData.phoneNumber}
                         onChange={(e) => updateLeadField("phoneNumber", e.target.value)}
                         placeholder="Enter phone number"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Salesperson</Label>
+                      <SearchableSelect
+                        options={salespersons.map((item) => ({
+                          value: item.fullName,
+                          label: `${item.fullName} (${item.employeeCode})`,
+                        }))}
+                        value={leadData.salesperson}
+                        onValueChange={(value) => updateLeadField("salesperson", value)}
+                        placeholder="Select salesperson"
+                        searchPlaceholder="Search salespersons..."
+                        emptyMessage={isLoadingSalespersons ? "Loading..." : isSalespersonsError ? "Unable to load salespersons" : "No salespersons found"}
                       />
                     </div>
                   </div>
@@ -1185,7 +1264,7 @@ export default function QuotationForm() {
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label>Vendor Email</Label>
                       <Input
@@ -1194,6 +1273,20 @@ export default function QuotationForm() {
                           setRateRequestData((prev) => ({ ...prev, vendorEmail: e.target.value }))
                         }
                         placeholder="vendor@email.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Salesperson</Label>
+                      <SearchableSelect
+                        options={salespersons.map((item) => ({
+                          value: item.fullName,
+                          label: `${item.fullName} (${item.employeeCode})`,
+                        }))}
+                        value={rateRequestData.salesperson}
+                        onValueChange={(value) => setRateRequestData((prev) => ({ ...prev, salesperson: value }))}
+                        placeholder="Select salesperson"
+                        searchPlaceholder="Search salespersons..."
+                        emptyMessage={isLoadingSalespersons ? "Loading..." : isSalespersonsError ? "Unable to load salespersons" : "No salespersons found"}
                       />
                     </div>
                     <div className="space-y-2">
@@ -1240,12 +1333,14 @@ export default function QuotationForm() {
                           value={formData.customerId?.toString() || ""}
                           onValueChange={(value) => {
                             const customer = debtors.find((c) => c.id === parseInt(value));
-                            setFormData({
-                              ...formData,
+                            setFormData((current) => ({
+                              ...current,
                               customerId: parseInt(value),
                               customerName: customer?.name || "",
                               contactPersonId: undefined,
-                            });
+                              salesperson: customer?.salesperson || current.salesperson,
+                              currencyId: customer?.currencyId || current.currencyId,
+                            }));
                           }}
                           placeholder="Select Company"
                           searchPlaceholder="Search..."
@@ -1301,6 +1396,29 @@ export default function QuotationForm() {
                       onValueChange={(value) => setFormData({ ...formData, mode: value })}
                       placeholder="Select Mode"
                       searchPlaceholder="Search..."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Salesperson</Label>
+                    <SearchableSelect
+                      disabled={isReadOnly}
+                      options={salespersons.map((item) => ({
+                        value: item.fullName,
+                        label: `${item.fullName} (${item.employeeCode})`,
+                      }))}
+                      value={formData.salesperson}
+                      onValueChange={(value) => setFormData({ ...formData, salesperson: value })}
+                      placeholder="Select salesperson"
+                      searchPlaceholder="Search salespersons..."
+                      emptyMessage={isLoadingSalespersons ? "Loading..." : isSalespersonsError ? "Unable to load salespersons" : "No salespersons found"}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Quotation Currency</Label>
+                    <Input
+                      value={quotationCurrency?.code || quotationDetail?.currencyCode || baseCurrencyCode}
+                      readOnly
+                      className="bg-muted"
                     />
                   </div>
                 </div>
@@ -1687,7 +1805,7 @@ export default function QuotationForm() {
                   <div>Rate</div>
                   <div>ROE</div>
                   <div>Qty</div>
-                  <div>Amount</div>
+                  <div>Amount ({quotationCurrency?.code || quotationDetail?.currencyCode || baseCurrencyCode})</div>
                   <div>Currency</div>
                   <div>Rate</div>
                   <div>ROE</div>

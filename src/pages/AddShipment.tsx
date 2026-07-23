@@ -69,7 +69,7 @@ import {
   PaymentStatus,
   fileApi,
 } from "@/services/api";
-import { hrEmployeeApi, type EmployeeDropdown } from "@/services/api/hr";
+import type { SalespersonLookup } from "@/services/api/lookups";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   useCreateShipment,
@@ -87,6 +87,7 @@ import {
 import { useDeleteInvoice, useDeletePurchaseInvoice } from "@/hooks/useInvoices";
 import { useAllCustomerCategoryTypes, useAllIncoTerms, useAllContainerTypes, useAllPackageTypes, useAllPorts } from "@/hooks/useSettings";
 import { useQuotationForShipment } from "@/hooks/useSales";
+import { useSalespersonLookup } from "@/hooks/useSalespersons";
 import { CargoContainerTab, CargoFormEntry } from "@/components/shipments/CargoContainerTab";
 import { calculateCbm } from "@/lib/cargoCalculations";
 
@@ -170,9 +171,9 @@ const getPortLabel = (port: { seaPortName?: string; seaPortCode?: string; airPor
 
 const TFS_SALESPERSON = "TFS";
 
-const getShipmentSalespersonOptions = (employees: EmployeeDropdown[]) => [
+const getShipmentSalespersonOptions = (salespersons: SalespersonLookup[]) => [
   { value: TFS_SALESPERSON, label: TFS_SALESPERSON },
-  ...employees
+  ...salespersons
     .filter(emp => emp.fullName.trim().toLowerCase() !== TFS_SALESPERSON.toLowerCase())
     .map(emp => ({
       value: emp.fullName,
@@ -329,13 +330,11 @@ const AddShipment = () => {
   });
   const networkPartners = useMemo(() => networkPartnersResponse?.data ?? [], [networkPartnersResponse?.data]);
 
-  // Fetch Employees for Assign To dropdown
-  const { data: employeesResponse, isLoading: isLoadingEmployees } = useQuery({
-    queryKey: ['hr-employees-dropdown'],
-    queryFn: () => hrEmployeeApi.getDropdown(),
-    staleTime: 60 * 60 * 1000,
-  });
-  const employees = useMemo(() => employeesResponse?.data ?? [], [employeesResponse?.data]);
+  const {
+    data: salespersons = [],
+    isLoading: isLoadingSalespersons,
+    isError: isSalespersonsError,
+  } = useSalespersonLookup();
 
   // Fetch BL Types
   const { data: blTypesResponse } = useQuery({
@@ -519,6 +518,7 @@ const AddShipment = () => {
         ...prev,
         direction: "Import", // Default to Import as per plan
         mode: shipmentMode,
+        salesperson: quotationForShipment.salesperson || prev.salesperson,
         incoTermId,
         // Port of Loading → Load, Receipt, Place of Receipt
         portOfLoadingId: quotationForShipment.loadingPortId,
@@ -610,8 +610,12 @@ const AddShipment = () => {
         // Add costings from quotation charges
         if (quotationForShipment.charges && quotationForShipment.charges.length > 0) {
           for (const charge of quotationForShipment.charges) {
-            const saleLCY = (charge.amount || 0) * (charge.roe || 1);
-            const costLCY = (charge.costAmount || 0) * (charge.costRoe || 1);
+            // Quotation Amount is expressed in the quotation document currency.
+            // Shipment costings retain each line's own FCY and LCY snapshots.
+            const saleFCY = (charge.rate || 0) * (charge.quantity || 0);
+            const saleLCY = saleFCY * (charge.roe || 1);
+            const costFCY = (charge.costRate || 0) * (charge.costQuantity || 0);
+            const costLCY = costFCY * (charge.costRoe || 1);
             const costingData: AddShipmentCostingRequest = {
               shipmentId: savedShipmentId,
               description: charge.chargeType || '',
@@ -620,7 +624,7 @@ const AddShipment = () => {
               saleUnit: charge.rate || 0,
               saleCurrencyId: charge.currencyId,
               saleExRate: charge.roe || 1,
-              saleFCY: charge.amount || 0,
+              saleFCY,
               saleLCY,
               saleTaxPercentage: 0,
               saleTaxAmount: 0,
@@ -628,7 +632,7 @@ const AddShipment = () => {
               costUnit: charge.costRate || 0,
               costCurrencyId: charge.costCurrencyId,
               costExRate: charge.costRoe || 1,
-              costFCY: charge.costAmount || 0,
+              costFCY,
               costLCY,
               costTaxPercentage: 0,
               costTaxAmount: 0,
@@ -1739,13 +1743,16 @@ const AddShipment = () => {
                   <div>
                     <Label className="text-sm">Salesperson</Label>
                     <SearchableSelect
-                      options={getShipmentSalespersonOptions(employees)}
+                      options={getShipmentSalespersonOptions(salespersons)}
                       value={formData.salesperson}
                       onValueChange={(v) => handleInputChange("salesperson", v)}
                       placeholder="Select"
                       searchPlaceholder="Search employees..."
-                      emptyMessage={isLoadingEmployees ? "Loading..." : "No employees found"}
+                      emptyMessage={isLoadingSalespersons ? "Loading..." : "No salespersons found"}
                     />
+                    {isSalespersonsError && (
+                      <p className="mt-1 text-xs text-destructive">Unable to load salespersons.</p>
+                    )}
                   </div>
                 </div>
               </div>

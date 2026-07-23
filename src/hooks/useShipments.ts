@@ -170,8 +170,9 @@ export function useDeleteShipmentParty() {
       }
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['shipments'] });
+      queryClient.invalidateQueries({ queryKey: ['shipment-customs', variables.shipmentId] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Party removed successfully');
     },

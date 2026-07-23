@@ -149,6 +149,15 @@ export interface AccountReceivable {
   status?: string;
 }
 
+export interface AccountReceivableBalanceTotal {
+  currencyCode: string;
+  balance: number;
+}
+
+export interface AccountReceivablePage extends PaginatedList<AccountReceivable> {
+  balanceTotals: AccountReceivableBalanceTotal[];
+}
+
 export interface AccountPayable {
   id: number;
   invoiceDate: string;
@@ -362,7 +371,7 @@ export const customerApi = {
     if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
     if (params?.fromDate) query.append('fromDate', params.fromDate);
     if (params?.toDate) query.append('toDate', params.toDate);
-    return fetchApi<PaginatedList<AccountReceivable>>(
+    return fetchApi<AccountReceivablePage>(
       `/customers/${customerId}/account-receivables?${query}`
     );
   },

@@ -99,6 +99,11 @@ export interface ShipmentParty {
   customerCategoryName?: string;
   customerId?: number;
   customerName: string;
+  customerAddress?: string;
+  customerCity?: string;
+  customerCountry?: string;
+  customerPhone?: string;
+  customerEmail?: string;
   mobile?: string;
   phone?: string;
   email?: string;
@@ -439,6 +444,9 @@ export interface ShipmentCustomsDto {
   berth?: string;
   lastStop?: string;
   tallyContractorPartyId?: number;
+  manifestAgentPartyId?: number;
+  containerListAgentPartyId?: number;
+  cBookAgentPartyId?: number;
 }
 
 export interface UpsertShipmentCustomsRequest {
@@ -459,6 +467,9 @@ export interface UpsertShipmentCustomsRequest {
   berth?: string;
   lastStop?: string;
   tallyContractorPartyId?: number;
+  manifestAgentPartyId?: number;
+  containerListAgentPartyId?: number;
+  cBookAgentPartyId?: number;
 }
 
 // Shipment Invoice Types

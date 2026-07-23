@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { API_BASE_URL } from "@/services/api/base";
 import { useAuthPdf } from "@/hooks/useAuthPdf";
 import { useShipmentByIdentifier } from "@/hooks/useShipments";
@@ -17,6 +17,7 @@ const REPORT_TITLES: Record<string, string> = {
 
 export default function ShipmentReportPrintView() {
   const { shipmentId, reportType } = useParams<{ shipmentId: string; reportType: string }>();
+  const [searchParams] = useSearchParams();
   const isNumericShipmentId = Boolean(shipmentId && /^\d+$/.test(shipmentId));
   const { data: shipmentByIdentifier, isLoading: isResolvingShipment } = useShipmentByIdentifier(
     !isNumericShipmentId && shipmentId ? shipmentId : ""
@@ -26,8 +27,13 @@ export default function ShipmentReportPrintView() {
     ? shipmentId
     : shipmentByIdentifier?.id?.toString() ?? null;
 
+  const pdfQuery = new URLSearchParams({ inline: "true" });
+  if (reportType === "bill-of-lading" && searchParams.get("original") === "true") {
+    pdfQuery.set("original", "true");
+  }
+
   const pdfUrl = resolvedShipmentId && reportType
-    ? `${API_BASE_URL}/shipments/${resolvedShipmentId}/reports/${reportType}?inline=true`
+    ? `${API_BASE_URL}/shipments/${resolvedShipmentId}/reports/${reportType}?${pdfQuery.toString()}`
     : null;
 
   const { blobUrl, isLoading, error } = useAuthPdf(pdfUrl);

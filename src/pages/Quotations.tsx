@@ -197,6 +197,8 @@ export default function Quotations() {
                       <TableHead className="text-table-header-foreground">Date</TableHead>
                       <TableHead className="text-table-header-foreground">Quotation No</TableHead>
                       <TableHead className="text-table-header-foreground">Customer Name</TableHead>
+                      <TableHead className="text-table-header-foreground">Salesperson</TableHead>
+                      <TableHead className="text-table-header-foreground">Currency</TableHead>
                       <TableHead className="text-table-header-foreground">Incoterms</TableHead>
                       <TableHead className="text-table-header-foreground">Mode</TableHead>
                       <TableHead className="text-table-header-foreground">POL</TableHead>
@@ -210,7 +212,7 @@ export default function Quotations() {
                   <TableBody>
                     {quotations.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
                           No quotations found
                         </TableCell>
                       </TableRow>
@@ -220,6 +222,8 @@ export default function Quotations() {
                           <TableCell>{formatDate(quotation.quotationDate, "dd-MM-yyyy")}</TableCell>
                           <TableCell className="font-medium">{quotation.quotationNo}</TableCell>
                           <TableCell className="text-green-600">{quotation.customerName}</TableCell>
+                          <TableCell>{quotation.salesperson || "-"}</TableCell>
+                          <TableCell>{quotation.currencyCode || "-"}</TableCell>
                           <TableCell className="text-green-600">{quotation.incoTermCode || "-"}</TableCell>
                           <TableCell>{quotation.mode}</TableCell>
                           <TableCell className="text-green-600">{quotation.loadingPortName || quotation.pol}</TableCell>

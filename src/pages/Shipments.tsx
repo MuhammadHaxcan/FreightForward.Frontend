@@ -519,7 +519,7 @@ const Shipments = () => {
               onKeyDown={(e) => {
                 if (e.key === "Enter" && containerNumberValue.trim()) {
                   window.open(
-                    `/shipments/reports/by-container/${containerPromptReport?.slug}/${encodeURIComponent(containerNumberValue.trim())}`,
+                    `/shipments/reports/by-container/${containerPromptReport?.slug}/${encodeURIComponent(containerNumberValue.trim())}?shipmentId=${reportsShipmentId}`,
                     '_blank'
                   );
                   setContainerPromptReport(null);
@@ -541,7 +541,7 @@ const Shipments = () => {
               className="btn-success px-8"
               onClick={() => {
                 window.open(
-                  `/shipments/reports/by-container/${containerPromptReport?.slug}/${encodeURIComponent(containerNumberValue.trim())}`,
+                  `/shipments/reports/by-container/${containerPromptReport?.slug}/${encodeURIComponent(containerNumberValue.trim())}?shipmentId=${reportsShipmentId}`,
                   '_blank'
                 );
                 setContainerPromptReport(null);

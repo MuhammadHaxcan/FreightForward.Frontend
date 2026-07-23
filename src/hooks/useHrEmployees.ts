@@ -71,6 +71,7 @@ export function useCreateHrEmployee() {
       toast.success('Employee created successfully');
       queryClient.invalidateQueries({ queryKey: ['hr-employees'] });
       queryClient.invalidateQueries({ queryKey: ['hr-employees-dropdown'] });
+      queryClient.invalidateQueries({ queryKey: ['lookups', 'salespersons'] });
       queryClient.invalidateQueries({ queryKey: ['unlinked-employees'] });
       queryClient.invalidateQueries({ queryKey: ['hr-next-employee-code'] });
     },
@@ -92,6 +93,7 @@ export function useUpdateHrEmployee() {
       queryClient.invalidateQueries({ queryKey: ['hr-employees'] });
       queryClient.invalidateQueries({ queryKey: ['hr-employee', id] });
       queryClient.invalidateQueries({ queryKey: ['hr-employees-dropdown'] });
+      queryClient.invalidateQueries({ queryKey: ['lookups', 'salespersons'] });
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to update employee');
@@ -110,6 +112,7 @@ export function useDeleteHrEmployee() {
       toast.success('Employee deleted successfully');
       queryClient.invalidateQueries({ queryKey: ['hr-employees'] });
       queryClient.invalidateQueries({ queryKey: ['hr-employees-dropdown'] });
+      queryClient.invalidateQueries({ queryKey: ['lookups', 'salespersons'] });
       queryClient.invalidateQueries({ queryKey: ['unlinked-employees'] });
     },
     onError: (error: Error) => {

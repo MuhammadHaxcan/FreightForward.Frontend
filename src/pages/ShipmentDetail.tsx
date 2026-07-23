@@ -103,10 +103,11 @@ import {
   FreightType,
   PaymentStatus,
 } from "@/services/api";
-import { hrEmployeeApi, type EmployeeDropdown } from "@/services/api/hr";
+import type { SalespersonLookup } from "@/services/api/lookups";
 import { interactionAuditApi } from "@/services/api/interactionAudit";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { OfficeInteractionAuditEventRequest } from "@/types/auth";
+import { useSalespersonLookup } from "@/hooks/useSalespersons";
 
 // Helper function to get payment status display and styling
 const getPaymentStatusDisplay = (status: PaymentStatus) => {
@@ -185,9 +186,9 @@ const getPortLabel = (port: { seaPortName?: string; seaPortCode?: string; airPor
 
 const TFS_SALESPERSON = "TFS";
 
-const getShipmentSalespersonOptions = (employees: EmployeeDropdown[]) => [
+const getShipmentSalespersonOptions = (salespersons: SalespersonLookup[]) => [
   { value: TFS_SALESPERSON, label: TFS_SALESPERSON },
-  ...employees
+  ...salespersons
     .filter(emp => emp.fullName.trim().toLowerCase() !== TFS_SALESPERSON.toLowerCase())
     .map(emp => ({
       value: emp.fullName,
@@ -437,13 +438,11 @@ const ShipmentDetail = () => {
   });
   const networkPartners = useMemo(() => networkPartnersResponse?.data ?? [], [networkPartnersResponse?.data]);
 
-  // Fetch Employees for Assign To dropdown
-  const { data: employeesResponse, isLoading: isLoadingEmployees } = useQuery({
-    queryKey: ['hr-employees-dropdown'],
-    queryFn: () => hrEmployeeApi.getDropdown(),
-    staleTime: 60 * 60 * 1000,
-  });
-  const employees = useMemo(() => employeesResponse?.data ?? [], [employeesResponse?.data]);
+  const {
+    data: salespersons = [],
+    isLoading: isLoadingSalespersons,
+    isError: isSalespersonsError,
+  } = useSalespersonLookup();
 
   // Fetch BL Types
   const { data: blTypesResponse } = useQuery({
@@ -1654,13 +1653,16 @@ const ShipmentDetail = () => {
                   <div>
                     <Label className="text-sm">Salesperson</Label>
                     <SearchableSelect
-                      options={getShipmentSalespersonOptions(employees)}
+                      options={getShipmentSalespersonOptions(salespersons)}
                       value={formData.salesperson}
                       onValueChange={(v) => handleInputChange("salesperson", v)}
                       placeholder="Select"
                       searchPlaceholder="Search employees..."
-                      emptyMessage={isLoadingEmployees ? "Loading..." : "No employees found"}
+                      emptyMessage={isLoadingSalespersons ? "Loading..." : "No salespersons found"}
                     />
+                    {isSalespersonsError && (
+                      <p className="mt-1 text-xs text-destructive">Unable to load salespersons.</p>
+                    )}
                   </div>
                 </div>
               </div>

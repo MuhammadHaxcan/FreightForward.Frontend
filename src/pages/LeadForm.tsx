@@ -34,6 +34,7 @@ import {
 } from "@/hooks/useSettings";
 import { EquipmentGrid } from "@/components/leads/EquipmentGrid";
 import { BoxPalletsGrid } from "@/components/leads/BoxPalletsGrid";
+import { useSalespersonLookup } from "@/hooks/useSalespersons";
 
 const PRODUCT_TYPES = [
   "AGRICULTURE & FOOD",
@@ -59,6 +60,7 @@ const PRODUCT_TYPES = [
 ];
 
 interface FormData {
+  salesperson: string;
   customerId?: number;
   fullName: string;
   email: string;
@@ -84,6 +86,7 @@ interface FormData {
 }
 
 const initialFormData: FormData = {
+  salesperson: "",
   fullName: "",
   email: "",
   phoneNumber: "",
@@ -126,6 +129,11 @@ export default function LeadForm() {
   const { data: incoTerms, isLoading: isLoadingIncoTerms } = useAllIncoTerms();
   const { data: containerTypes } = useAllContainerTypes();
   const { data: packageTypes } = useAllPackageTypes();
+  const {
+    data: salespersons = [],
+    isLoading: isLoadingSalespersons,
+    isError: isSalespersonsError,
+  } = useSalespersonLookup();
 
   // Ensure arrays for safe mapping
   const incoTermsArray = Array.isArray(incoTerms) ? incoTerms : [];
@@ -194,6 +202,7 @@ export default function LeadForm() {
       }
 
       setFormData({
+        salesperson: lead.salesperson || "",
         customerId: lead.customerId,
         fullName: lead.fullName || "",
         email: lead.email || "",
@@ -237,6 +246,7 @@ export default function LeadForm() {
         fullName: customer.name,
         email: customer.email || "",
         phoneNumber: customer.phone || "",
+        salesperson: customer.salesperson || prev.salesperson,
       }));
     }
   };
@@ -273,6 +283,7 @@ export default function LeadForm() {
     }
 
     const request: CreateLeadRequest = {
+      salesperson: formData.salesperson || undefined,
       leadType: 'ManualLead',
       customerId: formData.customerId,
       fullName: formData.fullName,
@@ -355,7 +366,7 @@ export default function LeadForm() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-4 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="customerSelect">Customer Name *</Label>
                     <SearchableSelect
@@ -387,6 +398,20 @@ export default function LeadForm() {
                       value={formData.phoneNumber}
                       onChange={(e) => updateField("phoneNumber", e.target.value)}
                       placeholder="Enter phone number"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Salesperson</Label>
+                    <SearchableSelect
+                      options={salespersons.map((salesperson) => ({
+                        value: salesperson.fullName,
+                        label: `${salesperson.fullName} (${salesperson.employeeCode})`,
+                      }))}
+                      value={formData.salesperson}
+                      onValueChange={(value) => updateField("salesperson", value)}
+                      placeholder="Select salesperson"
+                      searchPlaceholder="Search salespersons..."
+                      emptyMessage={isLoadingSalespersons ? "Loading..." : isSalespersonsError ? "Unable to load salespersons" : "No salespersons found"}
                     />
                   </div>
                 </div>

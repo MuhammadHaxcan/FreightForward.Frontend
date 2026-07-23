@@ -6,7 +6,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../components/ui/card';
 import { Alert, AlertDescription } from '../components/ui/alert';
-import { Loader2, Ship, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,7 @@ import {
 } from '../components/ui/dialog';
 import { authApi } from '../services/api/auth';
 import loginBg from '../assets/login-bg.png';
+import tfsLogo from '../assets/tfs-logo.svg';
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -119,14 +120,13 @@ export default function Login() {
       className="flex min-h-screen items-center justify-center p-4 bg-cover bg-center bg-no-repeat"
       style={{ backgroundImage: `url(${loginBg})`, backgroundColor: '#d5e3ed' }}
     >
-      <Card className="w-full max-w-md shadow-xl">
+      <Card className="w-full max-w-md overflow-hidden border border-black/15 shadow-xl">
+        <div className="h-1.5 bg-gradient-to-r from-[#363636] via-[#4A4A4A] to-[#4DB749]" />
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-2">
-            <div className="rounded-full bg-blue-600 p-3">
-              <Ship className="h-8 w-8 text-white" />
-            </div>
+            <img src={tfsLogo} alt="TFS logo" className="h-16 w-auto object-contain" />
           </div>
-          <CardTitle className="text-2xl font-bold">Sign In</CardTitle>
+          <CardTitle className="text-2xl font-bold text-[#363636]">Sign In</CardTitle>
           <CardDescription>
             Enter your credentials to access your account
           </CardDescription>
@@ -189,7 +189,7 @@ export default function Login() {
 
             <Button
               type="submit"
-              className="w-full"
+              className="w-full bg-[#4DB749] text-white hover:bg-[#3f9f3b] focus-visible:ring-[#4DB749]"
               disabled={isSubmitting}
             >
               {isSubmitting ? (
@@ -207,13 +207,13 @@ export default function Login() {
           <button
             type="button"
             onClick={handleForgotPasswordOpen}
-            className="text-sm text-muted-foreground hover:text-primary hover:underline"
+            className="text-sm text-muted-foreground hover:text-[#4DB749] hover:underline"
           >
             Forgot Password?
           </button>
           <Link
             to="/system/login"
-            className="text-sm text-muted-foreground hover:text-primary hover:underline"
+            className="text-sm text-muted-foreground hover:text-[#4DB749] hover:underline"
           >
             System Administrator Login
           </Link>

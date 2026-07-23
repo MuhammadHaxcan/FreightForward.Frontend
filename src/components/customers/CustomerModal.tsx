@@ -9,8 +9,8 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useCreateCustomer, useUpdateCustomer, useSimilarCustomerCheck } from "@/hooks/useCustomers";
 import { useAllCountries, useAllCurrencyTypes, useAllCustomerCategoryTypes } from "@/hooks/useSettings";
 import { Customer, customerApi, NextCustomerCodes } from "@/services/api";
-import { hrEmployeeApi } from "@/services/api/hr";
 import { useQuery } from "@tanstack/react-query";
+import { useSalespersonLookup } from "@/hooks/useSalespersons";
 
 interface CustomerModalProps {
   open: boolean;
@@ -65,13 +65,11 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
   // Fetch customer category types from API
   const { data: categoryTypes = [] } = useAllCustomerCategoryTypes();
 
-  // Fetch employees for Assign To dropdown
-  const { data: employeesResponse } = useQuery({
-    queryKey: ['hr-employees-dropdown'],
-    queryFn: () => hrEmployeeApi.getDropdown(),
-    staleTime: 5 * 60 * 1000,
-  });
-  const employees = employeesResponse?.data ?? [];
+  const {
+    data: salespersons = [],
+    isLoading: isLoadingSalespersons,
+    isError: isSalespersonsError,
+  } = useSalespersonLookup(open);
 
   // Fetch next customer codes from API
   const { data: nextCodesResponse, refetch: refetchNextCodes } = useQuery({
@@ -343,11 +341,15 @@ export function CustomerModal({ open, onOpenChange, customer, mode }: CustomerMo
             <div className="space-y-2">
               <Label className="text-sm">Salesperson</Label>
               <SearchableSelect
-                options={employees.map((emp) => ({ value: emp.fullName, label: `${emp.fullName} (${emp.employeeCode})` }))}
+                options={salespersons.map((salesperson) => ({
+                  value: salesperson.fullName,
+                  label: `${salesperson.fullName} (${salesperson.employeeCode})`,
+                }))}
                 value={formData.salesperson}
                 onValueChange={(value) => setFormData({ ...formData, salesperson: value })}
                 placeholder="Select employee..."
                 searchPlaceholder="Search employees..."
+                emptyMessage={isLoadingSalespersons ? "Loading..." : isSalespersonsError ? "Unable to load salespersons" : "No salespersons found"}
                 triggerClassName="bg-muted/50"
               />
             </div>

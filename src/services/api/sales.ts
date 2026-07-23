@@ -87,6 +87,7 @@ export interface SalesActivityLogEntry {
 }
 
 export interface Lead {
+  salesperson?: string;
   id: number;
   leadNo: string;
   leadDate: string;
@@ -159,6 +160,7 @@ export interface CreateLeadDetailRequest {
 }
 
 export interface CreateLeadRequest {
+  salesperson?: string;
   leadType?: LeadType;
   customerId?: number;
   fullName: string;
@@ -188,6 +190,7 @@ export interface UpdateLeadRequest extends CreateLeadRequest {
 }
 
 export interface RateRequest {
+  salesperson?: string;
   id: number;
   rateRequestNo: string;
   requestDate: string;
@@ -236,6 +239,7 @@ export interface RateRequest {
 }
 
 export interface CreateRateRequestRequest {
+  salesperson?: string;
   leadId?: number;
   mode?: ShipmentMode;
   shipmentMode?: ShipmentMode;
@@ -257,6 +261,9 @@ export interface UpdateRateRequestRequest extends CreateRateRequestRequest {
 }
 
 export interface Quotation {
+  salesperson?: string;
+  currencyId?: number;
+  currencyCode?: string;
   id: number;
   quotationNo: string;
   quotationDate: string;
@@ -357,6 +364,8 @@ export interface CreateQuotationCargoDetailRequest {
 }
 
 export interface CreateQuotationRequest {
+  salesperson?: string;
+  currencyId?: number;
   quotationDate: string;
   rateRequestId?: number;
   customerId?: number;
@@ -415,6 +424,7 @@ export interface CreateCompleteQuotationRequest {
 
 // RateRequest for conversion to Quotation
 export interface RateRequestForConversion {
+  salesperson?: string;
   id: number;
   rateRequestNo: string;
   rateRequestDate: string;
@@ -462,6 +472,9 @@ export interface RateRequestForConversion {
 
 // Quotation for Shipment conversion
 export interface QuotationForShipment {
+  salesperson?: string;
+  currencyId?: number;
+  currencyCode?: string;
   id: number;
   quotationNo: string;
   quotationBookingNo?: string;

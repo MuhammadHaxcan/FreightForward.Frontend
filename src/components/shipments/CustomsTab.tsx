@@ -32,6 +32,9 @@ function createEmptyCustomsForm() {
     berth: "",
     lastStop: "",
     tallyContractorPartyId: "",
+    manifestAgentPartyId: "",
+    containerListAgentPartyId: "",
+    cBookAgentPartyId: "",
   };
 }
 
@@ -41,6 +44,14 @@ const allowedTallyCategoryCodes = new Set([
   "DeliveryAgent",
   "ClearingAgent",
   "Terminal",
+]);
+
+const allowedReportAgentCategoryCodes = new Set([
+  "Agents",
+  "OverseasAgents",
+  "DeliveryAgent",
+  "OriginAgent",
+  "CoLoader",
 ]);
 
 export function CustomsTab({ shipmentId, isReadOnly = false }: CustomsTabProps) {
@@ -74,6 +85,9 @@ export function CustomsTab({ shipmentId, isReadOnly = false }: CustomsTabProps) 
       berth: customs.berth ?? "",
       lastStop: customs.lastStop ?? "",
       tallyContractorPartyId: customs.tallyContractorPartyId?.toString() ?? "",
+      manifestAgentPartyId: customs.manifestAgentPartyId?.toString() ?? "",
+      containerListAgentPartyId: customs.containerListAgentPartyId?.toString() ?? "",
+      cBookAgentPartyId: customs.cBookAgentPartyId?.toString() ?? "",
     });
   }, [customs, shipmentId]);
 
@@ -81,12 +95,22 @@ export function CustomsTab({ shipmentId, isReadOnly = false }: CustomsTabProps) 
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const partyOptions = (shipment?.parties ?? [])
+  const tallyPartyOptions = (shipment?.parties ?? [])
     .filter((party) => allowedTallyCategoryCodes.has(party.customerCategoryCode ?? ""))
     .map((party) => ({
       value: party.id.toString(),
       label: `${party.customerCategoryName ?? "Party"} - ${party.customerName}${party.phone ? ` (${party.phone})` : party.mobile ? ` (${party.mobile})` : ""}`,
     }));
+
+  const reportAgentOptions = [
+    { value: "", label: "Use automatic fallback" },
+    ...(shipment?.parties ?? [])
+      .filter((party) => allowedReportAgentCategoryCodes.has(party.customerCategoryCode ?? ""))
+      .map((party) => ({
+        value: party.id.toString(),
+        label: `${party.customerCategoryName ?? "Agent"} - ${party.customerName} [${party.masterType}]${party.phone ? ` (${party.phone})` : party.mobile ? ` (${party.mobile})` : ""}`,
+      })),
+  ];
 
   const handleSave = () => {
     upsert({
@@ -107,6 +131,9 @@ export function CustomsTab({ shipmentId, isReadOnly = false }: CustomsTabProps) 
       berth: form.berth || undefined,
       lastStop: form.lastStop || undefined,
       tallyContractorPartyId: form.tallyContractorPartyId ? Number(form.tallyContractorPartyId) : undefined,
+      manifestAgentPartyId: form.manifestAgentPartyId ? Number(form.manifestAgentPartyId) : undefined,
+      containerListAgentPartyId: form.containerListAgentPartyId ? Number(form.containerListAgentPartyId) : undefined,
+      cBookAgentPartyId: form.cBookAgentPartyId ? Number(form.cBookAgentPartyId) : undefined,
     });
   };
 
@@ -215,11 +242,57 @@ export function CustomsTab({ shipmentId, isReadOnly = false }: CustomsTabProps) 
         <div>
           <h4 className="font-semibold text-emerald-600">Pakistan / CSA Header</h4>
           <p className="mt-1 text-sm text-muted-foreground">
-            Shipping agent is sourced automatically from the shipment Parties tab using Shipping Line, Agents, then Delivery Agent.
+            Select the agent to print on each Customs sheet. Options come from eligible agents already added in the shipment Parties tab.
+            Eligible types are Agents, Overseas Agents, Delivery Agent, Origin Agent, and Co-loader, regardless of master type.
           </p>
+          {reportAgentOptions.length === 1 && (
+            <p className="mt-1 text-sm text-amber-600">
+              No eligible agents are currently attached to this shipment. Add one in the Parties tab first.
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+          <div className="space-y-1">
+            <Label className="text-sm font-medium">Import General Manifest Agent</Label>
+            <SearchableSelect
+              options={reportAgentOptions}
+              value={form.manifestAgentPartyId}
+              onValueChange={(value) => handleChange("manifestAgentPartyId", value)}
+              disabled={isReadOnly}
+              placeholder="Select manifest agent"
+              searchPlaceholder="Search eligible agents..."
+              triggerClassName="w-full bg-card"
+              emptyMessage="Add an eligible agent in the Parties tab first."
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-sm font-medium">Container List Agent</Label>
+            <SearchableSelect
+              options={reportAgentOptions}
+              value={form.containerListAgentPartyId}
+              onValueChange={(value) => handleChange("containerListAgentPartyId", value)}
+              disabled={isReadOnly}
+              placeholder="Select container-list agent"
+              searchPlaceholder="Search eligible agents..."
+              triggerClassName="w-full bg-card"
+              emptyMessage="Add an eligible agent in the Parties tab first."
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-sm font-medium">C Book Agent</Label>
+            <SearchableSelect
+              options={reportAgentOptions}
+              value={form.cBookAgentPartyId}
+              onValueChange={(value) => handleChange("cBookAgentPartyId", value)}
+              disabled={isReadOnly}
+              placeholder="Select C Book agent"
+              searchPlaceholder="Search eligible agents..."
+              triggerClassName="w-full bg-card"
+              emptyMessage="Add an eligible agent in the Parties tab first."
+            />
+          </div>
+
           <div className="space-y-1">
             <Label className="text-sm font-medium">IGM / EGM No</Label>
             <Input
@@ -307,7 +380,7 @@ export function CustomsTab({ shipmentId, isReadOnly = false }: CustomsTabProps) 
           <div className="space-y-1">
             <Label className="text-sm font-medium">Tally Contractor</Label>
             <SearchableSelect
-              options={partyOptions}
+              options={tallyPartyOptions}
               value={form.tallyContractorPartyId}
               onValueChange={(value) => handleChange("tallyContractorPartyId", value)}
               disabled={isReadOnly}

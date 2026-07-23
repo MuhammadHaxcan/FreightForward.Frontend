@@ -304,6 +304,7 @@ export default function Leads() {
                       <TableHead className="text-table-header-foreground">Lead Type</TableHead>
                       <TableHead className="text-table-header-foreground">Date</TableHead>
                       <TableHead className="text-table-header-foreground">Customer Name</TableHead>
+                      <TableHead className="text-table-header-foreground">Salesperson</TableHead>
                       <TableHead className="text-table-header-foreground">Freight Mode</TableHead>
                       <TableHead className="text-table-header-foreground">Inco Terms</TableHead>
                       <TableHead className="text-table-header-foreground">Pickup Country</TableHead>
@@ -317,7 +318,7 @@ export default function Leads() {
                   <TableBody>
                     {leads.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
                           No leads found
                         </TableCell>
                       </TableRow>
@@ -341,6 +342,7 @@ export default function Leads() {
                           </TableCell>
                           <TableCell>{formatDate(lead.leadDate, "dd-MM-yyyy")}</TableCell>
                           <TableCell className="text-green-600">{lead.customerName || lead.fullName}</TableCell>
+                          <TableCell>{lead.salesperson || "-"}</TableCell>
                           <TableCell>{lead.freightMode || "-"}</TableCell>
                           <TableCell>{lead.incoTermCode || "-"}</TableCell>
                           <TableCell className="text-green-600">{lead.polCountry || lead.pickupCountryName || "-"}</TableCell>
