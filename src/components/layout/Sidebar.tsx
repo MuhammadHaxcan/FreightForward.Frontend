@@ -15,11 +15,13 @@ import {
   ChevronDown,
   Menu,
   X,
+  TriangleAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { BRAND } from "@/config/branding";
 
 interface SubMenuItem {
   title: string;
@@ -38,8 +40,7 @@ interface SidebarItem {
 
 const allSidebarItems: SidebarItem[] = [
   { title: "Dashboard", icon: Radar, path: "/", permission: "dash_view" },
-  // Exception Dashboard hidden — client not billed for this feature. Restore to re-enable.
-  // { title: "Exception Dashboard", icon: TriangleAlert, path: "/exceptions", permission: "dash_view" },
+  { title: "Exceptions", icon: TriangleAlert, path: "/exceptions", permission: "dash_view" },
   {
     title: "Shipments",
     icon: Container,
@@ -243,9 +244,9 @@ export function Sidebar() {
           <Menu size={22} strokeWidth={1.5} />
         </button>
         <img
-          src="/tfs-logo-new.svg"
-          alt="Transparent Freight Services"
-          className="h-7 w-auto"
+          src={BRAND.assets.wordmarkDarkBackground}
+          alt={`${BRAND.productName} logo`}
+          className="h-8 w-auto rounded-sm"
         />
       </header>
 
@@ -283,11 +284,11 @@ export function Sidebar() {
           onClick={() => collapsed && setCollapsed(false)}
         >
           <img
-            src="/tfs-logo-new.svg"
-            alt="Transparent Freight Services"
+            src={collapsed ? BRAND.assets.iconDarkBackground : BRAND.assets.wordmarkDarkBackground}
+            alt={`${BRAND.productName} logo`}
             className={cn(
-              "transition-all duration-300",
-              collapsed ? "h-7 w-auto" : "w-full h-auto"
+              "rounded-sm object-contain transition-all duration-300",
+              collapsed ? "h-9 w-9" : "w-full h-auto"
             )}
           />
         </div>

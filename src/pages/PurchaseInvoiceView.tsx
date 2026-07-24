@@ -17,6 +17,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useShipment } from "@/hooks/useShipments";
 import { API_BASE_URL, fetchBlob } from "@/services/api/base";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
+import { BRAND } from "@/config/branding";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -254,7 +255,7 @@ export default function PurchaseInvoiceView() {
 
         {/* Footer */}
         <div className="text-center text-sm text-muted-foreground print:hidden">
-          Copyright &copy; {officeName || "TransParent"} {new Date().getFullYear()}
+          Copyright &copy; {officeName || BRAND.legalName} {new Date().getFullYear()}
         </div>
       </div>
     </MainLayout>

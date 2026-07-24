@@ -2,6 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer } from "lucide-react";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
+import { BRAND } from "@/config/branding";
 
 interface ChargeItem {
   description: string;
@@ -113,9 +114,9 @@ for (let i = 3; i <= 7; i++) {
     date: `${25 - i}-Dec-2025`,
     validity: "31-Dec-2025",
     customer: {
-      name: "TRANSPARENT FREIGHT SERVICES",
-      email: "info@tfs-global.com",
-      phone: "+971 4 239 6853",
+      name: "Northstar Electronics LLC",
+      email: "accounts@northstar-demo.example",
+      phone: "+971 4 555 0142",
     },
     shipmentDetails: {
       mode: "Air Freight",
@@ -204,35 +205,28 @@ export default function QuotationView() {
             <div className="flex justify-between items-start mb-8">
               {/* Company Logo and Name */}
               <div className="flex flex-col items-start">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-4xl font-bold">
-                    <span className="text-green-600">TRANS</span>
-                    <span className="text-gray-800">PA</span>
-                    <span className="text-green-600">RENT</span>
-                  </span>
-                </div>
-                <div className="text-lg font-semibold text-gray-700 tracking-wider">
-                  FREIGHT SERVICES
-                </div>
-                <div className="text-sm text-green-600 italic">
-                  Your Trusted Logistics Provider
+                <img
+                  src={BRAND.assets.iconTransparent}
+                  alt={`${BRAND.productName} logo`}
+                  className="h-24 w-24 object-contain"
+                />
+                <div className="mt-1 text-sm font-medium text-[#052E26]">
+                  {BRAND.tagline}
                 </div>
               </div>
 
               {/* Company Contact Info */}
               <div className="text-right text-sm">
-                <p className="font-bold text-gray-800">TRANSPARENT FREIGHT SERVICES LLC</p>
-                <p className="text-gray-600">M110, M FLOOR, SHAIKHA MHARA AL-QUSAIS</p>
-                <p className="text-gray-600">BLDG., AL QUSAIS 2</p>
-                <p className="text-gray-600 mt-2">TEL : 04-2396853</p>
-                <p className="text-green-600">United Arab Emirates</p>
-                <p className="text-blue-600">EMAIL:info@tfs-global.com</p>
-                <p className="text-blue-600">WEBSITE:www.tfs-global.com</p>
+                <p className="font-bold text-[#052E26]">{BRAND.legalName}</p>
+                <p className="text-gray-600">{BRAND.address}</p>
+                <p className="text-gray-600 mt-2">TEL: {BRAND.phone}</p>
+                <p className="text-[#008C61]">EMAIL: {BRAND.email}</p>
+                <p className="text-[#008C61]">WEBSITE: {BRAND.website}</p>
               </div>
             </div>
 
             {/* Quotation Title Bar */}
-            <div className="bg-green-600 text-white text-center py-3 text-xl font-semibold mb-6">
+            <div className="bg-[#052E26] text-white text-center py-3 text-xl font-semibold mb-6">
               QUOTATION
             </div>
 
@@ -269,13 +263,13 @@ export default function QuotationView() {
                   </tr>
                   <tr className="border-b border-gray-300">
                     <td className="p-2 bg-gray-100 font-semibold border-r border-gray-300">Pickup Address</td>
-                    <td className="p-2 border-r border-gray-300 font-bold text-green-700">: {quotation.shipmentDetails.pickupAddress}</td>
+                    <td className="p-2 border-r border-gray-300 font-bold text-[#008C61]">: {quotation.shipmentDetails.pickupAddress}</td>
                     <td className="p-2 bg-gray-100 font-semibold border-r border-gray-300">No.of Pkgs</td>
                     <td className="p-2">: {quotation.shipmentDetails.noOfPkgs}</td>
                   </tr>
                   <tr className="border-b border-gray-300">
                     <td className="p-2 bg-gray-100 font-semibold border-r border-gray-300">Delivery Address</td>
-                    <td className="p-2 border-r border-gray-300 font-bold text-green-700">: {quotation.shipmentDetails.deliveryAddress}</td>
+                    <td className="p-2 border-r border-gray-300 font-bold text-[#008C61]">: {quotation.shipmentDetails.deliveryAddress}</td>
                     <td className="p-2 bg-gray-100 font-semibold border-r border-gray-300">Gross Weight</td>
                     <td className="p-2">: {quotation.shipmentDetails.grossWeight}</td>
                   </tr>
@@ -299,7 +293,7 @@ export default function QuotationView() {
             <div className="border border-gray-300 mb-6">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-green-600 text-white">
+                  <tr className="bg-[#052E26] text-white">
                     <th className="p-2 text-left font-semibold">Charges Details</th>
                     <th className="p-2 text-center font-semibold">Basis</th>
                     <th className="p-2 text-center font-semibold">Curr</th>
@@ -319,7 +313,7 @@ export default function QuotationView() {
                       <td className="p-2 text-right">{charge.totalAmount}</td>
                     </tr>
                   ))}
-                  <tr className="bg-green-100">
+                  <tr className="bg-[#DDF8EC]">
                     <td colSpan={4}></td>
                     <td className="p-2 text-right font-bold">Esti.Total</td>
                     <td className="p-2 text-right font-bold">{baseCurrencyCode} {calculateTotal()}</td>

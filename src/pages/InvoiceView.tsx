@@ -10,6 +10,7 @@ import { useInvoiceByIdentifier } from "@/hooks/useInvoices";
 import { useShipment } from "@/hooks/useShipments";
 import { SendEmailModal } from "@/components/common/SendEmailModal";
 import { useBaseCurrency } from "@/hooks/useBaseCurrency";
+import { BRAND } from "@/config/branding";
 import {
   Table,
   TableBody,
@@ -314,7 +315,7 @@ export default function InvoiceView() {
 
         {/* Footer */}
         <div className="text-center text-sm text-muted-foreground print:hidden">
-          Copyright &copy; {officeName || "TransParent"} {new Date().getFullYear()}
+          Copyright &copy; {officeName || BRAND.legalName} {new Date().getFullYear()}
         </div>
       </div>
 

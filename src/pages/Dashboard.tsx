@@ -1,6 +1,20 @@
 import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { Search, Loader2, TrendingUp, TrendingDown, Wallet, Receipt, PiggyBank, Percent, FileWarning, Building2, Banknote, Gauge } from "lucide-react";
+import {
+  Activity,
+  Banknote,
+  Building2,
+  FileWarning,
+  Gauge,
+  Loader2,
+  Percent,
+  PiggyBank,
+  Receipt,
+  Search,
+  TrendingDown,
+  TrendingUp,
+  Wallet,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   ResponsiveContainer,
@@ -20,6 +34,7 @@ import { useDashboardStats } from "@/hooks/useDashboard";
 import { format } from "date-fns";
 import { DateRangePicker, DateRangeValue } from "@/components/ui/date-range-picker";
 import type { ShipmentDistribution } from "@/services/api/dashboard";
+import { BRAND } from "@/config/branding";
 
 const Dashboard = () => {
   const currentYear = new Date().getFullYear();
@@ -127,15 +142,38 @@ const Dashboard = () => {
 
   return (
     <MainLayout>
-      <div className="p-6 space-y-6">
-        <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
+      <div className="min-h-screen space-y-6 bg-[#F6FAF8] p-4 sm:p-6">
+        <section className="relative overflow-hidden rounded-2xl bg-[#052E26] px-5 py-5 text-white shadow-lg sm:px-7 sm:py-6">
+          <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-[#00C889]/20 blur-3xl" />
+          <div className="pointer-events-none absolute bottom-0 right-1/3 h-24 w-48 rounded-full bg-[#6FE6B2]/10 blur-2xl" />
+          <div className="relative flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+            <div>
+              <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#6FE6B2]">
+                <Activity className="h-4 w-4" />
+                WayBill command center
+              </div>
+              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Business performance</h1>
+            </div>
+            <div className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/5 p-3 backdrop-blur sm:flex-row sm:items-center">
+              <DateRangePicker value={dateRange} onApply={setDateRange} className="w-full text-foreground sm:w-[280px]" />
+              <Button
+                size="sm"
+                className="gap-2 bg-[#00C889] text-[#052E26] hover:bg-[#6FE6B2]"
+                onClick={handleSearch}
+              >
+                <Search size={14} />
+                Apply period
+              </Button>
+            </div>
+          </div>
+        </section>
 
         {/* Gross P&L strip */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           {kpis.map((k, i) => (
             <div
               key={k.title}
-              className={`bg-card rounded-lg border border-border ${k.borderColor} border-l-4 p-4 shadow-sm hover:shadow-md transition-shadow animate-fade-in`}
+              className={`group rounded-xl border border-[#DDE9E4] bg-white ${k.borderColor} border-l-4 p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md animate-fade-in`}
               style={{ animationDelay: `${i * 80}ms` }}
             >
               <div className="flex items-start justify-between">
@@ -148,8 +186,8 @@ const Dashboard = () => {
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">{k.label}</p>
                 </div>
-                <div className="p-2 bg-muted rounded-lg opacity-50 shrink-0">
-                  <k.icon className="text-muted-foreground" size={20} />
+                <div className="shrink-0 rounded-xl bg-[#E9F8F2] p-2.5 text-[#067A5D] transition-transform group-hover:scale-105">
+                  <k.icon size={19} />
                 </div>
               </div>
             </div>
@@ -161,7 +199,7 @@ const Dashboard = () => {
           {netKpis.map((k, i) => (
             <div
               key={k.title}
-              className={`bg-card rounded-lg border border-border ${k.borderColor} border-l-4 p-4 shadow-sm hover:shadow-md transition-shadow animate-fade-in`}
+              className={`group rounded-xl border border-[#DDE9E4] bg-white ${k.borderColor} border-l-4 p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md animate-fade-in`}
               style={{ animationDelay: `${i * 80}ms` }}
             >
               <div className="flex items-start justify-between">
@@ -174,21 +212,12 @@ const Dashboard = () => {
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">{k.label}</p>
                 </div>
-                <div className="p-2 bg-muted rounded-lg opacity-50 shrink-0">
-                  <k.icon className="text-muted-foreground" size={20} />
+                <div className="shrink-0 rounded-xl bg-[#E9F8F2] p-2.5 text-[#067A5D] transition-transform group-hover:scale-105">
+                  <k.icon size={19} />
                 </div>
               </div>
             </div>
           ))}
-        </div>
-
-        {/* Date range */}
-        <div className="flex justify-start items-center gap-2">
-          <DateRangePicker value={dateRange} onApply={setDateRange} className="w-[280px]" />
-          <Button variant="outline" size="sm" className="gap-1" onClick={handleSearch}>
-            <Search size={14} />
-            Search
-          </Button>
         </div>
 
         {error && (
@@ -200,7 +229,7 @@ const Dashboard = () => {
         {/* Charts row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Monthly P&L bar chart */}
-          <div className="lg:col-span-2 bg-card rounded-lg border border-border shadow-sm p-4">
+          <div className="lg:col-span-2 rounded-2xl border border-[#DDE9E4] bg-white p-5 shadow-sm">
             <div className="flex items-start justify-between mb-2">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -211,7 +240,7 @@ const Dashboard = () => {
                 </h3>
               </div>
               <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-1 rounded">
-                ● Finance
+                Finance
               </span>
             </div>
             <div className="h-[340px]">
@@ -252,16 +281,16 @@ const Dashboard = () => {
                       iconType="circle"
                       wrapperStyle={{ paddingTop: "8px", fontSize: "12px" }}
                     />
-                    <Bar dataKey="revenue" name="Revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={28}>
+                    <Bar dataKey="revenue" name="Revenue" fill={BRAND.colors.emerald} radius={[6, 6, 0, 0]} maxBarSize={28}>
                       <LabelList
                         dataKey="grossProfit"
                         position="top"
                         content={(props) => <GpLabel {...(props as GpLabelProps)} currency={currency} />}
                       />
                     </Bar>
-                    <Bar dataKey="directCost" name="Direct Cost" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                    <Bar dataKey="directCost" name="Direct Cost" fill="#64748b" radius={[6, 6, 0, 0]} maxBarSize={28} />
                     {/* Hidden bar to keep GP visible in legend */}
-                    <Bar dataKey="grossProfit" name="Gross Profit" fill="#10b981" maxBarSize={0} />
+                    <Bar dataKey="grossProfit" name="Gross Profit" fill={BRAND.colors.emerald} maxBarSize={0} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
@@ -285,7 +314,7 @@ const Dashboard = () => {
               />
             </div>
 
-            <div className="bg-card rounded-lg border border-border shadow-sm p-4">
+            <div className="rounded-xl border border-[#DDE9E4] bg-white p-4 shadow-sm">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
                 P and L Highlights
               </p>
@@ -329,7 +358,7 @@ const Dashboard = () => {
             </div>
 
             {/* Salesperson Leaderboard */}
-            <div className="bg-card rounded-lg border border-border shadow-sm p-4">
+            <div className="rounded-xl border border-[#DDE9E4] bg-white p-4 shadow-sm">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
                 Sales Leaderboard
               </p>
@@ -400,10 +429,11 @@ function GpLabel({ x = 0, y = 0, width = 0, value = 0, currency }: GpLabelProps 
         width={textWidth}
         height={18}
         rx={9}
-        fill="#ecfdf5"
-        stroke="#10b981"
+        fill={BRAND.colors.mint}
+        fillOpacity={0.25}
+        stroke={BRAND.colors.emerald}
       />
-      <text x={cx} y={cy + 3} textAnchor="middle" fontSize={10} fill="#059669" fontWeight={600}>
+      <text x={cx} y={cy + 3} textAnchor="middle" fontSize={10} fill={BRAND.colors.deepTeal} fontWeight={600}>
         {text}
       </text>
     </g>
@@ -422,7 +452,7 @@ function DonutKpi({
   isLoading: boolean;
 }) {
   return (
-    <div className="bg-card rounded-lg border border-border shadow-sm p-4">
+    <div className="rounded-xl border border-[#DDE9E4] bg-white p-4 shadow-sm">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
         {title}
       </p>

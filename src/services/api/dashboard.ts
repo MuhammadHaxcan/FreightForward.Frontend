@@ -69,7 +69,6 @@ export interface DashboardStats {
 export interface ExceptionDashboardParams {
   asOfDate?: string;
   overdueDays?: number;
-  customerId?: number;
   salesperson?: string;
   mode?: string;
   direction?: string;
@@ -183,7 +182,6 @@ export const dashboardApi = {
     const query = new URLSearchParams();
     if (params?.asOfDate) query.append('asOfDate', params.asOfDate);
     if (params?.overdueDays !== undefined) query.append('overdueDays', params.overdueDays.toString());
-    if (params?.customerId !== undefined) query.append('customerId', params.customerId.toString());
     if (params?.salesperson) query.append('salesperson', params.salesperson);
     if (params?.mode) query.append('mode', params.mode);
     if (params?.direction) query.append('direction', params.direction);

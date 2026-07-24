@@ -17,7 +17,7 @@ import {
 } from '../components/ui/dialog';
 import { authApi } from '../services/api/auth';
 import loginBg from '../assets/login-bg.png';
-import tfsLogo from '../assets/tfs-logo.svg';
+import { BRAND } from '../config/branding';
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -106,7 +106,7 @@ export default function Login() {
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `url(${loginBg})`, backgroundColor: '#d5e3ed' }}>
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -121,14 +121,18 @@ export default function Login() {
       style={{ backgroundImage: `url(${loginBg})`, backgroundColor: '#d5e3ed' }}
     >
       <Card className="w-full max-w-md overflow-hidden border border-black/15 shadow-xl">
-        <div className="h-1.5 bg-gradient-to-r from-[#363636] via-[#4A4A4A] to-[#4DB749]" />
+        <div className="h-1.5 bg-gradient-to-r from-[#052E26] via-[#00C889] to-[#6FE6B2]" />
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-2">
-            <img src={tfsLogo} alt="TFS logo" className="h-16 w-auto object-contain" />
+            <img
+              src={BRAND.assets.iconTransparent}
+              alt={`${BRAND.productName} logo`}
+              className="h-20 w-20 object-contain"
+            />
           </div>
-          <CardTitle className="text-2xl font-bold text-[#363636]">Sign In</CardTitle>
+          <CardTitle className="text-2xl font-bold text-foreground">{BRAND.productName}</CardTitle>
           <CardDescription>
-            Enter your credentials to access your account
+            {BRAND.tagline}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -189,7 +193,7 @@ export default function Login() {
 
             <Button
               type="submit"
-              className="w-full bg-[#4DB749] text-white hover:bg-[#3f9f3b] focus-visible:ring-[#4DB749]"
+              className="w-full"
               disabled={isSubmitting}
             >
               {isSubmitting ? (
@@ -207,13 +211,13 @@ export default function Login() {
           <button
             type="button"
             onClick={handleForgotPasswordOpen}
-            className="text-sm text-muted-foreground hover:text-[#4DB749] hover:underline"
+            className="text-sm text-muted-foreground hover:text-primary hover:underline"
           >
             Forgot Password?
           </button>
           <Link
             to="/system/login"
-            className="text-sm text-muted-foreground hover:text-[#4DB749] hover:underline"
+            className="text-sm text-muted-foreground hover:text-primary hover:underline"
           >
             System Administrator Login
           </Link>

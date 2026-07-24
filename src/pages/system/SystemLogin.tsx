@@ -9,6 +9,7 @@ import { Loader2, Shield } from 'lucide-react';
 import loginBg from '../../assets/login-bg.png';
 import { systemAdminAuthApi } from '../../services/api/systemAdmin';
 import { getAccessToken } from '../../services/api/base';
+import { BRAND } from '../../config/branding';
 
 export default function SystemLogin() {
   const [email, setEmail] = useState('');
@@ -56,7 +57,7 @@ export default function SystemLogin() {
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `url(${loginBg})`, backgroundColor: '#d5e3ed' }}>
-        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -71,13 +72,21 @@ export default function SystemLogin() {
       style={{ backgroundImage: `url(${loginBg})`, backgroundColor: '#d5e3ed' }}
     >
       <Card className="w-full max-w-md shadow-xl">
+        <div className="h-1.5 bg-gradient-to-r from-[#052E26] via-[#00C889] to-[#6FE6B2]" />
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-2">
-            <div className="rounded-full bg-purple-600 p-3">
-              <Shield className="h-8 w-8 text-white" />
+            <div className="relative">
+              <img
+                src={BRAND.assets.iconTransparent}
+                alt={`${BRAND.productName} logo`}
+                className="h-20 w-20 object-contain"
+              />
+              <div className="absolute -bottom-1 -right-1 rounded-full bg-primary p-1.5">
+                <Shield className="h-4 w-4 text-primary-foreground" />
+              </div>
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">System Admin Portal</CardTitle>
+          <CardTitle className="text-2xl font-bold">{BRAND.productName} System Admin</CardTitle>
           <CardDescription>
             Sign in to manage offices and system settings
           </CardDescription>
@@ -126,7 +135,7 @@ export default function SystemLogin() {
 
             <Button
               type="submit"
-              className="w-full bg-purple-600 hover:bg-purple-700"
+              className="w-full"
               disabled={isSubmitting}
             >
               {isSubmitting ? (

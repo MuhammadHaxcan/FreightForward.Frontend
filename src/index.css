@@ -7,63 +7,62 @@
 
 @layer base {
   :root {
-    --background: 0 0% 98%;
-    --foreground: 220 20% 20%;
+    --background: 150 29% 97%;
+    --foreground: 165 23% 14%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 20% 20%;
+    --card-foreground: 165 23% 14%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 20%;
+    --popover-foreground: 165 23% 14%;
 
-    --primary: 152 60% 40%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 161 100% 39%;
+    --primary-foreground: 168 80% 10%;
 
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 220 20% 20%;
+    --secondary: 154 70% 93%;
+    --secondary-foreground: 168 80% 10%;
 
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 10% 50%;
+    --muted: 150 24% 94%;
+    --muted-foreground: 165 12% 43%;
 
-    --accent: 152 60% 95%;
-    --accent-foreground: 152 60% 30%;
+    --accent: 154 70% 90%;
+    --accent-foreground: 168 80% 10%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 14% 90%;
-    --input: 220 14% 90%;
-    --ring: 152 60% 40%;
+    --border: 155 21% 89%;
+    --input: 155 21% 89%;
+    --ring: 161 100% 39%;
 
     --radius: 0.5rem;
 
-    /* Sidebar - dark teal/green theme */
-    --sidebar-background: 180 25% 20%;
-    --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 152 60% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 180 20% 25%;
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 180 20% 25%;
-    --sidebar-ring: 152 60% 50%;
-    --sidebar-muted: 180 15% 35%;
+    /* WayBill deep teal navigation */
+    --sidebar-background: 168 80% 10%;
+    --sidebar-foreground: 150 29% 97%;
+    --sidebar-primary: 161 100% 39%;
+    --sidebar-primary-foreground: 168 80% 10%;
+    --sidebar-accent: 167 50% 16%;
+    --sidebar-accent-foreground: 150 29% 97%;
+    --sidebar-border: 166 36% 21%;
+    --sidebar-ring: 154 70% 67%;
+    --sidebar-muted: 157 22% 66%;
 
     /* Custom tokens */
-    --success: 152 60% 40%;
-    --success-foreground: 0 0% 100%;
+    --success: 161 100% 39%;
+    --success-foreground: 168 80% 10%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
     --info: 200 80% 50%;
     --info-foreground: 0 0% 100%;
 
     /* Table */
-    --table-header: 152 45% 35%;
-    --table-header-foreground: 0 0% 100%;
-    --table-row-hover: 152 60% 97%;
+    --table-header: 168 80% 10%;
+    --table-header-foreground: 150 29% 97%;
+    --table-row-hover: 154 70% 95%;
 
-    /* Modal Header - dark blue-gray (#2c3e50) */
-    --modal-header: 210 29% 24%;
-    --modal-header-foreground: 0 0% 100%;
+    --modal-header: 168 80% 10%;
+    --modal-header-foreground: 150 29% 97%;
   }
 
   .dark {
@@ -76,8 +75,8 @@
     --popover: 220 20% 13%;
     --popover-foreground: 0 0% 95%;
 
-    --primary: 152 60% 45%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 161 100% 39%;
+    --primary-foreground: 168 80% 10%;
 
     --secondary: 220 15% 20%;
     --secondary-foreground: 0 0% 95%;
@@ -85,32 +84,31 @@
     --muted: 220 15% 20%;
     --muted-foreground: 220 10% 60%;
 
-    --accent: 152 40% 20%;
-    --accent-foreground: 152 60% 70%;
+    --accent: 166 38% 20%;
+    --accent-foreground: 154 70% 67%;
 
     --destructive: 0 62% 40%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 220 15% 25%;
     --input: 220 15% 25%;
-    --ring: 152 60% 45%;
+    --ring: 161 100% 39%;
 
-    --sidebar-background: 180 30% 12%;
+    --sidebar-background: 168 80% 8%;
     --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 152 60% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 180 25% 18%;
+    --sidebar-primary: 161 100% 39%;
+    --sidebar-primary-foreground: 168 80% 8%;
+    --sidebar-accent: 167 48% 15%;
     --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 180 25% 18%;
-    --sidebar-ring: 152 60% 50%;
-    --sidebar-muted: 180 20% 30%;
+    --sidebar-border: 166 35% 20%;
+    --sidebar-ring: 154 70% 67%;
+    --sidebar-muted: 157 22% 66%;
 
-    --table-header: 152 45% 30%;
+    --table-header: 168 80% 10%;
     --table-header-foreground: 0 0% 100%;
-    --table-row-hover: 152 30% 15%;
+    --table-row-hover: 166 35% 15%;
 
-    /* Modal Header - dark blue-gray */
-    --modal-header: 210 29% 20%;
+    --modal-header: 168 80% 10%;
     --modal-header-foreground: 0 0% 100%;
   }
 }

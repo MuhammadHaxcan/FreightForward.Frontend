@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { usePaymentVoucherByIdentifier } from "@/hooks/usePaymentVouchers";
 import { formatDate } from "@/lib/utils";
+import { BRAND } from "@/config/branding";
 
 export default function PaymentView() {
   const { id } = useParams<{ id: string }>();
@@ -80,22 +81,24 @@ export default function PaymentView() {
       <div className="bg-white border rounded-lg shadow-sm print:shadow-none">
         {/* Company Header */}
         <div className="p-6 border-b">
-          <div className="flex justify-between">
+          <div className="flex items-start justify-between gap-6">
             <div>
-              <h2 className="text-xl font-bold text-green-700">TRANSPARENT FREIGHT SERVICES LLC</h2>
-              <p className="text-sm text-muted-foreground">Email : info@tfs-global.com</p>
-              <p className="text-sm text-muted-foreground">Phone : 04-2396853</p>
-              <p className="text-sm text-muted-foreground">
-                Address: ROOM No. 313, 3RD FLOOR, SHAIKHA MHARA-AI QUSAIS BLDG., DUBAI, UNITED ARAB EMIRATES.
-              </p>
-              <p className="text-sm text-muted-foreground">United Arab Emirates</p>
-              <p className="text-sm text-muted-foreground">TRN :</p>
+              <h2 className="text-xl font-bold text-[#052E26]">{BRAND.legalName}</h2>
+              <p className="text-sm text-muted-foreground">Email: {BRAND.email}</p>
+              <p className="text-sm text-muted-foreground">Phone: {BRAND.phone}</p>
+              <p className="text-sm text-muted-foreground">Address: {BRAND.address}</p>
+              <p className="text-sm text-muted-foreground">Website: {BRAND.website}</p>
             </div>
+            <img
+              src={BRAND.assets.iconTransparent}
+              alt={`${BRAND.productName} logo`}
+              className="h-20 w-20 object-contain"
+            />
           </div>
         </div>
 
         {/* Payment Title Bar */}
-        <div className="bg-green-700 text-white text-center py-2 font-bold">
+        <div className="bg-[#052E26] text-white text-center py-2 font-bold">
           PAYMENT
         </div>
 

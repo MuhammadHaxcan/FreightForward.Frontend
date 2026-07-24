@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { BRAND } from "@/config/branding";
 import { getTodayDateOnly } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -169,12 +170,12 @@ const getPortLabel = (port: { seaPortName?: string; seaPortCode?: string; airPor
   return `${port.seaPortName || ''}${port.seaPortCode ? ` (${port.seaPortCode})` : ''} - ${port.city}, ${port.country}`;
 };
 
-const TFS_SALESPERSON = "TFS";
+const WAYBILL_SALESPERSON = BRAND.internalSalespersonLabel;
 
 const getShipmentSalespersonOptions = (salespersons: SalespersonLookup[]) => [
-  { value: TFS_SALESPERSON, label: TFS_SALESPERSON },
+  { value: WAYBILL_SALESPERSON, label: WAYBILL_SALESPERSON },
   ...salespersons
-    .filter(emp => emp.fullName.trim().toLowerCase() !== TFS_SALESPERSON.toLowerCase())
+    .filter(emp => emp.fullName.trim().toLowerCase() !== WAYBILL_SALESPERSON.toLowerCase())
     .map(emp => ({
       value: emp.fullName,
       label: `${emp.employeeCode} - ${emp.fullName}`,

@@ -14,6 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { BRAND } from "@/config/branding";
 
 // Prefer exact category codes, then retain a name match for legacy data.
 function findParty(parties: ShipmentParty[], ...categoryCodes: string[]) {
@@ -575,16 +576,19 @@ export default function BillOfLadingViewer() {
                   }}
                 >
                   <img
-                    src="/tfs-logo.jpg"
-                    alt="Transparent Freight Services"
-                    style={{ width: "75%", objectFit: "contain" }}
+                    src={BRAND.assets.iconTransparent}
+                    alt={`${BRAND.productName} logo`}
+                    style={{ width: "38%", maxHeight: "35mm", objectFit: "contain" }}
                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                   />
+                  <div style={{ fontSize: "9pt", fontWeight: 700, color: "#052E26", textAlign: "center", marginTop: "1mm" }}>
+                    {BRAND.legalName}
+                  </div>
                   <div style={{ fontSize: "6.5pt", color: "#888", textAlign: "center", marginTop: "2mm" }}>
-                    INFO@TFS-GLOBAL.COM
+                    {BRAND.email.toUpperCase()}
                   </div>
                   <div style={{ fontSize: "6.5pt", color: "#888" }}>
-                    WWW.TFS-GLOBAL.COM
+                    {BRAND.website.toUpperCase()}
                   </div>
                 </div>
               </div>

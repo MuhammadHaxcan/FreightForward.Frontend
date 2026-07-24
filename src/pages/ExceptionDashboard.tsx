@@ -28,7 +28,6 @@ import {
   YAxis,
 } from "recharts";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -42,7 +41,6 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDashboardExceptions } from "@/hooks/useDashboard";
-import { useAllDebtors } from "@/hooks/useCustomers";
 
 const todayIso = () => {
   const date = new Date();
@@ -67,13 +65,9 @@ const directionOptions = [
   { value: "CrossTrade", label: "Cross-Trade" },
 ];
 
-const quickAges = [15, 30, 45, 60, 90];
-
 interface FilterState {
   asOfDate: string;
   overdueDays: string;
-  customerId: string;
-  salesperson: string;
   mode: string;
   direction: string;
 }
@@ -81,8 +75,6 @@ interface FilterState {
 const defaultFilters = (): FilterState => ({
   asOfDate: todayIso(),
   overdueDays: "30",
-  customerId: "all",
-  salesperson: "all",
   mode: "all",
   direction: "all",
 });
@@ -90,43 +82,16 @@ const defaultFilters = (): FilterState => ({
 export default function ExceptionDashboard() {
   const [filters, setFilters] = useState<FilterState>(() => defaultFilters());
   const [appliedFilters, setAppliedFilters] = useState<FilterState>(() => defaultFilters());
-  const { data: customers = [] } = useAllDebtors();
 
   const params = useMemo(() => ({
     asOfDate: appliedFilters.asOfDate || undefined,
     overdueDays: Math.max(parseInt(appliedFilters.overdueDays, 10) || 30, 1),
-    customerId: appliedFilters.customerId !== "all" ? parseInt(appliedFilters.customerId, 10) : undefined,
-    salesperson: appliedFilters.salesperson !== "all" ? appliedFilters.salesperson : undefined,
     mode: appliedFilters.mode !== "all" ? appliedFilters.mode : undefined,
     direction: appliedFilters.direction !== "all" ? appliedFilters.direction : undefined,
   }), [appliedFilters]);
 
   const { data, isLoading, error } = useDashboardExceptions(params);
   const currency = data?.currency ?? "AED";
-
-  const salespersonOptions = useMemo(() => [
-    { value: "all", label: "All Salespeople" },
-    ...(data?.salespeople ?? []).map((name) => ({ value: name, label: name })),
-  ], [data?.salespeople]);
-
-  const customerOptions = useMemo(() => [
-    { value: "all", label: "All Customers" },
-    ...customers.map((customer) => ({
-      value: customer.id.toString(),
-      label: customer.name,
-    })),
-  ], [customers]);
-
-  const filterSummary = useMemo(() => {
-    const labels = [];
-    if (appliedFilters.customerId !== "all") {
-      labels.push(customerOptions.find((item) => item.value === appliedFilters.customerId)?.label ?? "Customer");
-    }
-    if (appliedFilters.salesperson !== "all") labels.push(appliedFilters.salesperson);
-    if (appliedFilters.mode !== "all") labels.push(modeOptions.find((item) => item.value === appliedFilters.mode)?.label ?? appliedFilters.mode);
-    if (appliedFilters.direction !== "all") labels.push(directionOptions.find((item) => item.value === appliedFilters.direction)?.label ?? appliedFilters.direction);
-    return labels;
-  }, [appliedFilters, customerOptions]);
 
   const agingData = useMemo(() => {
     const bucket30 = data?.customerCollections.reduce((sum, item) => sum + item.bucket30LCY, 0) ?? 0;
@@ -157,122 +122,78 @@ export default function ExceptionDashboard() {
 
   return (
     <MainLayout>
-      <div className="p-6 space-y-6 bg-slate-50/40 min-h-screen">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-red-600">
-                <AlertTriangle className="h-5 w-5" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-semibold text-foreground">Exception Dashboard</h1>
-                <p className="text-sm text-muted-foreground">
-                  Operational and finance risks as of {formatDate(data?.asOfDate ?? appliedFilters.asOfDate)}.
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="secondary" className="rounded-md px-2.5 py-1">
-              {appliedFilters.overdueDays}+ days
-            </Badge>
-            {filterSummary.length ? (
-              filterSummary.map((label) => (
-                <Badge key={label} variant="outline" className="rounded-md px-2.5 py-1 bg-white">
-                  {label}
-                </Badge>
-              ))
-            ) : (
-              <Badge variant="outline" className="rounded-md px-2.5 py-1 bg-white">
-                All records
-              </Badge>
-            )}
-          </div>
-        </div>
-
-        <section className="rounded-lg border bg-card p-4 shadow-sm">
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
-              <FilterField label="As Of" className="lg:w-[160px]">
-                <Input
-                  type="date"
-                  value={filters.asOfDate}
-                  onChange={(event) => setFilters((prev) => ({ ...prev, asOfDate: event.target.value }))}
-                />
-              </FilterField>
-
-              <FilterField label="Overdue Age" className="lg:w-[330px]">
-                <div className="flex gap-2">
-                  {quickAges.map((days) => (
-                    <Button
-                      key={days}
-                      type="button"
-                      variant={filters.overdueDays === days.toString() ? "default" : "outline"}
-                      size="sm"
-                      className="h-10 flex-1 px-2"
-                      onClick={() => setFilters((prev) => ({ ...prev, overdueDays: days.toString() }))}
-                    >
-                      {days}d
-                    </Button>
-                  ))}
+      <div className="min-h-screen space-y-6 bg-[#F6FAF8] p-4 sm:p-6">
+        <section className="relative overflow-hidden rounded-2xl bg-[#052E26] px-5 py-4 text-white shadow-lg sm:px-7 sm:py-5">
+          <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-[#00C889]/20 blur-3xl" />
+          <div className="relative grid gap-4 xl:grid-cols-[minmax(250px,1fr)_minmax(0,650px)] xl:items-center">
+            <div>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-400/15 text-amber-300 ring-1 ring-amber-300/20">
+                  <AlertTriangle className="h-5 w-5" />
                 </div>
-              </FilterField>
-
-              <FilterField label="Custom Days" className="lg:w-[120px]">
-                <Input
-                  type="number"
-                  min={1}
-                  value={filters.overdueDays}
-                  onChange={(event) => setFilters((prev) => ({ ...prev, overdueDays: event.target.value }))}
-                />
-              </FilterField>
-
-              <div className="flex gap-2 lg:ml-auto">
-                <Button onClick={applyFilters} className="gap-2">
-                  <Search className="h-4 w-4" />
-                  Apply
-                </Button>
-                <Button onClick={resetFilters} variant="outline" size="icon" title="Reset">
-                  <RotateCcw className="h-4 w-4" />
-                </Button>
+                <div>
+                  <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">Exception control tower</h1>
+                  <p className="mt-1 text-sm text-white/65">
+                    Operational and finance risks as of {formatDate(data?.asOfDate ?? appliedFilters.asOfDate)}.
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <FilterField label="Customer">
-                <SearchableSelect
-                  options={customerOptions}
-                  value={filters.customerId}
-                  onValueChange={(value) => setFilters((prev) => ({ ...prev, customerId: value }))}
-                  placeholder="All Customers"
-                  searchPlaceholder="Search customers..."
-                />
-              </FilterField>
-              <FilterField label="Salesperson">
-                <SearchableSelect
-                  options={salespersonOptions}
-                  value={filters.salesperson}
-                  onValueChange={(value) => setFilters((prev) => ({ ...prev, salesperson: value }))}
-                  placeholder="All Salespeople"
-                  searchPlaceholder="Search salespeople..."
-                />
-              </FilterField>
-              <FilterField label="Mode">
-                <SearchableSelect
-                  options={modeOptions}
-                  value={filters.mode}
-                  onValueChange={(value) => setFilters((prev) => ({ ...prev, mode: value }))}
-                  placeholder="All Modes"
-                />
-              </FilterField>
-              <FilterField label="Direction">
-                <SearchableSelect
-                  options={directionOptions}
-                  value={filters.direction}
-                  onValueChange={(value) => setFilters((prev) => ({ ...prev, direction: value }))}
-                  placeholder="All Directions"
-                />
-              </FilterField>
+            <div>
+              <div className="rounded-xl border border-white/10 bg-white/5 p-3 backdrop-blur">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-[122px_96px_115px_125px_auto] lg:items-center">
+                  <Input
+                    aria-label="As of date"
+                    title="As of date"
+                    type="date"
+                    value={filters.asOfDate}
+                    className="h-10 border-white/15 bg-[#F6FAF8] px-2.5 text-xs text-foreground"
+                    onChange={(event) => setFilters((prev) => ({ ...prev, asOfDate: event.target.value }))}
+                  />
+
+                  <Input
+                    aria-label="Overdue age in days"
+                    title="Overdue age in days"
+                    type="number"
+                    min={1}
+                    value={filters.overdueDays}
+                    className="h-10 border-white/15 bg-[#F6FAF8] px-2.5 text-xs text-foreground"
+                    onChange={(event) => setFilters((prev) => ({ ...prev, overdueDays: event.target.value }))}
+                  />
+
+                  <SearchableSelect
+                    options={modeOptions}
+                    value={filters.mode}
+                    onValueChange={(value) => setFilters((prev) => ({ ...prev, mode: value }))}
+                    placeholder="All Modes"
+                    triggerClassName="h-10 border-white/15 bg-[#F6FAF8] px-2.5 text-xs text-foreground hover:bg-white"
+                  />
+
+                  <SearchableSelect
+                    options={directionOptions}
+                    value={filters.direction}
+                    onValueChange={(value) => setFilters((prev) => ({ ...prev, direction: value }))}
+                    placeholder="All Directions"
+                    triggerClassName="h-10 border-white/15 bg-[#F6FAF8] px-2.5 text-xs text-foreground hover:bg-white"
+                  />
+
+                  <div className="flex gap-1.5">
+                    <Button onClick={applyFilters} className="h-10 gap-1.5 bg-[#00C889] px-3 text-xs text-[#052E26] hover:bg-[#6FE6B2]">
+                      <Search className="h-3.5 w-3.5" />
+                      Apply filters
+                    </Button>
+                    <Button
+                      onClick={resetFilters}
+                      size="icon"
+                      title="Reset filters"
+                      className="h-10 w-10 border border-white/15 bg-white/10 text-white hover:bg-white/20"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -734,15 +655,6 @@ export default function ExceptionDashboard() {
         </section>
       </div>
     </MainLayout>
-  );
-}
-
-function FilterField({ label, className, children }: { label: string; className?: string; children: ReactNode }) {
-  return (
-    <div className={`space-y-1.5 ${className ?? ""}`}>
-      <label className="text-xs font-medium text-muted-foreground">{label}</label>
-      {children}
-    </div>
   );
 }
 

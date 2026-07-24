@@ -18,6 +18,7 @@ import { API_BASE_URL, fetchBlob } from "@/services/api/base";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { BRAND } from "@/config/branding";
 import { SendEmailModal } from "@/components/common/SendEmailModal";
 
 export default function CreditNoteView() {
@@ -262,7 +263,7 @@ export default function CreditNoteView() {
 
         {/* Footer */}
         <div className="text-center text-sm text-muted-foreground print:hidden">
-          Copyright &copy; {officeName || "TransParent"} {new Date().getFullYear()}
+          Copyright &copy; {officeName || BRAND.legalName} {new Date().getFullYear()}
         </div>
       </div>
 
