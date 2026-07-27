@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { useCreditNotes, useDeleteCreditNote } from "@/hooks/useCreditNotes";
 import { useAllDebtors } from "@/hooks/useCustomers";
 import { useAuth } from "@/contexts/AuthContext";
@@ -179,7 +180,7 @@ export default function CreditNotes() {
                   <TableCell>{cn.referenceNo || "-"}</TableCell>
                   <TableCell className="text-blue-600">{cn.addedBy || "-"}</TableCell>
                   <TableCell>
-                    <span className="text-sm">{cn.status || "-"}</span>
+                    {cn.status ? <StatusBadge status={cn.status} /> : "-"}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">

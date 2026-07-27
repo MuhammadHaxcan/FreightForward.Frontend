@@ -5,6 +5,7 @@ import { ArrowLeft, Printer, Loader2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { type Payslip } from "@/services/api/hr";
 import { useHrPayslip } from "@/hooks/useHrPayroll";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 const months = [
   "January", "February", "March", "April", "May", "June",
@@ -26,17 +27,7 @@ const HrPayslip = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    const colors: Record<string, string> = {
-      Draft: "bg-yellow-500",
-      Processed: "bg-blue-500",
-      Paid: "bg-green-500",
-      Cancelled: "bg-red-500",
-    };
-    return (
-      <span className={`px-3 py-1 rounded text-sm font-medium text-white ${colors[status] || "bg-gray-500"}`}>
-        {status}
-      </span>
-    );
+    return <StatusBadge status={status} />;
   };
 
   if (isLoading) {

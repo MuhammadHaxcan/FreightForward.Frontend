@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { DateInput } from "@/components/ui/date-input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   Dialog,
   DialogContent,
@@ -163,21 +164,7 @@ const HrAdvances = () => {
     amt.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const getStatusBadge = (status: string) => {
-    const colors: Record<string, string> = {
-      Active: "bg-green-500",
-      FullyRepaid: "bg-blue-500",
-      WrittenOff: "bg-gray-500",
-    };
-    const labels: Record<string, string> = {
-      Active: "Active",
-      FullyRepaid: "Fully Repaid",
-      WrittenOff: "Written Off",
-    };
-    return (
-      <span className={`px-3 py-1 rounded text-sm font-medium text-white ${colors[status] || "bg-gray-500"}`}>
-        {labels[status] || status}
-      </span>
-    );
+    return <StatusBadge status={status} />;
   };
 
   return (

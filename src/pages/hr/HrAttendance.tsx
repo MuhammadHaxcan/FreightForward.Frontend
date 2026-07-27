@@ -6,6 +6,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Save, Loader2, ChevronLeft, ChevronRight, CalendarIcon, Lock, LockOpen } from "lucide-react";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import { useAuth } from "@/contexts/AuthContext";
@@ -27,15 +28,6 @@ const statusOptions = [
   { value: "AnnualLeave", label: "Annual Leave" },
   { value: "Holiday", label: "Holiday" },
 ];
-
-const statusColors: Record<string, string> = {
-  Present: "bg-green-500",
-  Absent: "bg-red-500",
-  Late: "bg-yellow-500",
-  HalfDay: "bg-orange-500",
-  AnnualLeave: "bg-cyan-500",
-  Holiday: "bg-purple-500",
-};
 
 interface LocalEntry {
   employeeId: number;
@@ -224,13 +216,7 @@ const HrAttendance = () => {
 
   const getStatusBadge = (status: string) => {
     const label = statusOptions.find((o) => o.value === status)?.label || status;
-    return (
-      <span
-        className={`px-3 py-1 rounded text-sm font-medium text-white ${statusColors[status] || "bg-gray-500"}`}
-      >
-        {label}
-      </span>
-    );
+    return <StatusBadge status={status} label={label} />;
   };
 
   return (

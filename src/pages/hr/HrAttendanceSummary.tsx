@@ -30,6 +30,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { MutationBlockingOverlay } from "@/components/ui/mutation-blocking-overlay";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 const monthOptions = [
   { value: "1", label: "January" },
@@ -45,15 +46,6 @@ const monthOptions = [
   { value: "11", label: "November" },
   { value: "12", label: "December" },
 ];
-
-const statusColors: Record<string, string> = {
-  Present: "bg-green-500",
-  Absent: "bg-red-500",
-  Late: "bg-yellow-500",
-  HalfDay: "bg-orange-500",
-  AnnualLeave: "bg-cyan-500",
-  Holiday: "bg-purple-500",
-};
 
 const statusLabels: Record<string, string> = {
   Present: "Present",
@@ -204,13 +196,7 @@ const HrAttendanceSummary = () => {
 
   const getStatusBadge = (status: string) => {
     const label = statusLabels[status] || status;
-    return (
-      <span
-        className={`px-2 py-0.5 rounded text-xs font-medium text-white ${statusColors[status] || "bg-gray-400"}`}
-      >
-        {label}
-      </span>
-    );
+    return <StatusBadge status={status} label={label} />;
   };
 
   const openUnlockModal = (dateStr: string, dayLabel: string, recordId?: number) => {

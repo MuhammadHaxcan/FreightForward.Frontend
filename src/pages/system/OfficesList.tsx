@@ -283,7 +283,7 @@ export default function OfficesList() {
                         <div className="flex justify-between items-center">
                           <span className="font-medium">Username:</span>
                           <div className="flex items-center gap-2">
-                            <code className="bg-white px-2 py-1 rounded border">
+                            <code className="rounded border border-border bg-background px-2 py-1">
                               {createdOffice.adminCredentials.username}
                             </code>
                             <Button
@@ -298,7 +298,7 @@ export default function OfficesList() {
                         <div className="flex justify-between items-center">
                           <span className="font-medium">Password:</span>
                           <div className="flex items-center gap-2">
-                            <code className="bg-white px-2 py-1 rounded border">
+                            <code className="rounded border border-border bg-background px-2 py-1">
                               {createdOffice.adminCredentials.password}
                             </code>
                             <Button
@@ -313,7 +313,7 @@ export default function OfficesList() {
                         <div className="flex justify-between items-center">
                           <span className="font-medium">Login as:</span>
                           <div className="flex items-center gap-2">
-                            <code className="bg-white px-2 py-1 rounded border">
+                            <code className="rounded border border-border bg-background px-2 py-1">
                               {createdOffice.office.slug}/{createdOffice.adminCredentials.username}
                             </code>
                             <Button

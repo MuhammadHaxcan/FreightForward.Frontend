@@ -24,7 +24,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Edit, Plus, FileText, Loader2, Check, History } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { useNavigate } from "react-router-dom";
 import { useRateRequests, useUpdateRateRequest, useRateRequest } from "@/hooks/useSales";
 import { RateRequest } from "@/services/api";
@@ -70,18 +70,7 @@ export default function RateRequests() {
   const totalPages = data?.totalPages || 1;
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "Pending":
-        return <Badge className="bg-yellow-500 text-white">Pending</Badge>;
-      case "Sent":
-        return <Badge className="bg-blue-500 text-white">Sent</Badge>;
-      case "Received":
-        return <Badge className="bg-green-500 text-white">Received</Badge>;
-      case "Quoted":
-        return <Badge className="bg-purple-500 text-white">Quoted</Badge>;
-      default:
-        return <Badge className="bg-gray-500 text-white">{status}</Badge>;
-    }
+    return <StatusBadge status={status} />;
   };
 
   const handleConvertToQuotation = (request: RateRequest) => {

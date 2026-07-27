@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
@@ -126,11 +127,10 @@ export function GeneralDocumentModal({ open, onOpenChange }: GeneralDocumentModa
           </div>
           <div>
             <Label className="form-label">Remarks</Label>
-            <textarea
+            <Textarea
               placeholder="Remarks"
               value={remarks}
               onChange={(e) => setRemarks(e.target.value)}
-              className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             />
           </div>
           </div>

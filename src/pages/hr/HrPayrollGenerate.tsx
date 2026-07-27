@@ -215,7 +215,7 @@ const HrPayrollGenerate = () => {
 
                   {/* Lates breakdown */}
                   {preGenInfo.currentMonthLates === 0 && preGenInfo.previousCarryForwardLates > 0 ? (
-                    <div className="bg-gray-50 dark:bg-gray-900/30 border border-gray-200 dark:border-gray-700 rounded-lg p-3 text-sm">
+                    <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm">
                       <p className="font-medium text-gray-700 dark:text-gray-300">Late Carry Forward Discarded</p>
                       <p className="text-gray-500 dark:text-gray-400 text-xs mt-0.5">
                         No lates this month — carry forward of <span className="font-semibold text-gray-700 dark:text-gray-300">{preGenInfo.previousCarryForwardLates} late(s)</span> from previous month will be reset to 0.

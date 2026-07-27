@@ -26,7 +26,7 @@ export function SalesActivityLogModal({
 }: SalesActivityLogModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-hidden flex flex-col gap-0 p-0">
+      <DialogContent className="max-h-[80vh] max-w-modal-lg overflow-hidden p-0 flex flex-col gap-0">
         <DialogHeader className="bg-modal-header text-white p-4 rounded-t-lg">
           <DialogTitle className="text-white text-lg font-semibold">{title}</DialogTitle>
         </DialogHeader>

@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Edit, Plus, Eye, Download, Trash2, Loader2, CheckCircle, Ship, MoreHorizontal, History } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -103,18 +103,7 @@ export default function Quotations() {
     "gap-3 rounded-md px-3 py-2 text-sm font-medium focus:text-white data-[highlighted]:text-white";
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "Approved":
-        return <Badge className="bg-green-500 text-white">Approved</Badge>;
-      case "Pending":
-        return <Badge className="bg-yellow-500 text-white">Pending</Badge>;
-      case "Rejected":
-        return <Badge className="bg-red-500 text-white">Rejected</Badge>;
-      case "Converted":
-        return <Badge className="bg-purple-500 text-white">Converted</Badge>;
-      default:
-        return <Badge className="bg-gray-500 text-white">{status}</Badge>;
-    }
+    return <StatusBadge status={status} />;
   };
 
   return (
@@ -237,7 +226,7 @@ export default function Quotations() {
                                 <Button
                                   variant="outline"
                                   size="icon"
-                                  className="h-8 w-8 border-slate-300 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
+                                  className="h-8 w-8 border-border bg-card text-foreground shadow-sm hover:bg-accent"
                                   aria-label="Quotation actions"
                                 >
                                   <MoreHorizontal className="h-4 w-4" />
@@ -245,7 +234,7 @@ export default function Quotations() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent
                                 align="end"
-                                className="w-48 rounded-xl border border-slate-200 bg-white p-2 shadow-xl"
+                                className="w-48 rounded-lg border border-border bg-popover p-2 text-popover-foreground shadow-lg"
                               >
                                 <PermissionGate permission="quot_edit">
                                   <DropdownMenuItem

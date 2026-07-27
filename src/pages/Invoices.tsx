@@ -17,6 +17,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { useInvoices } from "@/hooks/useInvoices";
 import { useAllDebtors } from "@/hooks/useCustomers";
 import { DateRangePicker, DateRangeValue } from "@/components/ui/date-range-picker";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 export default function Invoices() {
   const navigate = useNavigate();
@@ -69,15 +70,11 @@ export default function Invoices() {
   };
 
   const getStatusBadge = (status: string) => {
-    return (
-      <span className="text-sm">{status}</span>
-    );
+    return <StatusBadge status={status} />;
   };
 
   const getPaymentStatusBadge = (status: string) => {
-    return (
-      <span className="text-sm">{status}</span>
-    );
+    return <StatusBadge status={status} />;
   };
 
   const startEntry = totalCount > 0 ? (pageNumber - 1) * pageSize + 1 : 0;

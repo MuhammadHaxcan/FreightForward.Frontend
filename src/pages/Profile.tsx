@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Camera, User, Mail, Phone, Building2, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
@@ -31,15 +32,6 @@ const monthOptions = [
   { value: '12', label: 'December' },
 ];
 
-const statusColors: Record<string, string> = {
-  Present: 'bg-green-500',
-  Absent: 'bg-red-500',
-  Late: 'bg-yellow-500',
-  HalfDay: 'bg-orange-500',
-  AnnualLeave: 'bg-cyan-500',
-  Holiday: 'bg-purple-500',
-};
-
 const statusLabels: Record<string, string> = {
   Present: 'Present',
   Absent: 'Absent',
@@ -50,13 +42,6 @@ const statusLabels: Record<string, string> = {
 };
 
 const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-const payrollStatusColors: Record<string, string> = {
-  Draft: 'bg-gray-200 text-gray-700',
-  Paid: 'bg-green-100 text-green-700',
-  Cancelled: 'bg-red-100 text-red-700',
-  Processed: 'bg-blue-100 text-blue-700',
-};
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
@@ -450,7 +435,6 @@ export default function Profile() {
                             {attendanceRecords.map((record, idx) => {
                               const date = new Date(record.date);
                               const dayName = dayNames[date.getDay()];
-                              const colorClass = statusColors[record.status] || 'bg-gray-400';
                               const label = statusLabels[record.status] || record.status;
                               return (
                                 <tr
@@ -460,9 +444,7 @@ export default function Profile() {
                                   <td className="px-3 py-2">{record.date}</td>
                                   <td className="px-3 py-2">{dayName}</td>
                                   <td className="px-3 py-2">
-                                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-white text-xs font-medium ${colorClass}`}>
-                                      {label}
-                                    </span>
+                                    <StatusBadge status={record.status} label={label} />
                                   </td>
                                   <td className="px-3 py-2 text-muted-foreground">{record.remarks || '—'}</td>
                                 </tr>
@@ -512,7 +494,6 @@ export default function Profile() {
                           <tbody>
                             {payrollItems.map((item, idx) => {
                               const monthLabel = monthOptions.find((m) => parseInt(m.value) === item.month)?.label || item.month;
-                              const statusClass = payrollStatusColors[item.status] || 'bg-gray-100 text-gray-600';
                               return (
                                 <tr
                                   key={item.id}
@@ -523,9 +504,7 @@ export default function Profile() {
                                   <td className="px-3 py-2 text-right">{formatCurrency(item.totalDeductions)}</td>
                                   <td className="px-3 py-2 text-right font-medium">{formatCurrency(item.netSalary)}</td>
                                   <td className="px-3 py-2">
-                                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${statusClass}`}>
-                                      {item.status}
-                                    </span>
+                                    <StatusBadge status={item.status} />
                                   </td>
                                   <td className="px-3 py-2">
                                     <Button
@@ -575,7 +554,6 @@ export default function Profile() {
 
 function PayslipBreakdown({ payslip }: { payslip: Payslip }) {
   const monthLabel = monthOptions.find((m) => parseInt(m.value) === payslip.month)?.label || payslip.month;
-  const statusClass = payrollStatusColors[payslip.status] || 'bg-gray-100 text-gray-600';
 
   return (
     <div className="space-y-4 text-sm">
@@ -588,9 +566,7 @@ function PayslipBreakdown({ payslip }: { payslip: Payslip }) {
             <p className="text-muted-foreground text-xs">{[payslip.designation, payslip.department].filter(Boolean).join(' · ')}</p>
           )}
         </div>
-        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${statusClass}`}>
-          {payslip.status}
-        </span>
+        <StatusBadge status={payslip.status} />
       </div>
 
       {/* Earnings & Deductions */}

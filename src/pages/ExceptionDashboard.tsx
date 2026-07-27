@@ -122,9 +122,9 @@ export default function ExceptionDashboard() {
 
   return (
     <MainLayout>
-      <div className="min-h-screen space-y-6 bg-[#F6FAF8] p-4 sm:p-6">
-        <section className="relative overflow-hidden rounded-2xl bg-[#052E26] px-5 py-4 text-white shadow-lg sm:px-7 sm:py-5">
-          <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-[#00C889]/20 blur-3xl" />
+      <div className="min-h-screen space-y-6 bg-background p-4 sm:p-6">
+        <section className="relative overflow-hidden rounded-lg bg-sidebar px-5 py-4 text-sidebar-foreground shadow-lg sm:px-7 sm:py-5">
+          <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
           <div className="relative grid gap-4 xl:grid-cols-[minmax(250px,1fr)_minmax(0,650px)] xl:items-center">
             <div>
               <div className="flex items-center gap-3">
@@ -141,14 +141,14 @@ export default function ExceptionDashboard() {
             </div>
 
             <div>
-              <div className="rounded-xl border border-white/10 bg-white/5 p-3 backdrop-blur">
+              <div className="rounded-lg border border-white/10 bg-white/5 p-3 backdrop-blur">
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-[122px_96px_115px_125px_auto] lg:items-center">
                   <Input
                     aria-label="As of date"
                     title="As of date"
                     type="date"
                     value={filters.asOfDate}
-                    className="h-10 border-white/15 bg-[#F6FAF8] px-2.5 text-xs text-foreground"
+                    className="h-10 border-white/15 bg-background px-2.5 text-xs text-foreground"
                     onChange={(event) => setFilters((prev) => ({ ...prev, asOfDate: event.target.value }))}
                   />
 
@@ -158,7 +158,7 @@ export default function ExceptionDashboard() {
                     type="number"
                     min={1}
                     value={filters.overdueDays}
-                    className="h-10 border-white/15 bg-[#F6FAF8] px-2.5 text-xs text-foreground"
+                    className="h-10 border-white/15 bg-background px-2.5 text-xs text-foreground"
                     onChange={(event) => setFilters((prev) => ({ ...prev, overdueDays: event.target.value }))}
                   />
 
@@ -167,7 +167,7 @@ export default function ExceptionDashboard() {
                     value={filters.mode}
                     onValueChange={(value) => setFilters((prev) => ({ ...prev, mode: value }))}
                     placeholder="All Modes"
-                    triggerClassName="h-10 border-white/15 bg-[#F6FAF8] px-2.5 text-xs text-foreground hover:bg-white"
+                    triggerClassName="h-10 border-white/15 bg-background px-2.5 text-xs text-foreground hover:bg-card"
                   />
 
                   <SearchableSelect
@@ -175,11 +175,11 @@ export default function ExceptionDashboard() {
                     value={filters.direction}
                     onValueChange={(value) => setFilters((prev) => ({ ...prev, direction: value }))}
                     placeholder="All Directions"
-                    triggerClassName="h-10 border-white/15 bg-[#F6FAF8] px-2.5 text-xs text-foreground hover:bg-white"
+                    triggerClassName="h-10 border-white/15 bg-background px-2.5 text-xs text-foreground hover:bg-card"
                   />
 
                   <div className="flex gap-1.5">
-                    <Button onClick={applyFilters} className="h-10 gap-1.5 bg-[#00C889] px-3 text-xs text-[#052E26] hover:bg-[#6FE6B2]">
+                    <Button onClick={applyFilters} className="h-10 gap-1.5 bg-primary px-3 text-xs text-primary-foreground hover:bg-sidebar-muted">
                       <Search className="h-3.5 w-3.5" />
                       Apply filters
                     </Button>
@@ -697,7 +697,7 @@ function KpiCard({
             {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : value}
           </p>
         </div>
-        <div className="rounded-md bg-white/70 p-2 text-muted-foreground">
+        <div className="rounded-md bg-card/70 p-2 text-muted-foreground">
           <Icon className="h-5 w-5" />
         </div>
       </div>
@@ -761,7 +761,7 @@ function ExceptionLink({
 
 function DataTable({ children }: { children: ReactNode }) {
   return (
-    <div data-detail-scroll className="max-h-[1344px] overflow-auto rounded-md border bg-white shadow-sm [&_thead]:sticky [&_thead]:top-0 [&_thead]:z-10">
+    <div data-detail-scroll className="max-h-[1344px] overflow-auto rounded-md border border-border bg-card shadow-sm [&_thead]:sticky [&_thead]:top-0 [&_thead]:z-10">
       {children}
     </div>
   );
@@ -855,7 +855,7 @@ function LinkPill({
   children: ReactNode;
 }) {
   const className = {
-    customer: "border-slate-200 bg-white text-slate-800 hover:border-slate-300 hover:bg-slate-50",
+    customer: "border-border bg-card text-foreground hover:border-primary/40 hover:bg-accent",
     invoice: "border-indigo-100 bg-indigo-50/70 text-indigo-700 hover:border-indigo-200 hover:bg-indigo-50",
     purchase: "border-emerald-100 bg-emerald-50/70 text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50",
     job: "border-sky-100 bg-sky-50/70 text-sky-700 hover:border-sky-200 hover:bg-sky-50",
@@ -870,7 +870,7 @@ function LinkPill({
 
 function TextBadge({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+    <span className="inline-flex rounded-md border border-border bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
       {children}
     </span>
   );
@@ -878,7 +878,7 @@ function TextBadge({ children }: { children: ReactNode }) {
 
 function CountPill({ value }: { value: number }) {
   return (
-    <span className="inline-flex min-w-[44px] justify-center rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700">
+    <span className="inline-flex min-w-[44px] justify-center rounded-md border border-border bg-muted px-2 py-1 text-xs font-semibold text-foreground">
       {value}
     </span>
   );
@@ -895,11 +895,11 @@ function AmountStatusPill({
 }) {
   const className = tone === "paid"
     ? value <= 0.005
-      ? "border-slate-200 bg-slate-50 text-slate-500"
+      ? "border-border bg-muted text-muted-foreground"
       : "border-emerald-100 bg-emerald-50/70 text-emerald-700"
     : tone === "due"
       ? value <= 0.005
-        ? "border-slate-200 bg-slate-50 text-slate-500"
+        ? "border-border bg-muted text-muted-foreground"
         : value >= 1000
           ? "border-red-100 bg-red-50/70 text-red-700"
           : "border-amber-100 bg-amber-50/70 text-amber-700"
@@ -918,7 +918,7 @@ function AmountStatusPill({
 
 function DatePill({ value }: { value?: string }) {
   return (
-    <span className="inline-flex min-w-[104px] justify-center rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold tabular-nums text-slate-700">
+    <span className="inline-flex min-w-[104px] justify-center rounded-md border border-border bg-card px-2.5 py-1 text-xs font-semibold tabular-nums text-foreground">
       {formatDate(value)}
     </span>
   );
@@ -947,7 +947,7 @@ function BilledStatusPill({ status }: { status: string }) {
       ? "border-red-100 bg-red-50/70 text-red-700"
       : normalized.includes("billed")
         ? "border-emerald-100 bg-emerald-50/70 text-emerald-700"
-        : "border-slate-200 bg-slate-50 text-slate-700";
+        : "border-border bg-muted text-foreground";
 
   return (
     <span className={`inline-flex rounded-md border px-2.5 py-1 text-xs font-semibold ${className}`}>
@@ -1025,7 +1025,7 @@ function CountTooltip({ active, payload }: {
   if (!active || !payload?.length) return null;
   const item = payload[0];
   return (
-    <div className="min-w-[130px] rounded-md border bg-white/95 px-3 py-2 text-xs shadow-lg backdrop-blur">
+    <div className="min-w-[130px] rounded-md border border-border bg-popover/95 px-3 py-2 text-xs text-popover-foreground shadow-lg backdrop-blur">
       <p className="font-semibold text-slate-900">{item.name}</p>
       <p className="mt-0.5 text-muted-foreground">
         <span className="font-semibold text-slate-700">{item.value}</span> open items

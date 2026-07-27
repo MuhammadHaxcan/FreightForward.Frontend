@@ -133,7 +133,7 @@ export const CostSheetDetail = () => {
             </TableHeader>
             <TableBody>
               {detail.costings.map((costing, index) => (
-                <TableRow key={costing.id} className={index % 2 === 0 ? "bg-white hover:bg-slate-50" : "bg-slate-50/70 hover:bg-slate-100/70"}>
+                <TableRow key={costing.id} className={index % 2 === 0 ? "bg-card hover:bg-table-row-hover" : "bg-muted/40 hover:bg-table-row-hover"}>
                   <TableCell className="text-xs">{costing.serialNo}</TableCell>
                   <TableCell className="text-xs">{costing.description}</TableCell>
                   <TableCell className="text-xs">{costing.saleQty.toFixed(3)}</TableCell>
@@ -174,7 +174,7 @@ export const CostSheetDetail = () => {
               {formatAmount(currencyCode, detail.profit)}
             </div>
           </div>
-          <div className={`border rounded-lg p-4 shadow-sm ${detail.marginPercent >= 0 ? "border-slate-200 bg-slate-50" : "border-red-100 bg-red-50/50"}`}>
+          <div className={`border rounded-lg p-4 shadow-sm ${detail.marginPercent >= 0 ? "border-border bg-muted/40" : "border-red-100 bg-red-50/50"}`}>
             <div className="text-xs font-medium text-muted-foreground">Margin</div>
             <div className={`text-lg font-semibold ${detail.marginPercent >= 0 ? "text-slate-700" : "text-red-700"}`}>
               {detail.marginPercent.toFixed(2)}%

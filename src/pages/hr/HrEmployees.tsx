@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DateInput } from "@/components/ui/date-input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   Dialog,
   DialogContent,
@@ -204,17 +205,7 @@ const HrEmployees = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    const colors: Record<string, string> = {
-      Active: "bg-green-500",
-      Probation: "bg-yellow-500",
-      Resigned: "bg-orange-500",
-      Terminated: "bg-red-500",
-    };
-    return (
-      <span className={`px-3 py-1 rounded text-sm font-medium text-white ${colors[status] || "bg-gray-500"}`}>
-        {status}
-      </span>
-    );
+    return <StatusBadge status={status} />;
   };
 
   return (

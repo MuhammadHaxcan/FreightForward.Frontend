@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { SearchableMultiSelect } from "@/components/ui/searchable-multi-select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,7 +14,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { formatDate, formatDateToISO, cn } from "@/lib/utils";
-import { PaymentStatus, API_BASE_URL, fetchBlob } from "@/services/api";
+import { API_BASE_URL, fetchBlob } from "@/services/api";
 import { usePurchaseInvoices } from "@/hooks/useInvoices";
 import { usePaymentVouchers } from "@/hooks/usePaymentVouchers";
 import {
@@ -415,24 +416,6 @@ const CustomerDetail = () => {
       // toast already shown by mutation's onError
     } finally {
       setCnSaving(false);
-    }
-  };
-
-  // Helper function to get payment status display and styling
-  const getPaymentStatusDisplay = (status: PaymentStatus) => {
-    switch (status) {
-      case 'Pending':
-        return { label: 'Pending', className: 'bg-yellow-100 text-yellow-800' };
-      case 'PartiallyPaid':
-        return { label: 'Partially Paid', className: 'bg-orange-100 text-orange-800' };
-      case 'Paid':
-        return { label: 'Paid', className: 'bg-green-100 text-green-800' };
-      case 'Overdue':
-        return { label: 'Overdue', className: 'bg-red-100 text-red-800' };
-      case 'Closed':
-        return { label: 'Closed', className: 'bg-gray-100 text-gray-800' };
-      default:
-        return { label: status, className: 'bg-gray-100 text-gray-800' };
     }
   };
 
@@ -1223,7 +1206,6 @@ const CustomerDetail = () => {
                 </tr>
               ) : (
                 invoices.map((inv, i) => {
-                  const statusDisplay = getPaymentStatusDisplay(inv.paymentStatus);
                   const hasBalance = (inv.balanceAmount ?? 0) > 0;
                   const balanceColorClass = hasBalance
                     ? "bg-green-100 text-green-800 font-medium px-2 py-1 rounded"
@@ -1242,9 +1224,7 @@ const CustomerDetail = () => {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${statusDisplay.className}`}>
-                          {statusDisplay.label}
-                        </span>
+                        <StatusBadge status={inv.paymentStatus} />
                       </td>
                       <td className="px-4 py-3 text-sm">
                         {inv.receipts && inv.receipts.length > 0 ? (
@@ -1393,7 +1373,6 @@ const CustomerDetail = () => {
                 </tr>
               ) : (
                 accountReceivables.map((ar, i) => {
-                  const statusDisplay = getPaymentStatusDisplay(ar.paymentStatus);
                   const hasBalance = ar.balance > 0;
                   const balanceColorClass = hasBalance
                     ? "bg-green-100 text-green-800 font-medium px-2 py-1 rounded"
@@ -1411,11 +1390,11 @@ const CustomerDetail = () => {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${statusDisplay.className}`}>
-                          {statusDisplay.label}
-                        </span>
+                        <StatusBadge status={ar.paymentStatus} />
                       </td>
-                      <td className="px-4 py-3 text-sm">{ar.status || "Active"}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <StatusBadge status={ar.status || "Active"} />
+                      </td>
                       <td className="px-4 py-3 text-sm">
                         <span className="bg-primary text-primary-foreground px-2 py-1 rounded text-xs">
                           {ar.agingDays} Days
@@ -1557,7 +1536,6 @@ const CustomerDetail = () => {
                 </tr>
               ) : (
                 accountPayables.map((ap, i) => {
-                  const statusDisplay = getPaymentStatusDisplay(ap.paymentStatus);
                   const hasBalance = ap.balance > 0;
                   const balanceColorClass = hasBalance
                     ? "bg-orange-100 text-orange-800 font-medium px-2 py-1 rounded"
@@ -1575,11 +1553,11 @@ const CustomerDetail = () => {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${statusDisplay.className}`}>
-                          {statusDisplay.label}
-                        </span>
+                        <StatusBadge status={ap.paymentStatus} />
                       </td>
-                      <td className="px-4 py-3 text-sm">{ap.status || "Active"}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <StatusBadge status={ap.status || "Active"} />
+                      </td>
                       <td className="px-4 py-3 text-sm">
                         <span className="bg-primary text-primary-foreground px-2 py-1 rounded text-xs">
                           {ap.agingDays} Days
@@ -1705,7 +1683,9 @@ const CustomerDetail = () => {
                     <td className="px-4 py-3 text-sm">{cn.referenceNo || "-"}</td>
                     <td className="px-4 py-3 text-sm">{cn.totalAmount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || "0.00"}</td>
                     <td className="px-4 py-3 text-sm">{cn.addedBy || "-"}</td>
-                    <td className="px-4 py-3 text-sm">{cn.status || "-"}</td>
+                    <td className="px-4 py-3 text-sm">
+                      {cn.status ? <StatusBadge status={cn.status} /> : "-"}
+                    </td>
                     <td className="px-4 py-3">
                       <Button size="sm" className="btn-success" onClick={() => navigate(`/accounts/credit-notes/${cn.id}`)}>
                         View
@@ -1992,14 +1972,7 @@ const CustomerDetail = () => {
                     {pi.currencyCode} {pi.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </td>
                   <td className="px-4 py-3">
-                    {(() => {
-                      const statusDisplay = getPaymentStatusDisplay(pi.paymentStatus);
-                      return (
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${statusDisplay.className}`}>
-                          {statusDisplay.label}
-                        </span>
-                      );
-                    })()}
+                    <StatusBadge status={pi.paymentStatus} />
                   </td>
                 </tr>
               ))

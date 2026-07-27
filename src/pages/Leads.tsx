@@ -36,6 +36,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Edit, Send, Loader2, Plus, RotateCcw, Check, History } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { toast } from "sonner";
 import { useLeads, usePortalLeads, useAcceptPortalLead, useRevertPortalLead, useLead } from "@/hooks/useSales";
 import { useAllDebtors } from "@/hooks/useCustomers";
@@ -187,28 +188,19 @@ export default function Leads() {
   };
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "New":
-        return <Badge className="bg-blue-500 text-white">New</Badge>;
-      case "RateRequested":
-        return <Badge className="bg-amber-500 text-white">Rate Requested</Badge>;
-      case "Quoted":
-        return <Badge className="bg-purple-500 text-white">Quoted</Badge>;
-      case "Converted":
-        return <Badge className="bg-green-500 text-white">Converted</Badge>;
-      default:
-        return <Badge className="bg-gray-500 text-white">{status}</Badge>;
-    }
+    return <StatusBadge status={status} />;
   };
 
   const getPortalStatusBadge = (status: string, officeName?: string) => {
     if (status === "Available") {
-      return <Badge className="bg-green-500 text-white">Available</Badge>;
+      return <StatusBadge status={status} />;
     }
     return (
-      <Badge className="bg-gray-400 text-white">
-        Accepted by {officeName || "Unknown"}
-      </Badge>
+      <StatusBadge
+        status={status}
+        tone="neutral"
+        label={`Accepted by ${officeName || "Unknown"}`}
+      />
     );
   };
 
@@ -233,7 +225,7 @@ export default function Leads() {
                   <Button
                     onClick={handleSendRateRequest}
                     variant="outline"
-                    className="border-green-600 text-green-600 hover:bg-green-50"
+                    className="border-primary text-primary hover:bg-secondary"
                   >
                     <Send className="h-4 w-4 mr-2" />
                     Send Rate Request

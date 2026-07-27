@@ -63,7 +63,7 @@ export function BoxPalletsGrid({ boxPallets, onChange, packageTypes }: BoxPallet
           variant="outline"
           size="sm"
           onClick={handleAdd}
-          className="text-green-600 border-green-600 hover:bg-green-50"
+          className="border-primary text-primary hover:bg-secondary"
         >
           <Plus className="h-4 w-4 mr-1" />
           Add Row

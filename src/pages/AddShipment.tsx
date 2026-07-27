@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DateInput } from "@/components/ui/date-input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   Table,
   TableBody,
@@ -67,7 +68,6 @@ import {
   AddShipmentStatusLogRequest,
   PackageType,
   ShipmentStatus,
-  PaymentStatus,
   fileApi,
 } from "@/services/api";
 import type { SalespersonLookup } from "@/services/api/lookups";
@@ -91,24 +91,6 @@ import { useQuotationForShipment } from "@/hooks/useSales";
 import { useSalespersonLookup } from "@/hooks/useSalespersons";
 import { CargoContainerTab, CargoFormEntry } from "@/components/shipments/CargoContainerTab";
 import { calculateCbm } from "@/lib/cargoCalculations";
-
-// Helper function to get payment status display and styling
-const getPaymentStatusDisplay = (status: PaymentStatus) => {
-  switch (status) {
-    case 'Pending':
-      return { label: 'Pending', className: 'bg-yellow-100 text-yellow-800' };
-    case 'PartiallyPaid':
-      return { label: 'Partially Paid', className: 'bg-orange-100 text-orange-800' };
-    case 'Paid':
-      return { label: 'Paid', className: 'bg-green-100 text-green-800' };
-    case 'Overdue':
-      return { label: 'Overdue', className: 'bg-red-100 text-red-800' };
-    case 'Closed':
-      return { label: 'Closed', className: 'bg-gray-100 text-gray-800' };
-    default:
-      return { label: status, className: 'bg-gray-100 text-gray-800' };
-  }
-};
 
 // Local party type for storing before API submission
 interface LocalParty {
@@ -2272,7 +2254,6 @@ const AddShipment = () => {
                             </TableRow>
                           ) : (
                             shipmentInvoices.customerInvoices.map((inv, index) => {
-                              const statusDisplay = getPaymentStatusDisplay(inv.paymentStatus as PaymentStatus);
                               return (
                                 <TableRow key={inv.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
                                   <TableCell className="text-xs">{inv.partyName || "-"}</TableCell>
@@ -2284,9 +2265,7 @@ const AddShipment = () => {
                                   </TableCell>
                                   <TableCell className="text-xs">{inv.remarks || "-"}</TableCell>
                                   <TableCell className="text-xs">
-                                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${statusDisplay.className}`}>
-                                      {statusDisplay.label}
-                                    </span>
+                                    <StatusBadge status={inv.paymentStatus} />
                                   </TableCell>
                                   <TableCell className="text-xs">
                                     <div className="flex gap-1">
@@ -2339,7 +2318,6 @@ const AddShipment = () => {
                             </TableRow>
                           ) : (
                             shipmentInvoices.vendorInvoices.map((inv, index) => {
-                              const statusDisplay = getPaymentStatusDisplay(inv.paymentStatus as PaymentStatus);
                               return (
                                 <TableRow key={inv.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
                                   <TableCell className="text-xs">{inv.partyName || "-"}</TableCell>
@@ -2350,9 +2328,7 @@ const AddShipment = () => {
                                     </a>
                                   </TableCell>
                                   <TableCell className="text-xs">
-                                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${statusDisplay.className}`}>
-                                      {statusDisplay.label}
-                                    </span>
+                                    <StatusBadge status={inv.paymentStatus} />
                                   </TableCell>
                                   <TableCell className="text-xs">
                                     <div className="flex gap-1">

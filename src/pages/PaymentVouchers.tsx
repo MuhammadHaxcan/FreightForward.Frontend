@@ -224,7 +224,7 @@ export default function PaymentVouchers() {
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-8 w-8 border-slate-300 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
+                          className="h-8 w-8 border-border bg-card text-foreground shadow-sm hover:bg-accent"
                           aria-label="Payment actions"
                         >
                           <MoreHorizontal className="h-4 w-4" />
@@ -232,7 +232,7 @@ export default function PaymentVouchers() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent
                         align="end"
-                        className="w-48 rounded-xl border border-slate-200 bg-white p-2 shadow-xl"
+                        className="w-48 rounded-lg border border-border bg-popover p-2 text-popover-foreground shadow-lg"
                       >
                         <DropdownMenuItem
                           onClick={() => navigate(`/accounts/payment-vouchers/${encodeURIComponent(payment.paymentNo)}`)}

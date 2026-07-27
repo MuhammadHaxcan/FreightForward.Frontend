@@ -20,6 +20,7 @@ import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { BRAND } from "@/config/branding";
 import { SendEmailModal } from "@/components/common/SendEmailModal";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 export default function CreditNoteView() {
   const { id } = useParams<{ id: string }>();
@@ -164,7 +165,10 @@ export default function CreditNoteView() {
                   <p>Reference : {creditNote.referenceNo}</p>
                 )}
                 {creditNote.status && (
-                  <p>Status : {creditNote.status}</p>
+                  <div className="flex items-center gap-2">
+                    <span>Status :</span>
+                    <StatusBadge status={creditNote.status} />
+                  </div>
                 )}
               </div>
             </div>

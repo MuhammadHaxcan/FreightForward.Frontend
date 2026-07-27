@@ -7,8 +7,10 @@ import { hrAttendancePolicyApi } from "@/services/api/hr";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Edit, Trash2, Plus, Loader2, Upload, History, Save } from "lucide-react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   Dialog,
   DialogContent,
@@ -1908,7 +1910,9 @@ const Settings = () => {
                                 : "Both"}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-sm">{note.status}</td>
+                          <td className="px-4 py-3 text-sm">
+                            <StatusBadge status={note.status} />
+                          </td>
                         </tr>
                       ))}
                       {noteData?.items.length === 0 && (
@@ -2564,8 +2568,7 @@ const Settings = () => {
           <div className="p-6 space-y-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Note Text</label>
-              <textarea
-                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px]"
+              <Textarea
                 placeholder="Enter note text"
                 value={noteForm.text}
                 onChange={(e) => setNoteForm({ ...noteForm, text: e.target.value })}
@@ -2633,8 +2636,7 @@ const Settings = () => {
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Note Text</label>
-                <textarea
-                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px]"
+                <Textarea
                   value={editNote.text}
                   onChange={(e) => setEditNote({ ...editNote, text: e.target.value })}
                 />

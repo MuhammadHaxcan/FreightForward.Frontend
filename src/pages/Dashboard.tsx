@@ -142,23 +142,23 @@ const Dashboard = () => {
 
   return (
     <MainLayout>
-      <div className="min-h-screen space-y-6 bg-[#F6FAF8] p-4 sm:p-6">
-        <section className="relative overflow-hidden rounded-2xl bg-[#052E26] px-5 py-5 text-white shadow-lg sm:px-7 sm:py-6">
-          <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-[#00C889]/20 blur-3xl" />
-          <div className="pointer-events-none absolute bottom-0 right-1/3 h-24 w-48 rounded-full bg-[#6FE6B2]/10 blur-2xl" />
+      <div className="min-h-screen space-y-6 bg-background p-4 sm:p-6">
+        <section className="relative overflow-hidden rounded-lg bg-sidebar px-5 py-5 text-sidebar-foreground shadow-lg sm:px-7 sm:py-6">
+          <div className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
+          <div className="pointer-events-none absolute bottom-0 right-1/3 h-24 w-48 rounded-full bg-sidebar-muted/10 blur-2xl" />
           <div className="relative flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
             <div>
-              <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#6FE6B2]">
+              <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-sidebar-muted">
                 <Activity className="h-4 w-4" />
                 WayBill command center
               </div>
               <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Business performance</h1>
             </div>
-            <div className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/5 p-3 backdrop-blur sm:flex-row sm:items-center">
+            <div className="flex flex-col gap-2 rounded-lg border border-white/10 bg-white/5 p-3 backdrop-blur sm:flex-row sm:items-center">
               <DateRangePicker value={dateRange} onApply={setDateRange} className="w-full text-foreground sm:w-[280px]" />
               <Button
                 size="sm"
-                className="gap-2 bg-[#00C889] text-[#052E26] hover:bg-[#6FE6B2]"
+                className="gap-2 bg-primary text-primary-foreground hover:bg-sidebar-muted"
                 onClick={handleSearch}
               >
                 <Search size={14} />
@@ -173,7 +173,7 @@ const Dashboard = () => {
           {kpis.map((k, i) => (
             <div
               key={k.title}
-              className={`group rounded-xl border border-[#DDE9E4] bg-white ${k.borderColor} border-l-4 p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md animate-fade-in`}
+              className={`group rounded-lg border border-border bg-card ${k.borderColor} border-l-4 p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md animate-fade-in`}
               style={{ animationDelay: `${i * 80}ms` }}
             >
               <div className="flex items-start justify-between">
@@ -186,7 +186,7 @@ const Dashboard = () => {
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">{k.label}</p>
                 </div>
-                <div className="shrink-0 rounded-xl bg-[#E9F8F2] p-2.5 text-[#067A5D] transition-transform group-hover:scale-105">
+                <div className="shrink-0 rounded-lg bg-secondary p-2.5 text-secondary-foreground transition-transform group-hover:scale-105">
                   <k.icon size={19} />
                 </div>
               </div>
@@ -199,7 +199,7 @@ const Dashboard = () => {
           {netKpis.map((k, i) => (
             <div
               key={k.title}
-              className={`group rounded-xl border border-[#DDE9E4] bg-white ${k.borderColor} border-l-4 p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md animate-fade-in`}
+              className={`group rounded-lg border border-border bg-card ${k.borderColor} border-l-4 p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md animate-fade-in`}
               style={{ animationDelay: `${i * 80}ms` }}
             >
               <div className="flex items-start justify-between">
@@ -212,7 +212,7 @@ const Dashboard = () => {
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">{k.label}</p>
                 </div>
-                <div className="shrink-0 rounded-xl bg-[#E9F8F2] p-2.5 text-[#067A5D] transition-transform group-hover:scale-105">
+                <div className="shrink-0 rounded-lg bg-secondary p-2.5 text-secondary-foreground transition-transform group-hover:scale-105">
                   <k.icon size={19} />
                 </div>
               </div>
@@ -229,7 +229,7 @@ const Dashboard = () => {
         {/* Charts row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Monthly P&L bar chart */}
-          <div className="lg:col-span-2 rounded-2xl border border-[#DDE9E4] bg-white p-5 shadow-sm">
+          <div className="lg:col-span-2 rounded-lg border border-border bg-card p-5 shadow-sm">
             <div className="flex items-start justify-between mb-2">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -288,7 +288,7 @@ const Dashboard = () => {
                         content={(props) => <GpLabel {...(props as GpLabelProps)} currency={currency} />}
                       />
                     </Bar>
-                    <Bar dataKey="directCost" name="Direct Cost" fill="#64748b" radius={[6, 6, 0, 0]} maxBarSize={28} />
+                    <Bar dataKey="directCost" name="Direct Cost" fill="hsl(var(--muted-foreground))" radius={[6, 6, 0, 0]} maxBarSize={28} />
                     {/* Hidden bar to keep GP visible in legend */}
                     <Bar dataKey="grossProfit" name="Gross Profit" fill={BRAND.colors.emerald} maxBarSize={0} />
                   </BarChart>
@@ -314,7 +314,7 @@ const Dashboard = () => {
               />
             </div>
 
-            <div className="rounded-xl border border-[#DDE9E4] bg-white p-4 shadow-sm">
+            <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
                 P and L Highlights
               </p>
@@ -358,7 +358,7 @@ const Dashboard = () => {
             </div>
 
             {/* Salesperson Leaderboard */}
-            <div className="rounded-xl border border-[#DDE9E4] bg-white p-4 shadow-sm">
+            <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
                 Sales Leaderboard
               </p>
@@ -452,7 +452,7 @@ function DonutKpi({
   isLoading: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-[#DDE9E4] bg-white p-4 shadow-sm">
+    <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
         {title}
       </p>

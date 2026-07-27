@@ -113,14 +113,15 @@ export function CBMCalculatorWidget() {
       </Tooltip>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base">
+        <DialogContent className="max-h-[90vh] max-w-modal-3xl overflow-hidden p-0 flex flex-col gap-0">
+          <DialogHeader className="rounded-t-lg bg-modal-header p-4 text-modal-header-foreground">
+            <DialogTitle className="flex items-center gap-2 text-lg text-modal-header-foreground">
               <Package size={17} />
               CBM Calculator
             </DialogTitle>
           </DialogHeader>
 
+          <div className="space-y-4 overflow-y-auto p-4">
           {/* Unit + Mode selectors */}
           <div className="flex flex-wrap gap-4 items-center pb-1">
             <div className="flex items-center gap-1">
@@ -177,8 +178,8 @@ export function CBMCalculatorWidget() {
           </div>
 
           {/* Rows table */}
-          <div className="overflow-x-auto rounded-md border">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto rounded-md border border-border">
+            <table data-density="compact" className="w-full text-sm">
               <thead className="bg-muted/50">
                 <tr className="text-xs text-muted-foreground">
                   <th className="text-left py-2 pl-3 w-7">#</th>
@@ -354,6 +355,7 @@ export function CBMCalculatorWidget() {
             >
               <RotateCcw size={12} /> Reset
             </Button>
+          </div>
           </div>
         </DialogContent>
       </Dialog>

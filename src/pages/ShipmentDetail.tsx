@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DateInput } from "@/components/ui/date-input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   Table,
   TableBody,
@@ -102,31 +103,12 @@ import {
   ShipmentType,
   BLServiceType,
   FreightType,
-  PaymentStatus,
 } from "@/services/api";
 import type { SalespersonLookup } from "@/services/api/lookups";
 import { interactionAuditApi } from "@/services/api/interactionAudit";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { OfficeInteractionAuditEventRequest } from "@/types/auth";
 import { useSalespersonLookup } from "@/hooks/useSalespersons";
-
-// Helper function to get payment status display and styling
-const getPaymentStatusDisplay = (status: PaymentStatus) => {
-  switch (status) {
-    case 'Pending':
-      return { label: 'Pending', className: 'bg-yellow-100 text-yellow-800' };
-    case 'PartiallyPaid':
-      return { label: 'Partially Paid', className: 'bg-orange-100 text-orange-800' };
-    case 'Paid':
-      return { label: 'Paid', className: 'bg-green-100 text-green-800' };
-    case 'Overdue':
-      return { label: 'Overdue', className: 'bg-red-100 text-red-800' };
-    case 'Closed':
-      return { label: 'Closed', className: 'bg-gray-100 text-gray-800' };
-    default:
-      return { label: status, className: 'bg-gray-100 text-gray-800' };
-  }
-};
 
 // Helper functions for enum mapping
 const mapModeToDisplay = (mode: string): string => {
@@ -2207,7 +2189,6 @@ const ShipmentDetail = () => {
                           </TableRow>
                         ) : (
                           shipmentInvoices.customerInvoices.map((inv, index) => {
-                            const statusDisplay = getPaymentStatusDisplay(inv.paymentStatus as PaymentStatus);
                             return (
                               <TableRow key={inv.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
                                 <TableCell className="text-xs">{inv.partyName || "-"}</TableCell>
@@ -2218,9 +2199,7 @@ const ShipmentDetail = () => {
                                   </a>
                                 </TableCell>
                                 <TableCell className="text-xs">
-                                  <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${statusDisplay.className}`}>
-                                    {statusDisplay.label}
-                                  </span>
+                                  <StatusBadge status={inv.paymentStatus} />
                                 </TableCell>
                                 <TableCell className="text-xs">
                                   {!isReadOnly && (
@@ -2275,7 +2254,6 @@ const ShipmentDetail = () => {
                           </TableRow>
                         ) : (
                           shipmentInvoices.vendorInvoices.map((inv, index) => {
-                            const statusDisplay = getPaymentStatusDisplay(inv.paymentStatus as PaymentStatus);
                             return (
                               <TableRow key={inv.id} className={index % 2 === 0 ? "bg-card" : "bg-secondary/30"}>
                                 <TableCell className="text-xs">{inv.partyName || "-"}</TableCell>
@@ -2286,9 +2264,7 @@ const ShipmentDetail = () => {
                                   </a>
                                 </TableCell>
                                 <TableCell className="text-xs">
-                                  <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${statusDisplay.className}`}>
-                                    {statusDisplay.label}
-                                  </span>
+                                  <StatusBadge status={inv.paymentStatus} />
                                 </TableCell>
                                 <TableCell className="text-xs">
                                   {!isReadOnly && (
@@ -2628,7 +2604,7 @@ const ShipmentDetail = () => {
               ].map((report) => (
                 <button
                   key={report.slug}
-                  className="group flex w-full items-center gap-3 rounded-lg border border-transparent px-3 py-2.5 text-left transition-colors hover:border-slate-200 hover:bg-slate-50"
+                  className="group flex w-full items-center gap-3 rounded-lg border border-transparent px-3 py-2.5 text-left transition-colors hover:border-border hover:bg-accent"
                   onClick={() => window.open(`/shipments/${shipmentId}/reports/${report.slug}`, '_blank')}
                 >
                   <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${report.color}`}>

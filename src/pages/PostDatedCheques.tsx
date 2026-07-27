@@ -15,6 +15,7 @@ import {
 import { type PostDatedCheque } from "@/services/api/postDatedCheque";
 import { usePostDatedCheques } from "@/hooks/usePostDatedCheques";
 import { formatDate } from "@/lib/utils";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 interface TabPanelProps {
   source: string;
@@ -162,15 +163,7 @@ function PDCTable({ source, filterOptions, showTypeColumn = false, partyColumnLa
                     })}
                   </TableCell>
                   <TableCell>
-                    <span
-                      className={`px-2 py-1 rounded text-xs ${
-                        pdc.status === "Matured"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-yellow-100 text-yellow-800"
-                      }`}
-                    >
-                      {pdc.status}
-                    </span>
+                    <StatusBadge status={pdc.status} />
                   </TableCell>
                 </TableRow>
               ))

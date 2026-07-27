@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DateInput } from "@/components/ui/date-input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { StatusBadge } from "@/components/ui/status-badge";
 import {
   Dialog,
   DialogContent,
@@ -31,13 +32,6 @@ const MONTHS = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
 ];
-
-const payrollStatusColors: Record<string, string> = {
-  Draft: "bg-yellow-500",
-  Processed: "bg-blue-500",
-  Paid: "bg-green-500",
-  Cancelled: "bg-red-500",
-};
 
 const employmentStatuses = [
   { value: "Active", label: "Active" },
@@ -263,25 +257,11 @@ const HrEmployeeDetail = () => {
     amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const getAdvanceStatusBadge = (status: string) => {
-    const colors: Record<string, string> = {
-      Active: "bg-green-500",
-      FullyRepaid: "bg-blue-500",
-      WrittenOff: "bg-gray-500",
-      Cancelled: "bg-gray-500",
-    };
-    return <span className={`px-2 py-0.5 rounded text-xs font-medium text-white ${colors[status] || "bg-gray-500"}`}>{status}</span>;
+    return <StatusBadge status={status} />;
   };
 
   const getAttendanceStatusBadge = (status: string) => {
-    const colors: Record<string, string> = {
-      Present: "bg-green-500",
-      Absent: "bg-red-500",
-      Late: "bg-yellow-500",
-      HalfDay: "bg-orange-500",
-      AnnualLeave: "bg-cyan-500",
-      Holiday: "bg-purple-500",
-    };
-    return <span className={`px-2 py-0.5 rounded text-xs font-medium text-white ${colors[status] || "bg-gray-500"}`}>{status}</span>;
+    return <StatusBadge status={status} />;
   };
 
   if (empLoading) {
@@ -629,24 +609,26 @@ const HrEmployeeDetail = () => {
             <div className="flex items-center gap-4">
               <h2 className="text-lg font-medium">Attendance Summary</h2>
               <div className="flex items-center gap-2 ml-auto">
-                <select
-                  className="border border-border rounded-md px-3 py-1.5 text-sm bg-background"
-                  value={summaryMonth}
-                  onChange={(e) => setSummaryMonth(parseInt(e.target.value))}
-                >
-                  {MONTHS.map((m, i) => (
-                    <option key={i} value={i + 1}>{m}</option>
-                  ))}
-                </select>
-                <select
-                  className="border border-border rounded-md px-3 py-1.5 text-sm bg-background"
-                  value={summaryYear}
-                  onChange={(e) => setSummaryYear(parseInt(e.target.value))}
-                >
-                  {Array.from({ length: 5 }, (_, i) => now.getFullYear() - i).map((y) => (
-                    <option key={y} value={y}>{y}</option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  options={MONTHS.map((month, index) => ({
+                    value: String(index + 1),
+                    label: month,
+                  }))}
+                  value={String(summaryMonth)}
+                  onValueChange={(value) => setSummaryMonth(parseInt(value))}
+                  triggerClassName="h-9 w-[140px]"
+                  searchPlaceholder="Search month..."
+                />
+                <SearchableSelect
+                  options={Array.from({ length: 5 }, (_, index) => now.getFullYear() - index).map((year) => ({
+                    value: String(year),
+                    label: String(year),
+                  }))}
+                  value={String(summaryYear)}
+                  onValueChange={(value) => setSummaryYear(parseInt(value))}
+                  triggerClassName="h-9 w-[100px]"
+                  searchPlaceholder="Search year..."
+                />
               </div>
             </div>
             {summaryLoading ? (
@@ -710,9 +692,7 @@ const HrEmployeeDetail = () => {
                         <td className="px-4 py-3 text-sm text-right">{formatAmount(p.advanceDeduction)}</td>
                         <td className="px-4 py-3 text-sm text-right font-semibold">{formatAmount(p.netSalary)}</td>
                         <td className="px-4 py-3">
-                          <span className={`px-2 py-0.5 rounded text-xs font-medium text-white ${payrollStatusColors[p.status] || "bg-gray-500"}`}>
-                            {p.status}
-                          </span>
+                          <StatusBadge status={p.status} />
                         </td>
                         <td className="px-4 py-3 text-sm text-muted-foreground">{p.paidDate ? formatDate(p.paidDate) : "-"}</td>
                         <td className="px-4 py-3 text-center">

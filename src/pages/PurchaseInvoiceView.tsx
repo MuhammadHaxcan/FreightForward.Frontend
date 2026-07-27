@@ -124,7 +124,7 @@ export default function PurchaseInvoiceView() {
             <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
-                className="h-11 w-11 border-slate-300 bg-white text-slate-700 shadow-sm hover:bg-slate-50"
+                className="h-11 w-11 border-border bg-card text-foreground shadow-sm hover:bg-accent"
                 aria-label="Purchase invoice actions"
               >
                 <MoreHorizontal className="h-5 w-5" />
@@ -132,7 +132,7 @@ export default function PurchaseInvoiceView() {
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-xl"
+              className="w-56 rounded-lg border border-border bg-popover p-2 text-popover-foreground shadow-lg"
             >
               <DropdownMenuLabel className="px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
                 Purchase Actions

@@ -126,6 +126,69 @@
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Inter', sans-serif;
   }
+
+  /* Keep legacy/native data tables aligned with the shared grid primitives. */
+  table:not([data-density="compact"]) {
+    font-size: 0.9625rem;
+  }
+
+  table:not([data-density="compact"]) .text-xs {
+    font-size: 0.825rem;
+  }
+
+  table:not([data-density="compact"]) .text-sm {
+    font-size: 0.9625rem;
+  }
+
+  table:not([data-density="compact"]) thead th {
+    font-size: 12.1px;
+    font-weight: 600;
+    letter-spacing: 0.025em;
+    text-transform: uppercase;
+  }
+
+  table:not([data-align="top"]) th,
+  table:not([data-align="top"]) td {
+    vertical-align: middle;
+  }
+
+  table tbody tr {
+    transition: background-color 150ms ease;
+  }
+
+  table tbody tr:hover {
+    background-color: hsl(var(--table-row-hover));
+  }
+
+  table td.text-right,
+  table th.text-right {
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media print {
+    /*
+     * Preserve compact document layouts. The 10% grid type scale is intended
+     * for interactive application tables, not invoices and report printouts.
+     */
+    table:not([data-density="compact"]) {
+      font-size: inherit;
+    }
+
+    table:not([data-density="compact"]) .text-xs {
+      font-size: 0.75rem;
+    }
+
+    table:not([data-density="compact"]) .text-sm {
+      font-size: 0.875rem;
+    }
+
+    table:not([data-density="compact"]) thead th {
+      font-size: inherit;
+      font-weight: inherit;
+      letter-spacing: inherit;
+      text-transform: none;
+    }
+  }
 }
 
 @layer components {
