@@ -16,6 +16,7 @@ import {
 import { useCreateCreditNote, useCustomerCreditNoteUnpaidInvoices } from "@/hooks/useCreditNotes";
 import { useAllDebtors } from "@/hooks/useCustomers";
 import { useAllCurrencyTypes, useAllChargeItems } from "@/hooks/useSettings";
+import { formatDate } from "@/lib/utils";
 
 interface ChargeDetail {
   id: number;
@@ -218,7 +219,7 @@ export function AddCreditNoteModal({ open, onOpenChange, onSuccess }: AddCreditN
                   <Button variant="outline" className="w-full justify-start text-left font-normal">
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {creditNoteForm.creditNoteDate
-                      ? format(creditNoteForm.creditNoteDate, "dd-MM-yyyy")
+                      ? formatDate(creditNoteForm.creditNoteDate)
                       : "Select date"}
                   </Button>
                 </PopoverTrigger>
@@ -451,7 +452,7 @@ export function AddCreditNoteModal({ open, onOpenChange, onSuccess }: AddCreditN
                       >
                         <td className="px-3 py-2 text-sm text-blue-600">{inv.invoiceNo}</td>
                         <td className="px-3 py-2 text-sm">
-                          {inv.invoiceDate ? new Date(inv.invoiceDate).toLocaleDateString() : "-"}
+                          {formatDate(inv.invoiceDate)}
                         </td>
                         <td className="px-3 py-2 text-sm">{inv.jobNo || "-"}</td>
                         <td className="px-3 py-2 text-sm">{inv.currencyCode || "-"}</td>

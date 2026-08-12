@@ -106,15 +106,26 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
   const [editingCostingForModal, setEditingCostingForModal] = useState<CostingModalData | undefined>(undefined);
   const [pendingAutoSelect, setPendingAutoSelect] = useState<number | null>(null);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    purchaseId: string;
+    companyName: string;
+    customerId: string;
+    invoiceDate: string;
+    invoiceNo: string;
+    vDate: string;
+    currencyId: number | null;
+    currencyCode: string;
+    remarks: string;
+    selectedCharges: number[];
+  }>({
     purchaseId: "",
     companyName: "",
     customerId: "",
     invoiceDate: getTodayDateOnly(),
     invoiceNo: "",
     vDate: getTodayDateOnly(),
-    currencyId: 1,
-    currencyCode: baseCurrencyCode,
+    currencyId: null,
+    currencyCode: "",
     remarks: "",
     selectedCharges: [] as number[],
   });
@@ -129,8 +140,8 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
         invoiceDate: getTodayDateOnly(),
         invoiceNo: "",
         vDate: getTodayDateOnly(),
-        currencyId: 1,
-        currencyCode: baseCurrencyCode,
+        currencyId: null,
+        currencyCode: "",
         remarks: "",
         selectedCharges: [],
       });
@@ -159,7 +170,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
         invoiceDate: inv.purchaseDate,
         invoiceNo: inv.vendorInvoiceNo || "",
         vDate: inv.vendorInvoiceDate || getTodayDateOnly(),
-        currencyId: inv.currencyId || 1,
+        currencyId: inv.currencyId ?? null,
         currencyCode: currency?.code || baseCurrencyCode,
         remarks: inv.remarks || "",
         selectedCharges: costingIds,
@@ -215,7 +226,20 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
     return selectedParty?.customerId;
   }, [formData.customerId, creditorParties, isEditMode]);
 
-  const { data: selectedCustomerData } = useCustomer(selectedPartyCustomerId ?? 0);
+  const {
+    data: selectedCustomerData,
+    isLoading: isVendorCurrencyLoading,
+    isError: isVendorCurrencyError,
+  } = useCustomer(selectedPartyCustomerId ?? 0);
+
+  const isVendorCurrencyResolved = isEditMode || (
+    !!selectedPartyCustomerId &&
+    !isVendorCurrencyLoading &&
+    !isVendorCurrencyError &&
+    selectedCustomerData?.id === selectedPartyCustomerId &&
+    !!selectedCustomerData.currencyId &&
+    formData.currencyId === selectedCustomerData.currencyId
+  );
 
   // Update currency when company selection changes (only in create mode)
   useEffect(() => {
@@ -227,16 +251,17 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
   }, [formData.customerId, creditorParties, isEditMode]);
 
   useEffect(() => {
-    if (selectedCustomerData && !isEditMode) {
-      const custCurrencyId = selectedCustomerData.currencyId || 1;
+    if (selectedCustomerData?.id === selectedPartyCustomerId && !isEditMode) {
+      const custCurrencyId = selectedCustomerData.currencyId;
+      if (!custCurrencyId) return;
       const currency = currencies.find(c => c.id === custCurrencyId);
       setFormData(prev => ({
         ...prev,
         currencyId: custCurrencyId,
-        currencyCode: currency?.code || baseCurrencyCode,
+        currencyCode: currency?.code || selectedCustomerData.currencyCode || "",
       }));
     }
-  }, [selectedCustomerData, currencies, isEditMode, baseCurrencyCode]);
+  }, [selectedCustomerData, selectedPartyCustomerId, currencies, isEditMode]);
 
   // Sale-only charges: costings that have sale data but no cost data (edit mode only)
   const saleOnlyCharges = useMemo(() => {
@@ -381,6 +406,8 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
         ...prev,
         customerId: partyId,
         companyName: selectedParty.customerName,
+        currencyId: null,
+        currencyCode: "",
         selectedCharges: [],
       }));
     }
@@ -411,6 +438,15 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
 
     const selectedParty = creditorParties.find(p => p.id.toString() === formData.customerId);
     if (!selectedParty?.customerId) {
+      return;
+    }
+
+    if (!isEditMode && !isVendorCurrencyResolved) {
+      return;
+    }
+
+    const invoiceCurrencyId = isEditMode ? formData.currencyId : selectedCustomerData?.currencyId;
+    if (!invoiceCurrencyId) {
       return;
     }
 
@@ -466,7 +502,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
             vendorInvoiceNo: formData.invoiceNo || undefined,
             vendorInvoiceDate: formData.vDate && formData.vDate.trim() !== '' ? formData.vDate : undefined,
             shipmentId,
-            currencyId: formData.currencyId,
+            currencyId: invoiceCurrencyId,
             remarks: formData.remarks || undefined,
             items,
           },
@@ -479,7 +515,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
           invoiceDate: formData.invoiceDate,
           invoiceNo: formData.invoiceNo,
           vDate: formData.vDate,
-          currencyId: formData.currencyId,
+          currencyId: invoiceCurrencyId,
           remarks: formData.remarks,
           charges: formData.selectedCharges,
         });
@@ -519,7 +555,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
           vendorInvoiceNo: formData.invoiceNo || undefined,
           vendorInvoiceDate: formData.vDate && formData.vDate.trim() !== '' ? formData.vDate : undefined,
           jobNo: jobNumber || undefined,
-          currencyId: formData.currencyId,
+          currencyId: invoiceCurrencyId,
           remarks: formData.remarks || undefined,
           items,
         });
@@ -531,7 +567,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
           invoiceDate: formData.invoiceDate,
           invoiceNo: formData.invoiceNo,
           vDate: formData.vDate,
-          currencyId: formData.currencyId,
+          currencyId: invoiceCurrencyId,
           remarks: formData.remarks,
           charges: formData.selectedCharges,
         });
@@ -686,7 +722,9 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
             <div>
               <Label className="text-xs font-medium">* Base Currency</Label>
               <Input
-                value={formData.currencyCode}
+                value={!isEditMode && formData.customerId && !isVendorCurrencyResolved
+                  ? (isVendorCurrencyError ? "Vendor currency unavailable" : "Loading vendor currency...")
+                  : formData.currencyCode}
                 className="bg-muted h-9"
                 readOnly
               />
@@ -864,7 +902,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
             <Button
               className="btn-success"
               onClick={handleSave}
-              disabled={!shipmentId || !formData.customerId || (!isEditMode && formData.selectedCharges.length === 0) || isSaving}
+              disabled={!shipmentId || !formData.customerId || (!isEditMode && (!isVendorCurrencyResolved || formData.selectedCharges.length === 0)) || isSaving}
             >
               {isSaving ? (
                 <>

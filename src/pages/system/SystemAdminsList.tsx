@@ -15,6 +15,7 @@ import { Loader2, Plus, Users, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { SystemAdminUser, CreateSystemAdminRequest, UpdateSystemAdminRequest } from '../../types/auth';
 import SystemLayout from '../../components/system/SystemLayout';
+import { formatDate, formatDateTimeForDisplay } from '../../lib/utils';
 
 export default function SystemAdminsList() {
   const queryClient = useQueryClient();
@@ -377,10 +378,10 @@ export default function SystemAdminsList() {
                       </TableCell>
                       <TableCell>
                         {admin.lastLoginAt
-                          ? new Date(admin.lastLoginAt).toLocaleString()
+                          ? formatDateTimeForDisplay(admin.lastLoginAt)
                           : 'Never'}
                       </TableCell>
-                      <TableCell>{new Date(admin.createdAt).toLocaleDateString()}</TableCell>
+                      <TableCell>{formatDate(admin.createdAt)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button

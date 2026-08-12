@@ -95,7 +95,7 @@ export function VendorPayableDetailsModal({
                           </span>
                         </TableCell>
                         <TableCell>
-                          {item.invoiceDate ? formatDate(item.invoiceDate, "dd MMM yyyy") : "-"}
+                          {item.invoiceDate ? formatDate(item.invoiceDate) : "-"}
                         </TableCell>
                         <TableCell className="text-right">
                           {currencyCode} {formatAmount(item.credit)}

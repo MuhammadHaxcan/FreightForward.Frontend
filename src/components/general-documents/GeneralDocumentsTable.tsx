@@ -18,6 +18,7 @@ import { useGeneralDocuments, useDeleteGeneralDocument } from "@/hooks/useGenera
 import { GeneralDocument, fileApi } from "@/services/api";
 import { getAccessToken, attemptTokenRefresh } from "@/services/api/base";
 import { toast } from "sonner";
+import { formatDate as formatDisplayDate } from "@/lib/utils";
 
 export function GeneralDocumentsTable() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -83,8 +84,7 @@ export function GeneralDocumentsTable() {
   };
 
   const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    return formatDisplayDate(dateStr);
   };
 
   return (

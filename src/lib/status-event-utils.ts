@@ -1,4 +1,5 @@
 import { StatusEventType } from '@/services/api/shipment';
+import { formatDate, formatDateTimeForDisplay } from '@/lib/utils';
 
 export interface EventTypeOption {
   value: StatusEventType;
@@ -44,23 +45,11 @@ export const shouldShowVesselFields = (eventType: StatusEventType): boolean => {
 };
 
 export const formatEventDateTime = (dateTimeString: string): string => {
-  const date = new Date(dateTimeString);
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return formatDateTimeForDisplay(dateTimeString);
 };
 
 export const formatEventDateOnly = (dateTimeString: string): string => {
-  const date = new Date(dateTimeString);
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
+  return formatDate(dateTimeString);
 };
 
 export const formatEventTimeOnly = (dateTimeString: string): string => {

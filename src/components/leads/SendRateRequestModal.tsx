@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner";
 import { SendEmailModal } from "@/components/common/SendEmailModal";
 import { useAuth } from "@/contexts/AuthContext";
+import { rateRequestApi } from "@/services/api/sales";
 
 interface SendRateRequestModalProps {
   open: boolean;
@@ -43,6 +44,7 @@ export function SendRateRequestModal({
   const [internalNotes, setInternalNotes] = useState<string>("");
   const [step, setStep] = useState<"form" | "email">("form");
   const [newRateRequestId, setNewRateRequestId] = useState<number | null>(null);
+  const [newRateRequestNumber, setNewRateRequestNumber] = useState<string>("");
 
   const { user } = useAuth();
 
@@ -100,6 +102,7 @@ export function SendRateRequestModal({
       setInternalNotes("");
       setStep("form");
       setNewRateRequestId(null);
+      setNewRateRequestNumber("");
     }
   }, [open]);
 
@@ -128,8 +131,9 @@ export function SendRateRequestModal({
       });
 
       setNewRateRequestId(result);
+      const createdRateRequest = await rateRequestApi.getById(result);
+      setNewRateRequestNumber(createdRateRequest.data?.rateRequestNo ?? "");
       setStep("email");
-      onSuccess?.();
     } catch (error) {
       // Error is handled by the mutation
     }
@@ -137,7 +141,15 @@ export function SendRateRequestModal({
 
   const handleSkipEmail = () => {
     toast.success("Rate request created successfully");
+    onSuccess?.();
     onOpenChange(false);
+  };
+
+  const handleEmailOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      onSuccess?.();
+    }
+    onOpenChange(nextOpen);
   };
 
   const isLoading = loadingCategoryTypes || loadingCustomers;
@@ -146,15 +158,15 @@ export function SendRateRequestModal({
     return (
       <SendEmailModal
         open={open}
-        onOpenChange={onOpenChange}
+        onOpenChange={handleEmailOpenChange}
         recipientEmail={vendorEmail}
         recipientLabel="Vendor"
-        subject={`Rate Request`}
+        subject={`Rate Request${newRateRequestNumber ? ` ${newRateRequestNumber}` : ""}`}
         currentUserEmail={user?.email ?? ""}
         onSend={async (req) => {
           await sendEmail.mutateAsync({ id: newRateRequestId, data: req });
-          toast.success("Email sent successfully");
           onOpenChange(false);
+          onSuccess?.();
         }}
         isSending={sendEmail.isPending}
         title="Send Rate Request Email"

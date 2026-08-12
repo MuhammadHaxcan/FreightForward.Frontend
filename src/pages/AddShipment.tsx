@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { getTodayDateOnly } from "@/lib/utils";
+import { formatDate, getTodayDateOnly } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -2437,7 +2437,7 @@ const AddShipment = () => {
                         <TableCell>{index + 1}</TableCell>
                         <TableCell>{doc.documentTypeName || '-'}</TableCell>
                         <TableCell>{doc.documentNo}</TableCell>
-                        <TableCell>{doc.docDate}</TableCell>
+                        <TableCell>{formatDate(doc.docDate)}</TableCell>
                         <TableCell>
                           {doc.filePath ? (
                             <a

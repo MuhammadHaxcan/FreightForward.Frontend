@@ -30,31 +30,20 @@ export function parseDateOnly(dateString: string | null | undefined): Date | nul
 }
 
 /**
- * Format a date string for display.
+ * Format a date string or Date object for display.
  * Handles DateOnly strings without timezone issues.
- * Supported formats: "dd-MMM-yyyy" (default), "dd-MM-yyyy", "dd/MM/yyyy"
+ * Uses the application-wide dd-MMM-yyyy display standard.
  */
-export function formatDate(dateString: string | null | undefined, formatStr: string = "dd-MMM-yyyy"): string {
-  const date = parseDateOnly(dateString);
-  if (!date) return "-";
+export function formatDate(dateValue: string | Date | null | undefined): string {
+  const date = dateValue instanceof Date ? dateValue : parseDateOnly(dateValue);
+  if (!date || Number.isNaN(date.getTime())) return "-";
 
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const day = date.getDate().toString().padStart(2, '0');
-  const monthNum = (date.getMonth() + 1).toString().padStart(2, '0');
   const monthName = months[date.getMonth()];
   const year = date.getFullYear();
 
-  switch (formatStr) {
-    case "dd-MM-yyyy":
-      return `${day}-${monthNum}-${year}`;
-    case "dd/MM/yyyy":
-      return `${day}/${monthNum}/${year}`;
-    case "dd MMM yyyy":
-      return `${day} ${monthName} ${year}`;
-    case "dd-MMM-yyyy":
-    default:
-      return `${day}-${monthName}-${year}`;
-  }
+  return `${day}-${monthName}-${year}`;
 }
 
 /**
@@ -85,7 +74,7 @@ export function formatDateToISO(date: Date | null | undefined): string {
  * Format a Date object for display.
  * Uses local time to avoid timezone issues.
  */
-export function formatDateForDisplay(date: Date | null | undefined, formatStr: string = "dd-MMM-yyyy"): string {
+export function formatDateForDisplay(date: Date | null | undefined): string {
   if (!date) return "-";
 
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -93,10 +82,22 @@ export function formatDateForDisplay(date: Date | null | undefined, formatStr: s
   const month = months[date.getMonth()];
   const year = date.getFullYear();
 
-  if (formatStr === "MMM d, yyyy") {
-    return `${month} ${date.getDate()}, ${year}`;
-  }
-
-  // Default: dd-MMM-yyyy
   return `${day}-${month}-${year}`;
+}
+
+/** Format a timestamp for consistent user-visible display in local time. */
+export function formatDateTimeForDisplay(dateString: string | null | undefined): string {
+  if (!dateString) return "-";
+
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const day = date.getDate().toString().padStart(2, "0");
+  const month = months[date.getMonth()];
+  const year = date.getFullYear();
+  const hours = date.getHours().toString().padStart(2, "0");
+  const minutes = date.getMinutes().toString().padStart(2, "0");
+
+  return `${day}-${month}-${year} ${hours}:${minutes}`;
 }

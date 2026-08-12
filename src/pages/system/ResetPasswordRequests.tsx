@@ -12,6 +12,7 @@ import { Loader2, KeyRound, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import type { PasswordResetRequestDto } from '../../types/auth';
 import SystemLayout from '../../components/system/SystemLayout';
+import { formatDateTimeForDisplay } from '../../lib/utils';
 
 export default function ResetPasswordRequests() {
   const queryClient = useQueryClient();
@@ -60,7 +61,7 @@ export default function ResetPasswordRequests() {
     fulfillMutation.mutate({ officeId: resetTarget.officeId, userId: resetTarget.id, password: newPassword });
   };
 
-  const formatDate = (dateStr: string) => new Date(dateStr).toLocaleString();
+  const formatDate = formatDateTimeForDisplay;
 
   return (
     <SystemLayout>

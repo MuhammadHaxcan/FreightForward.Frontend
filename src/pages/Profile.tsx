@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Camera, User, Mail, Phone, Building2, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
+import { formatDate } from '@/lib/utils';
 
 const monthOptions = [
   { value: '1', label: 'January' },
@@ -457,7 +458,7 @@ export default function Profile() {
                                   key={record.id}
                                   className={idx % 2 === 0 ? 'bg-background' : 'bg-muted/30'}
                                 >
-                                  <td className="px-3 py-2">{record.date}</td>
+                                  <td className="px-3 py-2">{formatDate(record.date)}</td>
                                   <td className="px-3 py-2">{dayName}</td>
                                   <td className="px-3 py-2">
                                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-white text-xs font-medium ${colorClass}`}>

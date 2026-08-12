@@ -142,17 +142,17 @@ function PDCTable({ source, filterOptions, showTypeColumn = false, partyColumnLa
                     {pdc.voucherNo}
                   </TableCell>
                   <TableCell>
-                    {formatDate(pdc.voucherDate, "dd MMM yyyy")}
+                    {formatDate(pdc.voucherDate)}
                   </TableCell>
                   <TableCell>{pdc.partyName || "-"}</TableCell>
                   <TableCell>{pdc.chequeNo || "-"}</TableCell>
                   <TableCell>
-                    {pdc.chequeDate ? formatDate(pdc.chequeDate, "dd MMM yyyy") : "-"}
+                    {pdc.chequeDate ? formatDate(pdc.chequeDate) : "-"}
                   </TableCell>
                   <TableCell>{pdc.chequeBank || "-"}</TableCell>
                   <TableCell>
                     {pdc.postDatedValidDate
-                      ? formatDate(pdc.postDatedValidDate, "dd MMM yyyy")
+                      ? formatDate(pdc.postDatedValidDate)
                       : "-"}
                   </TableCell>
                   <TableCell>{pdc.currencyCode || "-"}</TableCell>

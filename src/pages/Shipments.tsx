@@ -334,7 +334,7 @@ const Shipments = () => {
                             <CheckCircle size={14} className="text-emerald-500" />
                           )}
                         </div>
-                        <div className="text-xs text-muted-foreground">{formatDate(shipment.jobDate, "dd/MM/yyyy")}</div>
+                        <div className="text-xs text-muted-foreground">{formatDate(shipment.jobDate)}</div>
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
@@ -362,13 +362,13 @@ const Shipments = () => {
                       <TableCell>
                         <div className="space-y-1">
                           <span className="text-foreground font-semibold">{shipment.portOfLoadingName || "-"}</span>
-                          <div className="text-xs text-muted-foreground">ETD: {formatDate(shipment.etd, "dd/MM/yyyy")}</div>
+                          <div className="text-xs text-muted-foreground">ETD: {formatDate(shipment.etd)}</div>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
                           <span>{shipment.portOfDischargeName || "-"}</span>
-                          <div className="text-xs text-muted-foreground">ETA: {formatDate(shipment.eta, "dd/MM/yyyy")}</div>
+                          <div className="text-xs text-muted-foreground">ETA: {formatDate(shipment.eta)}</div>
                         </div>
                       </TableCell>
                       <TableCell>

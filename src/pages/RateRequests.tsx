@@ -227,7 +227,7 @@ export default function RateRequests() {
                       </TableCell>
                       <TableCell className="font-medium">{request.rateRequestNo}</TableCell>
                       <TableCell className="text-green-600">{request.leadNo || "-"}</TableCell>
-                      <TableCell>{formatDate(request.requestDate, "dd-MM-yyyy")}</TableCell>
+                      <TableCell>{formatDate(request.requestDate)}</TableCell>
                       <TableCell className="text-green-600">{request.fullName || "-"}</TableCell>
                       <TableCell>{request.salesperson || "-"}</TableCell>
                       <TableCell>{request.freightMode || "-"}</TableCell>

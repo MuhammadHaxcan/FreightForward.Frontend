@@ -30,6 +30,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { MutationBlockingOverlay } from "@/components/ui/mutation-blocking-overlay";
+import { formatDate } from "@/lib/utils";
 
 const monthOptions = [
   { value: "1", label: "January" },
@@ -386,11 +387,7 @@ const HrAttendanceSummary = () => {
                         >
                           <td className="px-4 py-2 text-sm font-medium">{day}</td>
                           <td className="px-4 py-2 text-sm text-muted-foreground">
-                            {new Date(dateStr + "T00:00:00").toLocaleDateString("en-GB", {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                            })}
+                            {formatDate(dateStr)}
                           </td>
                           <td className={`px-4 py-2 text-sm font-medium ${isOffDay ? "text-red-500" : ""}`}>
                             {dayName}

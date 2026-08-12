@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useCurrencyRateHistory } from "@/hooks/useSettings";
-import { format } from "date-fns";
+import { formatDateTimeForDisplay } from "@/lib/utils";
 
 interface CurrencyRateHistoryModalProps {
   open: boolean;
@@ -80,7 +80,7 @@ export function CurrencyRateHistoryModal({
                     <div className="bg-secondary/30 rounded-lg p-3 ml-2">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium text-foreground">
-                          {format(new Date(entry.effectiveDate), "MMM dd, yyyy HH:mm")}
+                          {formatDateTimeForDisplay(entry.effectiveDate)}
                         </span>
                         {entry.changedBy && (
                           <span className="text-xs text-muted-foreground">

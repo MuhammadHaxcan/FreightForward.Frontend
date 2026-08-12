@@ -192,7 +192,7 @@ export default function PaymentVouchers() {
               data.items.map((payment, index) => (
                 <TableRow key={payment.id} className={`border-b border-border hover:bg-table-row-hover transition-colors ${index % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
                   <TableCell>
-                    {formatDate(payment.paymentDate, "dd MMM yyyy")}
+                    {formatDate(payment.paymentDate)}
                   </TableCell>
                   <TableCell className="text-green-600 font-medium">
                     {payment.paymentNo}

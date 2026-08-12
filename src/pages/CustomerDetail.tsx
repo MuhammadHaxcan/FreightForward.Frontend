@@ -998,7 +998,7 @@ const CustomerDetail = () => {
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {accountDetails.openingBalanceDate
-                        ? format(accountDetails.openingBalanceDate, "MM/dd/yyyy")
+                        ? formatDate(accountDetails.openingBalanceDate)
                         : "mm/dd/yyyy"}
                     </Button>
                   </PopoverTrigger>
@@ -1168,7 +1168,7 @@ const CustomerDetail = () => {
                   {customer.currencyCode ?? ""} {customer.openingBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
                 {customer.openingBalanceDate && (
-                  <span className="text-muted-foreground"> (as of {format(new Date(customer.openingBalanceDate), "dd-MM-yyyy")})</span>
+                  <span className="text-muted-foreground"> (as of {formatDate(customer.openingBalanceDate)})</span>
                 )}
               </span>
             )}
@@ -2169,7 +2169,7 @@ const CustomerDetail = () => {
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start text-left font-normal">
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {creditNoteForm.creditNoteDate ? format(creditNoteForm.creditNoteDate, "dd-MM-yyyy") : "Select date"}
+                      {creditNoteForm.creditNoteDate ? formatDate(creditNoteForm.creditNoteDate) : "Select date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0 bg-popover z-50">
@@ -2355,7 +2355,7 @@ const CustomerDetail = () => {
                       {cnSelectedInvoices.map((inv, i) => (
                         <tr key={inv.invoiceId} className={`border-b border-border ${i % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
                           <td className="px-3 py-2 text-sm text-blue-600">{inv.invoiceNo}</td>
-                          <td className="px-3 py-2 text-sm">{inv.invoiceDate ? new Date(inv.invoiceDate).toLocaleDateString() : '-'}</td>
+                          <td className="px-3 py-2 text-sm">{formatDate(inv.invoiceDate)}</td>
                           <td className="px-3 py-2 text-sm">{inv.jobNo || '-'}</td>
                           <td className="px-3 py-2 text-sm">{inv.currencyCode || '-'}</td>
                           <td className="px-3 py-2 text-sm text-right">{(inv.pendingAmount ?? 0).toFixed(2)}</td>

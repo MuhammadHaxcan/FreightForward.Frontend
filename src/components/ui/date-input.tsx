@@ -24,7 +24,7 @@ interface DateInputProps {
 export function DateInput({
   value,
   onChange,
-  placeholder = "dd-mm-yyyy",
+  placeholder = "dd-Mmm-yyyy",
   className,
   disabled,
   minDate,
@@ -34,12 +34,12 @@ export function DateInput({
   const [inputValue, setInputValue] = useState("");
   const minimumDate = parseDateOnly(minDate);
 
-  // Convert ISO date to dd-MM-yyyy format for display
+  // Convert ISO date to the standard user-visible format.
   const formatDisplayDate = (isoDate: string) => {
     if (!isoDate) return "";
     const date = parseDateOnly(isoDate);
     if (!date) return "";
-    return format(date, "dd-MM-yyyy");
+    return format(date, "dd-MMM-yyyy");
   };
 
   // Sync local input state when parent value changes (e.g., from calendar or external update)
@@ -47,20 +47,24 @@ export function DateInput({
     setInputValue(formatDisplayDate(value));
   }, [value]);
 
-  // Convert dd-MM-yyyy to ISO format for storage
+  // Convert the standard display format to ISO for storage. Continue accepting the
+  // previous numeric format while users transition to the new presentation standard.
   const parseInputDate = (displayDate: string): string | null => {
-    if (!displayDate || displayDate.length !== 10) return null;
-    try {
-      const date = parse(displayDate, "dd-MM-yyyy", new Date());
-      if (!isValid(date)) return null;
-      // Additional validation: ensure the parsed date matches the input
-      // This catches cases like 31-02-2024 which would parse to a different date
-      const reparsed = format(date, "dd-MM-yyyy");
-      if (reparsed !== displayDate) return null;
-      return format(date, "yyyy-MM-dd");
-    } catch {
-      return null;
+    if (!displayDate) return null;
+
+    for (const displayFormat of ["dd-MMM-yyyy", "dd-MM-yyyy"]) {
+      try {
+        const date = parse(displayDate, displayFormat, new Date());
+        if (!isValid(date)) continue;
+        const reparsed = format(date, displayFormat);
+        if (reparsed.toLowerCase() !== displayDate.toLowerCase()) continue;
+        return format(date, "yyyy-MM-dd");
+      } catch {
+        // Try the next supported display format.
+      }
     }
+
+    return null;
   };
 
   // Get Date object from ISO string for calendar
@@ -99,7 +103,7 @@ export function DateInput({
       const isoDate = formatDateToISO(date);
       onChange(isoDate);
       onValidityChange?.(true);
-      setInputValue(format(date, "dd-MM-yyyy"));
+      setInputValue(format(date, "dd-MMM-yyyy"));
     }
     setOpen(false);
   };

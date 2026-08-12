@@ -219,7 +219,7 @@ export default function Quotations() {
                     ) : (
                       quotations.map((quotation, index) => (
                         <TableRow key={quotation.id} className={`border-b border-border hover:bg-table-row-hover transition-colors ${index % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
-                          <TableCell>{formatDate(quotation.quotationDate, "dd-MM-yyyy")}</TableCell>
+                          <TableCell>{formatDate(quotation.quotationDate)}</TableCell>
                           <TableCell className="font-medium">{quotation.quotationNo}</TableCell>
                           <TableCell className="text-green-600">{quotation.customerName}</TableCell>
                           <TableCell>{quotation.salesperson || "-"}</TableCell>
@@ -228,7 +228,7 @@ export default function Quotations() {
                           <TableCell>{quotation.mode}</TableCell>
                           <TableCell className="text-green-600">{quotation.loadingPortName || quotation.pol}</TableCell>
                           <TableCell className="text-green-600">{quotation.destinationPortName || quotation.pod}</TableCell>
-                          <TableCell>{formatDate(quotation.quoteExpiryDate, "dd-MM-yyyy")}</TableCell>
+                          <TableCell>{formatDate(quotation.quoteExpiryDate)}</TableCell>
                           <TableCell>{getStatusBadge(quotation.quotationStatus)}</TableCell>
                           <TableCell className="text-purple-600 font-medium">{quotation.quotationBookingNo || "-"}</TableCell>
                           <TableCell>

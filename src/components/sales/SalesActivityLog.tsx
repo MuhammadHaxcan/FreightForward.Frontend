@@ -12,7 +12,7 @@ import {
   Clock,
   Loader2,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTimeForDisplay } from "@/lib/utils";
 
 interface SalesActivityLogProps {
   entries: SalesActivityLogEntry[];
@@ -41,13 +41,7 @@ const ACTION_COLOR: Record<string, string> = {
 };
 
 function formatTimestamp(value: string): string {
-  return new Date(value).toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatDateTimeForDisplay(value);
 }
 
 function RelatedLinks({ entry }: { entry: SalesActivityLogEntry }) {

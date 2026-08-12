@@ -1191,4 +1191,4 @@ function formatDate(value?: string) {
   return `${String(day).padStart(2, "0")}-${monthNames[month - 1]}-${year}`;
 }
 
-const monthNames = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];

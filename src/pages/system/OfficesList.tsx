@@ -14,6 +14,7 @@ import { Loader2, Plus, Building2, Power, PowerOff, Trash2, Copy, Check, Databas
 import { toast } from 'sonner';
 import type { CreateOfficeRequest, UpdateOfficeRequest, OfficeCreatedResponse, OfficeListItem, MigrationsInfo } from '../../types/auth';
 import SystemLayout from '../../components/system/SystemLayout';
+import { formatDate } from '../../lib/utils';
 
 export default function OfficesList() {
   const queryClient = useQueryClient();
@@ -732,7 +733,7 @@ export default function OfficesList() {
                           {office.isActive ? 'Active' : 'Inactive'}
                         </Badge>
                       </TableCell>
-                      <TableCell>{new Date(office.createdAt).toLocaleDateString()}</TableCell>
+                      <TableCell>{formatDate(office.createdAt)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           {office.isActive ? (

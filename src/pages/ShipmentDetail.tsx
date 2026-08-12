@@ -55,7 +55,7 @@ import { ShipmentJourneyCalendar } from "@/components/shipments/ShipmentJourneyC
 import { CustomsTab } from "@/components/shipments/CustomsTab";
 import { DeleteConfirmationModal } from "@/components/ui/delete-confirmation-modal";
 import { toast } from "sonner";
-import { getTodayDateOnly } from "@/lib/utils";
+import { formatDate, getTodayDateOnly } from "@/lib/utils";
 import {
   useShipmentByIdentifier,
   useUpdateShipment,
@@ -2376,7 +2376,7 @@ const ShipmentDetail = () => {
                         <TableCell>{index + 1}</TableCell>
                         <TableCell>{doc.documentTypeName || '-'}</TableCell>
                         <TableCell>{doc.documentNo}</TableCell>
-                        <TableCell>{doc.docDate}</TableCell>
+                        <TableCell>{formatDate(doc.docDate)}</TableCell>
                         <TableCell>
                           {doc.filePath ? (
                             <button

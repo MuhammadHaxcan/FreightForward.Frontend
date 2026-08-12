@@ -1,6 +1,7 @@
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Plus, Pencil, Eye, Trash2, Loader2, X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
@@ -136,6 +137,20 @@ const MasterCustomers = () => {
       >
         {isApproved ? "Approved" : "Pending"}
       </span>
+    );
+  };
+
+  const renderMasterTypeBadge = (masterType: MasterType) => {
+    const colorClass = {
+      Debtors: "border-emerald-200 bg-emerald-50 text-emerald-700",
+      Creditors: "border-blue-200 bg-blue-50 text-blue-700",
+      Neutral: "border-violet-200 bg-violet-50 text-violet-700",
+    }[masterType];
+
+    return (
+      <Badge variant="outline" className={colorClass}>
+        {masterType}
+      </Badge>
     );
   };
 
@@ -276,7 +291,9 @@ const MasterCustomers = () => {
                           }`}
                         >
                           <td className="px-4 py-3 text-sm font-medium text-foreground">{customer.code}</td>
-                          <td className="px-4 py-3 text-sm text-muted-foreground">{customer.masterType}</td>
+                          <td className="px-4 py-3 text-sm">
+                            {renderMasterTypeBadge(customer.masterType)}
+                          </td>
                           <td className="px-4 py-3 text-sm text-muted-foreground">
                             {customer.categories?.map((category) => category.name).join(", ") || "-"}
                           </td>

@@ -340,7 +340,7 @@ export default function Leads() {
                               {lead.leadType === "PortalLead" ? "Portal Lead" : "Manual Lead"}
                             </Badge>
                           </TableCell>
-                          <TableCell>{formatDate(lead.leadDate, "dd-MM-yyyy")}</TableCell>
+                          <TableCell>{formatDate(lead.leadDate)}</TableCell>
                           <TableCell className="text-green-600">{lead.customerName || lead.fullName}</TableCell>
                           <TableCell>{lead.salesperson || "-"}</TableCell>
                           <TableCell>{lead.freightMode || "-"}</TableCell>
@@ -521,7 +521,7 @@ export default function Leads() {
                           }
                         >
                           <TableCell className="font-medium">{lead.leadNo}</TableCell>
-                          <TableCell>{formatDate(lead.leadDate, "dd-MM-yyyy")}</TableCell>
+                          <TableCell>{formatDate(lead.leadDate)}</TableCell>
                           <TableCell className="text-green-600">{lead.fullName}</TableCell>
                           <TableCell>{lead.email}</TableCell>
                           <TableCell>{lead.freightMode || "-"}</TableCell>

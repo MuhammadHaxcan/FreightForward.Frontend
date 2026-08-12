@@ -17,6 +17,7 @@ import type {
   OfficeInteractionOutcomeStatus,
 } from '../../types/auth';
 import SystemLayout from '../../components/system/SystemLayout';
+import { formatDateTimeForDisplay } from '../../lib/utils';
 
 const INTERACTION_EVENT_TYPES: OfficeInteractionEventType[] = [
   'RouteOpened',
@@ -50,7 +51,7 @@ function formatAction(action: string): string {
 }
 
 function formatDateTime(value: string): string {
-  return new Date(value).toLocaleString();
+  return formatDateTimeForDisplay(value);
 }
 
 function toIso(value: string): string | undefined {

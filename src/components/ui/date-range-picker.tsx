@@ -145,14 +145,14 @@ export function DateRangePicker({
 
   const triggerLabel = value?.from
     ? value.to
-      ? `${format(value.from, "MMM d, yyyy")} - ${format(value.to, "MMM d, yyyy")}`
-      : format(value.from, "MMM d, yyyy")
+      ? `${format(value.from, "dd-MMM-yyyy")} - ${format(value.to, "dd-MMM-yyyy")}`
+      : format(value.from, "dd-MMM-yyyy")
     : placeholder;
 
   const bottomLabel = pendingRange?.from
     ? pendingRange.to
-      ? `${format(pendingRange.from, "MM/dd/yyyy")} - ${format(pendingRange.to, "MM/dd/yyyy")}`
-      : format(pendingRange.from, "MM/dd/yyyy")
+      ? `${format(pendingRange.from, "dd-MMM-yyyy")} - ${format(pendingRange.to, "dd-MMM-yyyy")}`
+      : format(pendingRange.from, "dd-MMM-yyyy")
     : "—";
 
   const calendarSelected: DateRange | undefined = pendingRange

@@ -15,6 +15,7 @@ import { useAllDebtors } from "@/hooks/useCustomers";
 import { useAllCurrencyTypes, useAllChargeItems } from "@/hooks/useSettings";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { formatDate } from "@/lib/utils";
 
 interface EditChargeLine {
   id?: number;
@@ -260,7 +261,7 @@ export default function CreditNoteEdit() {
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-full justify-start text-left font-normal">
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.creditNoteDate ? format(formData.creditNoteDate, "dd-MM-yyyy") : "Select date"}
+                    {formData.creditNoteDate ? formatDate(formData.creditNoteDate) : "Select date"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0 bg-popover z-50">
@@ -469,7 +470,7 @@ export default function CreditNoteEdit() {
                     {selectedInvoices.map((inv, i) => (
                       <tr key={inv.invoiceId} className={`border-b border-border ${i % 2 === 0 ? "bg-card" : "bg-secondary/30"}`}>
                         <td className="px-3 py-2 text-sm text-blue-600">{inv.invoiceNo}</td>
-                        <td className="px-3 py-2 text-sm">{inv.invoiceDate ? new Date(inv.invoiceDate).toLocaleDateString() : '-'}</td>
+                        <td className="px-3 py-2 text-sm">{formatDate(inv.invoiceDate)}</td>
                         <td className="px-3 py-2 text-sm">{inv.jobNo || '-'}</td>
                         <td className="px-3 py-2 text-sm">{inv.currencyCode || '-'}</td>
                         <td className="px-3 py-2 text-sm text-right">{(inv.pendingAmount ?? 0).toFixed(2)}</td>

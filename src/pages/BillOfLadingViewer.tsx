@@ -14,6 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { formatDate as formatDisplayDate } from "@/lib/utils";
 
 // Prefer exact category codes, then retain a name match for legacy data.
 function findParty(parties: ShipmentParty[], ...categoryCodes: string[]) {
@@ -64,18 +65,7 @@ function formatParty(party?: ShipmentParty) {
 }
 
 function formatDate(dateStr?: string) {
-  if (!dateStr) return "";
-  try {
-    return new Date(dateStr)
-      .toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
-      .toUpperCase();
-  } catch {
-    return dateStr;
-  }
+  return formatDisplayDate(dateStr);
 }
 
 function normalizeBlPortDisplay(

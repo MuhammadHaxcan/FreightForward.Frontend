@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { DateInput } from "@/components/ui/date-input";
+import { formatDate } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -608,7 +609,7 @@ const HrPayroll = () => {
                       </td>
                       <td className="px-4 py-3 text-sm text-muted-foreground">
                         {item.paidDate
-                          ? new Date(item.paidDate).toLocaleDateString()
+                          ? formatDate(item.paidDate)
                           : "-"}
                       </td>
                     </tr>

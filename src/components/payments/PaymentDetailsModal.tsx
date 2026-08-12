@@ -83,7 +83,7 @@ export function PaymentDetailsModal({
                         {inv.currencyCode || baseCurrencyCode} {(inv.balance ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell>
-                        {inv.purchaseDate ? formatDate(inv.purchaseDate, "dd MMM yyyy") : "-"}
+                        {inv.purchaseDate ? formatDate(inv.purchaseDate) : "-"}
                       </TableCell>
                     </TableRow>
                   ))}

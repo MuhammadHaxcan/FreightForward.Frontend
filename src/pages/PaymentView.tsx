@@ -107,7 +107,7 @@ export default function PaymentView() {
               <p><span className="font-medium">Customer Code :</span> {payment.vendorCode || "-"}</p>
             </div>
             <div className="text-right">
-              <p><span className="font-medium">Date:</span> {formatDate(payment.paymentDate, "dd-MM-yyyy")}</p>
+              <p><span className="font-medium">Date:</span> {formatDate(payment.paymentDate)}</p>
             </div>
           </div>
         </div>
@@ -130,7 +130,7 @@ export default function PaymentView() {
                 <TableCell>{payment.paymentMode === 'PostDatedCheque' ? 'POST DATED CHEQUE' : payment.paymentMode.toUpperCase().replace("BANKWIRE", "BANK WIRE").replace("BANKTRANSFER", "BANK TRANSFER")}</TableCell>
                 <TableCell>{payment.chequeNo || "-"}</TableCell>
                 <TableCell>
-                  {payment.chequeDate ? formatDate(payment.chequeDate, "dd-MM-yyyy") : "-"}
+                  {payment.chequeDate ? formatDate(payment.chequeDate) : "-"}
                 </TableCell>
                 <TableCell>{payment.bankName || "-"}</TableCell>
                 <TableCell>{payment.currencyCode || "-"}</TableCell>

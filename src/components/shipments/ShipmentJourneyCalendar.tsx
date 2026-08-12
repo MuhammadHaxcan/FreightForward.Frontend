@@ -7,7 +7,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
+import { cn, formatDate as formatDisplayDate } from "@/lib/utils";
 
 export interface ShipmentJourneyCalendarProps {
   etd?: string; // YYYY-MM-DD
@@ -43,7 +43,7 @@ function shiftMonths(base: Date, n: number): Date {
 
 function formatDate(d: Date | null) {
   if (!d) return "Not set";
-  return d.toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" });
+  return formatDisplayDate(d);
 }
 
 const WEEKDAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];

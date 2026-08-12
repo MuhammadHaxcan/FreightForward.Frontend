@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Lock } from "lucide-react";
 import type { RateRequest } from "@/services/api";
+import { formatDate } from "@/lib/utils";
 
 const READONLY_INPUT = "bg-muted cursor-not-allowed";
 const EM_DASH = "—";
@@ -41,7 +42,7 @@ export function LockedRateRequestSection({ rateRequest }: LockedRateRequestSecti
           <div className="space-y-2">
             <Label>Request Date</Label>
             <Input
-              value={renderText(rateRequest.requestDate ? rateRequest.requestDate.split("T")[0] : null)}
+              value={formatDate(rateRequest.requestDate)}
               readOnly
               className={READONLY_INPUT}
             />

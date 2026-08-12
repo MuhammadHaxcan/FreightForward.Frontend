@@ -9,7 +9,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Save, Loader2, ChevronLeft, ChevronRight, CalendarIcon, Lock, LockOpen } from "lucide-react";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import { useAuth } from "@/contexts/AuthContext";
-import { getTodayDateOnly } from "@/lib/utils";
+import { formatDate, getTodayDateOnly } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -273,7 +273,7 @@ const HrAttendance = () => {
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="flex-1 justify-start text-left font-normal h-9 px-3">
                       <CalendarIcon size={14} className="mr-2 text-muted-foreground" />
-                      {selectedDate ? format(new Date(selectedDate + "T00:00:00"), "dd MMM yyyy") : "Pick a date"}
+                      {selectedDate ? formatDate(selectedDate) : "Pick a date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">

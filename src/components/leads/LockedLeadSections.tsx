@@ -8,6 +8,7 @@ import { Ship, Plane, Truck, Container, Package, Lock } from "lucide-react";
 import { EquipmentGridReadOnly } from "@/components/leads/EquipmentGridReadOnly";
 import { BoxPalletsGridReadOnly } from "@/components/leads/BoxPalletsGridReadOnly";
 import type { Lead } from "@/services/api";
+import { formatDate } from "@/lib/utils";
 
 const READONLY_INPUT = "bg-muted cursor-not-allowed";
 const EM_DASH = "—";
@@ -203,7 +204,7 @@ export function LockedLeadSections({ lead }: LockedLeadSectionsProps) {
               <div className="space-y-2">
                 <Label>Goods Ready Date</Label>
                 <Input
-                  value={renderText(lead.goodsReadyDate ? lead.goodsReadyDate.split("T")[0] : null)}
+                  value={formatDate(lead.goodsReadyDate)}
                   readOnly
                   className={READONLY_INPUT}
                 />
