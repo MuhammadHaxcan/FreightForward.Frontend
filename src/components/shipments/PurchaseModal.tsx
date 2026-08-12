@@ -236,6 +236,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
     !!selectedPartyCustomerId &&
     !isVendorCurrencyLoading &&
     !isVendorCurrencyError &&
+    !!selectedCustomerData &&
     selectedCustomerData?.id === selectedPartyCustomerId &&
     !!selectedCustomerData.currencyId &&
     formData.currencyId === selectedCustomerData.currencyId
@@ -251,7 +252,7 @@ export function PurchaseModal({ open, onOpenChange, shipmentId, jobNumber, charg
   }, [formData.customerId, creditorParties, isEditMode]);
 
   useEffect(() => {
-    if (selectedCustomerData?.id === selectedPartyCustomerId && !isEditMode) {
+    if (selectedCustomerData && selectedPartyCustomerId && selectedCustomerData.id === selectedPartyCustomerId && !isEditMode) {
       const custCurrencyId = selectedCustomerData.currencyId;
       if (!custCurrencyId) return;
       const currency = currencies.find(c => c.id === custCurrencyId);
